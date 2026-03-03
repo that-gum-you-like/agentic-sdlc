@@ -20,6 +20,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, rename
 import { resolve, join } from 'path';
 import { execSync } from 'child_process';
 import { loadConfig } from './load-config.mjs';
+import { triggerNotification } from './notify.mjs';
 
 const config = loadConfig();
 const PROJECT_DIR = config.projectDir;
@@ -187,6 +188,11 @@ function checkAgentBudget(agentName) {
     .filter(e => e.agent === agentName && e.timestamp?.startsWith(today))
     .reduce((sum, e) => sum + (e.inputTokens || 0) + (e.outputTokens || 0), 0);
 
+  const pct = dailyLimit > 0 ? Math.round((todayUsage / dailyLimit) * 100) : 0;
+  if (pct >= 80 && pct < 100) {
+    triggerNotification('budgetAlert', `⚠️ Agent ${agentName} at ${pct}% of daily budget (${todayUsage.toLocaleString()}/${dailyLimit.toLocaleString()} tokens)`);
+  }
+
   return {
     allowed: todayUsage < dailyLimit,
     used: todayUsage,
@@ -217,10 +223,14 @@ function showStatus(tasks) {
   if (inProgress.length > 0) {
     console.log(`\n🔄 In Progress:`);
     for (const t of inProgress) {
-      const stale = isStaleClaim(t) ? ' ⚠️  STALE CLAIM' : '';
+      const stale = isStaleClaim(t);
+      const staleStr = stale ? ' ⚠️  STALE CLAIM' : '';
       const claimed = t.claimedBy ? ` [claimed: ${t.claimedBy}]` : '';
       const tokens = t.estimatedTokens != null ? ` ~${t.estimatedTokens.toLocaleString()} tokens` : '';
-      console.log(`  [${t.id}] ${t.title} → ${getAgentName(t.assignee)}${claimed}${tokens}${stale}`);
+      console.log(`  [${t.id}] ${t.title} → ${getAgentName(t.assignee)}${claimed}${tokens}${staleStr}`);
+      if (stale) {
+        triggerNotification('blocker', `🚫 Task ${t.id} "${t.title}" has a stale claim (${t.claimedBy}, started ${t.claimedAt})`);
+      }
     }
   }
 
@@ -345,11 +355,19 @@ switch (cmd) {
       break;
     }
 
+    // Approval gate: if task requires approval, notify human
+    if (task.approvalRequired) {
+      const { sendNotification } = await import('./notify.mjs');
+      sendNotification(`🔔 APPROVAL REQUESTED: Task ${task.id} "${task.title}" completed with passing tests. Approve?`);
+      console.log(`📋 Approval requested for [${task.id}] — check with: node agents/notify.mjs pending`);
+    }
+
     task.status = 'completed';
     task.test_status = 'passing';
     task.completed_at = new Date().toISOString();
     saveTask(task);
     console.log(`✅ Completed [${task.id}] ${task.title} (tests: passing)`);
+    triggerNotification('deployComplete', `✅ Task ${task.id} completed: ${task.title}`);
     break;
   }
 

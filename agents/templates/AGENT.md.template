@@ -20,7 +20,7 @@ You are responsible for everything in your domain. When a task lands in your que
 
 ### Micro Cycle (mandatory for every task)
 
-1. **Read memory** — Check `agents/{{NAME}}/memory/recent.json`, `agents/{{NAME}}/memory/core.json`, and your agent-specific memory before touching any code.
+1. **Read memory** — Check `agents/{{NAME}}/memory/recent.json`, `agents/{{NAME}}/memory/core.json`, and your agent-specific memory before touching any code. Check mailbox for human messages: `node ~/agentic-sdlc/agents/notify.mjs check-mailbox`
 2. **Read the task** — Understand what is being asked. If the task is ambiguous, flag it rather than guessing.
 3. **Implement** — Make the change. Prefer small, focused edits. One concern per file. Keep files under 300 lines.
 4. **Write tests** — Every change gets a test. No exceptions. Tests live next to the code they cover.

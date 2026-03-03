@@ -332,6 +332,36 @@ Generate a full agent prompt with injected memory for subagent spawning:
 node agents/worker.mjs --agent <name> --task <task-id>
 ```
 
+## Human Communication
+
+In addition to agent-to-agent communication via Matrix, the framework provides a notification and approval layer for human-in-the-loop workflows.
+
+### Notification Providers
+
+| Provider | Mechanism | Use Case |
+|----------|-----------|----------|
+| `openclaw` | WhatsApp via OpenClaw CLI | Production — real-time mobile notifications |
+| `file` | Append to local markdown file | Development — no external dependencies |
+| `none` | Print to stdout | Default — autonomous operation |
+
+Configuration lives in `project.json` under the `notification` key. See the main CLAUDE.md for command reference.
+
+### Approval Workflow
+
+1. Agent requests approval: `notify.mjs approve "Ready to deploy?" --task T-042`
+2. Notification sent to human via configured provider
+3. Approval file created at `pm/approvals/<id>.json`
+4. Human responds via messaging channel or `notify.mjs resolve`
+5. Agent checks with `notify.mjs check-mailbox` or `notify.mjs pending`
+6. On timeout: reminder sent → on double timeout: auto-approved with warning logged
+
+### Mailbox
+
+The mailbox file (`pm/mailbox.md`) serves as the async communication channel:
+- Agent messages: `**[timestamp] Agent →** message`
+- Human messages: `**[timestamp] Human →** message`
+- Plain text responses are also parsed for approval keywords
+
 ## Architecture Benefits
 
 1. **Specialization** — Each agent has deep expertise in their domain and does not cross into others

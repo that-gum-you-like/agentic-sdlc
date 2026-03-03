@@ -14,6 +14,7 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 import { loadConfig } from '../load-config.mjs';
+import { triggerNotification } from '../notify.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -126,3 +127,8 @@ const summary = generateSummary(tasks);
 console.log(summary);
 updateDashboard(summary);
 console.log('Dashboard updated.');
+
+// Notify human with daily summary
+const completedCount = tasks.filter(t => t.status === 'completed').length;
+const blockedCount = tasks.filter(t => t.status === 'pending' && t.blockedBy?.length > 0).length;
+triggerNotification('dailySummary', `📊 Daily Summary: ${completedCount} completed, ${tasks.filter(t => t.status === 'in_progress').length} in progress, ${blockedCount} blocked`);

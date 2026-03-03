@@ -140,9 +140,27 @@ Run tests first and re-submit with 'passing'.
 node agents/queue-drainer.mjs complete T-999 failing
 ```
 
+## 6. Human Approval Gates
+
+**Purpose:** Prevent critical actions without human sign-off.
+
+**How it works:**
+- Tasks with `"approvalRequired": true` cannot complete without human approval
+- Agents send approval requests via the notification channel
+- Approvals are tracked as JSON files in `pm/approvals/`
+- Timeout behavior prevents indefinite blocking: reminder at 1x timeout, auto-approve at 2x timeout
+
+**When to use:**
+- Production deployments
+- Database migrations
+- Breaking API changes
+- Any task where human judgment is required
+
+**Configuration:** Set `"approvalRequired": true` on individual task JSON files. The approval gate is opt-in — tasks without this field complete normally.
+
 ## Verification Checklist
 
-Run these to confirm all five mechanisms are working:
+Run these to confirm all six mechanisms are working:
 
 ```bash
 # 1. Conservation mode — toggle on, check report shows halved limits, restore

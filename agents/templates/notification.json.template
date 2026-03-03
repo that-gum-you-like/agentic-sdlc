@@ -1,0 +1,39 @@
+{
+  "_comment": "Notification provider configuration — add to project.json under 'notification'",
+
+  "_openclaw_example": {
+    "provider": "openclaw",
+    "channel": "+1XXXXXXXXXX",
+    "mailboxPath": "pm/mailbox.md",
+    "mediaDir": "pm/media",
+    "triggers": {
+      "blocker": true,
+      "budgetAlert": true,
+      "deployComplete": true,
+      "highSeverityFailure": true,
+      "dailySummary": true,
+      "approvalTimeout": true
+    }
+  },
+
+  "_file_example": {
+    "provider": "file",
+    "channel": "",
+    "mailboxPath": "pm/mailbox.md",
+    "mediaDir": "pm/media",
+    "triggers": {
+      "blocker": true,
+      "budgetAlert": true,
+      "deployComplete": false,
+      "highSeverityFailure": true,
+      "dailySummary": false,
+      "approvalTimeout": true
+    }
+  },
+
+  "_none_example": {
+    "provider": "none",
+    "channel": "",
+    "triggers": {}
+  }
+}

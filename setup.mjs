@@ -150,6 +150,15 @@ async function main() {
   const matrixDomain = await ask('Matrix domain (or leave blank to skip)', '');
 
   console.log('');
+  console.log('📡 Notification Configuration');
+  console.log('─'.repeat(40));
+  const notifProvider = await ask('Notification provider (openclaw/file/none)', 'none');
+  let notifChannel = '';
+  if (notifProvider === 'openclaw') {
+    notifChannel = await ask('WhatsApp number (e.g., +1XXXXXXXXXX)', '');
+  }
+
+  console.log('');
   console.log('═'.repeat(50));
   console.log('  Creating project structure...');
   console.log('═'.repeat(50));
@@ -174,6 +183,20 @@ async function main() {
     matrixDomain: matrixDomain || 'localhost',
     matrixServer: 'http://127.0.0.1:6167',
     credentialsPath: '',
+    notification: {
+      provider: notifProvider,
+      channel: notifChannel,
+      mailboxPath: 'pm/mailbox.md',
+      mediaDir: 'pm/media',
+      triggers: {
+        blocker: true,
+        budgetAlert: true,
+        deployComplete: notifProvider !== 'none',
+        highSeverityFailure: true,
+        dailySummary: notifProvider !== 'none',
+        approvalTimeout: true,
+      },
+    },
   };
   writeIfNotExists(
     join(agentsDir, 'project.json'),
@@ -288,6 +311,13 @@ ${agents.map(a => `| ${agentDomains[a]?.name || a} | ${agentRoles[a] || 'Develop
 | ${today} | System | Project bootstrapped with Agentic SDLC |
 `;
   writeIfNotExists(join(projectDir, 'pm/DASHBOARD.md'), dashboardContent, 'pm/DASHBOARD.md');
+
+  // Create pm/approvals/ and pm/media/ directories
+  ensureDir(join(projectDir, 'pm/approvals'));
+  ensureDir(join(projectDir, 'pm/media'));
+
+  // Create empty mailbox
+  writeIfNotExists(join(projectDir, 'pm/mailbox.md'), '# Human ↔ Agent Mailbox\n\nMessages between the human project owner and the agent network.\n\n---\n', 'pm/mailbox.md');
 
   // 10. Copy skills to project
   const skillsSource = join(SDLC_DIR, 'skills');

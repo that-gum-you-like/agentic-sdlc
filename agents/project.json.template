@@ -6,5 +6,19 @@
   "agents": [],
   "matrixDomain": "{{MATRIX_DOMAIN}}",
   "matrixServer": "http://127.0.0.1:6167",
-  "credentialsPath": ""
+  "credentialsPath": "",
+  "notification": {
+    "provider": "none",
+    "channel": "",
+    "mailboxPath": "pm/mailbox.md",
+    "mediaDir": "pm/media",
+    "triggers": {
+      "blocker": true,
+      "budgetAlert": true,
+      "deployComplete": false,
+      "highSeverityFailure": true,
+      "dailySummary": false,
+      "approvalTimeout": true
+    }
+  }
 }

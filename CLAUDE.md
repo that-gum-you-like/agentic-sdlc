@@ -103,6 +103,41 @@ Tests that catch known anti-patterns: `any` types, `console.log`, file size limi
 4. **REM Sleep** — Weekly memory consolidation (recent → medium-term → long-term)
 5. **Test-Gated Completion** — Cannot mark task complete without `passing` test status
 
+## Notification & Approval Layer
+
+Agents communicate with the human project owner through a pluggable notification channel.
+
+### Configuration
+Set `notification` in `project.json`:
+- `provider`: `"openclaw"` (WhatsApp), `"file"` (local), or `"none"` (default)
+- `channel`: Destination (phone number for OpenClaw)
+- `triggers`: Which events auto-notify (blocker, budgetAlert, deployComplete, highSeverityFailure, dailySummary, approvalTimeout)
+
+### Commands
+```bash
+node ~/agentic-sdlc/agents/notify.mjs send <message> [--media <path>]
+node ~/agentic-sdlc/agents/notify.mjs approve <message> --task <id> [--timeout <secs>] [--media <path>]
+node ~/agentic-sdlc/agents/notify.mjs check-mailbox
+node ~/agentic-sdlc/agents/notify.mjs pending
+node ~/agentic-sdlc/agents/notify.mjs resolve <id> approved|rejected [--note <text>]
+node ~/agentic-sdlc/agents/notify.mjs status
+```
+
+### Approval Gates
+- Add `"approvalRequired": true` to task JSON to require human approval before completion
+- Approvals timeout after 1 hour → reminder → auto-approve after 2x timeout
+- Approval files stored in `pm/approvals/`
+
+### Automatic Triggers
+| Trigger | Event | Message |
+|---------|-------|---------|
+| blocker | Task stale claim detected | "Task X has stale claim" |
+| budgetAlert | Agent at 80%+ daily budget | "Agent X at Y% budget" |
+| deployComplete | Task completed with passing tests | "Task X completed" |
+| highSeverityFailure | Failure recorded in core memory | "New failure: ..." |
+| dailySummary | Daily review runs | "N completed, M blocked" |
+| approvalTimeout | Approval pending past timeout | "REMINDER: approval pending" |
+
 ## Iteration Cycles
 
 ### Micro (Minutes)
@@ -156,6 +191,7 @@ When editing any agent's AGENT.md:
 ### On Session Start
 1. Read CLAUDE.md (this file)
 2. Check task queue status: `node ~/agentic-sdlc/agents/queue-drainer.mjs status`
+2.5. Check mailbox: `node ~/agentic-sdlc/agents/notify.mjs check-mailbox`
 3. Read PM dashboard: `pm/DASHBOARD.md`
 4. Pick up next unblocked tasks
 
@@ -189,6 +225,7 @@ Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 | `agents/cycles/weekly-review.mjs` | Weekly pattern review + REM sleep |
 | `agents/matrix-client/matrix-cli.mjs` | Matrix communication CLI |
 | `agents/start.sh` | System startup (Matrix + queue status) |
+| `agents/notify.mjs` | Notification & approval layer |
 | `docs/troubleshooting.md` | Common issues and recovery patterns |
 
 ## Getting Started

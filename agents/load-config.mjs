@@ -115,6 +115,15 @@ export function loadConfig() {
     matrixServer: raw.matrixServer,
     credentialsPath: raw.credentialsPath ? resolve(raw.credentialsPath) : '',
     dashboardPath: resolve(raw.projectDir, 'pm/DASHBOARD.md'),
+    // Notification & approval layer
+    notification: {
+      provider: raw.notification?.provider || 'none',
+      channel: raw.notification?.channel || '',
+      mailboxPath: resolve(raw.projectDir, raw.notification?.mailboxPath || 'pm/mailbox.md'),
+      mediaDir: resolve(raw.projectDir, raw.notification?.mediaDir || 'pm/media'),
+      approvalsDir: resolve(raw.projectDir, 'pm/approvals'),
+      triggers: raw.notification?.triggers || {},
+    },
   };
 
   return _cached;

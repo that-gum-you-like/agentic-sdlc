@@ -22,6 +22,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
 import { loadConfig } from './load-config.mjs';
+import { triggerNotification } from './notify.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -117,6 +118,7 @@ function record(agent, layer, content) {
     });
     saveMemory(agent, 'core', core);
     console.log(`Recorded failure in ${agent}/core.json`);
+    triggerNotification('highSeverityFailure', `🔴 New failure memory for ${agent}: ${content}`);
   } else {
     const memory = loadMemory(agent, layer);
     memory.entries = memory.entries || [];
