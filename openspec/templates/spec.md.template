@@ -1,0 +1,106 @@
+# Spec: {{CHANGE_NAME}}
+
+**Date**: {{DATE}}
+**Author**: {{AUTHOR}}
+**Status**: specs
+
+---
+
+## Overview
+
+<!-- One paragraph summarizing what this spec covers and how it relates to the design. -->
+
+{{SPEC_OVERVIEW}}
+
+---
+
+## Acceptance Criteria
+
+Each scenario below is a verifiable behavior. All scenarios must pass before this change is considered complete.
+
+---
+
+### Scenario 1: {{SCENARIO_1_TITLE}}
+
+**WHEN** {{SCENARIO_1_TRIGGER}}
+
+**THEN** {{SCENARIO_1_PRIMARY_OUTCOME}}
+
+**AND** {{SCENARIO_1_SECONDARY_OUTCOME}}
+
+---
+
+### Scenario 2: {{SCENARIO_2_TITLE}}
+
+**WHEN** {{SCENARIO_2_TRIGGER}}
+
+**THEN** {{SCENARIO_2_PRIMARY_OUTCOME}}
+
+**AND** {{SCENARIO_2_SECONDARY_OUTCOME}}
+
+---
+
+### Scenario 3: {{SCENARIO_3_TITLE}}
+
+**WHEN** {{SCENARIO_3_TRIGGER}}
+
+**THEN** {{SCENARIO_3_PRIMARY_OUTCOME}}
+
+**AND** {{SCENARIO_3_SECONDARY_OUTCOME}}
+
+---
+
+### Scenario 4: Error Case — {{SCENARIO_4_TITLE}}
+
+**WHEN** {{SCENARIO_4_ERROR_CONDITION}}
+
+**THEN** {{SCENARIO_4_ERROR_HANDLING}}
+
+**AND** {{SCENARIO_4_NO_SIDE_EFFECTS}}
+
+---
+
+### Scenario 5: Edge Case — {{SCENARIO_5_TITLE}}
+
+**WHEN** {{SCENARIO_5_EDGE_CONDITION}}
+
+**THEN** {{SCENARIO_5_EDGE_OUTCOME}}
+
+---
+
+## Invariants
+
+<!-- Conditions that must always be true, regardless of scenario. These are non-negotiable constraints. -->
+
+- {{INVARIANT_1}}
+- {{INVARIANT_2}}
+- {{INVARIANT_3}}
+
+---
+
+## Out of Scope
+
+<!-- Behaviors explicitly NOT covered by this spec. Reference the design's non-goals. -->
+
+- {{OUT_OF_SCOPE_BEHAVIOR_1}}
+- {{OUT_OF_SCOPE_BEHAVIOR_2}}
+
+---
+
+## Test Mapping
+
+<!-- Map each scenario to the test file(s) that will verify it. Fill in after tests are written. -->
+
+| Scenario | Test File | Test Name |
+|----------|-----------|-----------|
+| Scenario 1 | `{{TEST_FILE_1}}` | `{{TEST_NAME_1}}` |
+| Scenario 2 | `{{TEST_FILE_2}}` | `{{TEST_NAME_2}}` |
+| Scenario 3 | `{{TEST_FILE_3}}` | `{{TEST_NAME_3}}` |
+| Scenario 4 | `{{TEST_FILE_4}}` | `{{TEST_NAME_4}}` |
+| Scenario 5 | `{{TEST_FILE_5}}` | `{{TEST_NAME_5}}` |
+
+---
+
+## Next Step
+
+Proceed to tasks phase using `openspec-continue-change`.

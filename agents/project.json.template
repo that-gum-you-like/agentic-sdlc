@@ -1,0 +1,10 @@
+{
+  "name": "{{PROJECT_NAME}}",
+  "projectDir": "{{PROJECT_DIR}}",
+  "appDir": "{{APP_DIR}}",
+  "testCmd": "{{TEST_CMD}}",
+  "agents": [],
+  "matrixDomain": "{{MATRIX_DOMAIN}}",
+  "matrixServer": "http://127.0.0.1:6167",
+  "credentialsPath": ""
+}

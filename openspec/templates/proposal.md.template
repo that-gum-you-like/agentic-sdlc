@@ -1,0 +1,75 @@
+# Proposal: {{CHANGE_NAME}}
+
+**Date**: {{DATE}}
+**Author**: {{AUTHOR}}
+**Status**: proposed
+
+---
+
+## Problem
+
+<!-- What is broken, missing, or suboptimal? Be specific. Describe the current state and why it is a problem. -->
+
+{{PROBLEM_DESCRIPTION}}
+
+---
+
+## Proposed Solution
+
+<!-- What are we going to build or change? One paragraph. Not a technical spec — just the idea. -->
+
+{{SOLUTION_DESCRIPTION}}
+
+---
+
+## Value Analysis
+
+### Benefits
+
+<!-- What does this change make better? List concrete, measurable improvements where possible. -->
+
+- {{BENEFIT_1}}
+- {{BENEFIT_2}}
+
+### Costs
+
+<!-- What is the implementation effort? What are the risks? What could go wrong? -->
+
+- **Effort**: {{EFFORT_ESTIMATE}}
+- **Risk**: {{RISK_DESCRIPTION}}
+- **Dependencies**: {{DEPENDENCIES}}
+
+### Alternatives Considered
+
+<!-- What else could we do? Why is this approach better than the alternatives? -->
+
+| Alternative | Reason Rejected |
+|-------------|-----------------|
+| {{ALT_1}}   | {{REASON_1}}    |
+| Do nothing  | {{REASON_DO_NOTHING}} |
+
+### Decision
+
+<!-- Is this worth doing? Yes/No and why. -->
+
+{{DECISION}}
+
+---
+
+## Scope
+
+### In Scope
+
+- {{IN_SCOPE_1}}
+- {{IN_SCOPE_2}}
+
+### Out of Scope
+
+- {{OUT_OF_SCOPE_1}}
+- {{OUT_OF_SCOPE_2}}
+
+---
+
+## Next Step
+
+If approved: proceed to design phase using `openspec-continue-change`.

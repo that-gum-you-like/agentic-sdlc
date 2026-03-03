@@ -1,0 +1,39 @@
+# Review Checklist
+
+Use this checklist before marking any task complete or submitting work for review.
+
+## Code Quality
+
+- [ ] No `any` types — every value has an explicit, meaningful type
+- [ ] No `console.log` left in production code — use a logger or remove debug output
+- [ ] No files over 300 lines — split large files into focused modules
+- [ ] No commented-out code — delete it; git history preserves it if needed
+- [ ] No magic numbers or strings — extract to named constants
+
+## Return Patterns
+
+- [ ] All functions have explicit return types declared
+- [ ] No implicit `undefined` returns in functions that should return a value
+- [ ] Error paths return or throw consistently — no silent failures
+- [ ] Async functions are awaited at all call sites
+
+## Test Coverage
+
+- [ ] Every new function has at least one test
+- [ ] Every bug fix has a regression test
+- [ ] Tests describe behavior, not implementation details
+- [ ] Test names are readable as plain English sentences
+- [ ] No tests that always pass regardless of code behavior
+
+## Commits
+
+- [ ] Commit message follows `type(scope): description` format
+- [ ] Each commit is atomic — one logical change per commit
+- [ ] No merge commits in feature work — rebase instead
+- [ ] No sensitive values (tokens, passwords, keys) in committed files
+
+## General
+
+- [ ] The task spec is fully addressed — nothing left half-done
+- [ ] No regressions in existing tests
+- [ ] Memory updated with what changed and why

@@ -1,0 +1,127 @@
+# Design: {{CHANGE_NAME}}
+
+**Date**: {{DATE}}
+**Author**: {{AUTHOR}}
+**Status**: design
+
+---
+
+## Context
+
+### Current State
+
+<!-- How does the system work today in the area this change touches? What exists? What are the relevant files, services, or components? -->
+
+{{CURRENT_STATE_DESCRIPTION}}
+
+### Problem Restatement
+
+<!-- One sentence: what specifically are we fixing or adding? -->
+
+{{PROBLEM_RESTATEMENT}}
+
+---
+
+## Goals
+
+<!-- What this design must accomplish. Each goal should be verifiable. -->
+
+- {{GOAL_1}}
+- {{GOAL_2}}
+- {{GOAL_3}}
+
+## Non-Goals
+
+<!-- What this design explicitly does not do. Non-goals prevent scope creep and clarify intent. -->
+
+- {{NON_GOAL_1}}
+- {{NON_GOAL_2}}
+
+---
+
+## Design
+
+### Overview
+
+<!-- High-level description of the approach. How does the solution work conceptually? -->
+
+{{DESIGN_OVERVIEW}}
+
+### Components
+
+<!-- What are the main parts of this change? A new service, a modified component, a new API route? -->
+
+#### {{COMPONENT_1_NAME}}
+
+**File(s)**: `{{COMPONENT_1_PATH}}`
+
+{{COMPONENT_1_DESCRIPTION}}
+
+#### {{COMPONENT_2_NAME}}
+
+**File(s)**: `{{COMPONENT_2_PATH}}`
+
+{{COMPONENT_2_DESCRIPTION}}
+
+### Data Flow
+
+<!-- How does data move through the system? If relevant, describe the sequence of operations. -->
+
+```
+{{DATA_FLOW_DESCRIPTION}}
+```
+
+### Schema / Interface Changes
+
+<!-- Any new types, interfaces, API contracts, or database schema changes. -->
+
+```typescript
+{{SCHEMA_OR_INTERFACE}}
+```
+
+---
+
+## Decisions
+
+<!-- Key technical decisions made during design. For each: what was chosen, what was considered, why this choice. -->
+
+### Decision 1: {{DECISION_1_TITLE}}
+
+**Chosen**: {{DECISION_1_CHOICE}}
+
+**Considered**: {{DECISION_1_ALTERNATIVES}}
+
+**Rationale**: {{DECISION_1_RATIONALE}}
+
+### Decision 2: {{DECISION_2_TITLE}}
+
+**Chosen**: {{DECISION_2_CHOICE}}
+
+**Considered**: {{DECISION_2_ALTERNATIVES}}
+
+**Rationale**: {{DECISION_2_RATIONALE}}
+
+---
+
+## Risks and Mitigations
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| {{RISK_1}} | {{LIKELIHOOD_1}} | {{IMPACT_1}} | {{MITIGATION_1}} |
+| {{RISK_2}} | {{LIKELIHOOD_2}} | {{IMPACT_2}} | {{MITIGATION_2}} |
+
+---
+
+## Testing Approach
+
+<!-- How will we verify this design is implemented correctly? What kinds of tests are needed? -->
+
+- **Unit tests**: {{UNIT_TEST_APPROACH}}
+- **Integration tests**: {{INTEGRATION_TEST_APPROACH}}
+- **Manual verification**: {{MANUAL_VERIFICATION_APPROACH}}
+
+---
+
+## Next Step
+
+Proceed to specs phase using `openspec-continue-change`.

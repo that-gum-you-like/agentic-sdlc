@@ -1,0 +1,11 @@
+{
+  "agent-name": {
+    "name": "Agent Display Name",
+    "role": "Agent Role Description",
+    "patterns": [
+      "file/path/pattern",
+      "keyword1",
+      "keyword2"
+    ]
+  }
+}

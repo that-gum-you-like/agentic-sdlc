@@ -1,0 +1,96 @@
+# Tasks: {{CHANGE_NAME}}
+
+**Date**: {{DATE}}
+**Author**: {{AUTHOR}}
+**Status**: tasks
+
+---
+
+## Overview
+
+<!-- Brief summary of the work to be done. Reference the design and spec. -->
+
+{{TASKS_OVERVIEW}}
+
+---
+
+## Prerequisites
+
+<!-- Anything that must be true before implementation begins. -->
+
+- [ ] Design is approved
+- [ ] Specs are written and reviewed
+- [ ] {{PREREQUISITE_1}}
+- [ ] {{PREREQUISITE_2}}
+
+---
+
+## Implementation Tasks
+
+Tasks are ordered by dependency. Complete them in sequence unless noted otherwise.
+
+### Phase 1: {{PHASE_1_NAME}}
+
+- [ ] **{{TASK_1_ID}}**: {{TASK_1_DESCRIPTION}}
+  - Files: `{{TASK_1_FILES}}`
+  - Spec: Scenario {{TASK_1_SCENARIO_REF}}
+  - Notes: {{TASK_1_NOTES}}
+
+- [ ] **{{TASK_2_ID}}**: {{TASK_2_DESCRIPTION}}
+  - Files: `{{TASK_2_FILES}}`
+  - Spec: Scenario {{TASK_2_SCENARIO_REF}}
+  - Notes: {{TASK_2_NOTES}}
+
+### Phase 2: {{PHASE_2_NAME}}
+
+- [ ] **{{TASK_3_ID}}**: {{TASK_3_DESCRIPTION}}
+  - Files: `{{TASK_3_FILES}}`
+  - Spec: Scenario {{TASK_3_SCENARIO_REF}}
+  - Notes: {{TASK_3_NOTES}}
+
+- [ ] **{{TASK_4_ID}}**: {{TASK_4_DESCRIPTION}}
+  - Files: `{{TASK_4_FILES}}`
+  - Spec: Scenario {{TASK_4_SCENARIO_REF}}
+  - Notes: {{TASK_4_NOTES}}
+
+### Phase 3: Tests
+
+- [ ] **{{TASK_5_ID}}**: Write unit tests for {{UNIT_TEST_SUBJECT}}
+  - Files: `{{UNIT_TEST_FILES}}`
+  - Covers: Scenarios {{UNIT_TEST_SCENARIOS}}
+
+- [ ] **{{TASK_6_ID}}**: Write integration tests for {{INTEGRATION_TEST_SUBJECT}}
+  - Files: `{{INTEGRATION_TEST_FILES}}`
+  - Covers: Scenarios {{INTEGRATION_TEST_SCENARIOS}}
+
+- [ ] **{{TASK_7_ID}}**: Run full test suite and confirm no regressions
+  - Command: `{{TEST_CMD}}`
+  - Expected: All tests passing
+
+### Phase 4: Cleanup and Documentation
+
+- [ ] **{{TASK_8_ID}}**: Update any affected inline documentation
+  - Files: `{{DOCS_FILES}}`
+
+- [ ] **{{TASK_9_ID}}**: Update memory with change summary
+  - Files: `agents/memory/recent.json`, `agents/memory/medium-term.json`
+
+---
+
+## Completion Criteria
+
+This change is complete when:
+
+- [ ] All implementation tasks are checked off
+- [ ] All tests pass (`{{TEST_CMD}}`)
+- [ ] No regressions in existing test suite
+- [ ] Memory is updated
+- [ ] Change is committed and pushed
+
+---
+
+## Notes
+
+<!-- Any additional context, gotchas, or reminders for whoever implements these tasks. -->
+
+{{ADDITIONAL_NOTES}}
