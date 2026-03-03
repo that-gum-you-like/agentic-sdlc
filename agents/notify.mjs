@@ -36,7 +36,7 @@ function sendViaOpenclaw(message, mediaPath) {
     process.exit(1);
   }
 
-  let cmd = `openclaw message send --to "${channel}" --message "${message.replace(/"/g, '\\"')}"`;
+  let cmd = `openclaw message send --channel whatsapp --target "${channel}" --message "${message.replace(/"/g, '\\"')}"`;
   if (mediaPath) {
     const absMedia = resolve(mediaPath);
     cmd += ` --media "${absMedia}"`;
@@ -260,6 +260,16 @@ function cmdApprove(args) {
 // ---------------------------------------------------------------------------
 
 function cmdCheckMailbox() {
+  // Auto-sync inbound messages from OpenClaw before checking mailbox
+  if (NOTIF.provider === 'openclaw') {
+    try {
+      const syncScript = resolve(dirname(fileURLToPath(import.meta.url)), 'mailbox-sync.mjs');
+      if (existsSync(syncScript)) {
+        execSync(`node "${syncScript}"`, { stdio: 'inherit' });
+      }
+    } catch { /* sync failure shouldn't block mailbox check */ }
+  }
+
   if (!existsSync(NOTIF.mailboxPath)) {
     console.log('📭 No mailbox file found. No messages.');
     return;

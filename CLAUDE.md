@@ -226,6 +226,7 @@ Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 | `agents/matrix-client/matrix-cli.mjs` | Matrix communication CLI |
 | `agents/start.sh` | System startup (Matrix + queue status) |
 | `agents/notify.mjs` | Notification & approval layer |
+| `agents/mailbox-sync.mjs` | Sync inbound WhatsApp messages to mailbox |
 | `docs/troubleshooting.md` | Common issues and recovery patterns |
 
 ## Getting Started
