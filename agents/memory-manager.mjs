@@ -26,11 +26,13 @@ import { loadConfig } from './load-config.mjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const AGENTS = loadConfig().agents;
+const config = loadConfig();
+const AGENTS = config.agents;
+const AGENTS_DIR = config.agentsDir;
 const LAYERS = ['core', 'long-term', 'medium-term', 'recent', 'compost'];
 
 function getMemoryPath(agent, layer) {
-  return resolve(__dirname, agent, 'memory', `${layer}.json`);
+  return resolve(AGENTS_DIR, agent, 'memory', `${layer}.json`);
 }
 
 function loadMemory(agent, layer) {

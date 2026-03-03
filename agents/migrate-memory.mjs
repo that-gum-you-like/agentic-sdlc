@@ -17,8 +17,10 @@ import { loadConfig } from './load-config.mjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const AGENTS = loadConfig().agents;
-const VERSIONS_DIR = resolve(__dirname, 'versions');
+const config = loadConfig();
+const AGENTS = config.agents;
+const AGENTS_DIR = config.agentsDir;
+const VERSIONS_DIR = resolve(AGENTS_DIR, 'versions');
 const LAYERS = ['long-term', 'medium-term', 'recent'];
 
 const applyMode = process.argv.includes('--apply');
@@ -35,18 +37,18 @@ function getLatestSnapshot() {
 }
 
 function loadMemory(agent, layer) {
-  const path = resolve(__dirname, agent, 'memory', `${layer}.json`);
+  const path = resolve(AGENTS_DIR, agent, 'memory', `${layer}.json`);
   if (!existsSync(path)) return { entries: [] };
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
 function saveMemory(agent, layer, data) {
-  const path = resolve(__dirname, agent, 'memory', `${layer}.json`);
+  const path = resolve(AGENTS_DIR, agent, 'memory', `${layer}.json`);
   writeFileSync(path, JSON.stringify(data, null, 2));
 }
 
 function checkAgent(agent) {
-  const agentMdPath = resolve(__dirname, agent, 'AGENT.md');
+  const agentMdPath = resolve(AGENTS_DIR, agent, 'AGENT.md');
   if (!existsSync(agentMdPath)) {
     console.log(`  ⚠️  ${agent}/AGENT.md not found`);
     return [];

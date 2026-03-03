@@ -19,7 +19,9 @@ import { loadConfig } from './load-config.mjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const AGENTS = loadConfig().agents;
+const config = loadConfig();
+const AGENTS = config.agents;
+const AGENTS_DIR = config.agentsDir;
 const dryRun = process.argv.includes('--dry-run');
 
 let passed = 0;
@@ -36,21 +38,24 @@ function check(description, condition) {
 }
 
 function readAgentMd(agent) {
-  const path = resolve(__dirname, agent, 'AGENT.md');
+  const path = resolve(AGENTS_DIR, agent, 'AGENT.md');
   if (!existsSync(path)) return '';
   return readFileSync(path, 'utf8');
 }
 
 function readCoreJson(agent) {
-  const path = resolve(__dirname, agent, 'memory', 'core.json');
+  const path = resolve(AGENTS_DIR, agent, 'memory', 'core.json');
   if (!existsSync(path)) return {};
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
 function readChecklist() {
-  const path = resolve(__dirname, 'richmond', 'checklist.md');
-  if (!existsSync(path)) return '';
-  return readFileSync(path, 'utf8');
+  // Search for checklist in any agent directory that has one
+  for (const agent of AGENTS) {
+    const path = resolve(AGENTS_DIR, agent, 'checklist.md');
+    if (existsSync(path)) return readFileSync(path, 'utf8');
+  }
+  return '';
 }
 
 // Tests

@@ -16,10 +16,24 @@ import { readFileSync, readdirSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { loadConfig } from './load-config.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const REVIEWS_DIR = resolve(__dirname, 'richmond', 'reviews');
+const config = loadConfig();
+const AGENTS_DIR = config.agentsDir;
+const PROJECT_DIR = config.projectDir;
+
+// Find the reviewer agent's reviews directory
+function findReviewsDir() {
+  for (const agent of config.agents) {
+    const reviewsPath = resolve(AGENTS_DIR, agent, 'reviews');
+    if (existsSync(reviewsPath)) return reviewsPath;
+  }
+  // Fallback to richmond (common name)
+  return resolve(AGENTS_DIR, 'richmond', 'reviews');
+}
+const REVIEWS_DIR = findReviewsDir();
 const RECURRENCE_THRESHOLD = 3;
 
 // ---------------------------------------------------------------------------
@@ -225,7 +239,7 @@ function getGitLog() {
   try {
     const output = execSync('git log --oneline -100', {
       encoding: 'utf8',
-      cwd: resolve(__dirname, '..'),
+      cwd: PROJECT_DIR,
     }).trim();
 
     if (!output) return [];
@@ -261,7 +275,7 @@ function getFixCommitFiles(gitLog) {
     try {
       const files = execSync(
         `git diff-tree --no-commit-id --name-only -r ${commit.hash}`,
-        { encoding: 'utf8', cwd: resolve(__dirname, '..') }
+        { encoding: 'utf8', cwd: PROJECT_DIR }
       ).trim().split('\n').filter(Boolean);
 
       result.push({ ...commit, files });
@@ -297,7 +311,7 @@ function annotateWithGitHotspots(patterns, reviews, fixCommits) {
     try {
       const files = execSync(
         `git diff-tree --no-commit-id --name-only -r ${hash}`,
-        { encoding: 'utf8', cwd: resolve(__dirname, '..') }
+        { encoding: 'utf8', cwd: PROJECT_DIR }
       ).trim().split('\n').filter(Boolean);
       for (const f of files) reviewedFiles.add(f);
     } catch {

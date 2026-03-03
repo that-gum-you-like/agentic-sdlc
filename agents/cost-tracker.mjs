@@ -12,11 +12,14 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
+import { loadConfig } from './load-config.mjs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const COST_LOG_PATH = resolve(__dirname, 'cost-log.json');
-const BUDGET_PATH = resolve(__dirname, 'budget.json');
+const config = loadConfig();
+const COST_LOG_PATH = config.costLogPath;
+const BUDGET_PATH = config.budgetPath;
 
 function loadLog() {
   if (!existsSync(COST_LOG_PATH)) return [];

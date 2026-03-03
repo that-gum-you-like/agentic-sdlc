@@ -17,8 +17,10 @@ import { loadConfig } from './load-config.mjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const AGENTS = loadConfig().agents;
-const VERSIONS_DIR = resolve(__dirname, 'versions');
+const config = loadConfig();
+const AGENTS = config.agents;
+const AGENTS_DIR = config.agentsDir;
+const VERSIONS_DIR = resolve(AGENTS_DIR, 'versions');
 
 function snapshot() {
   const date = new Date().toISOString().split('T')[0];
@@ -28,7 +30,7 @@ function snapshot() {
   if (!existsSync(snapshotDir)) mkdirSync(snapshotDir, { recursive: true });
 
   for (const agent of AGENTS) {
-    const src = resolve(__dirname, agent, 'AGENT.md');
+    const src = resolve(AGENTS_DIR, agent, 'AGENT.md');
     const dest = join(snapshotDir, `${agent}.md`);
     if (existsSync(src)) {
       copyFileSync(src, dest);
@@ -69,7 +71,7 @@ function restore(date) {
 
   for (const agent of AGENTS) {
     const src = join(snapshotDir, `${agent}.md`);
-    const dest = resolve(__dirname, agent, 'AGENT.md');
+    const dest = resolve(AGENTS_DIR, agent, 'AGENT.md');
     if (existsSync(src)) {
       copyFileSync(src, dest);
       console.log(`  🔄 Restored ${agent}/AGENT.md from ${date}`);
