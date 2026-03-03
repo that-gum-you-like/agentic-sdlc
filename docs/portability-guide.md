@@ -97,14 +97,16 @@ import { loadConfig } from './load-config.mjs';
 const config = loadConfig();
 ```
 
-`load-config.mjs` is located in `agents/` and resolves all paths relative to its own directory. It does not search upward through the filesystem — it looks for `agents/project.json` at a fixed location relative to the script file itself. This means the `agents/` directory must be placed at the project root for path resolution to work correctly.
+`load-config.mjs` is located in the SDLC repo's `agents/` directory and searches multiple locations to find `agents/project.json`. It walks up parent directories from the current working directory, so scripts can be run from subdirectories of a project.
 
 **Resolution order:**
 
-1. Looks for `agents/project.json` (sibling to `load-config.mjs`)
-2. If found and valid JSON, merges it over the built-in defaults
-3. If missing or malformed, falls back entirely to built-in defaults
-4. Resolves all paths to absolute paths using `resolve()` before caching
+1. `--project-dir` CLI argument (if provided)
+2. `SDLC_PROJECT_DIR` environment variable (if set)
+3. Current working directory + `agents/project.json`
+4. Walk up parent directories until `agents/project.json` is found
+5. If not found anywhere, falls back to built-in defaults
+6. Resolves all paths to absolute paths using `resolve()` before caching
 
 **What it returns:**
 

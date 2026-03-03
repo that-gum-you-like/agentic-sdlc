@@ -235,7 +235,30 @@ async function main() {
     }
   }
 
-  // 8. Create Richmond-style review checklist (if a reviewer agent exists)
+  // 8. Initialize cost-log.json
+  writeIfNotExists(
+    join(agentsDir, 'cost-log.json'),
+    JSON.stringify([], null, 2),
+    'agents/cost-log.json'
+  );
+
+  // 8b. Copy openspec templates
+  const openspecTemplatesSource = join(SDLC_DIR, 'openspec/templates');
+  const openspecTemplatesDest = join(projectDir, 'openspec/templates');
+  if (existsSync(openspecTemplatesSource)) {
+    ensureDir(openspecTemplatesDest);
+    const templateFiles = readdirSync(openspecTemplatesSource).filter(f => f.endsWith('.template'));
+    for (const tmplFile of templateFiles) {
+      const src = join(openspecTemplatesSource, tmplFile);
+      const dest = join(openspecTemplatesDest, tmplFile);
+      if (!existsSync(dest)) {
+        cpSync(src, dest);
+        console.log(`  ✅ Copied openspec template: ${tmplFile}`);
+      }
+    }
+  }
+
+  // 9. Create review checklist (if a reviewer agent exists)
   const reviewerAgent = agents.find(a =>
     (agentRoles[a] || '').toLowerCase().includes('review')
   );
@@ -348,6 +371,11 @@ Use \`/openspec-new-change\` to start, \`/openspec-continue-change\` to advance,
   console.log('  2. Run `claude` — SDLC rules loaded automatically');
   console.log('  3. Use `/openspec-new-change` to start your first change');
   console.log('  4. Use `node ~/agentic-sdlc/agents/queue-drainer.mjs status` to check queue');
+  console.log('');
+  console.log('  Suggested .gitignore additions:');
+  console.log('    agents/cost-log.json');
+  console.log('    agents/*/memory/recent.json');
+  console.log('    agents/*/memory/compost.json');
   console.log('');
 
   rl.close();

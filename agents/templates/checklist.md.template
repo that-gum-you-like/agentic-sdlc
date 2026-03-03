@@ -6,7 +6,7 @@ Use this checklist before marking any task complete or submitting work for revie
 
 - [ ] No `any` types — every value has an explicit, meaningful type
 - [ ] No `console.log` left in production code — use a logger or remove debug output
-- [ ] No files over 300 lines — split large files into focused modules
+- [ ] No services over 150 lines, no screens over 200 lines — split large files into focused modules
 - [ ] No commented-out code — delete it; git history preserves it if needed
 - [ ] No magic numbers or strings — extract to named constants
 

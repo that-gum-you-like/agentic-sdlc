@@ -146,6 +146,6 @@ switch (cmd) {
   matrix-cli.mjs read <agent> <room> [--limit N]
   matrix-cli.mjs rooms <agent>
 
-Agents: bryce, roy, moss, jen, richmond, denholm, douglas
+Agents: (as defined in your project's credentials file)
 Rooms: general, backend, frontend, ai-pipeline, releases, reviews, docs`);
 }

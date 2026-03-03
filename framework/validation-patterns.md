@@ -169,3 +169,26 @@ Code Layer          (source code, tests, build artifacts)
 ```
 
 Validation sits between agents and code. No agent output reaches the code layer without passing through validation.
+
+---
+
+## Anti-Pattern Naming Vocabulary
+
+When identifying anti-patterns, use specific vocabulary. Vague feedback ("it's bad", "clean this up") does not teach agents or humans. Name the violation precisely using these terms:
+
+| Term | Meaning | Example Violation |
+|------|---------|-------------------|
+| **Modular** | Code is organized into independent, interchangeable units with clear boundaries. Each module has a single responsibility and communicates through well-defined interfaces. | A 500-line function that handles parsing, validation, and database writes. |
+| **Robust** | Code handles errors, edge cases, and unexpected input gracefully. It does not silently swallow exceptions or fall back to incorrect defaults. | A function that catches all exceptions and returns `0` instead of propagating the error. |
+| **Testable** | Code can be verified in isolation. Dependencies are injectable, side effects are contained, and behavior is deterministic. | A function that reads directly from the filesystem and calls an external API with no way to mock either dependency. |
+| **Discoverable** | Code is organized so that its purpose and location are predictable from the project structure. Names, paths, and conventions make it possible to find what you need without searching. | A utility function buried inside an unrelated component file with a generic name like `helper`. |
+| **Decomposed** | Complex logic is broken into small, named steps. Each step is independently understandable. Long chains of logic are replaced with a sequence of well-named operations. | A single expression with 6 nested ternaries and 4 chained method calls. |
+
+**Usage in reviews and checklists:**
+- Not "this code is messy" → "this is not **modular** — the parsing logic should be a separate function"
+- Not "fix the error handling" → "this is not **robust** — NaN falls back to 0 silently"
+- Not "I can't find this" → "this is not **discoverable** — move it to `utils/` with a descriptive name"
+- Not "this is too complex" → "this is not **decomposed** — extract the validation step into its own function"
+- Not "we can't test this" → "this is not **testable** — inject the database client instead of importing it directly"
+
+These terms form the shared vocabulary for review checklists, defeat tests, and agent feedback. Every anti-pattern should be nameable with at least one of these terms.

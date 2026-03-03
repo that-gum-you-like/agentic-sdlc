@@ -129,3 +129,9 @@ Use this checklist when starting any project. Work through the levels sequential
 **Every correction becomes a rule.** When a senior developer catches a mistake, it must become a checklist item, not just a one-time fix.
 
 **Directory structure = status report.** Organize your project so the file tree communicates what is complete, in progress, and planned.
+
+---
+
+## Lesson Plan
+
+For a structured walkthrough of setting up and using this framework (Hours 1-7), see [`lesson-plan.md`](lesson-plan.md).

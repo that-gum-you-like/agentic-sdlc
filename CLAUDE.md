@@ -64,6 +64,14 @@ node ~/agentic-sdlc/agents/queue-drainer.mjs archive                  # Archive 
 node ~/agentic-sdlc/agents/queue-drainer.mjs reset <id>               # Reset stuck task
 ```
 
+**Token Estimate Reference (use for `estimatedTokens` field in task JSON):**
+| Task Type | estimatedTokens | When to Use |
+|-----------|----------------|-------------|
+| simple fix | 3500 | Single-file change, config update, minor bug fix |
+| feature | 20000 | New screen, service, or component |
+| architecture | 35000 | Multi-file refactor, schema design |
+| research | 65000 | Investigation spike, design exploration |
+
 ### Worker Launcher
 ```bash
 node ~/agentic-sdlc/agents/worker.mjs --agent <name> --task <task-id>
@@ -73,14 +81,11 @@ node ~/agentic-sdlc/agents/worker.mjs --agent <name> --task <task-id>
 
 ### Test Tiers
 ```bash
-# Project's test command (from project.json)
-<test-cmd>
-
-# Four-layer validation (import resolution, checklist, AST, statistics)
-node ~/agentic-sdlc/agents/four-layer-validate.mjs [--files <glob>] [--json]
-
-# Agent prompt quality (behavior tests)
-node ~/agentic-sdlc/agents/test-behavior.mjs [--dry-run]
+<test-cmd>                                          # Full unit suite (Tier 1)
+<test-cmd> --integration (or project-specific)      # Service↔store integration (Tier 2)
+<test-cmd> --defeat (or project-specific)            # Anti-pattern scans (Tier 3)
+node ~/agentic-sdlc/agents/four-layer-validate.mjs   # Four-layer validation
+node ~/agentic-sdlc/agents/test-behavior.mjs         # Agent prompt quality
 ```
 
 - **After any code change:** run full test suite
@@ -108,9 +113,14 @@ Pick → Implement → Test → Commit → Next
 - End of session: `node ~/agentic-sdlc/agents/cycles/daily-review.mjs`
 
 ### Weekly
+- Weekly review: `node ~/agentic-sdlc/agents/cycles/weekly-review.mjs`
 - Pattern review: `node ~/agentic-sdlc/agents/pattern-hunt.mjs`
 - Memory cleanup: `node ~/agentic-sdlc/agents/rem-sleep.mjs`
 - Behavior tests: `node ~/agentic-sdlc/agents/test-behavior.mjs`
+
+### Automated via OpenClaw Cron (Optional)
+- Weekly REM sleep: `openclaw cron add --name rem-sleep-weekly --cron "0 23 * * 0" --message "Run: node ~/agentic-sdlc/agents/rem-sleep.mjs" --session isolated`
+- Daily cost report: `openclaw cron add --name cost-report-daily --cron "0 6 * * *" --message "Run: node ~/agentic-sdlc/agents/cost-tracker.mjs report" --session isolated`
 
 ### Monthly
 - Behavior audit, agent versioning, compost cleanup, cost review
@@ -133,10 +143,30 @@ node ~/agentic-sdlc/agents/memory-manager.mjs compost <agent> <entry-id>
 
 ## Agent Evolution Protocol
 
+All AGENT.md files MUST have `<!-- version: X.X.X | date: YYYY-MM-DD -->` as the first line. Increment version when adding failure memories or changing operating rules.
+
 When editing any agent's AGENT.md:
 1. **Before:** Snapshot: `node ~/agentic-sdlc/agents/version-snapshot.mjs snapshot`
 2. **After:** Check memories: `node ~/agentic-sdlc/agents/migrate-memory.mjs --check`
-3. **Validate:** Behavior tests: `node ~/agentic-sdlc/agents/test-behavior.mjs`
+3. **Apply:** Flag stale entries for review: `node ~/agentic-sdlc/agents/migrate-memory.mjs --apply`
+4. **Validate:** Behavior tests: `node ~/agentic-sdlc/agents/test-behavior.mjs`
+
+## Session Protocols
+
+### On Session Start
+1. Read CLAUDE.md (this file)
+2. Check task queue status: `node ~/agentic-sdlc/agents/queue-drainer.mjs status`
+3. Read PM dashboard: `pm/DASHBOARD.md`
+4. Pick up next unblocked tasks
+
+### On Context Getting Low
+1. Update PM dashboard with current progress
+2. Mark in-progress tasks with status notes in their task JSON
+3. Commit and push all work
+
+## Git Conventions
+
+Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 
 ## Script Reference
 
@@ -144,7 +174,8 @@ When editing any agent's AGENT.md:
 |--------|---------|
 | `agents/queue-drainer.mjs` | Task queue management |
 | `agents/worker.mjs` | Generate agent prompts for subagent spawning |
-| `agents/seed-queue.mjs` | Initialize task queue from sprint tasks |
+| `agents/seed-queue.mjs` | Initialize task queue from seed-tasks.json template |
+| `agents/review-hook.mjs` | Post-commit review hook (install/run) |
 | `agents/memory-manager.mjs` | 5-layer memory CRUD |
 | `agents/rem-sleep.mjs` | Automated memory consolidation |
 | `agents/migrate-memory.mjs` | Memory migration on prompt upgrades |
@@ -158,6 +189,7 @@ When editing any agent's AGENT.md:
 | `agents/cycles/weekly-review.mjs` | Weekly pattern review + REM sleep |
 | `agents/matrix-client/matrix-cli.mjs` | Matrix communication CLI |
 | `agents/start.sh` | System startup (Matrix + queue status) |
+| `docs/troubleshooting.md` | Common issues and recovery patterns |
 
 ## Getting Started
 

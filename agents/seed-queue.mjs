@@ -1,250 +1,152 @@
 #!/usr/bin/env node
 /**
- * Seeds the task queue from Sprint 0 tasks.
- * Run once to populate tasks/queue/ with JSON task files.
+ * Seeds the task queue from a template file.
+ *
+ * Usage:
+ *   node seed-queue.mjs                          # Uses seed-tasks.json in project root
+ *   node seed-queue.mjs --template <path>         # Uses a specific template file
+ *   node seed-queue.mjs --template <path> --var PROJECT=MyApp --var APP_DIR=src
+ *   node seed-queue.mjs --dry-run                 # Preview without writing files
+ *
+ * Template format: see agents/templates/seed-tasks.json.template
+ *
+ * The script reads tasks from the template, substitutes {{VARIABLE}} placeholders
+ * with values from the template's "variables" section (overridable via --var flags),
+ * and writes individual task JSON files to the task queue directory.
  */
 
-import { writeFileSync, mkdirSync } from 'fs';
-import { resolve, join } from 'path';
+import { writeFileSync, readFileSync, mkdirSync, existsSync } from 'fs';
+import { resolve, join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { loadConfig } from './load-config.mjs';
 
-const QUEUE_DIR = loadConfig().tasksDir;
-mkdirSync(QUEUE_DIR, { recursive: true });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-const tasks = [
-  // Phase 1 — Foundation
-  {
-    id: 'T-001', phase: 1, title: 'Confirm Expo builds on iOS and Android simulators',
-    description: 'Run expo build for both platforms, fix any build errors. Ensure clean compile.',
-    assignee: 'jen', files: ['LinguaFlow/app.json', 'LinguaFlow/package.json'],
-    blockedBy: [],
-  },
-  {
-    id: 'T-002', phase: 1, title: 'Configure .env files for dev/staging/prod',
-    description: 'Set up .env, .env.staging, .env.production with Supabase, Cloudflare, AI API keys. Add .env to .gitignore.',
-    assignee: 'roy', files: ['LinguaFlow/.env', 'LinguaFlow/.gitignore'],
-    blockedBy: [],
-  },
-  {
-    id: 'T-003', phase: 1, title: 'Set up ESLint + Prettier with pre-commit hook',
-    description: 'Configure ESLint for React Native/TypeScript. Add Prettier. Set up husky pre-commit hook.',
-    assignee: 'roy', files: ['LinguaFlow/.eslintrc.js', 'LinguaFlow/.prettierrc', 'LinguaFlow/package.json'],
-    blockedBy: [],
-  },
-  {
-    id: 'T-004', phase: 1, title: 'Configure Sentry for crash reporting',
-    description: 'Install @sentry/react-native, configure for iOS + Android, add error boundary.',
-    assignee: 'roy', files: ['LinguaFlow/src/services/sentry.ts', 'LinguaFlow/app.json'],
-    blockedBy: [],
-  },
-  {
-    id: 'T-005', phase: 1, title: 'Set up GitHub Actions CI pipeline',
-    description: 'Create .github/workflows/ci.yml: lint + type-check + build on every PR.',
-    assignee: 'denholm', files: ['.github/workflows/ci.yml'],
-    blockedBy: [],
-  },
-  {
-    id: 'T-006', phase: 1, title: 'Write migration: users, creators, student_profiles tables',
-    description: 'Create Supabase migration with RLS policies. Users have role field. Creators have bio, avatar, stats. Students have language preferences.',
-    assignee: 'roy', files: ['LinguaFlow/supabase/migrations/'],
-    blockedBy: [],
-  },
-  {
-    id: 'T-007', phase: 1, title: 'Write migration: videos, video_locations, audio_lessons, captions',
-    description: 'Content tables. Videos have creator_id, status enum, transcript fields. Captions support multiple languages.',
-    assignee: 'roy', files: ['LinguaFlow/supabase/migrations/'],
-    blockedBy: ['T-006'],
-  },
-  {
-    id: 'T-008', phase: 1, title: 'Write migration: question_bank, video_question_matches, contributions',
-    description: 'Human-curated question bank. Questions have author_type (staff|creator), skill, CEFR level. Video matches have match_score and method.',
-    assignee: 'roy', files: ['LinguaFlow/supabase/migrations/'],
-    blockedBy: ['T-006'],
-  },
-  {
-    id: 'T-009', phase: 1, title: 'Write migration: quizzes, quiz_attempts, verbal_responses',
-    description: 'Quiz containers reference question_ids. Attempts track answers + score. Verbal responses store audio URLs.',
-    assignee: 'roy', files: ['LinguaFlow/supabase/migrations/'],
-    blockedBy: ['T-008'],
-  },
-  {
-    id: 'T-010', phase: 1, title: 'Write migration: progress, stats, badges, gamification tables',
-    description: 'student_progress, user_stats (points, streak, level), badges, user_badges. Includes XP calculation triggers.',
-    assignee: 'roy', files: ['LinguaFlow/supabase/migrations/'],
-    blockedBy: ['T-006'],
-  },
-  {
-    id: 'T-011', phase: 1, title: 'Write migration: locations table with seed data',
-    description: '4-level hierarchy: dialect_zone > country > region > city. Seed Spanish-speaking locations. Dialect metadata JSON.',
-    assignee: 'roy', files: ['LinguaFlow/supabase/migrations/'],
-    blockedBy: ['T-006'],
-  },
-  {
-    id: 'T-012', phase: 1, title: 'Configure RLS policies for all tables',
-    description: 'Students read own data. Creators read own analytics. Published content public. Admin full access.',
-    assignee: 'roy', files: ['LinguaFlow/supabase/migrations/'],
-    blockedBy: ['T-006', 'T-007', 'T-008', 'T-009', 'T-010'],
-  },
-  {
-    id: 'T-013', phase: 1, title: 'Define design tokens in theme.ts',
-    description: 'Colors, spacing scale, typography scale, border radii, shadows. Export as typed constants.',
-    assignee: 'jen', files: ['LinguaFlow/src/constants/theme.ts'],
-    blockedBy: [],
-  },
-  {
-    id: 'T-014', phase: 1, title: 'Build core UI components (Button, Input, Card, Badge, Avatar)',
-    description: 'All variants, loading states, a11y labels. Use NativeWind. Storybook-style preview if feasible.',
-    assignee: 'jen', files: ['LinguaFlow/src/components/ui/'],
-    blockedBy: ['T-013'],
-  },
-  {
-    id: 'T-015', phase: 1, title: 'Build LoadingSpinner, SkeletonLoader, EmptyState, ErrorState, Toast',
-    description: 'Utility UI components used across all screens. Consistent patterns.',
-    assignee: 'jen', files: ['LinguaFlow/src/components/ui/'],
-    blockedBy: ['T-013'],
-  },
+// ---------------------------------------------------------------------------
+// CLI argument parsing
+// ---------------------------------------------------------------------------
 
-  // Phase 2 — Auth & Onboarding
-  {
-    id: 'T-016', phase: 2, title: 'Wire RegisterScreen to Supabase Auth',
-    description: 'Email + password + role selection. Create user in Supabase. Handle errors (duplicate email, weak password).',
-    assignee: 'roy', files: ['LinguaFlow/src/stores/authStore.ts', 'LinguaFlow/src/hooks/useAuth.ts'],
-    blockedBy: ['T-006'],
-  },
-  {
-    id: 'T-017', phase: 2, title: 'Wire LoginScreen to Supabase Auth',
-    description: 'Email + password login. Persist session in Zustand authStore + AsyncStorage. Auto-login on relaunch.',
-    assignee: 'roy', files: ['LinguaFlow/src/stores/authStore.ts'],
-    blockedBy: ['T-006'],
-  },
-  {
-    id: 'T-018', phase: 2, title: 'Wire ForgotPasswordScreen to Supabase',
-    description: 'Send password reset email via Supabase. Handle success + error states.',
-    assignee: 'roy', files: ['LinguaFlow/src/stores/authStore.ts'],
-    blockedBy: ['T-016'],
-  },
-  {
-    id: 'T-019', phase: 2, title: 'Implement route protection and auth redirect',
-    description: 'Redirect unauthenticated users to login. Redirect based on role (student → feed, creator → dashboard).',
-    assignee: 'jen', files: ['LinguaFlow/app/_layout.tsx'],
-    blockedBy: ['T-016', 'T-017'],
-  },
-  {
-    id: 'T-020', phase: 2, title: 'Build student onboarding flow',
-    description: 'OnboardingScreen: language selector (Spanish ↔ English) + CEFR level picker. Save to student_profiles. Skip if profile exists.',
-    assignee: 'jen', files: ['LinguaFlow/app/(student)/', 'LinguaFlow/src/components/'],
-    blockedBy: ['T-016', 'T-013'],
-  },
-  {
-    id: 'T-021', phase: 2, title: 'Build creator onboarding flow',
-    description: 'Creator profile creation: display name + bio. Save to creators table. Navigate to dashboard.',
-    assignee: 'jen', files: ['LinguaFlow/app/(creator)/'],
-    blockedBy: ['T-016', 'T-013'],
-  },
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const result = { template: null, vars: {}, dryRun: false };
 
-  // Phase 3 — Video Upload & AI Pipeline
-  {
-    id: 'T-022', phase: 3, title: 'Integrate Cloudflare Stream in storage.ts',
-    description: 'Create upload URL, upload file with progress, poll processing status, get playback URL.',
-    assignee: 'roy', files: ['LinguaFlow/src/services/storage.ts'],
-    blockedBy: ['T-002'],
-  },
-  {
-    id: 'T-023', phase: 3, title: 'Wire UploadScreen to storage service',
-    description: 'File picker → upload progress bar → metadata form (title, language, level). Save video record to Supabase.',
-    assignee: 'jen', files: ['LinguaFlow/app/(creator)/upload.tsx'],
-    blockedBy: ['T-022', 'T-007'],
-  },
-  {
-    id: 'T-024', phase: 3, title: 'Integrate Whisper API in transcription.ts',
-    description: 'Send audio URL to Whisper large-v3. Get transcript + word-level timestamps. Store in video record.',
-    assignee: 'moss', files: ['LinguaFlow/src/services/transcription.ts'],
-    blockedBy: ['T-002'],
-  },
-  {
-    id: 'T-025', phase: 3, title: 'Build AI question matching in ai.ts',
-    description: 'Send transcript + language + level to Claude API. Match against question_bank. Return ranked question IDs.',
-    assignee: 'moss', files: ['LinguaFlow/src/services/ai.ts'],
-    blockedBy: ['T-002', 'T-008'],
-  },
-  {
-    id: 'T-026', phase: 3, title: 'Seed question_bank with initial human-authored questions',
-    description: 'Create seed script with 50-100 questions: Spanish/English, A1-B2, all 7 types, vocabulary + grammar + comprehension.',
-    assignee: 'moss', files: ['LinguaFlow/supabase/migrations/'],
-    blockedBy: ['T-008'],
-  },
-  {
-    id: 'T-027', phase: 3, title: 'Wire EditQuizScreen to load matched questions',
-    description: 'Load from video_question_matches. Display for creator review. Accept/remove/edit/add/reorder.',
-    assignee: 'jen', files: ['LinguaFlow/app/(creator)/quiz-editor/'],
-    blockedBy: ['T-025', 'T-014'],
-  },
-  {
-    id: 'T-028', phase: 3, title: 'Build ReviewQuizScreen and PublishScreen',
-    description: 'Preview quiz as student sees it. Publish button sets video status to published.',
-    assignee: 'jen', files: ['LinguaFlow/app/(creator)/'],
-    blockedBy: ['T-027'],
-  },
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--template' && args[i + 1]) {
+      result.template = args[++i];
+    } else if (args[i] === '--var' && args[i + 1]) {
+      const [key, ...valParts] = args[++i].split('=');
+      result.vars[key] = valParts.join('=');
+    } else if (args[i] === '--dry-run') {
+      result.dryRun = true;
+    }
+  }
 
-  // Phase 4 — Student Feed & Quiz Flow
-  {
-    id: 'T-029', phase: 4, title: 'Wire FeedScreen to Supabase video query',
-    description: 'Filter by student target_language + cefr_level. Order by published_at DESC. Infinite scroll + pull-to-refresh.',
-    assignee: 'roy', files: ['LinguaFlow/src/services/videoService.ts', 'LinguaFlow/src/hooks/useVideo.ts'],
-    blockedBy: ['T-007', 'T-017'],
-  },
-  {
-    id: 'T-030', phase: 4, title: 'Build VideoCard component and wire FeedScreen UI',
-    description: 'Thumbnail, title, creator, duration, level badge, view count. Skeleton loaders while loading.',
-    assignee: 'jen', files: ['LinguaFlow/app/(student)/feed.tsx', 'LinguaFlow/src/components/'],
-    blockedBy: ['T-029', 'T-014'],
-  },
-  {
-    id: 'T-031', phase: 4, title: 'Wire VideoPlayerScreen with Cloudflare Stream playback',
-    description: 'Load playback URL from Cloudflare. Play with expo-av. Transcript panel synced to video time.',
-    assignee: 'jen', files: ['LinguaFlow/app/(student)/video/'],
-    blockedBy: ['T-022', 'T-029'],
-  },
-  {
-    id: 'T-032', phase: 4, title: 'Build all 7 quiz question components',
-    description: 'MultipleChoice, FillInBlank, WordSelection, MatchingPairs, Ordering, TrueFalse, VerbalResponse.',
-    assignee: 'jen', files: ['LinguaFlow/src/components/quiz/', 'LinguaFlow/app/(student)/quiz/'],
-    blockedBy: ['T-014'],
-  },
-  {
-    id: 'T-033', phase: 4, title: 'Wire QuizScreen: load quiz, display questions, score',
-    description: 'Load quiz for video. One question at a time. Progress bar. Calculate score. Write quiz_attempt.',
-    assignee: 'roy', files: ['LinguaFlow/src/services/quizService.ts', 'LinguaFlow/src/stores/quizStore.ts'],
-    blockedBy: ['T-009', 'T-029'],
-  },
-  {
-    id: 'T-034', phase: 4, title: 'Wire QuizResultsScreen with XP and streak',
-    description: 'Display score, XP earned, streak update, review wrong answers, retake option. XP animation.',
-    assignee: 'jen', files: ['LinguaFlow/app/(student)/quiz/'],
-    blockedBy: ['T-032', 'T-033'],
-  },
-  {
-    id: 'T-035', phase: 4, title: 'Implement XP and streak engine',
-    description: 'XP award on quiz completion. Streak logic (increment/reset). Level calculation (XP/1000). Update user_stats.',
-    assignee: 'roy', files: ['LinguaFlow/src/services/progressService.ts', 'LinguaFlow/src/utils/scoring.ts'],
-    blockedBy: ['T-010', 'T-033'],
-  },
-];
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Template loading and variable substitution
+// ---------------------------------------------------------------------------
+
+function findTemplate(config, templatePath) {
+  // Explicit --template flag
+  if (templatePath) {
+    const resolved = resolve(templatePath);
+    if (existsSync(resolved)) return resolved;
+    console.error(`ERROR: Template not found: ${resolved}`);
+    process.exit(1);
+  }
+
+  // Look for seed-tasks.json in the project root
+  const projectTemplate = resolve(config.projectDir, 'seed-tasks.json');
+  if (existsSync(projectTemplate)) return projectTemplate;
+
+  // Look in the project's agents/ directory
+  const agentsTemplate = resolve(config.agentsDir, 'seed-tasks.json');
+  if (existsSync(agentsTemplate)) return agentsTemplate;
+
+  // Fall back to the framework's example template
+  const frameworkTemplate = resolve(__dirname, 'templates', 'seed-tasks.json.template');
+  if (existsSync(frameworkTemplate)) {
+    console.log('NOTE: Using framework example template. Copy it to your project and customize:');
+    console.log(`  cp ${frameworkTemplate} ${projectTemplate}`);
+    console.log('');
+    return frameworkTemplate;
+  }
+
+  console.error('ERROR: No seed-tasks.json found.');
+  console.error('Create one in your project root or specify one with --template <path>');
+  console.error(`Example template: ${resolve(__dirname, 'templates', 'seed-tasks.json.template')}`);
+  process.exit(1);
+}
+
+function substituteVariables(text, variables) {
+  return text.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+    if (key in variables) return variables[key];
+    return match; // Leave unresolved placeholders as-is
+  });
+}
+
+function loadTemplate(templatePath, cliVars) {
+  const raw = readFileSync(templatePath, 'utf8');
+  const parsed = JSON.parse(raw);
+
+  // Merge template variables with CLI overrides (CLI wins)
+  const variables = { ...parsed.variables, ...cliVars };
+
+  // Substitute variables in the full JSON (re-stringify, substitute, re-parse)
+  const substituted = substituteVariables(JSON.stringify(parsed.tasks), variables);
+  const tasks = JSON.parse(substituted);
+
+  return { tasks, variables };
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+
+const cliArgs = parseArgs();
+const config = loadConfig();
+const templatePath = findTemplate(config, cliArgs.template);
+
+console.log(`Loading template: ${templatePath}`);
+
+const { tasks, variables } = loadTemplate(templatePath, cliArgs.vars);
+
+if (Object.keys(variables).length > 0) {
+  console.log('Variables:');
+  for (const [key, val] of Object.entries(variables)) {
+    console.log(`  {{${key}}} = ${val}`);
+  }
+  console.log('');
+}
+
+if (cliArgs.dryRun) {
+  console.log(`DRY RUN — would seed ${tasks.length} tasks to ${config.tasksDir}\n`);
+} else {
+  mkdirSync(config.tasksDir, { recursive: true });
+}
 
 // Write each task as a JSON file
 for (const task of tasks) {
   const filename = `${task.id}.json`;
   const taskData = {
     ...task,
-    status: 'pending',
+    status: task.status || 'pending',
     created_at: new Date().toISOString(),
   };
-  writeFileSync(join(QUEUE_DIR, filename), JSON.stringify(taskData, null, 2));
+
+  if (cliArgs.dryRun) {
+    console.log(`  [DRY] ${filename}: ${task.title} (${task.assignee}, ${task.priority || 'MEDIUM'})`);
+  } else {
+    writeFileSync(join(config.tasksDir, filename), JSON.stringify(taskData, null, 2));
+  }
 }
 
-console.log(`Seeded ${tasks.length} tasks to ${QUEUE_DIR}`);
+console.log(`\n${cliArgs.dryRun ? 'Would seed' : 'Seeded'} ${tasks.length} tasks to ${config.tasksDir}`);
 
-// Show summary by agent
+// Show summary by assignee
 const byAgent = {};
 for (const task of tasks) {
   byAgent[task.assignee] = (byAgent[task.assignee] || 0) + 1;
@@ -255,7 +157,7 @@ for (const [agent, count] of Object.entries(byAgent)) {
 }
 
 // Show parallelization opportunities
-const unblocked = tasks.filter(t => t.blockedBy.length === 0);
+const unblocked = tasks.filter(t => !t.blockedBy || t.blockedBy.length === 0);
 console.log(`\nUnblocked tasks (can start immediately): ${unblocked.length}`);
 for (const t of unblocked) {
   console.log(`  [${t.id}] ${t.title} → ${t.assignee}`);

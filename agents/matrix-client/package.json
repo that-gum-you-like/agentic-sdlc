@@ -1,0 +1,12 @@
+{
+  "name": "agentic-sdlc-matrix-client",
+  "version": "1.0.0",
+  "description": "Matrix communication CLI for agentic SDLC agent coordination",
+  "type": "module",
+  "private": true,
+  "main": "matrix-cli.mjs",
+  "bin": {
+    "matrix-cli": "./matrix-cli.mjs"
+  },
+  "dependencies": {}
+}

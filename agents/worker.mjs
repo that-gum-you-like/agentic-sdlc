@@ -6,8 +6,8 @@
  * the full prompt needed to launch a Claude subagent in the micro cycle.
  *
  * Usage:
- *   node agents/worker.mjs --agent roy --task T-006
- *   node agents/worker.mjs --agent moss --task T-008
+ *   node agents/worker.mjs --agent <agent-name> --task T-006
+ *   node agents/worker.mjs --agent <agent-name> --task T-008
  *
  * This script does NOT launch Claude directly — it generates the prompt
  * that the orchestrator (Claude Code main session) uses with the Task tool.
@@ -96,9 +96,9 @@ ${task.acceptance_criteria ? `**Acceptance Criteria:**\n${task.acceptance_criter
 const { agent, task: taskId } = parseArgs();
 
 if (!agent || !taskId) {
-  console.log(`Usage: node agents/worker.mjs --agent <name> --task <task-id>
+  console.log(`Usage: node agents/worker.mjs --agent <agent-name> --task <task-id>
 
-Agents: roy, moss, jen, richmond, denholm, douglas
+Agents: (as defined in your project's agents/ directory)
 Tasks: T-001, T-002, etc.`);
   process.exit(1);
 }

@@ -1,0 +1,121 @@
+{
+  "_comment": "Template for seeding the task queue. Copy this to your project as seed-tasks.json and customize.",
+  "_instructions": "Each task needs: id, phase, title, description, assignee (agent slug), files (affected paths), blockedBy (task IDs). The seed-queue.mjs script reads this file and creates individual task JSON files in tasks/queue/.",
+  "variables": {
+    "PROJECT": "MyProject",
+    "APP_DIR": "src",
+    "TEST_DIR": "src/__tests__"
+  },
+  "tasks": [
+    {
+      "id": "T-001",
+      "phase": 1,
+      "title": "Verify project builds and runs locally",
+      "description": "Run the build command and dev server. Fix any errors. Confirm clean compile.",
+      "assignee": "frontend",
+      "priority": "HIGH",
+      "estimatedTokens": 3500,
+      "files": ["{{APP_DIR}}/package.json"],
+      "blockedBy": []
+    },
+    {
+      "id": "T-002",
+      "phase": 1,
+      "title": "Configure environment variables for dev/staging/prod",
+      "description": "Set up .env files with all required API keys and service URLs. Add .env to .gitignore.",
+      "assignee": "backend",
+      "priority": "HIGH",
+      "estimatedTokens": 3500,
+      "files": [".env", ".env.example", ".gitignore"],
+      "blockedBy": []
+    },
+    {
+      "id": "T-003",
+      "phase": 1,
+      "title": "Set up linting and formatting with pre-commit hook",
+      "description": "Configure ESLint and Prettier (or equivalent). Add a pre-commit hook to enforce style.",
+      "assignee": "backend",
+      "priority": "MEDIUM",
+      "estimatedTokens": 3500,
+      "files": [".eslintrc.*", ".prettierrc", "package.json"],
+      "blockedBy": []
+    },
+    {
+      "id": "T-004",
+      "phase": 1,
+      "title": "Set up CI pipeline",
+      "description": "Create CI configuration (GitHub Actions, etc.) to run lint, type-check, and build on every PR.",
+      "assignee": "release",
+      "priority": "MEDIUM",
+      "estimatedTokens": 20000,
+      "files": [".github/workflows/ci.yml"],
+      "blockedBy": []
+    },
+    {
+      "id": "T-005",
+      "phase": 1,
+      "title": "Write initial database schema or data model",
+      "description": "Define the core data model for the project. Create migrations or schema files.",
+      "assignee": "backend",
+      "priority": "HIGH",
+      "estimatedTokens": 20000,
+      "files": ["{{APP_DIR}}/db/", "{{APP_DIR}}/models/"],
+      "blockedBy": []
+    },
+    {
+      "id": "T-006",
+      "phase": 1,
+      "title": "Build core UI components",
+      "description": "Create foundational UI components: Button, Input, Card, and layout primitives.",
+      "assignee": "frontend",
+      "priority": "HIGH",
+      "estimatedTokens": 20000,
+      "files": ["{{APP_DIR}}/components/ui/"],
+      "blockedBy": []
+    },
+    {
+      "id": "T-007",
+      "phase": 2,
+      "title": "Implement authentication flow",
+      "description": "Build sign-up, login, logout, and session management. Wire to auth provider.",
+      "assignee": "backend",
+      "priority": "HIGH",
+      "estimatedTokens": 35000,
+      "files": ["{{APP_DIR}}/services/auth.*", "{{APP_DIR}}/stores/authStore.*"],
+      "blockedBy": ["T-005"]
+    },
+    {
+      "id": "T-008",
+      "phase": 2,
+      "title": "Build main application screen",
+      "description": "Create the primary screen users see after login. Wire to data layer.",
+      "assignee": "frontend",
+      "priority": "HIGH",
+      "estimatedTokens": 20000,
+      "files": ["{{APP_DIR}}/screens/", "{{APP_DIR}}/pages/"],
+      "blockedBy": ["T-006", "T-007"]
+    },
+    {
+      "id": "T-009",
+      "phase": 3,
+      "title": "Write integration tests for core flows",
+      "description": "Test the end-to-end flows: auth, main CRUD operations, error handling.",
+      "assignee": "backend",
+      "priority": "MEDIUM",
+      "estimatedTokens": 20000,
+      "files": ["{{TEST_DIR}}/integration/"],
+      "blockedBy": ["T-007", "T-008"]
+    },
+    {
+      "id": "T-010",
+      "phase": 3,
+      "title": "Set up error monitoring and crash reporting",
+      "description": "Integrate an error reporting service. Add error boundaries and global error handlers.",
+      "assignee": "backend",
+      "priority": "LOW",
+      "estimatedTokens": 3500,
+      "files": ["{{APP_DIR}}/services/errorReporting.*"],
+      "blockedBy": ["T-002"]
+    }
+  ]
+}
