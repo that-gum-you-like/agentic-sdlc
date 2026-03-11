@@ -107,6 +107,61 @@ Randomness in software must be owned, not scattered. Any property that must be t
 
 ---
 
+---
+
+## Case Study 4: 6,600 Tests Pass, 6 Browser Bugs Ship
+
+**Category:** Missing validation layer (no browser verification)
+
+**What happened:**
+
+A project had comprehensive code-level test coverage: 6,600+ unit tests across 431 suites, integration tests, defeat tests, and behavior tests. All passing. The team also ran 5 Playwright smoke tests post-deploy that checked for DOM text presence on key pages. The framework prescribed unit, integration, defeat, and behavior testing — but had no concept of browser-based E2E verification as a named requirement.
+
+A user opened the production app and found 6 bugs within minutes:
+1. **Refresh crash** — Components on multiple route groups broke on hard browser refresh (state lost, blank screens)
+2. **TypeError on navigation** — Navigating between certain screens threw an unhandled TypeError, crashing the view
+3. **Dead links** — Navigation buttons led to screens with no content (blank pages, placeholder text)
+4. **Broken audio** — Audio playback controls were present but non-functional (no error, just silence)
+5. **Lost state** — User interactions (likes, bookmarks) disappeared after navigating away and returning
+6. **Missing content** — Screens that rendered correctly on first load showed empty containers after any page transition
+
+Every single bug was immediately obvious to anyone who opened a browser. None were detectable by Jest, which runs in jsdom — a simulated DOM that doesn't execute real browser rendering, navigation, or state lifecycle.
+
+**Why it went undetected:**
+
+- Unit tests mock the browser environment. They verify function behavior, not rendering behavior.
+- The 5 existing smoke tests checked "does text X appear on the page?" — not "does user flow Y work end-to-end?"
+- The framework's validation layers (Research, Critique, Code, Statistics) all operate at the code level. No layer required opening a browser.
+- The maturity model mentioned "front-end e2e" in passing but never included it in any checklist or enforced step.
+- The micro cycle was: implement → write tests → run tests → commit. "Run tests" meant Jest. No browser step existed.
+- The Done checklist said "tests pass" — which meant unit tests pass. Browser verification was not a named requirement.
+
+**Mechanism:**
+
+Code-level tests verify that functions behave correctly in isolation. Browser-level tests verify that the assembled application behaves correctly as a system. These are fundamentally different things. A component can pass every unit test while being completely broken in a real browser because:
+- State hydration fails on page refresh (server/client mismatch)
+- Navigation triggers unmount/remount cycles that lose state
+- Async operations race with rendering
+- CSS/layout issues hide or misposition content
+- Event handlers fail to attach after dynamic rendering
+
+The framework had a structural blind spot: it treated "testing" as synonymous with "code-level testing." Browser verification was not in the vocabulary.
+
+**Defeat pattern:**
+
+- **Layer 5 (Browser Verification):** Added as a new validation layer. Tests the system from the user's perspective in a real browser against the built artifact.
+- **Maturity model:** Browser E2E added to Level 4 (Quality) checklist. User journey coverage added to Level 5 (Evolution).
+- **Micro cycle:** Conditional browser E2E step added after unit tests for frontend changes.
+- **Deploy gate:** Browser E2E must pass before production deploy.
+- **Done checklist:** Post-deploy browser verification with screenshot proof required before reporting done.
+- **Required scenarios:** Refresh resilience, navigation completeness, state persistence, demo/seed mode, error states.
+
+**Lesson:**
+
+Unit tests tell you your code is correct. Browser tests tell you your product works. A project with 100% unit test coverage and zero browser verification will ship broken software to users. The framework must name browser verification as a distinct, required tier — not assume it's covered by "testing." If the framework doesn't require someone to open a browser, no one will open a browser.
+
+---
+
 ## Summary Table
 
 | Case Study | Category | Detection Gap | Primary Defeat |
@@ -114,6 +169,7 @@ Randomness in software must be owned, not scattered. Any property that must be t
 | Citation Crisis | Fabricated references | No citation verification step | Layer 1 research validation + checklist |
 | NaN Fallback Disaster | Silent numeric failure | No statistical monitoring | Defeat test + Layer 4 statistics |
 | 150 Math.random() | Uncontrolled randomness | No cross-file pattern detection | AST-based count test + centralized utility |
+| 6,600 Tests Pass, 6 Browser Bugs | Missing browser verification | No validation layer for browser behavior | Layer 5 browser verification + deploy gate |
 
 ---
 

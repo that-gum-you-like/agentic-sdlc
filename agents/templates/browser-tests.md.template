@@ -1,0 +1,136 @@
+# Browser E2E Test Patterns
+
+Browser E2E tests verify that your application works from the user's perspective in a real browser. They complement code-level tests (unit, integration, defeat) by catching failures that only manifest at runtime: broken rendering, dead navigation, lost state, and unhandled errors.
+
+**Key principles:**
+- Run against the production build, not the dev server
+- Express user intent, not implementation details
+- Capture screenshots as proof at each verification step
+- Use a browser automation tool (e.g., Playwright, Puppeteer, or equivalent)
+
+---
+
+## 1. Refresh Resilience
+
+**What it catches:** Components that break on hard browser refresh — blank screens, lost state, hydration errors, unhandled exceptions after reload.
+
+**Why it matters:** Users refresh pages. If your app only works on initial navigation and breaks on F5, it's broken.
+
+**Structure:**
+```
+For each route group in the application:
+  1. Log in (or navigate to entry point)
+  2. Navigate to the route
+  3. Verify content renders correctly
+  4. Hard refresh the browser (full page reload)
+  5. Verify the same content still renders correctly
+  6. Screenshot before and after refresh for comparison
+```
+
+---
+
+## 2. User Journey
+
+**What it catches:** Broken end-to-end flows that span multiple screens — login failures, navigation dead ends, interactions that don't produce results.
+
+**Why it matters:** Individual screens may render correctly but the flow between them may be broken. User journeys test the seams.
+
+**Structure:**
+```
+For each critical user flow:
+  1. Start from the entry point (login, landing page)
+  2. Navigate through the primary flow (browse → select → interact)
+  3. Verify each step produces the expected result
+  4. Complete the flow (submit, save, confirm)
+  5. Verify the final state is correct
+  6. Screenshot at each step
+```
+
+---
+
+## 3. Navigation Completeness
+
+**What it catches:** Dead links, buttons that navigate to blank pages, missing content on target screens.
+
+**Why it matters:** Every clickable element that implies navigation must lead somewhere with real content. A blank page is a bug even if no error is thrown.
+
+**Structure:**
+```
+For each navigation element (links, buttons, tabs, menu items):
+  1. Click the element
+  2. Wait for navigation to complete
+  3. Verify the target page has meaningful content (not blank, not error, not placeholder)
+  4. Navigate back
+  5. Repeat for the next element
+  6. Screenshot any target page with missing or placeholder content
+```
+
+---
+
+## 4. State Persistence
+
+**What it catches:** User interactions that disappear after navigation — likes that unlike themselves, form data that clears, selections that reset.
+
+**Why it matters:** If a user takes an action and navigates away, the action should persist when they return. Lost state destroys user trust.
+
+**Structure:**
+```
+For each stateful interaction (like, bookmark, comment, form entry, selection):
+  1. Perform the interaction
+  2. Verify the state change is reflected in the UI
+  3. Navigate away to a different screen
+  4. Navigate back to the original screen
+  5. Verify the state change is still reflected
+  6. Hard refresh the browser
+  7. Verify the state change survives the refresh
+  8. Screenshot at steps 2, 5, and 7
+```
+
+---
+
+## 5. Demo / Seed Mode
+
+**What it catches:** Demo or seed data flows that fail — missing seed data, broken demo accounts, network calls to production APIs during demo mode.
+
+**Why it matters:** Demo mode is often the first thing a reviewer, stakeholder, or new user sees. If demo mode is broken, the first impression is broken.
+
+**Structure:**
+```
+  1. Log in with demo/seed credentials (or trigger demo mode)
+  2. Verify demo data loads without errors
+  3. Browse through all major sections
+  4. Interact with demo content (play, like, comment, navigate)
+  5. Verify interactions work against seed data
+  6. Verify no network calls to production APIs (if applicable)
+  7. Screenshot the demo experience at key steps
+```
+
+---
+
+## 6. Error Resilience
+
+**What it catches:** Unhandled errors that produce blank screens, TypeErrors in the console, or crashes instead of graceful error UI.
+
+**Why it matters:** Network failures, empty data, and edge cases are inevitable. The app must degrade gracefully, not crash.
+
+**Structure:**
+```
+For each error scenario (network offline, empty data, invalid input, missing auth):
+  1. Trigger the error condition (disable network, clear data, use invalid credentials)
+  2. Navigate to affected screens
+  3. Verify the app shows a meaningful error state (not a blank screen, not a TypeError)
+  4. Verify the app is still navigable (not stuck, not frozen)
+  5. Restore normal conditions
+  6. Verify the app recovers without requiring a full restart
+  7. Screenshot the error state and recovery state
+```
+
+---
+
+## When to Add Browser Tests
+
+- **New screen or route:** Add refresh resilience + navigation completeness tests
+- **New user flow:** Add a user journey test covering the full flow
+- **New stateful interaction:** Add a state persistence test
+- **Bug fix for a browser-only bug:** Add a test for the specific scenario that was broken
+- **Before every production deploy:** Run the full browser E2E suite against the local build

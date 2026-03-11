@@ -57,6 +57,28 @@ After deployment or after a batch of work, statistical validation checks whether
 
 This layer catches failures that are invisible to functional tests: silent fallbacks, degraded-but-passing behavior, and drift over time.
 
+### Layer 5: Browser Verification
+
+Tests the system from the user's perspective in a real browser. This layer catches failures that are invisible to code-level tests: broken rendering after refresh, dead navigation links, lost state across page transitions, and runtime errors that only manifest in a real browser environment.
+
+**Principles:**
+- User journey tests express user intent, not implementation details
+- Tests run against the built artifact (production build), not the dev server
+- Every deployable frontend feature has a corresponding browser test
+- Screenshot proof is captured and reviewed before reporting done
+
+**Required Scenarios:**
+- **Refresh resilience**: Every route group tested for hard refresh survival — navigate to route, reload browser, verify content still renders correctly
+- **Demo/seed mode**: Full login → browse → interact flow verified end-to-end in a real browser
+- **Navigation completeness**: Every UI link and button navigates to a screen with actual content (not blank, not error)
+- **State persistence**: User interactions (likes, comments, bookmarks, form entries) survive navigation and reload
+- **Error states**: Network failures, empty states, and edge cases produce graceful UI — no blank screens, no unhandled TypeErrors
+
+**When to Run:**
+- After any change to screens, navigation, or state management
+- As a deploy pipeline gate (after build, before production deploy)
+- Post-deploy against production URL as smoke verification
+
 ---
 
 ## Pre-Commit and Post-Commit Validation
@@ -163,12 +185,12 @@ Coordination Layer  (task queue, release manager, PM dashboard)
     |
 Agent Layer         (specialist agents: backend, frontend, AI, review, release, docs)
     |
-Validation Layer    (research → critique → code → statistics)
+Validation Layer    (research → critique → code → statistics → browser verification)
     |
 Code Layer          (source code, tests, build artifacts)
 ```
 
-Validation sits between agents and code. No agent output reaches the code layer without passing through validation.
+Validation sits between agents and code. No agent output reaches the code layer without passing through validation. For projects with a frontend, the browser verification layer is the final gate before deploy.
 
 ---
 

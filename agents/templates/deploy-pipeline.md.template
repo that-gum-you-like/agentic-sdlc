@@ -1,0 +1,127 @@
+# Deploy Pipeline Template
+
+A recommended deploy pipeline that includes browser E2E as a gate. Adapt the specific commands to your project's tooling.
+
+**Key principle:** Never deploy code that hasn't been verified in a real browser. Unit tests prove the code is correct; browser tests prove the product works.
+
+---
+
+## Pipeline Stages
+
+```
+1. BUILD          → Production build artifact
+2. SERVE LOCAL    → Serve the build artifact locally
+3. BROWSER E2E    → Run browser E2E suite against local build  ← GATE
+4. DEPLOY         → Push build artifact to hosting platform
+5. POST-DEPLOY    → Run smoke tests against production URL
+6. BROWSER VERIFY → Screenshot production + visual confirmation ← GATE
+7. NOTIFY         → Notify stakeholder with results + screenshots
+```
+
+---
+
+## Stage Details
+
+### 1. Build
+
+Build the production artifact using the project's build tool. The output should be the exact artifact that will be deployed — no additional transformations after this step.
+
+```
+# Example (adapt to your project)
+npm run build
+# or: npx expo export --platform web
+# or: cargo build --release
+```
+
+### 2. Serve Locally
+
+Serve the built artifact on a local port. This simulates the production environment without deploying.
+
+```
+# Example
+npx serve dist --listen 3000
+# or: python -m http.server 3000 --directory dist
+```
+
+### 3. Browser E2E (Pre-Deploy Gate)
+
+Run the full browser E2E suite against the locally-served build. This catches rendering bugs, navigation failures, state issues, and refresh crashes before they reach production.
+
+**This is a gate:** if any browser E2E test fails, the pipeline stops. Fix the issue and restart from step 1.
+
+```
+# Example (adapt to your browser automation tool)
+npx playwright test --project=e2e
+# or: npx cypress run
+# or: use openclaw_browser_test or equivalent
+```
+
+**Minimum scenarios to verify:**
+- Refresh resilience on all route groups
+- Critical user journey (login → navigate → interact → verify)
+- Navigation completeness (no dead links)
+- State persistence (interactions survive navigation)
+
+### 4. Deploy
+
+Push the build artifact to the hosting platform. Use the project's deploy script — never manual commands that skip pipeline steps.
+
+```
+# Example
+bash scripts/deploy.sh
+# or: vercel deploy --prod (only if wrapped in a script that runs all steps)
+```
+
+### 5. Post-Deploy Smoke
+
+Run a quick smoke test suite against the production URL to verify the deploy succeeded and critical paths are accessible.
+
+```
+# Example
+npx playwright test --project=smoke --base-url https://your-production-url.com
+```
+
+### 6. Browser Verification (Post-Deploy Gate)
+
+Open the production URL in a real browser, exercise every changed feature, and capture screenshots as proof.
+
+**This is a gate:** if visual verification reveals any issue, fix and re-deploy before notifying anyone.
+
+**Steps:**
+1. Open production URL in a real browser (or browser automation tool)
+2. Navigate to every screen affected by the change
+3. Screenshot each screen
+4. Visually inspect each screenshot — verify correct rendering, no blank areas, no errors
+5. If any issue is found: fix → rebuild → re-deploy → re-verify
+
+### 7. Notify
+
+Send a notification to the stakeholder with:
+- Summary of what was deployed
+- Production URL
+- Testing instructions (what to tap/click to verify)
+- Screenshots as proof of verification
+
+**Only send this notification after all gates have passed.** Never say "done" before visual verification on production.
+
+---
+
+## Anti-Patterns to Avoid
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|-------------|-------------|-----------------|
+| Deploy without browser E2E | Ships bugs invisible to unit tests | Run browser E2E against local build before deploy |
+| Test against dev server | Dev server behavior differs from production build | Always test against the built artifact |
+| Skip post-deploy verification | Production deploy can introduce issues (CDN, env vars, font paths) | Always verify on the actual production URL |
+| Notify before verifying | Stakeholder opens a broken link | Notify only after all gates pass |
+| Manual deploy commands | Skips pipeline steps (font fixups, smoke tests, etc.) | Always use the deploy script |
+
+---
+
+## Adapting This Template
+
+1. Replace example commands with your project's actual build/serve/test/deploy commands
+2. Add project-specific smoke test scenarios
+3. Configure your browser automation tool for both local and production testing
+4. Set up the notification channel (WhatsApp, Slack, email, etc.)
+5. Document the pipeline in your project's CLAUDE.md or deploy documentation

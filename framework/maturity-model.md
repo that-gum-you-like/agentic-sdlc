@@ -101,6 +101,9 @@ Use this checklist when starting any project. Work through the levels sequential
 - [ ] Post-commit review hook
 - [ ] Defeat tests for known anti-patterns
 - [ ] Static analysis (linting, type checking, semantic analysis)
+- [ ] Browser E2E: critical user flows tested in real browser (login → navigate → interact → verify)
+- [ ] Refresh resilience: route groups survive hard browser refresh
+- [ ] Deploy gate: browser E2E must pass before production deploy
 
 ### Level 5 (Evolution)
 
@@ -109,6 +112,9 @@ Use this checklist when starting any project. Work through the levels sequential
 - [ ] REM Sleep automated (weekly memory consolidation)
 - [ ] Agent versioning with snapshots and rollback capability
 - [ ] Memory migration on version changes
+- [ ] User journey coverage: new features require corresponding browser journey test
+- [ ] Dead link audit: navigation targets verified to have content
+- [ ] State persistence testing: user interactions survive navigation and reload
 
 ### Level 6 (Continuous Improvement + Mastery)
 

@@ -47,10 +47,11 @@ Projects use specialist agents, each with:
 3. Implement code changes
 4. Write tests (happy path + at least one error case)
 5. Run tests
-6. If tests pass → commit → mark task completed
-7. If tests fail → fix → re-run (max 3 attempts, then flag blocked)
-8. Record learnings in memory
-9. Pick next task → repeat
+6. IF frontend files changed (screens, navigation, components, state management): Run browser E2E against local production build using a browser automation tool (e.g., Playwright)
+7. If tests pass → commit → mark task completed
+8. If tests fail → fix → re-run (max 3 attempts, then flag blocked)
+9. Record learnings in memory
+10. Pick next task → repeat
 
 ### Task Queue Commands
 ```bash
@@ -86,7 +87,15 @@ node ~/agentic-sdlc/agents/worker.mjs --agent <name> --task <task-id>
 <test-cmd> --defeat (or project-specific)            # Anti-pattern scans (Tier 3)
 node ~/agentic-sdlc/agents/four-layer-validate.mjs   # Four-layer validation
 node ~/agentic-sdlc/agents/test-behavior.mjs         # Agent prompt quality
+# Browser E2E (Tier 5) — see below
 ```
+
+**Tier 5: Browser E2E**
+- **Run when:** any change to app screens, navigation, state management, or components
+- **What it checks:** real browser rendering, navigation flows, state persistence, refresh resilience
+- **Tools:** browser automation tool (e.g., Playwright, Puppeteer, or equivalent)
+- **Gate:** must pass before deploy to production
+- **How:** build the production artifact → serve locally → run browser E2E against the local build
 
 - **After any code change:** run full test suite
 - **Before every commit:** run defeat tests to catch anti-pattern regressions
@@ -141,7 +150,7 @@ node ~/agentic-sdlc/agents/notify.mjs status
 ## Iteration Cycles
 
 ### Micro (Minutes)
-Pick → Implement → Test → Commit → Next
+Pick → Implement → Test → Browser E2E (if frontend changed) → Commit → Next
 
 ### Daily
 - After every task: update task JSON, record cost
@@ -199,6 +208,20 @@ When editing any agent's AGENT.md:
 1. Update PM dashboard with current progress
 2. Mark in-progress tasks with status notes in their task JSON
 3. Commit and push all work
+
+### Done Checklist (For Frontend Changes)
+
+"Wrote the code" is NOT "shipped the fix." Every step must complete before reporting done:
+
+1. **Tests pass** — unit + defeat + behavior
+2. **Browser E2E pass** — run browser automation (e.g., Playwright) against the production build for any frontend change
+3. **Commit + push** — atomic commit, push to remote
+4. **Deploy via pipeline** — use the project's deploy script/pipeline, never manual deploys
+5. **Post-deploy browser verification** — exercise every changed feature in a real browser against the production URL:
+   - Screenshot at every step
+   - Visually confirm each screenshot shows correct rendering
+   - Fix and re-deploy if any verification fails
+6. **Notify stakeholder LAST** — only after browser verification passes on production
 
 ## Git Conventions
 
