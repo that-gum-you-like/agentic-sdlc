@@ -91,7 +91,7 @@
 ### 11. Cycle Automation
 
 - [x] 11.1 Create `agents/templates/cron-schedule.json.template` with 4 cycle schedules (daily review, weekly pattern hunt + REM sleep, monthly audit, daily cost report)
-- [ ] 11.2 Update `setup.mjs` — when notification provider is OpenClaw, offer to register cron jobs. When not OpenClaw, output manual crontab recommendations.
+- [x] 11.2 Update `setup.mjs` — when notification provider is OpenClaw, offer to register cron jobs. When not OpenClaw, output manual crontab recommendations.
 - [x] 11.3 Create `pm/cycle-history.json` log — all automated cycle runs recorded with type, timestamp, success/failure, summary stats
 - [x] 11.4 Update `daily-review.mjs` and `weekly-review.mjs` — append to cycle-history.json on completion
 - [x] 11.5 Write test: cycle-history entries have correct schema; daily and weekly review append correctly
@@ -133,7 +133,7 @@
 
 - [x] 15.1 Add bottleneck analysis to `daily-review.mjs` — compute: average human task wait time, tasks blocked > 24 hours, approval queue depth. If human tasks are the limiting factor (> 50% of blocked tasks are waiting on human), flag in dashboard.
 - [x] 15.2 Add bottleneck notification — when human tasks have been pending > 24 hours, send notification: "Bottleneck alert: N human tasks pending > 24h. Agent work is blocked on human action."
-- [ ] 15.3 Write test: bottleneck detected when majority of blocked tasks await human; not detected when blocks are technical
+- [x] 15.3 Write test: bottleneck detected when majority of blocked tasks await human; not detected when blocks are technical
 
 ---
 
@@ -141,15 +141,15 @@
 
 ### 16. Cross-Cutting Integration
 
-- [ ] 16.1 Update CLAUDE.md with all new commands, config fields, and script references
-- [ ] 16.2 Update `framework/maturity-model.md` — add specific implementation criteria for Levels 5-6 now that they have concrete scripts
+- [x] 16.1 Update CLAUDE.md with all new commands, config fields, and script references
+- [x] 16.2 Update `framework/maturity-model.md` — add specific implementation criteria for Levels 5-6 now that they have concrete scripts
 - [ ] 16.3 Update `framework/validation-patterns.md` — add Layer 2.5 (NLP) documentation
-- [ ] 16.4 Update `docs/safety-mechanisms.md` — add wellness guardrails and bottleneck detection
-- [ ] 16.5 Update `docs/troubleshooting.md` — add troubleshooting for new features (embedding model not found, spaCy not installed, human task stuck, instance conflict)
-- [ ] 16.6 Update `setup.mjs` — scaffold new config fields (humanWellness, cadence, maxInstances, permissions) in project.json and budget.json during setup
+- [x] 16.4 Update `docs/safety-mechanisms.md` — add wellness guardrails and bottleneck detection
+- [x] 16.5 Update `docs/troubleshooting.md` — add troubleshooting for new features (embedding model not found, spaCy not installed, human task stuck, instance conflict)
+- [x] 16.6 Update `setup.mjs` — scaffold new config fields (humanWellness, cadence, maxInstances, permissions) in project.json and budget.json during setup
 - [ ] 16.7 Run full behavior test suite (`test-behavior.mjs`) — all existing + new checks must pass
 
 ### 17. Backlog Cleanup
 
-- [ ] 17.1 Remove items 1-10 from `openspec/BACKLOG.md` (promoted to this change) — leave only items that were not addressed
-- [ ] 17.2 Update memory file `agentic-sdlc-maturity.md` if it exists, or ensure MEMORY.md index is current
+- [x] 17.1 Remove items 1-10 from `openspec/BACKLOG.md` (promoted to this change) — leave only items that were not addressed
+- [x] 17.2 Update memory file `agentic-sdlc-maturity.md` if it exists, or ensure MEMORY.md index is current

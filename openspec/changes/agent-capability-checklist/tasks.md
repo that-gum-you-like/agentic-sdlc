@@ -37,21 +37,21 @@
 - [x] 4.2 Implement drift detection: PRIMARY source is `pm/capability-log.jsonl` (system-instrumented). For each agent, load last `windowSize` tasks. For each `required` capability, check if the system log has zero entries for `driftThreshold`+ consecutive tasks. Fire `capabilityDrift` notification. Cross-reference agent self-report for skipReasons.
 - [x] 4.2b Implement discrepancy detection: compare system log (what actually ran) vs. agent self-report (what agent claims). Flag when agent says "used: true" but system log has no matching entry ("Agent claimed memoryRecall but no system log entry found for T-015").
 - [x] 4.3 Implement scope creep detection: flag when `notExpected` capability is marked as used.
-- [ ] 4.4 Implement usage aggregation: per-agent, per-capability usage rate over the window. Output as table.
-- [ ] 4.5 Write test: drift detected after 3 consecutive skips; no drift with skipReason; no drift below threshold; scope creep flagged for notExpected usage; usage rates computed correctly
+- [x] 4.4 Implement usage aggregation: per-agent, per-capability usage rate over the window. Output as table.
+- [x] 4.5 Write test: drift detected after 3 consecutive skips; no drift with skipReason; no drift below threshold; scope creep flagged for notExpected usage; usage rates computed correctly
 
 ## 5. Integration with Cycles
 
-- [ ] 5.1 Update `agents/cycles/daily-review.mjs` — call capability-monitor `check` and include "Agent Capability Health" section in PM Dashboard
-- [ ] 5.2 Update `agents/cycles/weekly-review.mjs` — call capability-monitor `report` and include capability usage trends in weekly output
-- [ ] 5.3 Update `agents/notify.mjs` — support `capabilityDrift` trigger in notification config
+- [x] 5.1 Update `agents/cycles/daily-review.mjs` — call capability-monitor `check` and include "Agent Capability Health" section in PM Dashboard
+- [x] 5.2 Update `agents/cycles/weekly-review.mjs` — call capability-monitor `report` and include capability usage trends in weekly output
+- [x] 5.3 Update `agents/notify.mjs` — support `capabilityDrift` trigger in notification config
 
 ## 6. Documentation & Setup
 
-- [ ] 6.1 Update CLAUDE.md — add capability monitoring section with commands, config, and explanation
-- [ ] 6.2 Update `setup.mjs` — scaffold `capabilities.json` from template during project setup, add `capabilityMonitoring` to project.json
-- [ ] 6.3 Add `capability-monitor.mjs` to Script Reference table in CLAUDE.md
-- [ ] 6.4 Update `openspec/BACKLOG.md` — reference this change for tracking
+- [x] 6.1 Update CLAUDE.md — add capability monitoring section with commands, config, and explanation
+- [x] 6.2 Update `setup.mjs` — scaffold `capabilities.json` from template during project setup, add `capabilityMonitoring` to project.json
+- [x] 6.3 Add `capability-monitor.mjs` to Script Reference table in CLAUDE.md
+- [x] 6.4 Update `openspec/BACKLOG.md` — reference this change for tracking
 
 ## 7. Validation
 
