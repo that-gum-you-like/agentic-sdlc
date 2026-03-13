@@ -21,27 +21,22 @@ import { fileURLToPath } from 'url';
 
 import { loadConfig } from './load-config.mjs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
 /**
- * Append one JSONL line to pm/capability-log.jsonl.
+ * Core append logic — writes one JSONL entry to the given file path.
+ * Exported separately so tests can exercise the logic without loadConfig().
  *
- * @param {string} capability - Capability key (e.g. "memoryRecall", "defeatTests")
- * @param {string} agent      - Agent name (e.g. "roy") or "system" if not determinable
- * @param {string} taskId     - Task ID (e.g. "T-015") or "unknown" if not available
- * @param {string} script     - Script filename (e.g. "memory-manager.mjs")
- * @param {string} command    - Command or operation (e.g. "recall", "record")
+ * @param {string} logPath    - Absolute path to the JSONL log file
+ * @param {string} capability - Capability key (e.g. "memoryRecall")
+ * @param {string} agent      - Agent name or "system"
+ * @param {string} taskId     - Task ID or "unknown"
+ * @param {string} script     - Script filename
+ * @param {string} command    - Command / operation name
  */
-export function logCapabilityUsage(capability, agent, taskId, script, command) {
-  const config = loadConfig();
-  const pmDir = resolve(config.projectDir, 'pm');
-
-  if (!existsSync(pmDir)) {
-    mkdirSync(pmDir, { recursive: true });
+export function _appendToLog(logPath, capability, agent, taskId, script, command) {
+  const dir = dirname(logPath);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
   }
-
-  const logPath = resolve(pmDir, 'capability-log.jsonl');
 
   const entry = {
     timestamp: new Date().toISOString(),
@@ -53,4 +48,19 @@ export function logCapabilityUsage(capability, agent, taskId, script, command) {
   };
 
   appendFileSync(logPath, JSON.stringify(entry) + '\n', 'utf8');
+}
+
+/**
+ * Append one JSONL line to pm/capability-log.jsonl for the current project.
+ *
+ * @param {string} capability - Capability key (e.g. "memoryRecall", "defeatTests")
+ * @param {string} agent      - Agent name (e.g. "roy") or "system" if not determinable
+ * @param {string} taskId     - Task ID (e.g. "T-015") or "unknown" if not available
+ * @param {string} script     - Script filename (e.g. "memory-manager.mjs")
+ * @param {string} command    - Command or operation (e.g. "recall", "record")
+ */
+export function logCapabilityUsage(capability, agent, taskId, script, command) {
+  const config = loadConfig();
+  const logPath = resolve(config.projectDir, 'pm', 'capability-log.jsonl');
+  _appendToLog(logPath, capability, agent, taskId, script, command);
 }
