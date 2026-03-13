@@ -37,20 +37,20 @@
 - [x] 4.3 Add `search` command to `agents/memory-manager.mjs` — `memory-manager.mjs search <agent> "<query>"` returns top-5 entries by semantic similarity. Falls back to full recall if embeddings unavailable.
 - [x] 4.4 Update `memory-manager.mjs record` — after writing entry to memory layer, generate and store embedding in vectors.json (if sentence-transformers available). Graceful fallback if not installed.
 - [x] 4.5 Update `worker.mjs` — use semantic search (when available) to inject only relevant memory entries into agent prompt, queried by task title + description. Fall back to full recall otherwise.
-- [ ] 4.6 Write unit tests for semantic-index.mjs — cosine similarity math, top-K selection, graceful fallback when embed.py not available
-- [ ] 4.7 Write integration test: record 10 memory entries, search for related query, verify relevant entries rank higher than irrelevant ones
+- [x] 4.6 Write unit tests for semantic-index.mjs — cosine similarity math, top-K selection, graceful fallback when embed.py not available
+- [x] 4.7 Write integration test: record 10 memory entries, search for related query, verify relevant entries rank higher than irrelevant ones
 
 ### 5. Similarity-Based REM Sleep
 
 - [x] 5.1 Update `rem-sleep.mjs` deduplication — add cosine similarity check (threshold >= 0.92) alongside exact match. When embeddings available, merge near-duplicates (keep newer, compost older).
 - [x] 5.2 Add `--similarity` flag to rem-sleep.mjs that enables similarity-based dedup (defaults to exact-only if embeddings unavailable)
-- [ ] 5.3 Write test: two semantically equivalent but textually different entries are merged; two genuinely different entries are kept
+- [x] 5.3 Write test: two semantically equivalent but textually different entries are merged; two genuinely different entries are kept
 
 ### 6. Semantic Pattern Hunt
 
 - [x] 6.1 Update `pattern-hunt.mjs` — when embeddings available, cluster review issues by cosine similarity (threshold >= 0.85) instead of keyword-only categorization
 - [x] 6.2 Add cluster labeling — most representative term becomes cluster label
-- [ ] 6.3 Write test: "missing null check", "no undefined guard", and "unhandled nullable" are clustered together
+- [x] 6.3 Write test: "missing null check", "no undefined guard", and "unhandled nullable" are clustered together
 
 ### 7. Agent Maturation Tracking
 
