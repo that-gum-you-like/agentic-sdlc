@@ -7,7 +7,7 @@
 3. **Max duration** — Configurable cap (default 120s), auto-stop at limit
 4. **Visual feedback** — Print `🎙 Recording...` on start, `⏹ Processing...` on stop
 5. **Temp file cleanup** — Audio file deleted after successful transcription
-6. **Key binding** — Configurable via `voice-config.json`, default F8. Note: the hardware Fn key cannot be bound by Linux (it's intercepted by keyboard firmware). Use an F-key (F8, F12) or modifier combo (Super+V) instead.
+6. **Key binding** — Configurable via `voice-config.json`, default F6. Note: the hardware Fn key cannot be bound by Linux (it's intercepted by keyboard firmware). Use an F-key (F6, F12) or modifier combo (Super+V) instead.
 7. **Key binding install** — `voice-intake.sh install-key` sets up keyd or xbindkeys config
 8. **Audio device detection** — On startup, verify recording device exists. Clear error if not.
 9. **Dependency check** — Verify `sox` (or `arecord`) is installed. Print install instructions if missing.

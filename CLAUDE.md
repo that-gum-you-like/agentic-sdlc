@@ -386,8 +386,26 @@ Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 | `agents/embed.py` | Local embedding generation (sentence-transformers) |
 | `agents/schema-validator.mjs` | JSON Schema validation for inter-agent data contracts |
 | `agents/capability-monitor.mjs` | Capability drift detection, usage reports, health checks |
+| `agents/voice-intake.sh` | Push-to-talk voice input via Groq Whisper |
+| `agents/voice-config.json` | Voice input configuration (key, mode, model) |
 | `docs/comparison.md` | Framework comparison (vs LangGraph, Autogen, CrewAI, etc.) |
 | `docs/troubleshooting.md` | Common issues and recovery patterns |
+| `docs/voice-intake.md` | Voice input setup and usage guide |
+
+## Voice Input
+
+Push-to-talk voice input via Groq Whisper API. Speak instead of typing.
+
+```bash
+bash ~/agentic-sdlc/agents/voice-intake.sh              # Record → transcribe → type into terminal
+bash ~/agentic-sdlc/agents/voice-intake.sh --mode clip    # Record → transcribe → clipboard
+bash ~/agentic-sdlc/agents/voice-intake.sh --mode mailbox # Record → transcribe → pm/voice-inbox.md
+bash ~/agentic-sdlc/agents/voice-intake.sh --mode stdout  # Record → transcribe → print
+bash ~/agentic-sdlc/agents/voice-intake.sh check          # Verify dependencies
+bash ~/agentic-sdlc/agents/voice-intake.sh install-key    # Set up F6 key binding
+```
+
+Config: `agents/voice-config.json`. Requires `$GROQ_API_KEY`. See `docs/voice-intake.md` for setup.
 
 ## Getting Started
 

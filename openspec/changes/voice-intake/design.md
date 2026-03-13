@@ -12,7 +12,7 @@ The operator wants to press a Function key, speak, and have the transcription fl
 ## Goals / Non-Goals
 
 **Goals:**
-- Push-to-talk via a dedicated key. **Note:** The hardware Fn key is intercepted by keyboard firmware before the OS sees it — it cannot be bound by `keyd` or any Linux tool. Options: (a) use a specific F-key like F8 or F12 that's unlikely to conflict, (b) use a modifier combo like Super+V, (c) remap Fn to a scancode via firmware if the keyboard supports it. Default: **F8**.
+- Push-to-talk via a dedicated key. **Note:** The hardware Fn key is intercepted by keyboard firmware before the OS sees it — it cannot be bound by `keyd` or any Linux tool. Options: (a) use a specific F-key like F6 or F12 that's unlikely to conflict, (b) use a modifier combo like Super+V, (c) remap Fn to a scancode via firmware if the keyboard supports it. Default: **F6**.
 - Audio capture → Groq Whisper API → text, end-to-end < 2 seconds for a 30-second clip
 - Text injected into the active terminal (Claude Code session) via clipboard paste or stdin pipe, **with auto-Enter** so it submits immediately
 - Voice always flows through the SDLC process: transcription → Claude Code → Claude asks clarifying questions → Claude parses into openspec/tasks when ready
@@ -96,7 +96,7 @@ The operator wants to press a Function key, speak, and have the transcription fl
 
 ```json
 {
-  "key": "F8",
+  "key": "F6",
   "mode": "type",
   "autoSubmit": true,
   "model": "whisper-large-v3-turbo",
@@ -119,6 +119,6 @@ The operator wants to press a Function key, speak, and have the transcription fl
 
 ## Resolved Questions
 
-1. **Which key?** — Operator wanted Fn but that's hardware-level (can't bind). Using **F8** as default, configurable. Operator should pick whichever F-key they don't use.
+1. **Which key?** — Operator wanted Fn but that's hardware-level (can't bind). Using **F6** as default, configurable. Operator should pick whichever F-key they don't use.
 2. **Auto-submit?** — **Yes.** Auto-press Enter after typing so it submits to Claude Code immediately.
 3. **How are voice entries processed?** — Voice input always goes through the SDLC process: transcription → Claude Code session → Claude asks clarifying questions → Claude routes to openspec/tasks when the requirement is clear. Voice is just another input channel to Claude, not a separate pipeline. Mailbox mode is the fallback when no Claude session is active.

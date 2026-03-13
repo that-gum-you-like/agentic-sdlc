@@ -1,0 +1,12 @@
+{
+  "key": "F6",
+  "mode": "type",
+  "autoSubmit": true,
+  "model": "whisper-large-v3-turbo",
+  "language": "en",
+  "maxSeconds": 120,
+  "groqApiKeyEnv": "GROQ_API_KEY",
+  "mailboxPath": "pm/voice-inbox.md",
+  "audioFormat": "wav",
+  "sampleRate": 16000
+}
