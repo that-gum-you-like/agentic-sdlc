@@ -398,11 +398,74 @@ Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 | `agents/embed.py` | Local embedding generation (sentence-transformers) |
 | `agents/schema-validator.mjs` | JSON Schema validation for inter-agent data contracts |
 | `agents/capability-monitor.mjs` | Capability drift detection, usage reports, health checks |
+| `agents/garden-roadmap.mjs` | Archive completed roadmap items, keep roadmap focused |
+| `agents/autonomous-launcher.sh` | Headless Claude Code launcher for autonomous operation |
 | `agents/voice-intake.sh` | Push-to-talk voice input via Groq Whisper |
 | `agents/voice-config.json` | Voice input configuration (key, mode, model) |
 | `docs/comparison.md` | Framework comparison (vs LangGraph, Autogen, CrewAI, etc.) |
 | `docs/troubleshooting.md` | Common issues and recovery patterns |
 | `docs/voice-intake.md` | Voice input setup and usage guide |
+
+## Plans Directory Convention
+
+Projects use a `plans/` directory for persistent planning artifacts:
+
+```
+plans/
+├── requirements.md          # REQ-xxx numbered requirements
+├── priorities.md            # Value/complexity scores, priority matrix
+├── roadmap.md               # Phased delivery plan (active work only)
+├── parallelization.md       # Dependency graphs, work streams, contracts
+├── devlog.md                # Append-only narrative progress journal
+├── [feature]-plan.md        # Complex feature plans (linked from roadmap)
+└── completed/
+    └── roadmap-archive.md   # Completed roadmap items with dates
+```
+
+`setup.mjs` creates `plans/` and `plans/completed/` automatically.
+
+### Dev Log Convention
+Agents append entries to `plans/devlog.md` after completing tasks:
+```markdown
+### 2026-03-13 — Roy — T-042
+- Implemented user auth endpoints
+- Added 12 unit tests (all passing)
+- Fixed edge case: empty email validation
+```
+
+### Roadmap Gardening
+Periodically archive completed roadmap items to keep the active roadmap focused:
+```bash
+node ~/agentic-sdlc/agents/garden-roadmap.mjs              # Execute
+node ~/agentic-sdlc/agents/garden-roadmap.mjs --dry-run     # Preview
+node ~/agentic-sdlc/agents/garden-roadmap.mjs --status       # Stats
+```
+
+## Autonomous Operation
+
+Launch agents headlessly for autonomous work:
+```bash
+bash ~/agentic-sdlc/agents/autonomous-launcher.sh --agent roy        # Specific agent
+bash ~/agentic-sdlc/agents/autonomous-launcher.sh --task T-042       # Specific task
+bash ~/agentic-sdlc/agents/autonomous-launcher.sh --dry-run          # Preview prompt
+```
+
+The launcher checks the roadmap/queue, claims work, executes the micro cycle, updates the dev log, and auto-commits. See `framework/prompt-playbook.md` for scheduling patterns.
+
+## Agent Routing
+
+See `framework/agent-routing.md` for the complete "when to use which agent" reference. Quick summary:
+
+| Phase | Agents |
+|-------|--------|
+| Planning | Requirements Engineer → Value Analyst → Product Manager → Parallelization Analyst |
+| Implementation | Backend Dev, Frontend Dev, AI Pipeline (routed by domain patterns) |
+| Quality | Code Reviewer, `four-layer-validate.mjs`, `test-behavior.mjs` |
+| Release | Release Manager, deploy pipeline |
+
+## Prompt Playbook
+
+See `framework/prompt-playbook.md` for ready-to-use prompts covering: planning, execution, roadmap management, review, autonomous operation, deployment, and delegation.
 
 ## Voice Input
 

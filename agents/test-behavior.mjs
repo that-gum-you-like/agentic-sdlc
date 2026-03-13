@@ -206,6 +206,38 @@ check('CLAUDE.md has roadmap discipline section', /Roadmap Discipline/i.test(cla
 check('CLAUDE.md has "never one more thing" rule', /never.*one.*more.*thing|scope.*creep/i.test(claudeMd));
 check('CLAUDE.md references planning agents', /Planning Agents|Requirements Engineer|Value Analyst|Product Manager|Parallelization Analyst/i.test(claudeMd));
 check('CLAUDE.md documents planning pipeline', /Brain dump.*Requirements.*Priorities.*Roadmap.*Parallelization/i.test(claudeMd));
+check('CLAUDE.md documents plans/ directory', /plans\/.*directory|plans\/requirements|plans\/roadmap/i.test(claudeMd));
+check('CLAUDE.md documents autonomous launcher', /autonomous-launcher/i.test(claudeMd));
+check('CLAUDE.md documents dev log convention', /devlog|dev log/i.test(claudeMd));
+check('CLAUDE.md documents roadmap gardening', /garden-roadmap|roadmap garden/i.test(claudeMd));
+check('CLAUDE.md documents prompt playbook', /prompt-playbook|prompt playbook/i.test(claudeMd));
+check('CLAUDE.md documents agent routing', /agent-routing|agent routing/i.test(claudeMd));
+
+// Framework production docs
+console.log('\n📋 Production Workflow Docs:');
+const requiredProductionDocs = {
+  'prompt-playbook.md': [/Planning Phase/, /Execution Phase/, /Autonomous Operation/, /Anti-Pattern/],
+  'agent-routing.md': [/Planning Phase Agents/, /Execution Phase Agents/, /Trigger Condition/, /Decision Flowchart/],
+};
+for (const [doc, patterns] of Object.entries(requiredProductionDocs)) {
+  const dPath = resolve(frameworkDir, doc);
+  if (!existsSync(dPath)) {
+    check(`framework/${doc} exists`, false);
+    continue;
+  }
+  const content = readFileSync(dPath, 'utf8');
+  for (const pattern of patterns) {
+    check(`framework/${doc} contains ${pattern.source}`, pattern.test(content));
+  }
+}
+
+// Autonomous launcher
+const launcherPath = resolve(__dirname, 'autonomous-launcher.sh');
+check('autonomous-launcher.sh exists', existsSync(launcherPath));
+
+// Garden roadmap
+const gardenPath = resolve(__dirname, 'garden-roadmap.mjs');
+check('garden-roadmap.mjs exists', existsSync(gardenPath));
 
 // Maturation regression check
 // Fails if an agent's correction rate increased for 2+ consecutive weeks

@@ -66,7 +66,9 @@ agentic-sdlc/
 │   ├── evolution-timeline.md    # 6-week agent maturation timeline
 │   ├── requirements-guide.md    # REQ-xxx format, 5-component structure, anti-patterns
 │   ├── parallelization-guide.md # Dependency graphs, interface contracts, work streams
-│   └── agent-lifecycle.md       # Create/specialize/terminate, CTO mindset, roadmap discipline
+│   ├── agent-lifecycle.md       # Create/specialize/terminate, CTO mindset, roadmap discipline
+│   ├── prompt-playbook.md       # Ready-to-use prompts for common workflows
+│   └── agent-routing.md         # When to use which agent, trigger conditions
 ├── agents/                      # Scripts and templates
 │   ├── load-config.mjs          # Cross-directory config loader
 │   ├── queue-drainer.mjs        # Task queue management

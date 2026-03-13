@@ -171,6 +171,8 @@ async function main() {
   ensureDir(join(projectDir, 'tasks/completed'));
   ensureDir(join(projectDir, 'openspec/changes'));
   ensureDir(join(projectDir, 'openspec/specs'));
+  ensureDir(join(projectDir, 'plans'));
+  ensureDir(join(projectDir, 'plans/completed'));
   ensureDir(join(projectDir, 'pm'));
 
   // 4. Create project.json
