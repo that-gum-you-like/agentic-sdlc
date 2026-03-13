@@ -195,7 +195,19 @@ async function main() {
         highSeverityFailure: true,
         dailySummary: notifProvider !== 'none',
         approvalTimeout: true,
+        capabilityDrift: true,
       },
+    },
+    humanWellness: {
+      enabled: false,
+      dailyMaxHours: 10,
+      nightCutoff: '23:00',
+      breakIntervalHours: 3,
+    },
+    capabilityMonitoring: {
+      enabled: true,
+      driftThreshold: 3,
+      windowSize: 10,
     },
   };
   writeIfNotExists(
@@ -207,7 +219,12 @@ async function main() {
   // 5. Create budget.json
   const budgetJson = {
     conservationMode: false,
-    agents: modelConfig,
+    agents: Object.fromEntries(
+      Object.entries(modelConfig).map(([agent, cfg]) => [
+        agent,
+        { ...cfg, maxInstances: 1 },
+      ])
+    ),
   };
   writeIfNotExists(
     join(agentsDir, 'budget.json'),
@@ -255,6 +272,31 @@ async function main() {
     const emptyMemory = JSON.stringify({ entries: [] }, null, 2);
     for (const layer of ['long-term', 'medium-term', 'recent', 'compost']) {
       writeIfNotExists(join(memoryDir, `${layer}.json`), emptyMemory, `agents/${agent}/memory/${layer}.json`);
+    }
+  }
+
+  // 7b. Create capabilities.json from template
+  const capTemplateSource = join(SDLC_DIR, 'agents/templates/capabilities.json.template');
+  if (existsSync(capTemplateSource) && agents.length > 0) {
+    try {
+      const capTemplate = JSON.parse(readFileSync(capTemplateSource, 'utf8'));
+      const capabilities = {};
+      for (const agent of agents) {
+        const role = (agentRoles[agent] || '').toLowerCase();
+        // Map role keywords to archetype
+        let archetype = 'backend'; // default
+        if (role.includes('frontend') || role.includes('ui')) archetype = 'frontend';
+        else if (role.includes('review')) archetype = 'reviewer';
+        else if (role.includes('release') || role.includes('deploy')) archetype = 'release';
+        capabilities[agent] = capTemplate[archetype] || capTemplate.backend;
+      }
+      writeIfNotExists(
+        join(agentsDir, 'capabilities.json'),
+        JSON.stringify(capabilities, null, 2),
+        'agents/capabilities.json'
+      );
+    } catch {
+      console.log('  ℹ️  Could not scaffold capabilities.json (template error)');
     }
   }
 
@@ -375,19 +417,24 @@ Use \`/openspec-new-change\` to start, \`/openspec-continue-change\` to advance,
     console.log(`  ✅ Created CLAUDE.md`);
   }
 
-  // 12. Set up daily update cron (if OpenClaw available)
+  // 12. Set up cron jobs (if OpenClaw available)
   try {
     execSync('which openclaw', { stdio: 'pipe' });
-    try {
-      execSync(`openclaw cron add sdlc-update "0 4 * * *" "cd ~/agentic-sdlc && git pull --ff-only"`, {
-        stdio: 'pipe',
-      });
-      console.log(`  ✅ Set up daily SDLC update cron (04:00)`);
-    } catch {
-      console.log(`  ℹ️  OpenClaw cron setup skipped (may already exist)`);
+    const cronJobs = [
+      { name: 'sdlc-update', cron: '0 4 * * *', cmd: 'cd ~/agentic-sdlc && git pull --ff-only', desc: 'daily SDLC update (04:00)' },
+      { name: 'rem-sleep-weekly', cron: '0 23 * * 0', cmd: `cd ${projectDir} && node ~/agentic-sdlc/agents/rem-sleep.mjs`, desc: 'weekly REM sleep (Sun 23:00)' },
+      { name: 'cost-report-daily', cron: '0 6 * * *', cmd: `cd ${projectDir} && node ~/agentic-sdlc/agents/cost-tracker.mjs report`, desc: 'daily cost report (06:00)' },
+    ];
+    for (const job of cronJobs) {
+      try {
+        execSync(`openclaw cron add ${job.name} "${job.cron}" "${job.cmd}"`, { stdio: 'pipe' });
+        console.log(`  ✅ Set up ${job.desc}`);
+      } catch {
+        console.log(`  ℹ️  Cron "${job.name}" skipped (may already exist)`);
+      }
     }
   } catch {
-    console.log(`  ℹ️  OpenClaw not available — skip daily update cron`);
+    console.log(`  ℹ️  OpenClaw not available — skip cron setup`);
   }
 
   // Done!

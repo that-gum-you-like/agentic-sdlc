@@ -20,7 +20,7 @@ The following ideas from the 2026-03-13 curriculum review have been implemented:
 | 8 | Execution Cadence | `curriculum-maturity-advancement` (tasks 10.1-10.4) |
 | 9 | NLP Code Analysis | `curriculum-maturity-advancement` (tasks 14.1-14.5) — partially implemented |
 | 10 | Agent Evolution Timeline | `curriculum-maturity-advancement` (tasks 7.1-7.6) |
-| — | Capability Monitoring | `agent-capability-checklist` (31 tasks) — tasks 5.1–5.3, 6.1–6.4 implemented (2026-03-13) |
+| — | Capability Monitoring | `agent-capability-checklist` (31 tasks) — 29/31 complete, system instrumentation + monitor + docs done (2026-03-13) |
 
 ---
 
