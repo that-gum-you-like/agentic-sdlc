@@ -70,7 +70,7 @@ function getPermissionConstraint(agentName) {
 
 function getCadenceGuidance(agentName) {
   const cadence = config.cadence;
-  if (!cadence?.agentOffsets || !cadence.agentOffsets[agentName]) return '';
+  if (!cadence?.agentOffsets || !(agentName in cadence.agentOffsets)) return '';
 
   const offset = cadence.agentOffsets[agentName];
   const window = cadence.commitWindowMinutes || 15;
