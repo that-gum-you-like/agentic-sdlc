@@ -109,20 +109,32 @@ Use this checklist when starting any project. Work through the levels sequential
 
 - [ ] 5-layer memory per agent (core, long-term, medium-term, recent, compost)
 - [ ] Failure memories populated in `core.json`
-- [ ] REM Sleep automated (weekly memory consolidation)
+- [ ] REM Sleep automated (weekly memory consolidation + similarity dedup)
+- [ ] Semantic memory search via embeddings (`semantic-index.mjs`)
 - [ ] Agent versioning with snapshots and rollback capability
 - [ ] Memory migration on version changes
+- [ ] Agent maturation tracking (6 levels: New → Evolving)
+- [ ] Performance feedback metrics injected into agent prompts
+- [ ] Semantic clustering in pattern-hunt
+- [ ] Capability monitoring — system-instrumented logs + agent self-report
 - [ ] User journey coverage: new features require corresponding browser journey test
 - [ ] Dead link audit: navigation targets verified to have content
 - [ ] State persistence testing: user interactions survive navigation and reload
 
 ### Level 6 (Continuous Improvement + Mastery)
 
-- [ ] Behavior tests for prompt changes
+- [ ] Behavior tests for prompt changes + maturation regression
 - [ ] Per-agent token budgets + circuit breakers
-- [ ] Cost tracking and monitoring
-- [ ] Pattern hunt → defeat test loop
+- [ ] Cost tracking, efficiency metrics, and session hours monitoring
+- [ ] Pattern hunt → defeat test loop (with semantic clustering)
 - [ ] Conservation mode trigger at 80% budget
+- [ ] Instance scaling — multiple instances of same agent type
+- [ ] Execution cadence — staggered commit windows
+- [ ] Human task queue — bidirectional human-agent task flow
+- [ ] Human wellness guardrails — advisory session limits
+- [ ] Bottleneck detection — alerts when human tasks block agent work
+- [ ] Capability drift detection — fire alerts on 3+ consecutive skips
+- [ ] Cycle history logging — all automated runs recorded
 
 ---
 

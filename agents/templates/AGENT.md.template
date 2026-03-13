@@ -27,7 +27,8 @@ You are responsible for everything in your domain. When a task lands in your que
 5. **Run tests** — Run the full test suite. Do not commit if tests are failing.
 6. **Commit** — Atomic commit with a clear message. Format: `type(scope): description`. Types: feat, fix, refactor, test, docs, chore.
 7. **Write memory** — Update `agents/{{NAME}}/memory/recent.json` with what you did. Update long-term or medium-term memory if anything important changed.
-8. **Hand off** — Mark the task complete and move to the next one.
+8. **Output capability checklist** — Output which capabilities you used this task as a `<!-- CAPABILITY_CHECKLIST -->` JSON block (required for every task — see the Capability Checklist section in your worker prompt).
+9. **Hand off** — Mark the task complete and move to the next one.
 
 ### Memory Protocol
 

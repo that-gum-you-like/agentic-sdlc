@@ -91,3 +91,35 @@ Common issues and solutions when running the Agentic SDLC framework.
 1. Run `node ~/agentic-sdlc/agents/queue-drainer.mjs status` to see all tasks.
 2. Reset stuck tasks: `node ~/agentic-sdlc/agents/queue-drainer.mjs reset <id>` for each.
 3. Archive completed tasks: `node ~/agentic-sdlc/agents/queue-drainer.mjs archive`.
+
+---
+
+## New Feature Issues
+
+### Embedding model not found (semantic search)
+- **Install dependencies:** `pip install -r ~/agentic-sdlc/agents/requirements-nlp.txt`
+- **First run downloads model:** `all-MiniLM-L6-v2` (~80MB) downloads on first use. Needs internet once.
+- **Graceful fallback:** If sentence-transformers isn't installed, semantic search falls back to full recall. No error.
+
+### Human task stuck / not unblocking agents
+- **Check task status:** `node ~/agentic-sdlc/agents/queue-drainer.mjs human-status`
+- **Complete manually:** `node ~/agentic-sdlc/agents/queue-drainer.mjs human-complete <HTASK-id>`
+- **Verify unblocks:** The `unblocks` array in the human task JSON lists which agent tasks get unblocked.
+- **Missing human-queue dir:** The directory `tasks/human-queue/` is created automatically on first use.
+
+### Instance conflict (parallel agents)
+- **Check for overlapping files:** Two instances assigned tasks touching the same files will conflict.
+- **Queue-drainer detects this:** File pattern conflict detection serializes overlapping tasks automatically.
+- **Shared budget:** All instances share the base agent's daily token limit. Check with `cost-tracker.mjs report`.
+- **Manual fix:** If instances are fighting, reduce `maxInstances` in `budget.json` to 1.
+
+### Wellness alerts not firing
+- **Check config:** Ensure `humanWellness.enabled: true` in `project.json`.
+- **Check alert dedup:** `pm/wellness-alerts.json` tracks which alerts fired today. Delete it to reset.
+- **Manual check:** `node ~/agentic-sdlc/agents/notify.mjs wellness-check`
+
+### Capability drift not detected
+- **Check log exists:** System-instrumented log is at `pm/capability-log.jsonl`. If empty, scripts may not have the instrumentation yet.
+- **Check capabilities.json:** Ensure `agents/capabilities.json` defines `required` capabilities for each agent.
+- **Run manually:** `node ~/agentic-sdlc/agents/capability-monitor.mjs check`
+- **Check threshold:** Default is 3 consecutive skips. Configurable via `capabilityMonitoring.driftThreshold` in `project.json`.

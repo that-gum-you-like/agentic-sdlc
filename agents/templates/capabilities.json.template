@@ -1,0 +1,33 @@
+{
+  "backend": {
+    "required": ["memoryRecall", "memoryRecord", "defeatTests", "learningRecord", "costTracking"],
+    "conditional": {
+      "browserE2E": "when frontend files changed",
+      "semanticSearch": "when sentence-transformers installed",
+      "cadenceTiming": "when cadence configured"
+    },
+    "notExpected": ["openclawBrowser", "openclawNotify"]
+  },
+  "frontend": {
+    "required": ["memoryRecall", "memoryRecord", "defeatTests", "learningRecord", "costTracking", "browserE2E"],
+    "conditional": {
+      "semanticSearch": "when sentence-transformers installed",
+      "cadenceTiming": "when cadence configured"
+    },
+    "notExpected": ["openclawBrowser", "openclawNotify"]
+  },
+  "reviewer": {
+    "required": ["memoryRecall", "checklistReview"],
+    "conditional": {
+      "semanticSearch": "when sentence-transformers installed"
+    },
+    "notExpected": ["browserE2E", "openclawBrowser", "costTracking"]
+  },
+  "release": {
+    "required": ["deployPipeline", "openclawNotify"],
+    "conditional": {
+      "browserE2E": "when deploy includes frontend changes"
+    },
+    "notExpected": ["defeatTests", "semanticSearch"]
+  }
+}

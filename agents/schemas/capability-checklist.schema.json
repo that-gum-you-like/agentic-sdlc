@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "capability-checklist",
+  "title": "Capability Checklist",
+  "description": "Post-task capability usage checklist produced by each agent",
+  "type": "object",
+  "required": ["taskId", "agent", "timestamp", "capabilities"],
+  "additionalProperties": false,
+  "properties": {
+    "taskId": {
+      "type": "string",
+      "description": "ID of the task this checklist covers"
+    },
+    "agent": {
+      "type": "string",
+      "description": "Agent name that produced this checklist"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the checklist was produced"
+    },
+    "capabilities": {
+      "type": "object",
+      "description": "Map of capability keys to usage records",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["used"],
+        "additionalProperties": false,
+        "properties": {
+          "used": {
+            "type": "boolean",
+            "description": "Whether this capability was used on this task"
+          },
+          "skipReason": {
+            "type": "string",
+            "description": "Why the capability was skipped (required when used=false for required capabilities)"
+          }
+        }
+      }
+    }
+  }
+}

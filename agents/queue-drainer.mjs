@@ -21,6 +21,7 @@ import { resolve, join } from 'path';
 import { execSync } from 'child_process';
 import { loadConfig } from './load-config.mjs';
 import { triggerNotification, notifyHumanTask, runWellnessCheck } from './notify.mjs';
+import { logCapabilityUsage } from './capability-logger.mjs';
 
 let validate = null;
 try {
@@ -98,6 +99,37 @@ function saveHumanTask(task) {
 
 function saveTask(task) {
   writeFileSync(join(TASKS_DIR, task._file), JSON.stringify(task, null, 2));
+}
+
+/**
+ * Parse a <!-- CAPABILITY_CHECKLIST --> JSON block from agent output text.
+ * Returns the parsed checklist object, or null if not found / malformed.
+ */
+function parseCapabilityChecklist(taskId, outputText) {
+  if (!outputText) return null;
+
+  const startTag = '<!-- CAPABILITY_CHECKLIST -->';
+  const endTag = '<!-- /CAPABILITY_CHECKLIST -->';
+
+  const startIdx = outputText.indexOf(startTag);
+  const endIdx = outputText.indexOf(endTag);
+
+  if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
+    return null;
+  }
+
+  const raw = outputText.slice(startIdx + startTag.length, endIdx).trim();
+
+  // Strip markdown code fences if present
+  const stripped = raw.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
+
+  try {
+    const parsed = JSON.parse(stripped);
+    return parsed;
+  } catch {
+    console.warn(`Warning: malformed capability checklist JSON for ${taskId} — storing as null`);
+    return null;
+  }
 }
 
 function determineAgent(task) {
@@ -539,6 +571,7 @@ switch (cmd) {
     if (!task) { console.error(`Task ${taskId} not found`); break; }
     if (!agentName) { console.error('Usage: claim <task-id> <agent>'); break; }
     if (validate) {
+      try { logCapabilityUsage('schemaValidation', agentName, taskId, 'queue-drainer.mjs', 'claim'); } catch {}
       const claimData = {
         taskId: taskId,
         agentName: agentName,
@@ -574,6 +607,10 @@ switch (cmd) {
   case 'complete': {
     const taskId = args[0];
     const testStatus = args[1]; // 'passing' or 'failing'
+    // Optional: --output <path-to-agent-output-file> for checklist parsing
+    const outputIdx = args.indexOf('--output');
+    const agentOutputPath = outputIdx !== -1 ? args[outputIdx + 1] : null;
+
     const task = tasks.find(t => t.id === taskId);
     if (!task) { console.error(`Task ${taskId} not found`); break; }
 
@@ -583,7 +620,26 @@ switch (cmd) {
       break;
     }
 
+    // Parse capability checklist from agent output (3.1 / 3.2)
+    let capabilityChecklist = null;
+    if (agentOutputPath && existsSync(agentOutputPath)) {
+      try {
+        const agentOutput = readFileSync(agentOutputPath, 'utf8');
+        capabilityChecklist = parseCapabilityChecklist(taskId, agentOutput);
+        if (capabilityChecklist === null) {
+          console.warn(`Warning: no capability checklist found in output for ${taskId}`);
+        }
+      } catch {
+        console.warn(`Warning: no capability checklist found in output for ${taskId}`);
+      }
+    } else {
+      // No output file provided — warn but do not block completion (3.2)
+      console.warn(`Warning: no capability checklist found in output for ${taskId}`);
+    }
+    task.capabilityChecklist = capabilityChecklist;
+
     if (validate) {
+      try { logCapabilityUsage('schemaValidation', task.claimedBy || 'system', taskId, 'queue-drainer.mjs', 'complete'); } catch {}
       const completeData = {
         taskId: taskId,
         agentName: task.claimedBy || 'unknown',

@@ -292,6 +292,38 @@ Agents mature through 6 levels: New → Corrected → Remembering → Teaching �
 - `test-behavior.mjs` includes regression detection (correction rate spikes)
 - `daily-review.mjs` dashboard shows maturation level, weeks at level, and trend
 
+## Capability Monitoring
+
+Tracks which capabilities (memory, tests, notifications, etc.) agents actually use per task. Uses dual-layer tracking:
+
+- **System-instrumented logs (primary):** Each capability script (`memory-manager.mjs`, `cost-tracker.mjs`, `notify.mjs`, etc.) appends a JSONL line to `pm/capability-log.jsonl` as a side effect of running. Agents cannot skip or falsify these entries.
+- **Agent self-report (secondary):** Agents output a `<!-- CAPABILITY_CHECKLIST -->` JSON block at task completion with `skipReason` for unused capabilities. Provides context the system log can't infer.
+
+Drift is detected when a `required` capability has zero system-log entries for 3+ consecutive tasks without a valid `skipReason`. The monitor cross-references both sources: if an agent claims it used memory but the system log has no matching entry, that discrepancy is flagged.
+
+### Commands
+```bash
+node ~/agentic-sdlc/agents/capability-monitor.mjs check    # Scan recent tasks for drift
+node ~/agentic-sdlc/agents/capability-monitor.mjs report   # Full per-agent usage rate table
+node ~/agentic-sdlc/agents/capability-monitor.mjs status   # Quick health check
+```
+
+### Config
+Add to `project.json`:
+```json
+{
+  "capabilityMonitoring": {
+    "enabled": true,
+    "driftThreshold": 3,
+    "windowSize": 10
+  }
+}
+```
+
+Per-agent expected capabilities are defined in `agents/capabilities.json` (scaffolded by `setup.mjs`). Each agent entry has `required`, `conditional`, and `notExpected` capability lists. Using a `notExpected` capability triggers a scope creep alert.
+
+Enable drift notifications by adding `"capabilityDrift": true` to `notification.triggers` in `project.json`.
+
 ## Performance Feedback
 
 Cost-tracker computes per-agent efficiency metrics:
@@ -335,6 +367,7 @@ Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 | `agents/semantic-index.mjs` | Vector embedding index for semantic memory search |
 | `agents/embed.py` | Local embedding generation (sentence-transformers) |
 | `agents/schema-validator.mjs` | JSON Schema validation for inter-agent data contracts |
+| `agents/capability-monitor.mjs` | Capability drift detection, usage reports, health checks |
 | `docs/comparison.md` | Framework comparison (vs LangGraph, Autogen, CrewAI, etc.) |
 | `docs/troubleshooting.md` | Common issues and recovery patterns |
 

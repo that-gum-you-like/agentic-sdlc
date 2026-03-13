@@ -23,6 +23,7 @@ import { dirname } from 'path';
 
 import { loadConfig } from './load-config.mjs';
 import { triggerNotification } from './notify.mjs';
+import { logCapabilityUsage } from './capability-logger.mjs';
 
 let semanticIndex = null;
 try {
@@ -59,6 +60,8 @@ function recall(agent) {
     console.error(`Unknown agent: ${agent}. Available: ${AGENTS.join(', ')}`);
     process.exit(1);
   }
+
+  try { logCapabilityUsage('memoryRecall', agent, process.env.TASK_ID || 'unknown', 'memory-manager.mjs', 'recall'); } catch {}
 
   console.log(`\n🧠 Memory Recall for ${agent}`);
   console.log('═'.repeat(50));
@@ -206,6 +209,8 @@ function record(agent, layer, content) {
     process.exit(1);
   }
 
+  try { logCapabilityUsage('memoryRecord', agent, process.env.TASK_ID || 'unknown', 'memory-manager.mjs', 'record'); } catch {}
+
   if (layer === 'core') {
     // For core, add to failures array
     const core = loadMemory(agent, 'core');
@@ -334,6 +339,8 @@ function searchMemory(agent, query, topK = 5) {
     console.error(`Unknown agent: ${agent}. Available: ${AGENTS.join(', ')}`);
     process.exit(1);
   }
+
+  try { logCapabilityUsage('memoryRecall', agent, process.env.TASK_ID || 'unknown', 'memory-manager.mjs', 'search'); } catch {}
 
   if (!semanticIndex) {
     console.warn('Semantic search not available — falling back to full recall');

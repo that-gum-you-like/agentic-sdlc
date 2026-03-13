@@ -17,6 +17,7 @@ import { execSync } from 'child_process';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { loadConfig } from './load-config.mjs';
+import { logCapabilityUsage } from './capability-logger.mjs';
 
 // Optional semantic clustering via embeddings
 let clusterBySimilarity;
@@ -998,6 +999,8 @@ function formatHumanReadable(result) {
 // ---------------------------------------------------------------------------
 
 async function main() {
+  try { logCapabilityUsage('patternHunt', process.env.AGENT || 'system', process.env.TASK_ID || 'unknown', 'pattern-hunt.mjs', 'run'); } catch {}
+
   const args = process.argv.slice(2);
   const jsonMode = args.includes('--json');
   const dryRun = args.includes('--dry-run');

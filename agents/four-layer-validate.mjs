@@ -26,6 +26,7 @@ import { fileURLToPath } from 'url';
 import { glob as globFn } from 'fs/promises';
 
 import { loadConfig } from './load-config.mjs';
+import { logCapabilityUsage } from './capability-logger.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const _config = loadConfig();
@@ -596,6 +597,8 @@ async function runLayer4(targetFiles) {
 // ---------------------------------------------------------------------------
 
 async function main() {
+  try { logCapabilityUsage('defeatTests', process.env.AGENT || 'system', process.env.TASK_ID || 'unknown', 'four-layer-validate.mjs', 'run'); } catch {}
+
   const targetFiles = await resolveTargetFiles();
 
   const [layer1, layer2, layer3, layer4] = await Promise.all([

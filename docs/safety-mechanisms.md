@@ -158,6 +158,60 @@ node agents/queue-drainer.mjs complete T-999 failing
 
 **Configuration:** Set `"approvalRequired": true` on individual task JSON files. The approval gate is opt-in — tasks without this field complete normally.
 
+## 7. Human Wellness Guardrails
+
+**Purpose:** Protect the human operator from overwork. Advisory alerts, never blocking.
+
+**Configuration:** Add to `project.json`:
+```json
+{
+  "humanWellness": {
+    "enabled": true,
+    "dailyMaxHours": 10,
+    "nightCutoff": "23:00",
+    "breakIntervalHours": 3
+  }
+}
+```
+
+**How it works:**
+- `cost-tracker.mjs` tracks wall-clock session hours (30-min gap = new session)
+- `notify.mjs wellness-check` fires alerts when thresholds are exceeded
+- Queue-drainer calls wellness check after each task assignment (wrapped in try/catch)
+- Alerts are deduplicated per threshold per day via `pm/wellness-alerts.json`
+
+**Key principle:** Wellness alerts are **advisory only**. The queue is never paused or blocked.
+
+## 8. Bottleneck Detection
+
+**Purpose:** Alert when human tasks are the limiting factor blocking agent work.
+
+**How it fires:** During `daily-review.mjs`, if >50% of blocked tasks are waiting on human action AND human tasks have been pending >24 hours, a bottleneck notification is sent.
+
+**What you see:**
+```
+⚠ Bottleneck alert: 3 human tasks pending > 24h. Agent work is blocked on human action.
+```
+
+## 9. Capability Drift Detection
+
+**Purpose:** Detect when agents silently stop using capabilities they're supposed to use.
+
+**How it works:** System-instrumented logs (`pm/capability-log.jsonl`) track every capability invocation. `capability-monitor.mjs check` scans for required capabilities with zero log entries across 3+ consecutive tasks.
+
+**Alerts:**
+- **Drift:** Required capability skipped 3+ times without justification
+- **Scope creep:** Agent uses a `notExpected` capability
+- **Discrepancy:** Agent self-reports usage but system log has no matching entry
+
+## 10. Permission Tiers
+
+**Purpose:** Principle of least privilege per agent.
+
+**Tiers:** `read-only` < `edit-gated` < `full-edit` (default) < `deploy`
+
+Queue-drainer enforces permissions on task assignment. Worker injects constraints into agent prompts.
+
 ## Verification Checklist
 
 Run these to confirm all six mechanisms are working:

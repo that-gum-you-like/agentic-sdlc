@@ -16,6 +16,7 @@ import { readFileSync, existsSync, symlinkSync, unlinkSync, chmodSync } from 'fs
 import { resolve, dirname, join, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { loadConfig } from './load-config.mjs';
+import { logCapabilityUsage } from './capability-logger.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -112,6 +113,8 @@ function parseChecklist(markdownContent) {
 // ---------------------------------------------------------------------------
 
 function reviewCommit(config, reviewerName, commitSha) {
+  try { logCapabilityUsage('checklistReview', reviewerName, process.env.TASK_ID || 'unknown', 'review-hook.mjs', 'run'); } catch {}
+
   const diff = git(`diff ${commitSha}~1 ${commitSha}`);
   const message = git(`log -1 --pretty=%B ${commitSha}`);
   const changedFiles = git(`diff --name-only ${commitSha}~1 ${commitSha}`).split('\n').filter(Boolean);

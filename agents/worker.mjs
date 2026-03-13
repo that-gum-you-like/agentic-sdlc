@@ -18,6 +18,25 @@ import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
+// Canonical capability list (task 2.2)
+const CANONICAL_CAPABILITIES = [
+  'memoryRecall',
+  'memoryRecord',
+  'semanticSearch',
+  'defeatTests',
+  'schemaValidation',
+  'browserE2E',
+  'openclawBrowser',
+  'openclawNotify',
+  'costTracking',
+  'learningRecord',
+  'cadenceTiming',
+  'checklistReview',
+  'humanTaskCreate',
+  'patternHunt',
+  'permissionCompliance',
+];
+
 import { loadConfig } from './load-config.mjs';
 import { computeEfficiencyMetrics } from './cost-tracker.mjs';
 
@@ -49,6 +68,72 @@ function parseArgs() {
 function loadFile(path) {
   if (!existsSync(path)) return null;
   return readFileSync(path, 'utf8');
+}
+
+function loadCapabilitiesConfig() {
+  const capPath = resolve(AGENTS_DIR, 'capabilities.json');
+  if (!existsSync(capPath)) return null;
+  try {
+    return JSON.parse(readFileSync(capPath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function generateCapabilityChecklistSection(agentName) {
+  const capConfig = loadCapabilitiesConfig();
+  const agentCaps = capConfig?.[agentName];
+
+  const required = agentCaps?.required || [];
+  const conditional = agentCaps?.conditional || {};
+  const notExpected = agentCaps?.notExpected || [];
+
+  // Build the template JSON for the agent to fill in
+  const template = {};
+  for (const cap of CANONICAL_CAPABILITIES) {
+    if (notExpected.includes(cap)) continue; // skip notExpected from template
+    const isRequired = required.includes(cap);
+    const condReason = conditional[cap];
+    if (isRequired) {
+      template[cap] = { used: true };
+    } else if (condReason) {
+      template[cap] = { used: false, skipReason: `(conditional: ${condReason})` };
+    } else {
+      template[cap] = { used: false, skipReason: '(not applicable to this task)' };
+    }
+  }
+
+  const requiredList = required.length > 0 ? `Required (must use every task): ${required.join(', ')}` : 'No required capabilities configured';
+  const conditionalList = Object.keys(conditional).length > 0
+    ? Object.entries(conditional).map(([k, v]) => `  - ${k}: ${v}`).join('\n')
+    : '  (none)';
+  const notExpectedList = notExpected.length > 0 ? `NOT expected (do not use): ${notExpected.join(', ')}` : '';
+
+  return `
+## Capability Checklist (Required Output)
+
+At the end of your task, you MUST output a \`<!-- CAPABILITY_CHECKLIST -->\` JSON block. This is non-negotiable — it is how the system tracks capability usage and detects drift.
+
+**Your capabilities for this task:**
+${requiredList}
+Conditional (use when condition applies):
+${conditionalList}
+${notExpectedList ? notExpectedList + '\n' : ''}
+For each capability you did NOT use, provide a \`skipReason\` explaining why.
+
+Output this block as the FINAL thing in your response, after all code changes:
+
+\`\`\`
+<!-- CAPABILITY_CHECKLIST -->
+${JSON.stringify({
+    taskId: '(fill in task id)',
+    agent: agentName,
+    timestamp: '(fill in ISO timestamp)',
+    capabilities: template,
+  }, null, 2)}
+<!-- /CAPABILITY_CHECKLIST -->
+\`\`\`
+`;
 }
 
 function loadMemory(agentName) {
@@ -154,6 +239,7 @@ function generatePrompt(agentName, task, agentMd, memories) {
   const permissionConstraint = getPermissionConstraint(agentName);
   const cadenceGuidance = getCadenceGuidance(agentName);
   const instanceSection = generateInstanceSection(task);
+  const capabilitySection = generateCapabilityChecklistSection(agentName);
 
   let efficiencySummary = '';
   try {
@@ -220,7 +306,7 @@ Do NOT fabricate credentials, make irreversible design choices on behalf of the 
 - Do NOT stop to confirm — keep going
 - Small files, small commits
 - Every commit must include tests
-`;
+${capabilitySection}`;
 }
 
 // Main

@@ -13,6 +13,7 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 import { loadConfig } from './load-config.mjs';
+import { logCapabilityUsage } from './capability-logger.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -36,6 +37,8 @@ function loadBudget() {
 }
 
 function record(agent, taskId, inputTokens, outputTokens) {
+  try { logCapabilityUsage('costTracking', agent, taskId, 'cost-tracker.mjs', 'record'); } catch {}
+
   const parsedInput = parseInt(inputTokens, 10);
   const parsedOutput = parseInt(outputTokens, 10);
   if (isNaN(parsedInput) || isNaN(parsedOutput) || parsedInput < 0 || parsedOutput < 0) {

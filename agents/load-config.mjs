@@ -159,6 +159,17 @@ export function loadConfig() {
       approvalsDir: resolve(raw.projectDir, 'pm/approvals'),
       triggers: raw.notification?.triggers || {},
     },
+    // Capability monitoring (optional)
+    // NOTE: setup.mjs should scaffold agents/capabilities.json from
+    // agents/templates/capabilities.json.template during project setup,
+    // and add a default capabilityMonitoring block to project.json.
+    capabilityMonitoring: {
+      enabled: raw.capabilityMonitoring?.enabled !== undefined ? raw.capabilityMonitoring.enabled : true,
+      driftThreshold: raw.capabilityMonitoring?.driftThreshold ?? 3,
+      windowSize: raw.capabilityMonitoring?.windowSize ?? 10,
+    },
+    // Paths used by capability monitoring
+    capabilityLogPath: resolve(raw.projectDir, 'pm/capability-log.jsonl'),
   };
 
   return _cached;

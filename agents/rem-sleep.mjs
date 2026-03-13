@@ -25,6 +25,7 @@ try {
 }
 
 import { loadConfig } from './load-config.mjs';
+import { logCapabilityUsage } from './capability-logger.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -61,6 +62,8 @@ function daysSince(dateStr) {
 }
 
 async function consolidateAgent(agent) {
+  try { logCapabilityUsage('remSleep', agent, process.env.TASK_ID || 'unknown', 'rem-sleep.mjs', 'consolidate'); } catch {}
+
   console.log(`\n🌙 ${agent}`);
 
   const recent = loadMemory(agent, 'recent');

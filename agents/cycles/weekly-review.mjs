@@ -208,6 +208,28 @@ consolidateMemories();
 taskSummary();
 computeMaturationMetrics();
 
+// Capability Usage Trends (5.2)
+try {
+  const { generateCapabilityReport } = await import('../capability-monitor.mjs');
+  const report = await generateCapabilityReport();
+  if (report && report.rows && report.rows.length > 0) {
+    console.log('\n📋 Capability Usage Trends');
+    console.log('─'.repeat(40));
+    console.log('  Agent          | Capability       | Usage Rate');
+    console.log('  ' + '─'.repeat(50));
+    for (const row of report.rows) {
+      const agent = (row.agent || '').padEnd(14);
+      const cap = (row.capability || '').padEnd(16);
+      const rate = typeof row.usageRate === 'number' ? `${Math.round(row.usageRate * 100)}%` : 'n/a';
+      console.log(`  ${agent} | ${cap} | ${rate}`);
+    }
+  } else {
+    console.log('\n📋 Capability Usage Trends: No data available yet.');
+  }
+} catch {
+  // capability-monitor not yet installed — skip silently
+}
+
 // Record cycle history
 {
   const pmDir = resolve(ROOT, 'pm');

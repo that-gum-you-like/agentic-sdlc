@@ -298,6 +298,25 @@ if (staleHumanTasks.length > 0) {
   }
 }
 
+// Agent Capability Health (5.1)
+try {
+  const { checkCapabilityHealth } = await import('../capability-monitor.mjs');
+  const health = await checkCapabilityHealth();
+  if (health && health.alerts && health.alerts.length > 0) {
+    for (const alert of health.alerts) {
+      if (alert.type === 'drift') {
+        console.log(`\nAgent Capability Health: DRIFT ALERT — ${alert.agent}: ${alert.capability} skipped ${alert.consecutiveSkips}x consecutive`);
+      } else if (alert.type === 'scopeCreep') {
+        console.log(`\nAgent Capability Health: SCOPE CREEP — ${alert.agent}: unexpected capability ${alert.capability} was used`);
+      }
+    }
+  } else {
+    console.log('\nAgent Capability Health: All agents nominal. No drift alerts.');
+  }
+} catch {
+  // capability-monitor not yet installed — skip silently
+}
+
 // Record cycle history
 recordCycleHistory('daily-review', { completed: completedCount, inProgress: inProgressCount, blocked: blockedCount, total: tasks.length });
 

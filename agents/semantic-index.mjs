@@ -19,6 +19,7 @@ import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
 
 import { loadConfig } from './load-config.mjs';
+import { logCapabilityUsage } from './capability-logger.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -132,6 +133,8 @@ function getAllMemoryEntries(agent) {
  * Build or rebuild the full embedding index for an agent.
  */
 function buildIndex(agent) {
+  try { logCapabilityUsage('semanticEmbed', agent, process.env.TASK_ID || 'unknown', 'semantic-index.mjs', 'embed'); } catch {}
+
   if (!pythonAvailable()) {
     console.warn('⚠️  sentence-transformers not available. Install: pip install sentence-transformers');
     return;
@@ -186,6 +189,8 @@ function addEntry(agent, entryId, content) {
  * Returns top-K entries ranked by relevance.
  */
 function search(agent, query, topK = 5) {
+  try { logCapabilityUsage('semanticSearch', agent, process.env.TASK_ID || 'unknown', 'semantic-index.mjs', 'search'); } catch {}
+
   const vectors = loadVectors(agent);
   const entryIds = Object.keys(vectors.entries);
 

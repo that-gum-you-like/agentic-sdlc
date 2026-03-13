@@ -19,6 +19,7 @@ import { execSync } from 'child_process';
 import { randomBytes } from 'crypto';
 
 import { loadConfig } from './load-config.mjs';
+import { logCapabilityUsage } from './capability-logger.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -73,6 +74,8 @@ function sendViaNone(message) {
 }
 
 function sendNotification(message, mediaPath) {
+  try { logCapabilityUsage('openclawNotify', process.env.AGENT || 'system', process.env.TASK_ID || 'unknown', 'notify.mjs', 'send'); } catch {}
+
   switch (NOTIF.provider) {
     case 'openclaw':
       return sendViaOpenclaw(message, mediaPath);
@@ -599,9 +602,23 @@ export function runWellnessCheck() {
 // Exported trigger helpers (for use by other scripts)
 // ---------------------------------------------------------------------------
 
+// Recognized trigger types:
+//   blocker, budgetAlert, deployComplete, highSeverityFailure,
+//   dailySummary, approvalTimeout, capabilityDrift
 export function triggerNotification(triggerName, message, mediaPath) {
   if (!NOTIF.triggers[triggerName]) return false;
   return sendNotification(message, mediaPath);
+}
+
+// ---------------------------------------------------------------------------
+// Capability drift notification (5.3)
+// Fires when capability-monitor detects 3+ consecutive skips of a required capability.
+// Enable by adding "capabilityDrift": true to notification.triggers in project.json.
+// ---------------------------------------------------------------------------
+
+export function notifyCapabilityDrift(agent, capability, consecutiveSkips) {
+  const message = `⚠️ CAPABILITY DRIFT: ${agent} has skipped ${capability} for ${consecutiveSkips} consecutive tasks`;
+  return triggerNotification('capabilityDrift', message);
 }
 
 // ---------------------------------------------------------------------------
@@ -686,5 +703,9 @@ Options for approve:
 Providers (set in project.json → notification.provider):
   openclaw           Send via OpenClaw/WhatsApp
   file               Append to local mailbox file
-  none               Print to stdout (default)`);
+  none               Print to stdout (default)
+
+Trigger types (set in project.json → notification.triggers):
+  blocker, budgetAlert, deployComplete, highSeverityFailure,
+  dailySummary, approvalTimeout, capabilityDrift`);
 }
