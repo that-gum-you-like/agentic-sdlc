@@ -273,11 +273,12 @@ When editing any agent's AGENT.md:
 5. Pick up next unblocked tasks
 
 ### Paperclip Integration
-This project is managed via Paperclip (http://localhost:3100) under the **Agentic SDLC** company.
+This project is managed via Paperclip (http://localhost:3100) as the **Agentic SDLC** company.
 - Source `.paperclip.env` to connect to the dashboard
 - Use the `/paperclip` skill to check assignments, update task status, and coordinate
-- Activity in this repo is tracked under company `67ee22d2-5e33-47b7-99aa-bcb51317e936`, project "Agentic SDLC Framework"
-- All 12 agents live in the company — issues are tagged to the correct project
+- Company: `06a6d823-ee33-4703-af9c-dba5503f5e1b`
+
+**Producer-Consumer Model:** This company produces the framework (scripts, templates, workflows, agent prompts). Product companies (like LinguaFlow) consume it. All product agents run `node ~/agentic-sdlc/agents/<script>.mjs` — so improvements here propagate to every product company automatically. Each product company is its own Paperclip company with its own agent roster.
 
 ### On Context Getting Low
 1. Update PM dashboard with current progress
@@ -418,8 +419,9 @@ Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 | `agents/alignment-monitor.mjs` | Unified quality/alignment check, prompt suggestions, self-improving checklist |
 | `agents/garden-roadmap.mjs` | Archive completed roadmap items, keep roadmap focused |
 | `agents/autonomous-launcher.sh` | Headless Claude Code launcher for autonomous operation |
-| `agents/voice-intake.sh` | Push-to-talk voice input via Groq Whisper |
-| `agents/voice-config.json` | Voice input configuration (key, mode, model) |
+| `agents/voice-intake.sh` | Terminal-based voice input with multiple modes |
+| `agents/voice-intake-toggle.sh` | Headless voice-to-clipboard (bind to hotkey) |
+| `agents/voice-config.json` | Voice input configuration (model, language, max duration) |
 | `docs/comparison.md` | Framework comparison (vs LangGraph, Autogen, CrewAI, etc.) |
 | `docs/troubleshooting.md` | Common issues and recovery patterns |
 | `docs/voice-intake.md` | Voice input setup and usage guide |
@@ -501,18 +503,19 @@ See `framework/prompt-playbook.md` for ready-to-use prompts covering: planning, 
 
 ## Voice Input
 
-Push-to-talk voice input via Groq Whisper API. Speak instead of typing.
+Two voice input options:
+
+**In Claude Code** — use the built-in `/voice` command. Hold spacebar to talk, release to send.
+
+**Anywhere else** — `voice-intake-toggle.sh` is a hotkey-driven voice-to-clipboard tool. Bind it to F6 (or any key), press to record, press again to stop. Transcription via Groq Whisper lands on your clipboard — paste into any app with Ctrl+V.
 
 ```bash
-bash ~/agentic-sdlc/agents/voice-intake.sh              # Record → transcribe → type into terminal
-bash ~/agentic-sdlc/agents/voice-intake.sh --mode clip    # Record → transcribe → clipboard
-bash ~/agentic-sdlc/agents/voice-intake.sh --mode mailbox # Record → transcribe → pm/voice-inbox.md
-bash ~/agentic-sdlc/agents/voice-intake.sh --mode stdout  # Record → transcribe → print
-bash ~/agentic-sdlc/agents/voice-intake.sh check          # Verify dependencies
-bash ~/agentic-sdlc/agents/voice-intake.sh install-key    # Set up F6 key binding
+bash ~/agentic-sdlc/agents/voice-intake-toggle.sh          # Toggle recording (bind to hotkey)
+bash ~/agentic-sdlc/agents/voice-intake-toggle.sh check     # Verify dependencies
+bash ~/agentic-sdlc/agents/voice-intake-toggle.sh setup     # Interactive setup guide
 ```
 
-Config: `agents/voice-config.json`. Requires `$GROQ_API_KEY`. See `docs/voice-intake.md` for setup.
+Config: `agents/voice-config.json`. Requires `$GROQ_API_KEY`. See `docs/voice-intake.md` for full setup.
 
 ## Getting Started
 

@@ -3,3 +3,4 @@
 
 # Runtime data (per-project, not framework)
 pm/
+.paperclip.env
