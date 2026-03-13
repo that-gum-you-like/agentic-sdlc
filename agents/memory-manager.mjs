@@ -24,6 +24,13 @@ import { dirname } from 'path';
 import { loadConfig } from './load-config.mjs';
 import { triggerNotification } from './notify.mjs';
 
+let semanticIndex = null;
+try {
+  semanticIndex = await import('./semantic-index.mjs');
+} catch {
+  // semantic-index not available — semantic search disabled
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -111,25 +118,35 @@ function record(agent, layer, content) {
     // For core, add to failures array
     const core = loadMemory(agent, 'core');
     core.failures = core.failures || [];
-    core.failures.push({
+    const failureEntry = {
       id: `F-${Date.now()}`,
       description: content,
       date: new Date().toISOString().split('T')[0],
-    });
+    };
+    core.failures.push(failureEntry);
     saveMemory(agent, 'core', core);
     console.log(`Recorded failure in ${agent}/core.json`);
+    // Index failure in semantic search
+    if (semanticIndex) {
+      try { semanticIndex.addEntry(agent, failureEntry.id, content); } catch {}
+    }
     triggerNotification('highSeverityFailure', `🔴 New failure memory for ${agent}: ${content}`);
   } else {
     const memory = loadMemory(agent, layer);
     memory.entries = memory.entries || [];
+    const entryId = `M-${Date.now()}`;
     memory.entries.push({
-      id: `M-${Date.now()}`,
+      id: entryId,
       content,
       date: new Date().toISOString().split('T')[0],
       timestamp: new Date().toISOString(),
     });
     saveMemory(agent, layer, memory);
     console.log(`Recorded in ${agent}/${layer}.json`);
+    // Index entry in semantic search
+    if (semanticIndex) {
+      try { semanticIndex.addEntry(agent, entryId, content); } catch {}
+    }
   }
 }
 
@@ -210,12 +227,44 @@ function compostEntry(agent, entryId) {
   console.error(`Entry ${entryId} not found in any layer for ${agent}`);
 }
 
+function searchMemory(agent, query, topK = 5) {
+  if (!AGENTS.includes(agent)) {
+    console.error(`Unknown agent: ${agent}. Available: ${AGENTS.join(', ')}`);
+    process.exit(1);
+  }
+
+  if (!semanticIndex) {
+    console.warn('Semantic search not available — falling back to full recall');
+    recall(agent);
+    return;
+  }
+
+  const results = semanticIndex.search(agent, query, topK);
+  if (!results) {
+    console.warn('No embeddings found — falling back to full recall');
+    recall(agent);
+    return;
+  }
+
+  console.log(`\n🔍 Semantic search for "${query}" in ${agent}'s memory:`);
+  console.log('─'.repeat(50));
+  for (const r of results) {
+    const scoreBar = '█'.repeat(Math.round(r.score * 10));
+    console.log(`  [${r.score.toFixed(3)}] ${scoreBar} (${r.layer}) ${r.content}`);
+  }
+  console.log('');
+}
+
 // CLI
 const [,, cmd, ...args] = process.argv;
 
 switch (cmd) {
   case 'recall':
     recall(args[0]);
+    break;
+
+  case 'search':
+    searchMemory(args[0], args.slice(1).join(' '));
     break;
 
   case 'record':
@@ -234,6 +283,7 @@ switch (cmd) {
   default:
     console.log(`Usage:
   memory-manager.mjs recall <agent>                    # Show all memories
+  memory-manager.mjs search <agent> "<query>"          # Semantic search (top 5)
   memory-manager.mjs record <agent> <layer> <entry>    # Add a memory
   memory-manager.mjs consolidate <agent>               # REM Sleep consolidation
   memory-manager.mjs compost <agent> <entry-id>        # Move to compost

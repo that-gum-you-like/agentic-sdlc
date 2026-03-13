@@ -9,9 +9,13 @@ The Agentic SDLC is a structured approach to using AI agents for software develo
 - **Multi-agent orchestration** — Specialist agents with defined roles, memory, and domains
 - **Task queue system** — Priority-based task assignment with dependency tracking
 - **OpenSpec workflow** — Structured change management: proposal → design → specs → tasks → implement
-- **5-layer memory** — Agents learn from mistakes and build institutional knowledge
+- **5-layer memory** — Agents learn from mistakes and build institutional knowledge; optional semantic search via sentence-transformers
 - **Safety mechanisms** — Budget limits, stale claim detection, test-gated completion
 - **Iteration cycles** — Micro (per-task), daily, weekly, and monthly review cadences
+- **Agent permission tiers** — Configurable per-agent access from read-only through deploy
+- **JSON Schema data contracts** — Validated inter-agent handoffs via `agents/schema-validator.mjs`
+- **Human wellness guardrails** — Optional session-hour and night-cutoff advisory alerts
+- **Agent maturation tracking** — 6-week evolution timeline for structured agent improvement
 
 ## Quick Start
 
@@ -58,7 +62,8 @@ agentic-sdlc/
 │   ├── maturity-model.md        # 7-level maturity pyramid
 │   ├── iteration-cycles.md      # Micro/Daily/Weekly/Monthly
 │   ├── validation-patterns.md   # 4-layer validation, defeat tests
-│   └── case-studies.md          # Real failure case studies
+│   ├── case-studies.md          # Real failure case studies
+│   └── evolution-timeline.md    # 6-week agent maturation timeline
 ├── agents/                      # Scripts and templates
 │   ├── load-config.mjs          # Cross-directory config loader
 │   ├── queue-drainer.mjs        # Task queue management
@@ -78,7 +83,8 @@ agentic-sdlc/
 │   ├── safety-mechanisms.md
 │   ├── portability-guide.md
 │   ├── agent-system.md
-│   └── memory-protocol.md
+│   ├── memory-protocol.md
+│   └── comparison.md            # Framework comparison (vs LangGraph, Autogen, CrewAI)
 └── .claude/
     └── settings.json            # Recommended Claude Code settings
 ```
@@ -96,6 +102,35 @@ The framework defines 7 maturity levels, each building on the previous:
 | 4 | Autonomous | Agents work overnight |
 | 5 | Evolving | Agents learn from mistakes |
 | 6 | Self-Improving | System improves without intervention |
+
+## Optional Dependencies
+
+The framework works fully without any Python dependencies. These are opt-in:
+
+```bash
+pip install -r agents/requirements-nlp.txt
+```
+
+Enables:
+- **Semantic memory search** — `memory-manager.mjs search` uses vector embeddings instead of full recall
+- **NLP code analysis** — `ast-analyzer.mjs` gains additional semantic pattern detection
+
+Without this package, all commands still work; search falls back to full recall.
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| `framework/maturity-model.md` | 7-level maturity pyramid |
+| `framework/iteration-cycles.md` | Micro/Daily/Weekly/Monthly cadences |
+| `framework/validation-patterns.md` | 5-layer validation and defeat tests |
+| `framework/case-studies.md` | Real failure case studies |
+| `framework/evolution-timeline.md` | 6-week agent maturation timeline |
+| `docs/agent-system.md` | Agent roster, memory, and domain routing |
+| `docs/memory-protocol.md` | 5-layer memory system |
+| `docs/safety-mechanisms.md` | Budget, stale claims, test gates |
+| `docs/comparison.md` | Framework comparison vs LangGraph, Autogen, CrewAI |
+| `docs/portability-guide.md` | Adapting the framework to a new project |
 
 ## License
 

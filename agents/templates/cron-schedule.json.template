@@ -1,0 +1,33 @@
+{
+  "description": "Recommended automated iteration cycle schedules for the agentic SDLC framework.",
+  "schedules": [
+    {
+      "name": "daily-review",
+      "cron": "0 6 * * *",
+      "script": "node ~/agentic-sdlc/agents/cycles/daily-review.mjs",
+      "description": "End-of-day summary, dashboard update, cost logging",
+      "session": "isolated"
+    },
+    {
+      "name": "daily-cost-report",
+      "cron": "0 7 * * *",
+      "script": "node ~/agentic-sdlc/agents/cost-tracker.mjs report",
+      "description": "Daily token usage and session hours report",
+      "session": "isolated"
+    },
+    {
+      "name": "weekly-pattern-hunt",
+      "cron": "0 23 * * 0",
+      "script": "node ~/agentic-sdlc/agents/cycles/weekly-review.mjs",
+      "description": "Pattern review, REM sleep consolidation, behavior tests",
+      "session": "isolated"
+    },
+    {
+      "name": "monthly-behavior-audit",
+      "cron": "0 6 1 * *",
+      "script": "node ~/agentic-sdlc/agents/test-behavior.mjs",
+      "description": "Full behavior audit, agent versioning check, compost cleanup",
+      "session": "isolated"
+    }
+  ]
+}

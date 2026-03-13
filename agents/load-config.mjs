@@ -95,6 +95,25 @@ export function loadConfig() {
     projectAgentsDir = resolve(raw.projectDir, 'agents');
   }
 
+  // Load budget.json agent configs and default permissions
+  let agentConfigs = {};
+  const budgetPath = resolve(projectAgentsDir, 'budget.json');
+  if (existsSync(budgetPath)) {
+    try {
+      const budget = JSON.parse(readFileSync(budgetPath, 'utf8'));
+      if (budget.agents) {
+        for (const [key, val] of Object.entries(budget.agents)) {
+          agentConfigs[key] = {
+            ...val,
+            permissions: val.permissions || 'full-edit',
+          };
+        }
+      }
+    } catch {
+      // budget.json missing or malformed — leave agentConfigs empty
+    }
+  }
+
   _cached = {
     name: raw.name,
     projectDir: resolve(raw.projectDir),
@@ -102,6 +121,7 @@ export function loadConfig() {
     appPath: resolve(raw.projectDir, raw.appDir),
     testCmd: raw.testCmd,
     agents: raw.agents,
+    agentConfigs,
     // Scripts live in the SDLC repo
     sdlcDir: resolve(__dirname, '..'),
     scriptsDir: __dirname,
@@ -115,6 +135,20 @@ export function loadConfig() {
     matrixServer: raw.matrixServer,
     credentialsPath: raw.credentialsPath ? resolve(raw.credentialsPath) : '',
     dashboardPath: resolve(raw.projectDir, 'pm/DASHBOARD.md'),
+    // Human task queue
+    humanQueueDir: resolve(raw.projectDir, 'tasks/human-queue'),
+    // Human wellness guardrails (optional)
+    humanWellness: {
+      enabled: raw.humanWellness?.enabled || false,
+      dailyMaxHours: raw.humanWellness?.dailyMaxHours || 10,
+      nightCutoff: raw.humanWellness?.nightCutoff || '23:00',
+      breakIntervalHours: raw.humanWellness?.breakIntervalHours || 3,
+    },
+    // Execution cadence (optional)
+    cadence: {
+      commitWindowMinutes: raw.cadence?.commitWindowMinutes || 15,
+      agentOffsets: raw.cadence?.agentOffsets || {},
+    },
     // Notification & approval layer
     notification: {
       provider: raw.notification?.provider || 'none',

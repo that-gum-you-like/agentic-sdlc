@@ -22,6 +22,14 @@ import { execSync } from 'child_process';
 import { loadConfig } from './load-config.mjs';
 import { triggerNotification } from './notify.mjs';
 
+let validate = null;
+try {
+  const sv = await import('./schema-validator.mjs');
+  validate = sv.validate;
+} catch {
+  // schema validator not available
+}
+
 const config = loadConfig();
 const PROJECT_DIR = config.projectDir;
 const TASKS_DIR = config.tasksDir;
@@ -32,6 +40,7 @@ const COST_LOG_PATH = config.costLogPath;
 
 const PRIORITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 const STALE_CLAIM_MS = 30 * 60 * 1000; // 30 minutes
+const PERMISSION_HIERARCHY = { 'read-only': 0, 'edit-gated': 1, 'full-edit': 2, 'deploy': 3 };
 
 // Load agent domains from project's agents/domains.json
 function loadAgentDomains() {
@@ -205,6 +214,16 @@ function getAgentName(agentKey) {
   return AGENT_DOMAINS[agentKey]?.name || agentKey;
 }
 
+function getAgentPermission(agentKey) {
+  return config.agentConfigs?.[agentKey]?.permissions || 'full-edit';
+}
+
+function agentMeetsPermission(agentKey, requiredPermission) {
+  const agentLevel = PERMISSION_HIERARCHY[getAgentPermission(agentKey)] ?? PERMISSION_HIERARCHY['full-edit'];
+  const requiredLevel = PERMISSION_HIERARCHY[requiredPermission] ?? 0;
+  return agentLevel >= requiredLevel;
+}
+
 function showStatus(tasks) {
   const pending = tasks.filter(t => t.status === 'pending');
   const inProgress = tasks.filter(t => t.status === 'in_progress');
@@ -227,7 +246,8 @@ function showStatus(tasks) {
       const staleStr = stale ? ' ⚠️  STALE CLAIM' : '';
       const claimed = t.claimedBy ? ` [claimed: ${t.claimedBy}]` : '';
       const tokens = t.estimatedTokens != null ? ` ~${t.estimatedTokens.toLocaleString()} tokens` : '';
-      console.log(`  [${t.id}] ${t.title} → ${getAgentName(t.assignee)}${claimed}${tokens}${staleStr}`);
+      const perm = getAgentPermission(t.assignee);
+      console.log(`  [${t.id}] ${t.title} → ${getAgentName(t.assignee)} [${perm}]${claimed}${tokens}${staleStr}`);
       if (stale) {
         triggerNotification('blocker', `🚫 Task ${t.id} "${t.title}" has a stale claim (${t.claimedBy}, started ${t.claimedAt})`);
       }
@@ -241,7 +261,10 @@ function showStatus(tasks) {
       const pri = t.priority || 'MEDIUM';
       const claimed = t.claimedBy ? ` [claimed: ${t.claimedBy}]` : '';
       const tokens = t.estimatedTokens != null ? ` ~${t.estimatedTokens.toLocaleString()} tokens` : '';
-      console.log(`  [${t.id}] (${pri}) ${t.title} → ${getAgentName(agent)}${claimed}${tokens}`);
+      const perm = getAgentPermission(agent);
+      const permSkip = t.requiredPermission && !agentMeetsPermission(agent, t.requiredPermission)
+        ? ` ⛔ needs ${t.requiredPermission}` : '';
+      console.log(`  [${t.id}] (${pri}) ${t.title} → ${getAgentName(agent)} [${perm}]${claimed}${tokens}${permSkip}`);
     }
   }
 
@@ -276,6 +299,10 @@ switch (cmd) {
       console.log(`\nLaunching ${batch.length} tasks in parallel:`);
       for (const task of batch) {
         const agent = determineAgent(task);
+        if (task.requiredPermission && !agentMeetsPermission(agent, task.requiredPermission)) {
+          console.log(`  ⛔ [${task.id}] Skipped — ${agent} [${getAgentPermission(agent)}] lacks required permission: ${task.requiredPermission}`);
+          continue;
+        }
         const budgetCheck = checkAgentBudget(agent);
         if (!budgetCheck.allowed) {
           console.log(`  ⚠️  [${task.id}] Skipped — ${agent} over budget (${budgetCheck.used}/${budgetCheck.limit} tokens)`);
@@ -292,6 +319,10 @@ switch (cmd) {
     } else {
       const task = independent[0];
       const agent = determineAgent(task);
+      if (task.requiredPermission && !agentMeetsPermission(agent, task.requiredPermission)) {
+        console.log(`⛔ Agent ${agent} [${getAgentPermission(agent)}] lacks required permission: ${task.requiredPermission}. Skipping.`);
+        break;
+      }
       const budgetCheck = checkAgentBudget(agent);
       if (!budgetCheck.allowed) {
         console.log(`⚠️  Agent ${agent} over budget (${budgetCheck.used}/${budgetCheck.limit} tokens). Skipping.`);
@@ -325,6 +356,21 @@ switch (cmd) {
     const task = tasks.find(t => t.id === taskId);
     if (!task) { console.error(`Task ${taskId} not found`); break; }
     if (!agentName) { console.error('Usage: claim <task-id> <agent>'); break; }
+    if (validate) {
+      const claimData = {
+        taskId: taskId,
+        agentName: agentName,
+        claimedAt: new Date().toISOString(),
+        estimatedTokens: task.estimatedTokens || 0,
+      };
+      const result = await validate('task-claim', claimData);
+      if (!result.valid) {
+        console.warn(`⚠️  task-claim schema validation failed for [${taskId}]:`);
+        for (const err of result.errors) {
+          console.warn(`   ${err.field}: ${err.message}`);
+        }
+      }
+    }
     task.claimedBy = agentName;
     task.claimedAt = new Date().toISOString();
     saveTask(task);
@@ -353,6 +399,25 @@ switch (cmd) {
       console.error(`❌ Cannot complete ${taskId}: test_status must be 'passing' (got '${testStatus || 'none'}')`);
       console.error(`   Run tests first: ${config.testCmd}`);
       break;
+    }
+
+    if (validate) {
+      const completeData = {
+        taskId: taskId,
+        agentName: task.claimedBy || 'unknown',
+        filesChanged: task.filesChanged || [],
+        testsPassed: task.testsPassed || 0,
+        testsFailed: task.testsFailed || 0,
+        commitHash: task.commitHash || '',
+        learnings: task.learnings || [],
+      };
+      const result = await validate('task-complete', completeData);
+      if (!result.valid) {
+        console.warn(`⚠️  task-complete schema validation failed for [${taskId}]:`);
+        for (const err of result.errors) {
+          console.warn(`   ${err.field}: ${err.message}`);
+        }
+      }
     }
 
     // Approval gate: if task requires approval, notify human

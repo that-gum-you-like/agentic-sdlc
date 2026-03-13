@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "review-result",
+  "title": "Review Result",
+  "description": "Payload Richmond (reviewer agent) sends back after completing a code review",
+  "type": "object",
+  "required": ["taskId", "approved", "issues"],
+  "additionalProperties": false,
+  "properties": {
+    "taskId": {
+      "type": "string",
+      "description": "Task identifier that was reviewed"
+    },
+    "approved": {
+      "type": "boolean",
+      "description": "Whether the changes are approved to merge / deploy"
+    },
+    "issues": {
+      "type": "array",
+      "description": "List of specific issues found during review",
+      "items": {
+        "type": "object",
+        "required": ["file", "line", "severity", "message"],
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "Relative path to the file containing the issue"
+          },
+          "line": {
+            "type": ["number", "null"],
+            "description": "Line number (null if not line-specific)"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["info", "warning", "error"],
+            "description": "Severity of the issue"
+          },
+          "message": {
+            "type": "string",
+            "description": "Description of the issue"
+          }
+        }
+      }
+    },
+    "suggestions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Non-blocking improvement suggestions"
+    },
+    "mustFix": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Blocking issues that must be resolved before approval"
+    }
+  }
+}

@@ -62,6 +62,35 @@ function record(agent, taskId, inputTokens, outputTokens) {
   console.log(`📊 Recorded: ${agent} | ${taskId} | ${entry.totalTokens} tokens (${entry.model})`);
 }
 
+function computeSessionHours(log, cutoffDate) {
+  const SESSION_GAP_MS = 30 * 60 * 1000; // 30 min gap = new session
+  const entries = log
+    .filter(e => new Date(e.timestamp) >= cutoffDate)
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  if (entries.length === 0) return 0;
+
+  let totalMs = 0;
+  let sessionStart = new Date(entries[0].timestamp);
+  let sessionEnd = sessionStart;
+
+  for (let i = 1; i < entries.length; i++) {
+    const ts = new Date(entries[i].timestamp);
+    if (ts - sessionEnd > SESSION_GAP_MS) {
+      // Gap detected — close previous session, start new one
+      totalMs += sessionEnd - sessionStart;
+      sessionStart = ts;
+    }
+    sessionEnd = ts;
+  }
+  // Close final session
+  totalMs += sessionEnd - sessionStart;
+
+  // Add minimum 5 min per session (agents take time even for single entries)
+  const sessionCount = entries.length > 0 ? 1 : 0;
+  return (totalMs / (1000 * 60 * 60)) + (sessionCount * 5 / 60);
+}
+
 function report(weekly) {
   const log = loadLog();
   const budget = loadBudget();
@@ -130,6 +159,20 @@ function report(weekly) {
     console.log(`\n  Top Tasks by Cost:`);
     for (const [taskId, stats] of topTasks) {
       console.log(`    ${taskId.padEnd(10)} ${stats.total.toLocaleString().padStart(8)} tokens (${stats.agent})`);
+    }
+  }
+
+  // Session hours
+  const sessionHours = computeSessionHours(log, cutoffDate);
+  console.log(`\n  Session Hours: ${sessionHours.toFixed(1)}h`);
+
+  // Wellness check
+  const projectConfig = config;
+  const wellness = projectConfig?.humanWellness;
+  if (wellness?.enabled && !weekly) {
+    const dailyMax = wellness.dailyMaxHours || 10;
+    if (sessionHours > dailyMax) {
+      console.log(`  ⚠️  WELLNESS: ${sessionHours.toFixed(1)}h exceeds daily max of ${dailyMax}h`);
     }
   }
 

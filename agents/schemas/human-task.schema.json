@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "human-task",
+  "title": "Human Task",
+  "description": "A task that requires human input or action before agents can continue",
+  "type": "object",
+  "required": ["id", "title", "description", "requester", "urgency", "unblocks", "status", "createdAt"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^HTASK-\\d+$",
+      "description": "Unique identifier in the form HTASK-<number>"
+    },
+    "title": {
+      "type": "string",
+      "description": "Short one-line description of what the human needs to do"
+    },
+    "description": {
+      "type": "string",
+      "description": "Full context and instructions for the human"
+    },
+    "requester": {
+      "type": "string",
+      "description": "Agent name that created this human task"
+    },
+    "urgency": {
+      "type": "string",
+      "enum": ["blocker", "normal", "low"],
+      "description": "How urgently this task needs to be completed"
+    },
+    "unblocks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Task IDs that are blocked until this human task is resolved"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "in-progress", "completed"],
+      "description": "Current state of the human task"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this task was created"
+    },
+    "completedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the human completed this task (optional)"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "description": "Agent maturation tracking template. Added to core.json maturation field.",
+  "levels": {
+    "0": {
+      "name": "New",
+      "description": "No corrections received yet",
+      "criteria": "Agent has just been created"
+    },
+    "1": {
+      "name": "Corrected",
+      "description": "First correction received and acknowledged",
+      "criteria": "At least one correction recorded in memory"
+    },
+    "2": {
+      "name": "Remembering",
+      "description": "First self-correction observed",
+      "criteria": "Agent avoids a previously-corrected mistake without being told"
+    },
+    "3": {
+      "name": "Teaching",
+      "description": "Correction rate declining, critic reviewing at higher level",
+      "criteria": "Corrections/week declining for 2+ consecutive weeks"
+    },
+    "4": {
+      "name": "Autonomous",
+      "description": "Zero basic corrections for 2 consecutive weeks",
+      "criteria": "No basic-severity corrections for 14+ days"
+    },
+    "5": {
+      "name": "Evolving",
+      "description": "Agent proposes new checklist items or defeat tests",
+      "criteria": "Agent has contributed to checklist or defeat test suite"
+    }
+  },
+  "template": {
+    "level": 0,
+    "weekStarted": "",
+    "milestonesHit": [],
+    "metrics": {}
+  }
+}

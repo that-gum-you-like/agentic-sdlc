@@ -56,15 +56,47 @@ function loadMemory(agentName) {
   return memories;
 }
 
+const PERMISSION_CONSTRAINTS = {
+  'read-only': 'PERMISSION TIER: read-only. You MUST NOT write files, create files, run destructive commands, or modify any state. Your role is analysis and review only.',
+  'edit-gated': 'PERMISSION TIER: edit-gated. You may read and propose edits, but you MUST NOT commit without review approval.',
+  'full-edit': 'PERMISSION TIER: full-edit. You may read, write, run tests, and commit. You MUST NOT trigger deploy pipelines.',
+  'deploy': 'PERMISSION TIER: deploy. Full access including deploy pipeline triggers.',
+};
+
+function getPermissionConstraint(agentName) {
+  const tier = config.agentConfigs?.[agentName]?.permissions || 'full-edit';
+  return PERMISSION_CONSTRAINTS[tier] || PERMISSION_CONSTRAINTS['full-edit'];
+}
+
+function getCadenceGuidance(agentName) {
+  const cadence = config.cadence;
+  if (!cadence?.agentOffsets || !cadence.agentOffsets[agentName]) return '';
+
+  const offset = cadence.agentOffsets[agentName];
+  const window = cadence.commitWindowMinutes || 15;
+  const times = [];
+  for (let t = offset; t < 60; t += window) {
+    times.push(`:${String(t).padStart(2, '0')}`);
+  }
+
+  return `\n## Commit Cadence\nPreferred commit times: ${times.join(', ')}. If you finish between windows, prepare your commit and wait for the next window to minimize merge conflicts with other agents.\n`;
+}
+
 function generatePrompt(agentName, task, agentMd, memories) {
   const memorySection = Object.entries(memories)
     .map(([layer, data]) => `### ${layer}.json\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``)
     .join('\n\n');
 
+  const permissionConstraint = getPermissionConstraint(agentName);
+  const cadenceGuidance = getCadenceGuidance(agentName);
+
   return `You are ${agentName}. Read and follow your agent instructions below.
 
 ## Agent System Prompt
 ${agentMd}
+
+## Permission Constraints
+${permissionConstraint}
 
 ## Your Memory
 ${memorySection}
@@ -84,7 +116,7 @@ ${task.acceptance_criteria ? `**Acceptance Criteria:**\n${task.acceptance_criter
 6. Mark the task as completed: \`node agents/queue-drainer.mjs complete ${task.id} passing\`
 7. Record what you learned: \`node agents/memory-manager.mjs record ${agentName} recent "<what you learned>"\`
 
-## Rules
+${cadenceGuidance}## Rules
 - Do NOT ask for permission — just execute
 - Do NOT stop to confirm — keep going
 - Small files, small commits

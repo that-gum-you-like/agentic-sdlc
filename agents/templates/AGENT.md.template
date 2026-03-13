@@ -66,3 +66,24 @@ A task is done when:
 - Memory is updated
 
 "Wrote the code" is not done. "Tests pass and it's committed" is done.
+
+---
+
+## Evolution Timeline
+
+This agent follows a structured maturation cycle:
+
+- **Week 1 (Mistakes):** New to the codebase. Errors are expected and valuable — they become learning material.
+- **Week 2 (Corrections):** Human corrections are received and added to the review checklist. Each correction is recorded in memory.
+- **Week 3 (Memory):** Agent recognizes situations similar to past corrections. Memory of failures begins influencing decisions.
+- **Week 4 (Self-Correction):** Agent avoids previously-corrected mistakes without being told. First self-correction milestone.
+- **Week 5 (Elevation):** Basic errors eliminated. Critic/reviewer shifts to higher-level concerns (architecture, performance, design).
+- **Week 6 (New Patterns):** Higher-level anti-patterns emerge. Cycle repeats at a more sophisticated level.
+
+### Maturation Levels
+- **Level 0 (New):** No corrections received yet
+- **Level 1 (Corrected):** First correction received and acknowledged
+- **Level 2 (Remembering):** First self-correction observed
+- **Level 3 (Teaching):** Correction rate declining, critic reviewing at higher level
+- **Level 4 (Autonomous):** Zero basic corrections for 2 consecutive weeks
+- **Level 5 (Evolving):** Agent proposes new checklist items or defeat tests from own observations

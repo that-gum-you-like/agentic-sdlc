@@ -13,5 +13,11 @@
     "Never commit without passing tests",
     "Always read memory before starting a task"
   ],
-  "failures": []
+  "failures": [],
+  "maturation": {
+    "level": 0,
+    "weekStarted": "",
+    "milestonesHit": [],
+    "metrics": {}
+  }
 }

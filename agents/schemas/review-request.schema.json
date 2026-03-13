@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "review-request",
+  "title": "Review Request",
+  "description": "Payload sent to Richmond (reviewer agent) asking for a code review",
+  "type": "object",
+  "required": ["taskId", "commitHash", "filesChanged", "summary", "riskLevel"],
+  "additionalProperties": false,
+  "properties": {
+    "taskId": {
+      "type": "string",
+      "description": "Task identifier whose output is being reviewed"
+    },
+    "commitHash": {
+      "type": "string",
+      "description": "Commit SHA containing the changes to review"
+    },
+    "filesChanged": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Relative paths of files included in the review"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Human-readable description of what was changed and why"
+    },
+    "questions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Specific questions the implementing agent wants the reviewer to address"
+    },
+    "riskLevel": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "Agent's self-assessed risk level for these changes"
+    }
+  }
+}

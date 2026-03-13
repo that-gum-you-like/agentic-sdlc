@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "deploy-request",
+  "title": "Deploy Request",
+  "description": "Payload sent to Denholm (release agent) to trigger a production deployment",
+  "type": "object",
+  "required": ["commitHash", "testsPassedCount", "browserE2EPassed", "changeDescription", "requestedBy"],
+  "additionalProperties": false,
+  "properties": {
+    "commitHash": {
+      "type": "string",
+      "description": "SHA of the commit to deploy"
+    },
+    "testsPassedCount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total number of automated tests that passed for this commit"
+    },
+    "browserE2EPassed": {
+      "type": "boolean",
+      "description": "Whether the browser E2E (T5) gate passed"
+    },
+    "changeDescription": {
+      "type": "string",
+      "description": "Human-readable description of what is being deployed"
+    },
+    "requestedBy": {
+      "type": "string",
+      "description": "Agent name or 'human' that is requesting the deploy"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+# NLP dependencies for agentic SDLC framework
+# These are OPTIONAL — the framework works without them.
+# All run locally, no cloud API calls.
+
+sentence-transformers>=2.2.0   # Embedding generation for semantic memory search
+spacy>=3.5.0                   # NLP analysis for code near-miss detection
+
+# After installing, download the spaCy model:
+#   python3 -m spacy download en_core_web_sm
+#
+# For sentence-transformers, the model downloads automatically on first use:
+#   all-MiniLM-L6-v2 (~80MB, CPU-optimized)

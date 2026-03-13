@@ -147,6 +147,32 @@ node ~/agentic-sdlc/agents/notify.mjs status
 | dailySummary | Daily review runs | "N completed, M blocked" |
 | approvalTimeout | Approval pending past timeout | "REMINDER: approval pending" |
 
+## Permission Tiers
+
+Agents have configurable permission levels in `budget.json`:
+- `read-only` — Can read, search, analyze. Cannot write or commit.
+- `edit-gated` — Can read + propose edits. Cannot commit without review approval.
+- `full-edit` — Can read, write, test, commit. Cannot deploy. **(default)**
+- `deploy` — Full access including deploy pipeline.
+
+Queue-drainer enforces permissions on task assignment. Worker.mjs injects constraints into agent prompts.
+
+## Human Wellness Guardrails
+
+Optional in `project.json`:
+```json
+{
+  "humanWellness": {
+    "enabled": true,
+    "dailyMaxHours": 10,
+    "nightCutoff": "23:00",
+    "breakIntervalHours": 3
+  }
+}
+```
+
+When enabled, cost-tracker monitors session hours and notify.mjs sends advisory alerts when thresholds are exceeded. Alerts are informational only — the queue is never paused.
+
 ## Iteration Cycles
 
 ### Micro (Minutes)
@@ -180,9 +206,19 @@ Pick → Implement → Test → Browser E2E (if frontend changed) → Commit →
 
 ```bash
 node ~/agentic-sdlc/agents/memory-manager.mjs recall <agent>
+node ~/agentic-sdlc/agents/memory-manager.mjs search <agent> "<query>"   # Semantic search (top 5)
 node ~/agentic-sdlc/agents/memory-manager.mjs record <agent> <layer> <entry>
 node ~/agentic-sdlc/agents/memory-manager.mjs consolidate <agent>
 node ~/agentic-sdlc/agents/memory-manager.mjs compost <agent> <entry-id>
+```
+
+### Semantic Memory Search (Optional)
+When `sentence-transformers` is installed (`pip install -r agents/requirements-nlp.txt`), memory search uses vector embeddings for semantic similarity. Without it, `search` falls back to full recall.
+
+```bash
+node ~/agentic-sdlc/agents/semantic-index.mjs embed <agent>              # Build index
+node ~/agentic-sdlc/agents/semantic-index.mjs search <agent> "<query>"   # Search
+node ~/agentic-sdlc/agents/semantic-index.mjs status <agent>             # Index stats
 ```
 
 ## Agent Evolution Protocol
@@ -250,6 +286,10 @@ Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 | `agents/start.sh` | System startup (Matrix + queue status) |
 | `agents/notify.mjs` | Notification & approval layer |
 | `agents/mailbox-sync.mjs` | Sync inbound WhatsApp messages to mailbox |
+| `agents/semantic-index.mjs` | Vector embedding index for semantic memory search |
+| `agents/embed.py` | Local embedding generation (sentence-transformers) |
+| `agents/schema-validator.mjs` | JSON Schema validation for inter-agent data contracts |
+| `docs/comparison.md` | Framework comparison (vs LangGraph, Autogen, CrewAI, etc.) |
 | `docs/troubleshooting.md` | Common issues and recovery patterns |
 
 ## Getting Started

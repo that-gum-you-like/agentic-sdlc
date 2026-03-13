@@ -1,0 +1,11 @@
+{
+  "id": "HTASK-001",
+  "title": "{{TITLE}}",
+  "description": "{{DESCRIPTION}}",
+  "requester": "{{AGENT_NAME}}",
+  "urgency": "normal",
+  "unblocks": [],
+  "status": "pending",
+  "createdAt": "{{ISO_DATE}}",
+  "completedAt": null
+}

@@ -7,13 +7,22 @@
  *   medium-term entries > 30 days → long-term or compost
  *
  * Usage:
- *   node agents/rem-sleep.mjs            # Run consolidation for all agents
- *   node agents/rem-sleep.mjs --dry-run  # Show what would change without modifying files
+ *   node agents/rem-sleep.mjs              # Run consolidation for all agents
+ *   node agents/rem-sleep.mjs --dry-run    # Show what would change without modifying files
+ *   node agents/rem-sleep.mjs --similarity # Also deduplicate near-duplicates by cosine similarity (requires semantic-index)
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+
+let checkSimilarity = null;
+try {
+  const si = await import('./semantic-index.mjs');
+  checkSimilarity = si.checkSimilarity;
+} catch {
+  // semantic-index not available
+}
 
 import { loadConfig } from './load-config.mjs';
 
@@ -27,6 +36,7 @@ const RECENT_AGE_DAYS = 7;
 const MEDIUM_AGE_DAYS = 30;
 
 const dryRun = process.argv.includes('--dry-run');
+const useSimilarity = process.argv.includes('--similarity');
 
 function getMemoryPath(agent, layer) {
   return resolve(AGENTS_DIR, agent, 'memory', `${layer}.json`);
@@ -50,7 +60,7 @@ function daysSince(dateStr) {
   return Math.floor((now - date) / (1000 * 60 * 60 * 24));
 }
 
-function consolidateAgent(agent) {
+async function consolidateAgent(agent) {
   console.log(`\n🌙 ${agent}`);
 
   const recent = loadMemory(agent, 'recent');
@@ -130,6 +140,44 @@ function consolidateAgent(agent) {
       console.log(`  🗑️  Removed ${removed} duplicates from long-term`);
       changes += removed;
     }
+
+    // Similarity-based dedup (requires --similarity flag and semantic-index)
+    if (useSimilarity && checkSimilarity && longTerm.entries.length > 1) {
+      const SIMILARITY_THRESHOLD = 0.92;
+      const composted = new Set();
+
+      for (let i = 0; i < longTerm.entries.length; i++) {
+        if (composted.has(i)) continue;
+        for (let j = i + 1; j < longTerm.entries.length; j++) {
+          if (composted.has(j)) continue;
+          const entryA = longTerm.entries[i];
+          const entryB = longTerm.entries[j];
+          const contentA = entryA.content || '';
+          const contentB = entryB.content || '';
+          if (!contentA || !contentB) continue;
+
+          const similarity = await checkSimilarity(contentA, contentB);
+          if (similarity >= SIMILARITY_THRESHOLD) {
+            const dateA = new Date(entryA.date || entryA.timestamp || 0);
+            const dateB = new Date(entryB.date || entryB.timestamp || 0);
+            // Keep newer, compost older
+            const [keepIdx, compostIdx] = dateA >= dateB ? [i, j] : [j, i];
+            const kept = longTerm.entries[keepIdx];
+            const composting = longTerm.entries[compostIdx];
+            console.log(`  Near-duplicate found (similarity: ${similarity.toFixed(2)}): kept '${(kept.content || '').substring(0, 60)}' composted '${(composting.content || '').substring(0, 60)}'`);
+            composted.add(compostIdx);
+            if (!dryRun) {
+              compost.entries = [...(compost.entries || []), composting];
+            }
+            changes++;
+          }
+        }
+      }
+
+      if (composted.size > 0) {
+        longTerm.entries = longTerm.entries.filter((_, idx) => !composted.has(idx));
+      }
+    }
   }
 
   if (changes === 0) {
@@ -150,7 +198,7 @@ console.log('═'.repeat(50));
 
 let totalChanges = 0;
 for (const agent of AGENTS) {
-  totalChanges += consolidateAgent(agent);
+  totalChanges += await consolidateAgent(agent);
 }
 
 console.log(`\n${'═'.repeat(50)}`);
