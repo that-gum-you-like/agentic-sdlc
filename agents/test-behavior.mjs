@@ -192,6 +192,23 @@ for (const [template, patterns] of Object.entries(planningTemplates)) {
   }
 }
 
+// Quality Alignment Monitor
+console.log('\n📋 Quality Alignment Monitor:');
+const qaPath = resolve(planningDir, 'quality-alignment.md');
+if (!existsSync(qaPath)) {
+  check('planning-agents/quality-alignment.md exists', false);
+} else {
+  const qaContent = readFileSync(qaPath, 'utf8');
+  check('quality-alignment.md contains Quality Alignment Monitor', /Quality Alignment Monitor/.test(qaContent));
+  check('quality-alignment.md contains Process Monitoring', /Process Monitoring/.test(qaContent));
+  check('quality-alignment.md contains Alignment Detection', /Alignment Detection/.test(qaContent));
+  check('quality-alignment.md contains Prompt Adjustment', /Prompt Adjustment/.test(qaContent));
+  check('quality-alignment.md contains Self-Improving Checklist', /Self-Improving Checklist/.test(qaContent));
+  check('quality-alignment.md contains Scheduling', /Scheduling|cron/.test(qaContent));
+}
+const alignMonPath = resolve(__dirname, 'alignment-monitor.mjs');
+check('alignment-monitor.mjs exists', existsSync(alignMonPath));
+
 // CLAUDE.md references new artifacts
 console.log('\n📋 CLAUDE.md — New Artifact References:');
 const claudeMdPath = resolve(__dirname, '..', 'CLAUDE.md');
@@ -212,6 +229,7 @@ check('CLAUDE.md documents dev log convention', /devlog|dev log/i.test(claudeMd)
 check('CLAUDE.md documents roadmap gardening', /garden-roadmap|roadmap garden/i.test(claudeMd));
 check('CLAUDE.md documents prompt playbook', /prompt-playbook|prompt playbook/i.test(claudeMd));
 check('CLAUDE.md documents agent routing', /agent-routing|agent routing/i.test(claudeMd));
+check('CLAUDE.md documents alignment monitor', /alignment-monitor|alignment monitor/i.test(claudeMd));
 
 // Framework production docs
 console.log('\n📋 Production Workflow Docs:');

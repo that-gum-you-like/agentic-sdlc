@@ -68,6 +68,7 @@ Projects should include planning-phase agents that produce standardized artifact
 | Business Value Analyst | `priorities.md` (value/complexity scores) | Requirements |
 | Technical Product Manager | `roadmap.md` (phased plan) | Requirements + Priorities |
 | Parallelization Analyst | `parallelization.md` (work streams) | Roadmap |
+| Quality Alignment Monitor | Alignment reports, prompt suggestions | All agent outputs |
 
 Pipeline: `Brain dump → Requirements → Priorities → Roadmap → Parallelization → Execution agents build`
 
@@ -398,6 +399,7 @@ Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 | `agents/embed.py` | Local embedding generation (sentence-transformers) |
 | `agents/schema-validator.mjs` | JSON Schema validation for inter-agent data contracts |
 | `agents/capability-monitor.mjs` | Capability drift detection, usage reports, health checks |
+| `agents/alignment-monitor.mjs` | Unified quality/alignment check, prompt suggestions, self-improving checklist |
 | `agents/garden-roadmap.mjs` | Archive completed roadmap items, keep roadmap focused |
 | `agents/autonomous-launcher.sh` | Headless Claude Code launcher for autonomous operation |
 | `agents/voice-intake.sh` | Push-to-talk voice input via Groq Whisper |
@@ -451,6 +453,20 @@ bash ~/agentic-sdlc/agents/autonomous-launcher.sh --dry-run          # Preview p
 ```
 
 The launcher checks the roadmap/queue, claims work, executes the micro cycle, updates the dev log, and auto-commits. See `framework/prompt-playbook.md` for scheduling patterns.
+
+## Quality Alignment Monitor
+
+Unified process alignment checker that orchestrates all quality tools:
+```bash
+node ~/agentic-sdlc/agents/alignment-monitor.mjs              # Full check + report
+node ~/agentic-sdlc/agents/alignment-monitor.mjs --dry-run     # Preview
+node ~/agentic-sdlc/agents/alignment-monitor.mjs --report       # Show last report
+node ~/agentic-sdlc/agents/alignment-monitor.mjs --checklist    # Show self-improving checklist
+```
+
+Checks: capability drift, prompt quality (behavior tests), roadmap health, task queue, planning artifact compliance (REQ-xxx format, phase structure, demo sentences). Outputs alignment score (0-100), drift alerts, and specific prompt adjustment suggestions. The checklist grows over time as new anti-patterns are detected.
+
+See `agents/templates/planning-agents/quality-alignment.md` for the full agent template.
 
 ## Agent Routing
 

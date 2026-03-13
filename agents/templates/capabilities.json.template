@@ -50,6 +50,13 @@
     "conditional": {},
     "notExpected": ["browserE2E", "defeatTests", "deployPipeline", "openclawBrowser", "openclawNotify"]
   },
+  "quality-alignment": {
+    "required": ["memoryRecall", "memoryRecord", "alignmentMonitor"],
+    "conditional": {
+      "reqFormatCompliance": "when checking planning artifact compliance"
+    },
+    "notExpected": ["browserE2E", "defeatTests", "deployPipeline", "openclawBrowser"]
+  },
   "parallelization-analyst": {
     "required": ["memoryRecall", "memoryRecord", "parallelizationAnalysis"],
     "conditional": {

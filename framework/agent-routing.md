@@ -10,6 +10,7 @@ Quick reference for which agent handles which situation. Use this when you're un
 | Requirements need prioritization | **Business Value Analyst** | Score value/complexity, create priority matrix |
 | Need phased delivery plan | **Technical Product Manager** | Create roadmap with phases, demo sentences, handoffs |
 | Roadmap ready for execution | **Parallelization Analyst** | Map dependencies, assign work streams, define contracts |
+| Process quality check needed | **Quality Alignment Monitor** | Run alignment check, detect drift, suggest prompt adjustments |
 
 ### Planning Pipeline (Sequential)
 ```
@@ -41,6 +42,7 @@ Brain dump → Requirements Engineer → Value Analyst → Product Manager → P
 | Capability drift suspected | `capability-monitor.mjs check` | Drift detection |
 | Roadmap cluttered with completed items | `garden-roadmap.mjs` | Archive completed items |
 | Want autonomous operation | `autonomous-launcher.sh` | Headless Claude session |
+| Process alignment check | `alignment-monitor.mjs` | Unified quality + alignment report |
 
 ## Decision Flowchart
 

@@ -123,6 +123,7 @@ Common agent personas for spec-driven development:
 | Code Reviewer | Code review, quality gates | Post-implementation |
 | Release Manager | Deploy pipeline, CI/CD | Release |
 | Documentarian | Docs, guides, README | Any phase |
+| Quality Alignment Monitor | Process alignment, drift detection, prompt suggestions | Always (periodic) |
 
 Not all roles need to be active simultaneously. Activate based on current phase.
 
