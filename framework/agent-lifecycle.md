@@ -113,12 +113,16 @@ Common agent personas for spec-driven development:
 
 | Role | Focus | When Active |
 |------|-------|-------------|
-| Requirements Reviewer | Validates requirement quality against the 5-component checklist | Planning phase |
-| Business Analyst | Evaluates business value, prioritizes features | Planning phase |
-| Project Manager | Manages roadmap, captures ideas, prevents derailment | Always |
+| Requirements Engineer | Brain dumps → REQ-xxx requirements, validates quality | Planning phase |
+| Business Value Analyst | Evaluates business value, prioritizes features | Planning phase |
+| Technical Product Manager | Manages roadmap, captures ideas, prevents derailment | Planning / Always |
+| Parallelization Analyst | Dependency graphs, work streams, interface contracts | Planning phase |
 | Backend Developer | API, database, services | Implementation |
 | Frontend Developer | UI, components, styling | Implementation |
-| Reviewer | Code review, quality gates | Post-implementation |
+| AI Pipeline Engineer | AI services, transcription, prompts | Implementation |
+| Code Reviewer | Code review, quality gates | Post-implementation |
+| Release Manager | Deploy pipeline, CI/CD | Release |
+| Documentarian | Docs, guides, README | Any phase |
 
 Not all roles need to be active simultaneously. Activate based on current phase.
 
