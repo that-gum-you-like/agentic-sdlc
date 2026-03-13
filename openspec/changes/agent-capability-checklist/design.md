@@ -23,9 +23,24 @@ The curriculum-maturity-advancement change added many new capabilities (semantic
 
 ## Decisions
 
-### D1: Checklist is agent self-reported, structured JSON
+### D1: Dual-layer tracking — system-instrumented logs (primary) + agent self-report (secondary)
 
-**Decision:** At the end of every task, the agent outputs a JSON block tagged `<!-- CAPABILITY_CHECKLIST -->` containing boolean fields for each capability and optional `skipReason` for any expected-but-unused capability. Worker.mjs injects the checklist template and instructions into every agent prompt.
+**Decision:** Capability usage is tracked at TWO levels. The **primary** source of truth is system-level instrumentation: each script logs its own invocation automatically to a shared capability log file. The **secondary** source is agent self-report (structured JSON in output) which captures intent and skipReasons that the system can't infer.
+
+**System-instrumented logging (PRIMARY — cannot be skipped or lied about):**
+Every capability script (`memory-manager.mjs`, `semantic-index.mjs`, `cost-tracker.mjs`, `queue-drainer.mjs`, `notify.mjs`, `rem-sleep.mjs`, `pattern-hunt.mjs`, `four-layer-validate.mjs`, etc.) logs its invocation to `pm/capability-log.jsonl` (append-only, one JSON line per invocation):
+
+```jsonl
+{"timestamp":"2026-03-13T14:30:01Z","capability":"memoryRecall","agent":"roy","taskId":"T-015","script":"memory-manager.mjs","command":"recall"}
+{"timestamp":"2026-03-13T14:30:05Z","capability":"semanticSearch","agent":"roy","taskId":"T-015","script":"semantic-index.mjs","command":"search"}
+{"timestamp":"2026-03-13T14:31:22Z","capability":"defeatTests","agent":"roy","taskId":"T-015","script":"four-layer-validate.mjs","command":"run"}
+{"timestamp":"2026-03-13T14:32:00Z","capability":"memoryRecord","agent":"roy","taskId":"T-015","script":"memory-manager.mjs","command":"record"}
+```
+
+This is automatic — the script writes the log line as a side effect of running. The agent cannot skip it, lie about it, or forget it. If `memory-manager.mjs recall roy` ran, the log has proof. If it didn't run, the log has no entry.
+
+**Agent self-report (SECONDARY — captures intent and context):**
+Agents ALSO output a `<!-- CAPABILITY_CHECKLIST -->` JSON block with `skipReason` for unused capabilities. This adds context the system can't infer ("skipped browserE2E because backend-only change"). The monitor cross-references both sources: if the agent claims it used memory but the system log has no `memoryRecall` entry for that task, that's a discrepancy flag.
 
 ```json
 {
@@ -49,11 +64,9 @@ The curriculum-maturity-advancement change added many new capabilities (semantic
 }
 ```
 
-**Why self-reported:** We can't reliably detect capability usage from the outside (would need to instrument every script). Self-reporting is simpler and the monitoring agent catches dishonesty via drift detection.
+**Why dual-layer:** Self-reporting alone is unreliable — agents can lie, forget, or drift. System logs alone miss context (why was something skipped). Together they provide both proof and explanation. The monitor trusts the system log for "did it happen?" and the self-report for "why/why not?"
 
-**Why JSON in agent output:** Parseable by queue-drainer on task completion. No additional IPC needed.
-
-**Alternative considered:** Instrumenting each script to log usage to a shared file. Rejected — too invasive, requires modifying every script, fragile.
+**Implementation:** A shared `logCapabilityUsage(capability, agent, taskId, script, command)` function exported from a new `agents/capability-logger.mjs`. Each script imports it and calls it at its entry point. The function appends one JSONL line to `pm/capability-log.jsonl`. This is ~3 lines added per script — minimal instrumentation.
 
 ### D2: Expected capabilities defined per agent in capabilities.json
 
@@ -121,7 +134,7 @@ The curriculum-maturity-advancement change added many new capabilities (semantic
 
 ## Risks / Trade-offs
 
-**[Agent lies on checklist] → Mitigation:** Drift detection catches systematic lying (if agent says it uses memory but its outputs show no memory-informed decisions, the review agent will notice). Also, Richmond's post-commit review can spot-check checklist accuracy.
+**[Agent lies on checklist] → Mitigation:** System-instrumented logs are the primary source of truth — if memory-manager.mjs didn't run, the log doesn't have an entry, regardless of what the agent claims. The monitor cross-references system log vs. self-report and flags discrepancies ("agent claimed memoryRecall but no system log entry found").
 
 **[Checklist adds prompt length] → Mitigation:** ~200 tokens for the checklist template. Negligible vs. typical task prompts (5K-30K tokens).
 
