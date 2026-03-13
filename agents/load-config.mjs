@@ -106,6 +106,7 @@ export function loadConfig() {
           agentConfigs[key] = {
             ...val,
             permissions: val.permissions || 'full-edit',
+            maxInstances: val.maxInstances ?? 1,
           };
         }
       }

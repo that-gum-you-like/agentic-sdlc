@@ -18,6 +18,13 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { loadConfig } from './load-config.mjs';
 
+// Optional semantic clustering via embeddings
+let clusterBySimilarity;
+try {
+  const si = await import('./semantic-index.mjs');
+  clusterBySimilarity = si.clusterBySimilarity;
+} catch { clusterBySimilarity = null; }
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const config = loadConfig();
@@ -210,6 +217,58 @@ function groupByCategory(reviews) {
   }
 
   return categoryMap;
+}
+
+/**
+ * When embeddings are available, merge categories whose labels are semantically
+ * similar (cosine >= 0.85) into a single cluster.  The most frequent label
+ * becomes the cluster representative.
+ *
+ * Falls back to identity (no merging) when sentence-transformers isn't installed.
+ */
+async function semanticMergeCategories(categoryMap) {
+  if (!clusterBySimilarity) return categoryMap;
+
+  const entries = Array.from(categoryMap.values());
+  if (entries.length < 2) return categoryMap;
+
+  try {
+    const labels = entries.map(e => e.label);
+    const clusters = await clusterBySimilarity(labels, 0.85);
+
+    // Build merged map
+    const merged = new Map();
+    for (const cluster of clusters) {
+      // Pick representative: highest count
+      const members = cluster.map(idx => entries[idx]);
+      members.sort((a, b) => b.count - a.count);
+      const rep = members[0];
+
+      // Merge all members into the representative
+      const combined = { ...rep, occurrences: [...rep.occurrences] };
+      for (let i = 1; i < members.length; i++) {
+        const m = members[i];
+        combined.count += m.count;
+        combined.occurrences.push(...m.occurrences);
+        combined.reviews.push(...m.reviews);
+        // Escalate severity
+        const severityRank = { minor: 1, major: 2, critical: 3 };
+        if ((severityRank[m.worstSeverity] || 0) > (severityRank[combined.worstSeverity] || 0)) {
+          combined.worstSeverity = m.worstSeverity;
+        }
+      }
+      // Update label to include cluster size
+      if (members.length > 1) {
+        combined.label = `${rep.label} (+${members.length - 1} similar)`;
+      }
+      merged.set(combined.category, combined);
+    }
+
+    return merged;
+  } catch {
+    // Fallback to original
+    return categoryMap;
+  }
 }
 
 /**
@@ -949,8 +1008,9 @@ async function main() {
   // Count total issues
   const totalIssues = reviews.reduce((sum, r) => sum + r.issues.length, 0);
 
-  // Group by category
-  const categoryMap = groupByCategory(reviews);
+  // Group by category (with optional semantic clustering)
+  const rawCategoryMap = groupByCategory(reviews);
+  const categoryMap = await semanticMergeCategories(rawCategoryMap);
 
   // All categories sorted by count desc
   const allCategories = Array.from(categoryMap.values()).sort((a, b) => b.count - a.count);

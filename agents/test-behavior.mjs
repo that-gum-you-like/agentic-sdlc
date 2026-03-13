@@ -124,6 +124,45 @@ check('Checklist mentions console.log', /console\.log/i.test(checklist));
 check('Checklist mentions file size', /\b150\b.*line|\b200\b.*line|file\s*size/i.test(checklist));
 check('Checklist mentions { data, error }', /data.*error|return.*pattern/i.test(checklist));
 
+// Maturation regression check
+// Fails if an agent's correction rate increased for 2+ consecutive weeks
+// after 2+ consecutive weeks of decline (regression after improvement).
+console.log('\n📋 All Agents — Maturation Regression:');
+for (const agent of AGENTS) {
+  const core = readCoreJson(agent);
+  const metrics = core.maturation?.metrics;
+  if (!metrics) {
+    // No metrics yet — skip (not a regression)
+    check(`${agent} maturation: no regression detected`, true);
+    continue;
+  }
+
+  const weeks = Object.keys(metrics).sort();
+  if (weeks.length < 4) {
+    // Not enough data to detect decline-then-spike
+    check(`${agent} maturation: insufficient data for regression check`, true);
+    continue;
+  }
+
+  // Look for a pattern of 2+ declining weeks followed by 2+ increasing weeks
+  const rates = weeks.map(w => metrics[w].correctionsReceived || 0);
+  let regressionFound = false;
+
+  for (let i = 0; i <= rates.length - 4; i++) {
+    const declineStreak = rates[i] > rates[i + 1] && rates[i + 1] > rates[i + 2];
+    const spikeStreak = rates[i + 2] < rates[i + 3];
+    if (declineStreak && spikeStreak) {
+      regressionFound = true;
+      break;
+    }
+  }
+
+  check(
+    `${agent} maturation: no regression after improvement (${weeks.length} weeks of data)`,
+    !regressionFound
+  );
+}
+
 // Summary
 console.log(`\n${'═'.repeat(50)}`);
 console.log(`Results: ${passed} passed, ${failed} failed`);

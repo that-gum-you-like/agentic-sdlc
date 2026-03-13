@@ -14,6 +14,13 @@ import { fileURLToPath } from 'url';
 import https from 'http';
 import { loadConfig } from '../load-config.mjs';
 
+// Optional schema validation for structured messages
+let validate;
+try {
+  const sv = await import('../schema-validator.mjs');
+  validate = sv.validate;
+} catch { validate = null; }
+
 const config = loadConfig();
 const CREDS_PATH = config.credentialsPath;
 const SERVER = config.matrixServer;
@@ -81,9 +88,42 @@ async function resolveRoom(token, roomName) {
   return data.room_id;
 }
 
+// Schema mapping for structured messages sent to specific rooms
+const ROOM_SCHEMAS = {
+  reviews: { outbound: 'review-request', inbound: 'review-result' },
+  releases: { outbound: 'deploy-request' },
+};
+
+/**
+ * Validate a structured JSON message against the appropriate schema for its room.
+ * Returns { valid, warning?, errors? } or null if no schema applies.
+ */
+async function validateStructuredMessage(room, message, direction = 'outbound') {
+  if (!validate) return null;
+  const mapping = ROOM_SCHEMAS[room];
+  if (!mapping || !mapping[direction]) return null;
+
+  // Only validate if the message looks like JSON
+  let parsed;
+  try {
+    parsed = typeof message === 'string' ? JSON.parse(message) : message;
+  } catch {
+    return null; // Plain text message, no validation needed
+  }
+
+  return validate(mapping[direction], parsed);
+}
+
 async function send(agent, room, message) {
   const token = getToken(agent);
   const roomId = await resolveRoom(token, room);
+
+  // Validate structured messages before sending
+  const validation = await validateStructuredMessage(room, message, 'outbound');
+  if (validation && !validation.valid) {
+    console.warn(`⚠ Schema validation warning for #${room}:`, validation.errors?.map(e => `${e.field}: ${e.message}`).join(', '));
+  }
+
   const txnId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const result = await matrixRequest('PUT',
     `/_matrix/client/v3/rooms/${encodeURIComponent(roomId)}/send/m.room.message/${txnId}`,

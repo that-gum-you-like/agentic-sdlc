@@ -21,7 +21,7 @@ const config = loadConfig();
 const COST_LOG_PATH = config.costLogPath;
 const BUDGET_PATH = config.budgetPath;
 
-function loadLog() {
+export function loadLog() {
   if (!existsSync(COST_LOG_PATH)) return [];
   return JSON.parse(readFileSync(COST_LOG_PATH, 'utf8'));
 }
@@ -62,7 +62,65 @@ function record(agent, taskId, inputTokens, outputTokens) {
   console.log(`📊 Recorded: ${agent} | ${taskId} | ${entry.totalTokens} tokens (${entry.model})`);
 }
 
-function computeSessionHours(log, cutoffDate) {
+/**
+ * Compute per-agent efficiency metrics over a rolling 5-task window.
+ *
+ * @param {string} agent - Agent name to compute metrics for
+ * @param {object} [options] - Optional overrides for testing
+ * @param {Array}  [options.logData]    - Cost log entries (skips file read)
+ * @param {object} [options.budgetData] - Budget object (skips file read)
+ * @returns {{ avgTokensPerTask: number, firstAttemptSuccessRate: number, comparedToTypeAvg: number }}
+ */
+export function computeEfficiencyMetrics(agent, { logData, budgetData } = {}) {
+  const log = logData !== undefined ? logData : loadLog();
+  const budget = budgetData !== undefined ? budgetData : loadBudget();
+
+  // Determine agent type (model) from budget config
+  const agentModel = budget?.agents?.[agent]?.model || null;
+
+  // Get last 5 entries for the target agent
+  const agentEntries = log.filter(e => e.agent === agent);
+  const window = agentEntries.slice(-5);
+
+  if (window.length === 0) {
+    return { avgTokensPerTask: 0, firstAttemptSuccessRate: 0, comparedToTypeAvg: 1 };
+  }
+
+  // avgTokensPerTask
+  const totalTokens = window.reduce((sum, e) => sum + e.totalTokens, 0);
+  const avgTokensPerTask = totalTokens / window.length;
+
+  // firstAttemptSuccessRate: tasks where taskId does NOT contain 'retry' or 'reset' suffix
+  const firstAttemptCount = window.filter(e => !/[-_](retry|reset|attempt[2-9])\d*$/i.test(e.taskId)).length;
+  const firstAttemptSuccessRate = (firstAttemptCount / window.length) * 100;
+
+  // comparedToTypeAvg: ratio vs average tokens/task for all agents of the same type (model)
+  let comparedToTypeAvg = 1;
+  if (agentModel) {
+    const sameTypeAgents = budget?.agents
+      ? Object.entries(budget.agents)
+          .filter(([, v]) => v.model === agentModel)
+          .map(([k]) => k)
+      : [];
+
+    if (sameTypeAgents.length > 1) {
+      const typeAvgs = sameTypeAgents.map(a => {
+        const entries = log.filter(e => e.agent === a).slice(-5);
+        if (entries.length === 0) return null;
+        return entries.reduce((sum, e) => sum + e.totalTokens, 0) / entries.length;
+      }).filter(v => v !== null);
+
+      if (typeAvgs.length > 0) {
+        const typeAvg = typeAvgs.reduce((s, v) => s + v, 0) / typeAvgs.length;
+        comparedToTypeAvg = typeAvg > 0 ? avgTokensPerTask / typeAvg : 1;
+      }
+    }
+  }
+
+  return { avgTokensPerTask, firstAttemptSuccessRate, comparedToTypeAvg };
+}
+
+export function computeSessionHours(log, cutoffDate) {
   const SESSION_GAP_MS = 30 * 60 * 1000; // 30 min gap = new session
   const entries = log
     .filter(e => new Date(e.timestamp) >= cutoffDate)
@@ -144,6 +202,15 @@ function report(weekly) {
     const pct = periodLimit ? ` (${Math.round(stats.total / periodLimit * 100)}%)` : '';
 
     console.log(`  ${agent.padEnd(12)} ${stats.total.toLocaleString().padStart(8)} tokens${budgetStr}${pct} | ${stats.tasks} tasks`);
+    try {
+      const eff = computeEfficiencyMetrics(agent);
+      const avgK = (eff.avgTokensPerTask / 1000).toFixed(1);
+      const fsr = Math.round(eff.firstAttemptSuccessRate);
+      const vsType = Math.round(eff.comparedToTypeAvg * 100);
+      console.log(`  ${''.padEnd(12)} efficiency: ${avgK}K tok/task | ${fsr}% first-attempt | ${vsType}% vs type avg`);
+    } catch {
+      // cost data unavailable — skip efficiency line
+    }
   }
 
   // Top tasks by cost
@@ -164,7 +231,11 @@ function report(weekly) {
 
   // Session hours
   const sessionHours = computeSessionHours(log, cutoffDate);
-  console.log(`\n  Session Hours: ${sessionHours.toFixed(1)}h`);
+  if (weekly) {
+    console.log(`\n  Human session hours this week: ${sessionHours.toFixed(1)}h`);
+  } else {
+    console.log(`\n  Session Hours: ${sessionHours.toFixed(1)}h`);
+  }
 
   // Wellness check
   const projectConfig = config;

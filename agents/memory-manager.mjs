@@ -104,6 +104,98 @@ function recall(agent) {
   console.log('');
 }
 
+/**
+ * Maturation level advancement logic.
+ *
+ * Checks the milestone criteria after a correction is recorded and auto-advances
+ * the agent's maturation level in core.json when criteria are met.
+ *
+ * Levels:
+ *   0 → 1: First correction recorded
+ *   1 → 2: First self-correction
+ *   2 → 3: 3+ consecutive weeks with declining correction rate
+ *   3 → 4: Pattern-hunt output attributes improvements to agent (contributesToPatterns flag)
+ *   4 → 5: Zero corrections in 2+ consecutive weeks
+ */
+function checkMaturationAdvancement(agent, content) {
+  const core = loadMemory(agent, 'core');
+  if (!core.maturation) {
+    core.maturation = { level: 0, weekStarted: '', milestonesHit: [], metrics: {} };
+  }
+  const mat = core.maturation;
+  const currentLevel = mat.level || 0;
+  let advanced = false;
+
+  if (currentLevel === 0) {
+    // Level 0 → 1: any correction recorded
+    mat.level = 1;
+    mat.weekStarted = new Date().toISOString().split('T')[0];
+    mat.milestonesHit = mat.milestonesHit || [];
+    mat.milestonesHit.push({ level: 1, date: new Date().toISOString().split('T')[0], trigger: 'first_correction' });
+    advanced = true;
+    console.log(`  🎓 ${agent} advanced to maturation level 1 (Corrected)`);
+  } else if (currentLevel === 1) {
+    // Level 1 → 2: self-correction detected
+    const isSelfCorrection = content.toLowerCase().includes('[self-correction]') ||
+      content.toLowerCase().includes('self-correction:');
+    if (isSelfCorrection) {
+      mat.level = 2;
+      mat.weekStarted = new Date().toISOString().split('T')[0];
+      mat.milestonesHit = mat.milestonesHit || [];
+      mat.milestonesHit.push({ level: 2, date: new Date().toISOString().split('T')[0], trigger: 'first_self_correction' });
+      advanced = true;
+      console.log(`  🎓 ${agent} advanced to maturation level 2 (Remembering)`);
+    }
+  } else if (currentLevel === 2) {
+    // Level 2 → 3: 3+ consecutive weeks of declining correction rate
+    const metrics = mat.metrics || {};
+    const weeks = Object.keys(metrics).sort();
+    if (weeks.length >= 3) {
+      const last3 = weeks.slice(-3);
+      const rates = last3.map(w => metrics[w].correctionsReceived || 0);
+      const declining = rates[0] > rates[1] && rates[1] > rates[2];
+      if (declining) {
+        mat.level = 3;
+        mat.weekStarted = new Date().toISOString().split('T')[0];
+        mat.milestonesHit = mat.milestonesHit || [];
+        mat.milestonesHit.push({ level: 3, date: new Date().toISOString().split('T')[0], trigger: 'declining_correction_rate' });
+        advanced = true;
+        console.log(`  🎓 ${agent} advanced to maturation level 3 (Teaching)`);
+      }
+    }
+  } else if (currentLevel === 3) {
+    // Level 3 → 4: contributesToPatterns flag set in core.maturation
+    if (mat.contributesToPatterns === true) {
+      mat.level = 4;
+      mat.weekStarted = new Date().toISOString().split('T')[0];
+      mat.milestonesHit = mat.milestonesHit || [];
+      mat.milestonesHit.push({ level: 4, date: new Date().toISOString().split('T')[0], trigger: 'team_pattern_contribution' });
+      advanced = true;
+      console.log(`  🎓 ${agent} advanced to maturation level 4 (Autonomous)`);
+    }
+  } else if (currentLevel === 4) {
+    // Level 4 → 5: zero corrections in 2+ consecutive weeks
+    const metrics = mat.metrics || {};
+    const weeks = Object.keys(metrics).sort();
+    if (weeks.length >= 2) {
+      const last2 = weeks.slice(-2);
+      const zeroCorrections = last2.every(w => (metrics[w].correctionsReceived || 0) === 0);
+      if (zeroCorrections) {
+        mat.level = 5;
+        mat.weekStarted = new Date().toISOString().split('T')[0];
+        mat.milestonesHit = mat.milestonesHit || [];
+        mat.milestonesHit.push({ level: 5, date: new Date().toISOString().split('T')[0], trigger: 'autonomous_operation' });
+        advanced = true;
+        console.log(`  🎓 ${agent} advanced to maturation level 5 (Evolving)`);
+      }
+    }
+  }
+
+  if (advanced) {
+    saveMemory(agent, 'core', core);
+  }
+}
+
 function record(agent, layer, content) {
   if (!AGENTS.includes(agent)) {
     console.error(`Unknown agent: ${agent}`);
@@ -147,6 +239,16 @@ function record(agent, layer, content) {
     if (semanticIndex) {
       try { semanticIndex.addEntry(agent, entryId, content); } catch {}
     }
+  }
+
+  // Check for maturation advancement whenever a correction is recorded
+  const isCorrection = content.toLowerCase().includes('[correction]') ||
+    content.toLowerCase().includes('correction:') ||
+    content.toLowerCase().includes('[self-correction]') ||
+    content.toLowerCase().includes('self-correction:') ||
+    layer === 'core';
+  if (isCorrection) {
+    checkMaturationAdvancement(agent, content);
   }
 }
 

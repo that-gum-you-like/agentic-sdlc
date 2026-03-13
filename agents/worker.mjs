@@ -19,6 +19,15 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
 import { loadConfig } from './load-config.mjs';
+import { computeEfficiencyMetrics } from './cost-tracker.mjs';
+
+let semanticSearch = null;
+try {
+  const si = await import('./semantic-index.mjs');
+  semanticSearch = si.search;
+} catch {
+  // semantic-index not available — fall back to full recall
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -82,13 +91,80 @@ function getCadenceGuidance(agentName) {
   return `\n## Commit Cadence\nPreferred commit times: ${times.join(', ')}. If you finish between windows, prepare your commit and wait for the next window to minimize merge conflicts with other agents.\n`;
 }
 
+function generateInstanceSection(task) {
+  // 9.4: Inject instance awareness when the task has an instanceId
+  if (!task.instanceId || task.instanceId === task.assignee) return '';
+
+  const instanceId = task.instanceId;
+  const baseAgent = task.assignee;
+  // Parse instance number and infer total (we know at least this instance exists)
+  const match = instanceId.match(/-(\d+)$/);
+  const instanceNum = match ? parseInt(match[1], 10) : 1;
+
+  // Collect sibling tasks (in-progress tasks for the same base agent)
+  // We read them from the task object metadata if available, otherwise note generically
+  const siblingsNote = task.siblingTasks
+    ? `Other active instances:\n${task.siblingTasks.map(s => `  - ${s.instanceId}: task ${s.taskId} (files: ${(s.files || []).join(', ') || 'none'})`).join('\n')}`
+    : `Other instances of ${baseAgent} may be running concurrently.`;
+
+  const avoidFiles = task.filesToAvoid
+    ? `\nFiles claimed by other instances (DO NOT TOUCH):\n${task.filesToAvoid.map(f => `  - ${f}`).join('\n')}`
+    : '';
+
+  return `\n## Instance Awareness
+You are running as instance **${instanceId}** (instance ${instanceNum} of agent ${baseAgent}).
+${siblingsNote}${avoidFiles}
+**Important:** Only modify the files listed in your task. Do NOT touch files owned by other instances.
+`;
+}
+
 function generatePrompt(agentName, task, agentMd, memories) {
-  const memorySection = Object.entries(memories)
-    .map(([layer, data]) => `### ${layer}.json\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``)
-    .join('\n\n');
+  // 4.5: Use semantic search when available to inject only relevant memory entries.
+  // Fall back to full recall (full memories object) if semantic search unavailable.
+  let memorySection;
+  let semanticSearchUsed = false;
+  try {
+    if (semanticSearch) {
+      const query = `${task.title} ${task.description || ''}`.trim();
+      const results = semanticSearch(agentName, query, 10);
+      if (results && results.length > 0) {
+        // Group results by layer for display
+        const byLayer = {};
+        for (const r of results) {
+          if (!byLayer[r.layer]) byLayer[r.layer] = [];
+          byLayer[r.layer].push(r.content);
+        }
+        const sections = Object.entries(byLayer).map(([layer, entries]) =>
+          `### ${layer} (semantic — top relevant entries)\n${entries.map(e => `- ${e}`).join('\n')}`
+        );
+        memorySection = sections.join('\n\n');
+        semanticSearchUsed = true;
+      }
+    }
+  } catch {
+    // semantic search failed — fall through to full recall
+  }
+
+  if (!semanticSearchUsed) {
+    memorySection = Object.entries(memories)
+      .map(([layer, data]) => `### ${layer}.json\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``)
+      .join('\n\n');
+  }
 
   const permissionConstraint = getPermissionConstraint(agentName);
   const cadenceGuidance = getCadenceGuidance(agentName);
+  const instanceSection = generateInstanceSection(task);
+
+  let efficiencySummary = '';
+  try {
+    const eff = computeEfficiencyMetrics(agentName);
+    const avgK = (eff.avgTokensPerTask / 1000).toFixed(1);
+    const fsr = Math.round(eff.firstAttemptSuccessRate);
+    const vsType = Math.round(eff.comparedToTypeAvg * 100);
+    efficiencySummary = `\n## Your Recent Efficiency\nYour recent efficiency: ${avgK}K tokens/task avg, ${fsr}% first-attempt success, ${vsType}% vs type average\n`;
+  } catch {
+    // cost data unavailable — skip efficiency section
+  }
 
   return `You are ${agentName}. Read and follow your agent instructions below.
 
@@ -97,7 +173,7 @@ ${agentMd}
 
 ## Permission Constraints
 ${permissionConstraint}
-
+${instanceSection}${efficiencySummary}
 ## Your Memory
 ${memorySection}
 
@@ -116,7 +192,30 @@ ${task.acceptance_criteria ? `**Acceptance Criteria:**\n${task.acceptance_criter
 6. Mark the task as completed: \`node agents/queue-drainer.mjs complete ${task.id} passing\`
 7. Record what you learned: \`node agents/memory-manager.mjs record ${agentName} recent "<what you learned>"\`
 
-${cadenceGuidance}## Rules
+${cadenceGuidance}## When You Hit an Unresolvable Blocker
+If you encounter a blocker that only a human can resolve (missing credentials, a design decision, content you cannot create, external access needed), create a human task file in \`tasks/human-queue/\` using this template:
+
+\`\`\`json
+{
+  "id": "HTASK-<NNN>",
+  "title": "<Short one-line description of what the human needs to do>",
+  "description": "<Full context: what you were doing, what is missing, and exactly what the human must provide or decide>",
+  "requester": "${agentName}",
+  "urgency": "blocker",
+  "unblocks": ["${task.id}"],
+  "status": "pending",
+  "createdAt": "<ISO 8601 timestamp>",
+  "completedAt": null
+}
+\`\`\`
+
+Then reset the current task and set its status to blocked:
+1. \`node agents/queue-drainer.mjs reset ${task.id}\`
+2. Edit \`tasks/queue/${task.id}.json\` — set \`"status": "blocked"\`
+
+Do NOT fabricate credentials, make irreversible design choices on behalf of the user, or loop indefinitely.
+
+## Rules
 - Do NOT ask for permission — just execute
 - Do NOT stop to confirm — keep going
 - Small files, small commits

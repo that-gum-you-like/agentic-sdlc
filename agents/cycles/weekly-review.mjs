@@ -11,7 +11,7 @@
  *   node agents/cycles/weekly-review.mjs
  */
 
-import { readFileSync, readdirSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
@@ -119,6 +119,85 @@ function taskSummary() {
   console.log(`  Velocity: ${completed} tasks/week`);
 }
 
+/**
+ * Compute per-agent maturation metrics for the current ISO week and write
+ * them to each agent's core.json under maturation.metrics[isoWeek].
+ *
+ * Metrics collected:
+ *   - correctionsReceived: count of entries tagged [correction] in recent + medium-term
+ *   - selfCorrections:     count of entries tagged [self-correction] in recent + medium-term
+ *   - reviewSeverity:      { critical, major, minor } counts from Richmond's reviews
+ */
+function computeMaturationMetrics() {
+  console.log('\n🎓 Agent Maturation Metrics');
+  console.log('─'.repeat(40));
+
+  // Determine ISO week string, e.g. "2026-W11"
+  const now = new Date();
+  const jan4 = new Date(now.getFullYear(), 0, 4);
+  const weekNum = Math.ceil(((now - jan4) / 86400000 + jan4.getDay() + 1) / 7);
+  const isoWeek = `${now.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+
+  // Pre-scan Richmond's reviews for severity counts per author
+  const severityByAgent = {};
+  if (existsSync(REVIEWS_DIR)) {
+    const reviewFiles = readdirSync(REVIEWS_DIR).filter(f => f.endsWith('.md'));
+    for (const file of reviewFiles) {
+      const content = readFileSync(resolve(REVIEWS_DIR, file), 'utf8');
+      // Try to attribute to an agent via filename convention: <date>-<agent>-*.md
+      const agentMatch = file.match(/^\d{4}-\d{2}-\d{2}-([a-z]+)/);
+      const reviewAgent = agentMatch ? agentMatch[1] : null;
+      if (!reviewAgent || !AGENTS.includes(reviewAgent)) continue;
+      if (!severityByAgent[reviewAgent]) {
+        severityByAgent[reviewAgent] = { critical: 0, major: 0, minor: 0 };
+      }
+      const issues = content.match(/\[(critical|major|minor)\]/gi) || [];
+      issues.forEach(tag => {
+        const key = tag.replace(/\[|\]/g, '').toLowerCase();
+        severityByAgent[reviewAgent][key] = (severityByAgent[reviewAgent][key] || 0) + 1;
+      });
+    }
+  }
+
+  for (const agent of AGENTS) {
+    const corePath = resolve(AGENTS_DIR, agent, 'memory/core.json');
+    if (!existsSync(corePath)) {
+      console.log(`  ${agent}: no core.json — skipped`);
+      continue;
+    }
+
+    const core = JSON.parse(readFileSync(corePath, 'utf8'));
+
+    // Count correction entries across recent + medium-term memory
+    let correctionsReceived = 0;
+    let selfCorrections = 0;
+    for (const layer of ['recent', 'medium-term']) {
+      const memPath = resolve(AGENTS_DIR, agent, `memory/${layer}.json`);
+      if (!existsSync(memPath)) continue;
+      const mem = JSON.parse(readFileSync(memPath, 'utf8'));
+      for (const entry of mem.entries || []) {
+        const text = (entry.content || '').toLowerCase();
+        if (text.includes('[correction]') || text.includes('correction:')) {
+          correctionsReceived++;
+        }
+        if (text.includes('[self-correction]') || text.includes('self-correction:')) {
+          selfCorrections++;
+        }
+      }
+    }
+
+    const reviewSeverity = severityByAgent[agent] || { critical: 0, major: 0, minor: 0 };
+
+    // Write metrics into core.json
+    core.maturation = core.maturation || { level: 0, weekStarted: '', milestonesHit: [], metrics: {} };
+    core.maturation.metrics = core.maturation.metrics || {};
+    core.maturation.metrics[isoWeek] = { correctionsReceived, selfCorrections, reviewSeverity };
+
+    writeFileSync(corePath, JSON.stringify(core, null, 2));
+    console.log(`  ${agent} [${isoWeek}]: corrections=${correctionsReceived}, self-corrections=${selfCorrections}, severity=${JSON.stringify(reviewSeverity)}`);
+  }
+}
+
 // Main
 console.log('═'.repeat(50));
 console.log('  Weekly Review — ' + new Date().toISOString().split('T')[0]);
@@ -127,6 +206,32 @@ console.log('═'.repeat(50));
 analyzePatterns();
 consolidateMemories();
 taskSummary();
+computeMaturationMetrics();
+
+// Record cycle history
+{
+  const pmDir = resolve(ROOT, 'pm');
+  if (!existsSync(pmDir)) mkdirSync(pmDir, { recursive: true });
+  const historyPath = resolve(pmDir, 'cycle-history.json');
+  let history = [];
+  if (existsSync(historyPath)) {
+    try { history = JSON.parse(readFileSync(historyPath, 'utf8')); } catch { history = []; }
+  }
+  const files = existsSync(TASKS_DIR) ? readdirSync(TASKS_DIR).filter(f => f.endsWith('.json')) : [];
+  let completed = 0, pending = 0;
+  for (const file of files) {
+    const task = JSON.parse(readFileSync(resolve(TASKS_DIR, file), 'utf8'));
+    if (task.status === 'completed') completed++;
+    else if (task.status === 'pending') pending++;
+  }
+  history.push({
+    type: 'weekly-review',
+    timestamp: new Date().toISOString(),
+    success: true,
+    stats: { completed, pending, agentsConsolidated: AGENTS.length },
+  });
+  writeFileSync(historyPath, JSON.stringify(history, null, 2));
+}
 
 console.log('\n' + '═'.repeat(50));
 console.log('  Weekly review complete.');

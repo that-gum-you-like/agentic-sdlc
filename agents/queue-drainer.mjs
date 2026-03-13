@@ -20,7 +20,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, rename
 import { resolve, join } from 'path';
 import { execSync } from 'child_process';
 import { loadConfig } from './load-config.mjs';
-import { triggerNotification } from './notify.mjs';
+import { triggerNotification, notifyHumanTask, runWellnessCheck } from './notify.mjs';
 
 let validate = null;
 try {
@@ -74,6 +74,26 @@ function loadTasks() {
 function loadCompletedCount() {
   if (!existsSync(COMPLETED_DIR)) return 0;
   return readdirSync(COMPLETED_DIR).filter(f => f.endsWith('.json')).length;
+}
+
+function loadHumanTasks() {
+  const humanQueueDir = config.humanQueueDir;
+  if (!existsSync(humanQueueDir)) return [];
+  const files = readdirSync(humanQueueDir).filter(f => f.endsWith('.json')).sort();
+  const tasks = [];
+  for (const file of files) {
+    try {
+      const task = JSON.parse(readFileSync(join(humanQueueDir, file), 'utf8'));
+      task._file = file;
+      tasks.push(task);
+    } catch { /* skip malformed */ }
+  }
+  return tasks;
+}
+
+function saveHumanTask(task) {
+  const humanQueueDir = config.humanQueueDir;
+  writeFileSync(join(humanQueueDir, task._file), JSON.stringify(task, null, 2));
 }
 
 function saveTask(task) {
@@ -183,8 +203,11 @@ function checkAgentBudget(agentName) {
   if (!existsSync(BUDGET_PATH)) return { allowed: true };
   if (!existsSync(COST_LOG_PATH)) return { allowed: true };
 
+  // 9.5: use base agent name (e.g. "roy" from "roy-2") for budget lookup
+  const budgetKey = baseAgentName(agentName);
+
   const budget = JSON.parse(readFileSync(BUDGET_PATH, 'utf8'));
-  const agentBudget = budget.agents?.[agentName];
+  const agentBudget = budget.agents?.[budgetKey];
   if (!agentBudget) return { allowed: true };
 
   const dailyLimit = budget.conservationMode
@@ -193,8 +216,9 @@ function checkAgentBudget(agentName) {
 
   const costLog = JSON.parse(readFileSync(COST_LOG_PATH, 'utf8'));
   const today = new Date().toISOString().split('T')[0];
+  // 9.5: count tokens from all instances of this agent (roy, roy-1, roy-2, etc.)
   const todayUsage = costLog
-    .filter(e => e.agent === agentName && e.timestamp?.startsWith(today))
+    .filter(e => baseAgentName(e.agent) === budgetKey && e.timestamp?.startsWith(today))
     .reduce((sum, e) => sum + (e.inputTokens || 0) + (e.outputTokens || 0), 0);
 
   const pct = dailyLimit > 0 ? Math.round((todayUsage / dailyLimit) * 100) : 0;
@@ -224,12 +248,72 @@ function agentMeetsPermission(agentKey, requiredPermission) {
   return agentLevel >= requiredLevel;
 }
 
+// 9.1 / 9.2: maxInstances from budget config, default 1
+function getMaxInstances(agentKey) {
+  return config.agentConfigs?.[agentKey]?.maxInstances ?? 1;
+}
+
+// 9.5: strip instance suffix (e.g. "roy-2" → "roy") for budget lookup
+function baseAgentName(agentKey) {
+  return agentKey.replace(/-\d+$/, '');
+}
+
+// 9.3: Get file patterns declared in domains.json for an agent
+function getAgentFilePatterns(agentKey) {
+  return AGENT_DOMAINS[agentKey]?.filePatterns || [];
+}
+
+// 9.3: Check whether two tasks' file patterns overlap (explicit files or domain patterns)
+function filePatternOverlap(task1, task2) {
+  const files1 = task1.files || [];
+  const files2 = task2.files || [];
+
+  // Direct file overlap
+  const set1 = new Set(files1);
+  for (const f of files2) {
+    if (set1.has(f)) return true;
+  }
+
+  // Domain pattern overlap: both tasks reference files matching the same agent's filePatterns
+  const agent1 = determineAgent(task1);
+  const agent2 = determineAgent(task2);
+  if (agent1 === agent2) {
+    const patterns = getAgentFilePatterns(agent1);
+    if (patterns.length > 0) {
+      const text1 = files1.join(' ');
+      const text2 = files2.join(' ');
+      for (const pattern of patterns) {
+        if (text1.includes(pattern) && text2.includes(pattern)) return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function showStatus(tasks) {
   const pending = tasks.filter(t => t.status === 'pending');
   const inProgress = tasks.filter(t => t.status === 'in_progress');
   const completed = tasks.filter(t => t.status === 'completed');
   const archivedCount = loadCompletedCount();
   const independent = findIndependentTasks(tasks);
+
+  // Human Tasks section (12.3)
+  const humanTasks = loadHumanTasks().filter(t => t.status !== 'completed');
+  if (humanTasks.length > 0) {
+    const now = Date.now();
+    const URGENCY_ICON = { blocker: '🚨', normal: '⚠️ ', low: '💤' };
+    console.log(`\n👤 Human Tasks (${humanTasks.length} pending)`);
+    console.log(`${'─'.repeat(50)}`);
+    for (const ht of humanTasks) {
+      const ageDays = Math.floor((now - new Date(ht.createdAt).getTime()) / (24 * 60 * 60 * 1000));
+      const ageStr = ageDays === 0 ? 'today' : `${ageDays}d old`;
+      const icon = URGENCY_ICON[ht.urgency] || '⚠️ ';
+      const unblocks = ht.unblocks?.length > 0 ? ` → unblocks: ${ht.unblocks.join(', ')}` : '';
+      console.log(`  ${icon} [${ht.id}] (${ht.urgency}) ${ht.title} [${ageStr}]${unblocks}`);
+    }
+    console.log(`${'─'.repeat(50)}`);
+  }
 
   console.log(`\n📋 Queue Status (${config.name})`);
   console.log(`${'─'.repeat(50)}`);
@@ -272,6 +356,59 @@ function showStatus(tasks) {
   if (groups.length > 0 && groups[0].length > 1) {
     console.log(`\n⚡ Can parallelize: ${groups[0].length} tasks in first batch`);
   }
+
+  // 9.6: Scale suggestions — warn when queue depth > 3 for a domain and maxInstances not reached
+  const domainCounts = {};
+  for (const t of independent) {
+    const agent = determineAgent(t);
+    domainCounts[agent] = (domainCounts[agent] || 0) + 1;
+  }
+  const suggestions = [];
+  for (const [agent, count] of Object.entries(domainCounts)) {
+    if (count > 3 && getMaxInstances(agent) > 1) {
+      // Only suggest if fewer instances are running than max
+      const runningInstances = inProgress.filter(t => baseAgentName(t.claimedBy || '') === agent).length;
+      if (runningInstances < getMaxInstances(agent)) {
+        suggestions.push(`  Consider scaling ${agent} (${count} unblocked tasks, max ${getMaxInstances(agent)} instances)`);
+      }
+    }
+  }
+  if (suggestions.length > 0) {
+    console.log(`\n📈 Scale Suggestions:`);
+    for (const s of suggestions) console.log(s);
+  }
+
+  // 10.3: Cadence — next commit window per agent
+  const cadence = config.cadence;
+  if (cadence && Object.keys(cadence.agentOffsets || {}).length > 0) {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const windowMinutes = cadence.commitWindowMinutes || 15;
+
+    console.log(`\n⏱  Commit Cadence (${windowMinutes}-min windows):`);
+    for (const [agent, offset] of Object.entries(cadence.agentOffsets)) {
+      // Build list of window start times within the hour
+      const windowsInHour = [];
+      for (let t = offset; t < 60; t += windowMinutes) {
+        windowsInHour.push(t);
+      }
+      // Find next window (look across current and next hour)
+      let nextMinutes = null;
+      for (const wm of windowsInHour) {
+        const absMinutes = now.getHours() * 60 + wm;
+        if (absMinutes > currentMinutes) { nextMinutes = absMinutes; break; }
+      }
+      if (nextMinutes === null) {
+        // Wrap to next hour
+        nextMinutes = (now.getHours() + 1) * 60 + windowsInHour[0];
+      }
+      const nextH = Math.floor(nextMinutes / 60) % 24;
+      const nextM = nextMinutes % 60;
+      const nextStr = `${String(nextH).padStart(2, '0')}:${String(nextM).padStart(2, '0')}`;
+      const minsUntil = nextMinutes - currentMinutes;
+      console.log(`  ${getAgentName(agent).padEnd(12)} next window: ${nextStr} (in ${minsUntil} min)`);
+    }
+  }
 }
 
 // CLI entry point
@@ -296,13 +433,52 @@ switch (cmd) {
     if (parallel) {
       const groups = getParallelizable(independent);
       const batch = groups[0] || [];
-      console.log(`\nLaunching ${batch.length} tasks in parallel:`);
+
+      // 9.2: Build multi-instance assignments per agent
+      // Count how many tasks per agent domain are in this batch; if > 1 and maxInstances > 1,
+      // assign unique instance IDs (roy-1, roy-2, ...). Serialise if file patterns overlap (9.3).
+      const agentTaskCounts = {};
+      const assignedTasks = []; // tasks that will actually be launched
+      const claimedFiles = []; // track files claimed so far to detect overlap (9.3)
+
       for (const task of batch) {
         const agent = determineAgent(task);
+        const taskFiles = task.files || [];
+
+        // 9.3: Check overlap with already-claimed files in this batch
+        const overlaps = claimedFiles.some(cf => {
+          const set = new Set(cf);
+          return taskFiles.some(f => set.has(f));
+        });
+        if (overlaps) {
+          console.log(`  ↩️  [${task.id}] Serialised — file pattern conflict with another task in batch`);
+          continue;
+        }
+
+        agentTaskCounts[agent] = (agentTaskCounts[agent] || 0) + 1;
+        const maxInst = getMaxInstances(agent);
+        const instanceNum = agentTaskCounts[agent];
+
+        // If this agent can only run one instance, skip extra tasks
+        if (instanceNum > maxInst) {
+          console.log(`  ⏭️  [${task.id}] Deferred — ${agent} max instances (${maxInst}) reached`);
+          continue;
+        }
+
+        // Assign instance ID only when running multiple instances
+        const instanceId = maxInst > 1 ? `${agent}-${instanceNum}` : agent;
+
+        assignedTasks.push({ task, agent, instanceId });
+        if (taskFiles.length > 0) claimedFiles.push(taskFiles);
+      }
+
+      console.log(`\nLaunching ${assignedTasks.length} tasks in parallel:`);
+      for (const { task, agent, instanceId } of assignedTasks) {
         if (task.requiredPermission && !agentMeetsPermission(agent, task.requiredPermission)) {
           console.log(`  ⛔ [${task.id}] Skipped — ${agent} [${getAgentPermission(agent)}] lacks required permission: ${task.requiredPermission}`);
           continue;
         }
+        // 9.5: budget check uses base agent name
         const budgetCheck = checkAgentBudget(agent);
         if (!budgetCheck.allowed) {
           console.log(`  ⚠️  [${task.id}] Skipped — ${agent} over budget (${budgetCheck.used}/${budgetCheck.limit} tokens)`);
@@ -310,12 +486,16 @@ switch (cmd) {
         }
         task.status = 'in_progress';
         task.assignee = agent;
-        task.claimedBy = agent;
+        task.instanceId = instanceId;
+        task.claimedBy = instanceId;
         task.claimedAt = new Date().toISOString();
         task.started_at = new Date().toISOString();
         saveTask(task);
-        console.log(`  [${task.id}] ${task.title} → ${getAgentName(agent)}`);
+        const instLabel = instanceId !== agent ? ` (instance: ${instanceId})` : '';
+        console.log(`  [${task.id}] ${task.title} → ${getAgentName(agent)}${instLabel}`);
       }
+      // Advisory wellness check — never blocks assignment (13.4, 13.5)
+      try { runWellnessCheck(); } catch { /* wellness is advisory only */ }
     } else {
       const task = independent[0];
       const agent = determineAgent(task);
@@ -335,6 +515,8 @@ switch (cmd) {
       task.started_at = new Date().toISOString();
       saveTask(task);
       console.log(`\nAssigned [${task.id}] ${task.title} → ${getAgentName(agent)}`);
+      // Advisory wellness check — never blocks assignment (13.4, 13.5)
+      try { runWellnessCheck(); } catch { /* wellness is advisory only */ }
     }
     break;
   }
@@ -469,6 +651,57 @@ switch (cmd) {
     break;
   }
 
+  // 12.2: human-status — list pending human tasks
+  case 'human-status': {
+    const humanTasks = loadHumanTasks();
+    const pending = humanTasks.filter(t => t.status !== 'completed');
+    if (pending.length === 0) {
+      console.log('✅ No pending human tasks.');
+      break;
+    }
+    const now = Date.now();
+    const URGENCY_ICON = { blocker: '🚨', normal: '⚠️ ', low: '💤' };
+    console.log(`\n👤 Pending Human Tasks (${pending.length})`);
+    console.log(`${'─'.repeat(50)}`);
+    for (const ht of pending) {
+      const ageDays = Math.floor((now - new Date(ht.createdAt).getTime()) / (24 * 60 * 60 * 1000));
+      const ageStr = ageDays === 0 ? 'today' : `${ageDays}d old`;
+      const icon = URGENCY_ICON[ht.urgency] || '⚠️ ';
+      const unblocks = ht.unblocks?.length > 0 ? `\n      Unblocks: ${ht.unblocks.join(', ')}` : '';
+      console.log(`  ${icon} [${ht.id}] (${ht.urgency}) ${ht.title} [${ageStr}]`);
+      console.log(`      ${ht.description}${unblocks}`);
+    }
+    break;
+  }
+
+  // 12.2 + 12.6: human-complete <id> — mark done and unblock dependent agent tasks
+  case 'human-complete': {
+    const htId = args[0];
+    if (!htId) { console.error('Usage: human-complete <id>'); break; }
+
+    const humanTasks = loadHumanTasks();
+    const ht = humanTasks.find(t => t.id === htId);
+    if (!ht) { console.error(`Human task ${htId} not found`); break; }
+
+    ht.status = 'completed';
+    ht.completedAt = new Date().toISOString();
+    saveHumanTask(ht);
+    console.log(`✅ Human task ${htId} marked completed.`);
+
+    // 12.6: auto-unblock dependent agent tasks
+    if (ht.unblocks && ht.unblocks.length > 0) {
+      for (const blockedId of ht.unblocks) {
+        const agentTask = tasks.find(t => t.id === blockedId);
+        if (agentTask && agentTask.status === 'blocked') {
+          agentTask.status = 'pending';
+          saveTask(agentTask);
+          console.log(`  ↳ Unblocked agent task [${blockedId}] ${agentTask.title}`);
+        }
+      }
+    }
+    break;
+  }
+
   default:
     console.log(`Usage:
   queue-drainer.mjs run              # Process next task
@@ -479,5 +712,7 @@ switch (cmd) {
   queue-drainer.mjs release <task-id>        # Release a claimed task
   queue-drainer.mjs complete <task-id> passing  # Mark task done (requires passing tests)
   queue-drainer.mjs archive                  # Move completed tasks to completed/
-  queue-drainer.mjs reset <task-id>  # Reset a stuck task`);
+  queue-drainer.mjs reset <task-id>  # Reset a stuck task
+  queue-drainer.mjs human-status     # List pending human tasks
+  queue-drainer.mjs human-complete <id>  # Mark human task done and unblock agent tasks`);
 }

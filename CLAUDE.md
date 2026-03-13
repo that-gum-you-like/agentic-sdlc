@@ -259,6 +259,52 @@ When editing any agent's AGENT.md:
    - Fix and re-deploy if any verification fails
 6. **Notify stakeholder LAST** — only after browser verification passes on production
 
+## Instance Scaling
+
+Agents can run multiple parallel instances when configured:
+```json
+// budget.json
+{ "roy": { "maxInstances": 2, "dailyTokenLimit": 500000 } }
+```
+- Queue-drainer assigns up to `maxInstances` independent tasks with unique instance IDs (`roy-1`, `roy-2`)
+- File pattern conflict detection prevents overlapping assignments
+- All instances share the agent type's daily token budget
+- `queue-drainer.mjs status` shows scale suggestions when queue is deep
+
+## Human Task Queue
+
+Bidirectional human-agent task management:
+```bash
+node ~/agentic-sdlc/agents/queue-drainer.mjs human-status              # List pending human tasks
+node ~/agentic-sdlc/agents/queue-drainer.mjs human-complete <id>        # Mark done, auto-unblock agents
+```
+- Agents create human task JSON files when hitting unresolvable blockers
+- `notify.mjs` sends immediate notifications on human task creation
+- `daily-review.mjs` shows "YOUR Action Items" section at dashboard top
+- Bottleneck detection alerts when human tasks are blocking agent work > 24h
+
+## Agent Maturation Tracking
+
+Agents mature through 6 levels: New → Corrected → Remembering → Teaching → Autonomous → Evolving
+
+- `weekly-review.mjs` computes per-agent maturation metrics (corrections, self-corrections, review severity)
+- `memory-manager.mjs` auto-advances maturation level on milestone achievements
+- `test-behavior.mjs` includes regression detection (correction rate spikes)
+- `daily-review.mjs` dashboard shows maturation level, weeks at level, and trend
+
+## Performance Feedback
+
+Cost-tracker computes per-agent efficiency metrics:
+- Average tokens per task (rolling 5-task window)
+- First-attempt success rate
+- Comparison to type average
+
+Worker injects these metrics into agent prompts for self-awareness.
+
+## Cycle History
+
+All automated cycle runs are recorded in `pm/cycle-history.json` with type, timestamp, success/failure, and summary stats. Both daily and weekly reviews append entries automatically.
+
 ## Git Conventions
 
 Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
@@ -267,24 +313,24 @@ Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 
 | Script | Purpose |
 |--------|---------|
-| `agents/queue-drainer.mjs` | Task queue management |
+| `agents/queue-drainer.mjs` | Task queue management + human task queue |
 | `agents/worker.mjs` | Generate agent prompts for subagent spawning |
 | `agents/seed-queue.mjs` | Initialize task queue from seed-tasks.json template |
 | `agents/review-hook.mjs` | Post-commit review hook (install/run) |
-| `agents/memory-manager.mjs` | 5-layer memory CRUD |
-| `agents/rem-sleep.mjs` | Automated memory consolidation |
+| `agents/memory-manager.mjs` | 5-layer memory CRUD + maturation tracking |
+| `agents/rem-sleep.mjs` | Automated memory consolidation (+ similarity dedup) |
 | `agents/migrate-memory.mjs` | Memory migration on prompt upgrades |
 | `agents/version-snapshot.mjs` | Agent version snapshots |
-| `agents/cost-tracker.mjs` | Token usage logging and reporting |
-| `agents/test-behavior.mjs` | Agent prompt quality validation |
+| `agents/cost-tracker.mjs` | Token usage, efficiency metrics, session hours |
+| `agents/test-behavior.mjs` | Agent prompt quality + maturation regression |
 | `agents/four-layer-validate.mjs` | AST anti-pattern scanning |
 | `agents/ast-analyzer.mjs` | TypeScript semantic analysis |
-| `agents/pattern-hunt.mjs` | Review pattern mining |
-| `agents/cycles/daily-review.mjs` | End-of-day summary + dashboard update |
-| `agents/cycles/weekly-review.mjs` | Weekly pattern review + REM sleep |
-| `agents/matrix-client/matrix-cli.mjs` | Matrix communication CLI |
+| `agents/pattern-hunt.mjs` | Review pattern mining (+ semantic clustering) |
+| `agents/cycles/daily-review.mjs` | Daily summary + dashboard + bottleneck detection |
+| `agents/cycles/weekly-review.mjs` | Weekly review + REM sleep + maturation metrics |
+| `agents/matrix-client/matrix-cli.mjs` | Matrix communication CLI (+ schema validation) |
 | `agents/start.sh` | System startup (Matrix + queue status) |
-| `agents/notify.mjs` | Notification & approval layer |
+| `agents/notify.mjs` | Notification, approval, wellness checks |
 | `agents/mailbox-sync.mjs` | Sync inbound WhatsApp messages to mailbox |
 | `agents/semantic-index.mjs` | Vector embedding index for semantic memory search |
 | `agents/embed.py` | Local embedding generation (sentence-transformers) |

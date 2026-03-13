@@ -9,6 +9,7 @@
  *   node agents/notify.mjs pending
  *   node agents/notify.mjs resolve <approval-id> approved|rejected [--note <text>]
  *   node agents/notify.mjs status
+ *   node agents/notify.mjs wellness-check
  */
 
 import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, appendFileSync } from 'fs';
@@ -465,12 +466,154 @@ function cmdStatus() {
 }
 
 // ---------------------------------------------------------------------------
+// Wellness check (advisory only — never blocks queue or task assignment)
+// ---------------------------------------------------------------------------
+
+function loadCostLog() {
+  const costLogPath = config.costLogPath;
+  if (!existsSync(costLogPath)) return [];
+  try {
+    return JSON.parse(readFileSync(costLogPath, 'utf8'));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Compute total active session hours from a cost log since a given cutoff date.
+ * Mirrors the logic in cost-tracker.mjs computeSessionHours.
+ */
+function sessionHoursSince(log, cutoffDate) {
+  const SESSION_GAP_MS = 30 * 60 * 1000;
+  const entries = log
+    .filter(e => new Date(e.timestamp) >= cutoffDate)
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  if (entries.length === 0) return 0;
+
+  let totalMs = 0;
+  let sessionStart = new Date(entries[0].timestamp);
+  let sessionEnd = sessionStart;
+
+  for (let i = 1; i < entries.length; i++) {
+    const ts = new Date(entries[i].timestamp);
+    if (ts - sessionEnd > SESSION_GAP_MS) {
+      totalMs += sessionEnd - sessionStart;
+      sessionStart = ts;
+    }
+    sessionEnd = ts;
+  }
+  totalMs += sessionEnd - sessionStart;
+
+  return (totalMs / (1000 * 60 * 60)) + (5 / 60); // +5 min minimum credit
+}
+
+function getWellnessAlertsPath() {
+  const pmDir = resolve(config.projectDir, 'pm');
+  if (!existsSync(pmDir)) mkdirSync(pmDir, { recursive: true });
+  return resolve(pmDir, 'wellness-alerts.json');
+}
+
+function loadWellnessAlerts() {
+  const path = getWellnessAlertsPath();
+  if (!existsSync(path)) return {};
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function saveWellnessAlerts(alerts) {
+  writeFileSync(getWellnessAlertsPath(), JSON.stringify(alerts, null, 2));
+}
+
+/**
+ * Check human wellness thresholds and send advisory alerts.
+ * Advisory only — never throws, never blocks the queue.
+ */
+export function runWellnessCheck() {
+  const wellness = config.humanWellness;
+  if (!wellness?.enabled) {
+    console.log('ℹ️  Human wellness guardrails not enabled (set humanWellness.enabled=true in project.json)');
+    return;
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  const allAlerts = loadWellnessAlerts();
+  const todayAlerts = allAlerts[today] || {};
+
+  const log = loadCostLog();
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const sessionHours = sessionHoursSince(log, startOfDay);
+
+  const alertsSent = [];
+
+  // Threshold 1: daily max hours
+  if (!todayAlerts.dailyMax && sessionHours >= (wellness.dailyMaxHours || 10)) {
+    const msg = `⚠️ WELLNESS: You've been active for ${sessionHours.toFixed(1)}h today (limit: ${wellness.dailyMaxHours}h). Consider taking a break.`;
+    sendNotification(msg);
+    todayAlerts.dailyMax = new Date().toISOString();
+    alertsSent.push('dailyMax');
+    console.log(msg);
+  }
+
+  // Threshold 2: night cutoff
+  if (!todayAlerts.nightCutoff && wellness.nightCutoff) {
+    const [cutoffH, cutoffM] = wellness.nightCutoff.split(':').map(Number);
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const cutoffMinutes = cutoffH * 60 + (cutoffM || 0);
+    if (currentMinutes >= cutoffMinutes) {
+      const msg = `🌙 WELLNESS: It's past ${wellness.nightCutoff}. Time to stop for the night.`;
+      sendNotification(msg);
+      todayAlerts.nightCutoff = new Date().toISOString();
+      alertsSent.push('nightCutoff');
+      console.log(msg);
+    }
+  }
+
+  // Threshold 3: break interval (fires once per interval bucket)
+  if (wellness.breakIntervalHours && sessionHours >= wellness.breakIntervalHours) {
+    const intervalBucket = Math.floor(sessionHours / wellness.breakIntervalHours);
+    const alertKey = `breakInterval_${intervalBucket}`;
+    if (!todayAlerts[alertKey]) {
+      const msg = `☕ WELLNESS: You've been active for ${sessionHours.toFixed(1)}h. Consider a break (every ${wellness.breakIntervalHours}h recommended).`;
+      sendNotification(msg);
+      todayAlerts[alertKey] = new Date().toISOString();
+      alertsSent.push(alertKey);
+      console.log(msg);
+    }
+  }
+
+  if (alertsSent.length === 0) {
+    console.log(`✅ Wellness OK — ${sessionHours.toFixed(1)}h today, no thresholds exceeded`);
+  }
+
+  allAlerts[today] = todayAlerts;
+  saveWellnessAlerts(allAlerts);
+}
+
+// ---------------------------------------------------------------------------
 // Exported trigger helpers (for use by other scripts)
 // ---------------------------------------------------------------------------
 
 export function triggerNotification(triggerName, message, mediaPath) {
   if (!NOTIF.triggers[triggerName]) return false;
   return sendNotification(message, mediaPath);
+}
+
+// ---------------------------------------------------------------------------
+// Human task notification (12.5)
+// ---------------------------------------------------------------------------
+
+export function notifyHumanTask(task) {
+  const unblocksList = task.unblocks && task.unblocks.length > 0
+    ? `\nUnblocks: ${task.unblocks.join(', ')}`
+    : '';
+  const message = `🙋 HUMAN TASK REQUIRED [${task.urgency?.toUpperCase()}]\n[${task.id}] ${task.title}\n\n${task.description}${unblocksList}`;
+  return sendNotification(message);
 }
 
 export { sendNotification, loadApproval, saveApproval, listApprovals, NOTIF };
@@ -500,6 +643,28 @@ switch (cmd) {
   case 'status':
     cmdStatus();
     break;
+  case 'wellness-check':
+    runWellnessCheck();
+    break;
+  case 'human-task-notify': {
+    const taskPath = args[0];
+    if (!taskPath) {
+      console.error('Usage: notify.mjs human-task-notify <path-to-task-json>');
+      process.exit(1);
+    }
+    if (!existsSync(taskPath)) {
+      console.error(`❌ Task file not found: ${taskPath}`);
+      process.exit(1);
+    }
+    try {
+      const task = JSON.parse(readFileSync(taskPath, 'utf8'));
+      notifyHumanTask(task);
+    } catch (err) {
+      console.error(`❌ Failed to read or notify human task: ${err.message}`);
+      process.exit(1);
+    }
+    break;
+  }
   default:
     console.log(`Notification & Approval Layer
 
@@ -510,6 +675,8 @@ Usage:
   notify.mjs pending                                  List pending approvals
   notify.mjs resolve <id> approved|rejected [--note]  Manually resolve approval
   notify.mjs status                                   Check provider health
+  notify.mjs wellness-check                           Check human wellness thresholds (advisory)
+  notify.mjs human-task-notify <path>                 Notify human of a new human task
 
 Options for approve:
   --task <id>        Task ID this approval relates to
