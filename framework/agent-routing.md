@@ -25,6 +25,7 @@ Brain dump → Requirements Engineer → Value Analyst → Product Manager → P
 | AI/ML task (transcription, prompts, AI services) | **AI Pipeline Engineer** | Implement + test |
 | Frontend task (screens, components, navigation, styling) | **Frontend Developer** | Implement + test + browser E2E |
 | Code submitted for review | **Code Reviewer** | Review against checklist, approve/reject |
+| UI/UX quality review (design tokens, a11y, visual polish) | **UI/UX Designer** | Audit design system, accessibility, visual hierarchy, Storybook stories |
 | Deploy, release, CI/CD | **Release Manager** | Execute deploy pipeline |
 | Documentation needed | **Documentarian** | Write/update docs |
 
@@ -60,9 +61,11 @@ Is this a PLANNING task?
     │   ├── Backend files → Backend Developer
     │   ├── AI/ML files → AI Pipeline Engineer
     │   ├── Frontend files → Frontend Developer
+    │   ├── Style/design/a11y files → UI/UX Designer
     │   └── Other → Generic agent
     └── No → Is this a REVIEW/RELEASE task?
-        ├── Review → Code Reviewer
+        ├── Code review → Code Reviewer
+        ├── Design/a11y review → UI/UX Designer
         ├── Deploy → Release Manager
         └── Docs → Documentarian
 ```

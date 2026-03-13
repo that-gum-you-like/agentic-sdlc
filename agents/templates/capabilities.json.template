@@ -63,5 +63,13 @@
       "reqFormatCompliance": "when reviewing requirements for dependency mapping"
     },
     "notExpected": ["browserE2E", "defeatTests", "deployPipeline", "openclawBrowser", "openclawNotify"]
+  },
+  "uix": {
+    "required": ["memoryRecall", "memoryRecord", "designSystemAudit", "accessibilityAudit", "visualReview", "costTracking"],
+    "conditional": {
+      "storybookGovernance": "when Storybook is installed in the project",
+      "semanticSearch": "when sentence-transformers installed"
+    },
+    "notExpected": ["defeatTests", "deployPipeline", "openclawBrowser", "openclawNotify"]
   }
 }

@@ -266,10 +266,18 @@ When editing any agent's AGENT.md:
 
 ### On Session Start
 1. Read CLAUDE.md (this file)
-2. Check task queue status: `node ~/agentic-sdlc/agents/queue-drainer.mjs status`
-2.5. Check mailbox: `node ~/agentic-sdlc/agents/notify.mjs check-mailbox`
-3. Read PM dashboard: `pm/DASHBOARD.md`
-4. Pick up next unblocked tasks
+2. Source Paperclip env: `source .paperclip.env` (connects to Paperclip dashboard at http://localhost:3100)
+3. Check task queue status: `node ~/agentic-sdlc/agents/queue-drainer.mjs status`
+3.5. Check mailbox: `node ~/agentic-sdlc/agents/notify.mjs check-mailbox`
+4. Read PM dashboard: `pm/DASHBOARD.md`
+5. Pick up next unblocked tasks
+
+### Paperclip Integration
+This project is managed via Paperclip (http://localhost:3100) under the **Agentic SDLC** company.
+- Source `.paperclip.env` to connect to the dashboard
+- Use the `/paperclip` skill to check assignments, update task status, and coordinate
+- Activity in this repo is tracked under company `67ee22d2-5e33-47b7-99aa-bcb51317e936`, project "Agentic SDLC Framework"
+- All 12 agents live in the company — issues are tagged to the correct project
 
 ### On Context Getting Low
 1. Update PM dashboard with current progress
@@ -352,6 +360,14 @@ Add to `project.json`:
 ```
 
 Per-agent expected capabilities are defined in `agents/capabilities.json` (scaffolded by `setup.mjs`). Each agent entry has `required`, `conditional`, and `notExpected` capability lists. Using a `notExpected` capability triggers a scope creep alert.
+
+### UIX Agent Capabilities
+| Capability | Description |
+|------------|-------------|
+| `designSystemAudit` | Checks design token consistency (color, spacing, typography, border-radius, shadow) |
+| `accessibilityAudit` | Validates WCAG 2.1 AA compliance (contrast, semantic HTML, ARIA, focus, touch targets) |
+| `visualReview` | Screenshot-based visual hierarchy, responsive behavior, and interaction state evaluation |
+| `storybookGovernance` | Story coverage, state coverage, and prop sync enforcement (conditional on Storybook presence) |
 
 Enable drift notifications by adding `"capabilityDrift": true` to `notification.triggers` in `project.json`.
 
@@ -476,7 +492,7 @@ See `framework/agent-routing.md` for the complete "when to use which agent" refe
 |-------|--------|
 | Planning | Requirements Engineer → Value Analyst → Product Manager → Parallelization Analyst |
 | Implementation | Backend Dev, Frontend Dev, AI Pipeline (routed by domain patterns) |
-| Quality | Code Reviewer, `four-layer-validate.mjs`, `test-behavior.mjs` |
+| Quality | Code Reviewer, UI/UX Designer, `four-layer-validate.mjs`, `test-behavior.mjs` |
 | Release | Release Manager, deploy pipeline |
 
 ## Prompt Playbook

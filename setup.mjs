@@ -136,8 +136,13 @@ async function main() {
     const coreInput = await ask('Core agents (comma-separated)', agents.slice(0, 3).join(','));
     const coreAgents = new Set(coreInput.split(',').map(a => a.trim().toLowerCase()));
 
+    // Roles that are always support-tier regardless of core selection
+    const supportRoles = ['uix', 'ui/ux', 'design'];
+
     for (const agent of agents) {
-      const isCore = coreAgents.has(agent);
+      const role = (agentRoles[agent] || '').toLowerCase();
+      const forcedSupport = supportRoles.some(r => role.includes(r));
+      const isCore = !forcedSupport && coreAgents.has(agent);
       modelConfig[agent] = {
         dailyTokens: isCore ? 100000 : 50000,
         model: isCore ? 'sonnet' : 'haiku',
@@ -262,8 +267,84 @@ async function main() {
     });
     writeIfNotExists(join(agentDir, 'AGENT.md'), agentMd, `agents/${agent}/AGENT.md`);
 
-    // Core memory from template
-    const coreTemplate = readTemplate('agents/templates/core.json.template');
+    // Append UIX-specific operating rules if this is a uix agent
+    const agentRole = (agentRoles[agent] || '').toLowerCase();
+    if (agentRole.includes('ui/ux') || agentRole.includes('uix') || agentRole.includes('design')) {
+      const uixAddendum = `
+
+---
+
+## UIX-Specific Operating Rules
+
+### Design-Specific Micro Cycle Additions
+
+In addition to the standard micro cycle, every task MUST include:
+
+1. **Design Token Audit** — Check that all color, spacing, typography, border-radius, and shadow values reference project design tokens (not hard-coded values). Flag any hard-coded value that has a token equivalent.
+2. **Accessibility Validation (WCAG 2.1 AA)** — Verify:
+   - Color contrast ratios (4.5:1 normal text, 3:1 large text)
+   - Semantic HTML (buttons for actions, links for navigation, correct heading hierarchy)
+   - ARIA attributes (aria-label on icon buttons, aria-hidden on decorative elements)
+   - Focus management (modal focus traps, keyboard reachability)
+   - Touch targets (44x44px minimum)
+3. **Visual Review via Screenshots** — Take browser screenshots at 3 breakpoints (375px, 768px, 1280px) to evaluate:
+   - Visual hierarchy (primary CTA prominence, information grouping)
+   - Responsive behavior (no overflow, overlap, or truncation)
+   - Interaction states (hover, focus, active, disabled)
+4. **Storybook Story Governance** (conditional — only when Storybook is installed) — Verify:
+   - Every shared component (used in 2+ screens) has a \`.stories.*\` file
+   - Stories cover default + at least 2 other states (loading, error, empty, disabled)
+   - Story props stay in sync with component interface (no stale/missing props)
+
+### Design System Audit Rules
+
+- **Tokens over values**: If a design token exists for a color, spacing, or typography value, the component MUST use the token, not the raw value.
+- **Consistency over novelty**: Similar components (buttons, cards, inputs) MUST use consistent visual patterns.
+- **Scale alignment**: All spacing values MUST align to the project's spacing scale (e.g., 4px increments).
+- **Typography scale**: Font sizes and weights MUST follow the project's defined typography scale.
+
+### Accessibility Checklist (WCAG 2.1 AA)
+
+- [ ] All text meets contrast ratio minimums (4.5:1 normal, 3:1 large)
+- [ ] Interactive elements use semantic HTML (\`<button>\`, \`<a>\`, not clickable \`<div>\`)
+- [ ] No heading levels are skipped
+- [ ] Icon-only buttons have \`aria-label\`
+- [ ] Modals implement focus trapping
+- [ ] All interactive elements reachable via Tab
+- [ ] Touch targets are 44x44px minimum
+- [ ] Dynamic content regions have \`aria-live\`
+
+### Visual Review Workflow
+
+1. Build production artifact locally
+2. Take screenshots at 375px (mobile), 768px (tablet), 1280px (desktop)
+3. Evaluate each screenshot for: visual hierarchy, spacing consistency, responsive behavior, interaction states
+4. Flag any issues with specific coordinates/elements
+5. Use the project's existing browser automation tool (same as Tier 5 E2E)
+
+### Storybook Governance
+
+- Detect Storybook via \`@storybook/*\` in \`package.json\` or \`.storybook/\` directory
+- If not installed: skip Storybook checks, report \`skipReason\` in capability checklist
+- If installed: verify story coverage, state coverage, and prop sync for all changed components
+
+### Boundary with Other Agents
+
+- **Frontend Developer** builds features — UIX reviews visual quality
+- **Code Reviewer** reviews code quality — UIX reviews design quality
+- UIX does NOT write business logic, API calls, or navigation flows
+- UIX CAN write/modify styles, design tokens, Storybook stories, and accessibility attributes
+`;
+      const agentMdPath = join(agentDir, 'AGENT.md');
+      if (existsSync(agentMdPath)) {
+        appendFileSync(agentMdPath, uixAddendum);
+      }
+    }
+
+    // Core memory from template (UIX agents get specialized core)
+    const isUixAgent = agentRole.includes('ui/ux') || agentRole.includes('uix') || agentRole.includes('design');
+    const coreTemplatePath = isUixAgent ? 'agents/templates/uix-core.json.template' : 'agents/templates/core.json.template';
+    const coreTemplate = readTemplate(coreTemplatePath);
     const coreJson = fillTemplate(coreTemplate, {
       NAME: agentDomains[agent]?.name || agent,
       ROLE: agentRoles[agent] || 'Developer',
@@ -287,7 +368,8 @@ async function main() {
         const role = (agentRoles[agent] || '').toLowerCase();
         // Map role keywords to archetype
         let archetype = 'backend'; // default
-        if (role.includes('frontend') || role.includes('ui')) archetype = 'frontend';
+        if (role.includes('ui/ux') || role.includes('uix') || role.includes('design')) archetype = 'uix';
+        else if (role.includes('frontend') || role.includes('ui')) archetype = 'frontend';
         else if (role.includes('review')) archetype = 'reviewer';
         else if (role.includes('release') || role.includes('deploy')) archetype = 'release';
         capabilities[agent] = capTemplate[archetype] || capTemplate.backend;
