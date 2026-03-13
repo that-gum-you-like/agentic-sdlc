@@ -27,14 +27,21 @@ const __dirname = dirname(__filename);
 const config = loadConfig();
 const AGENTS_DIR = config.agentsDir;
 const EMBED_SCRIPT = resolve(__dirname, 'embed.py');
+const VENV_PYTHON = resolve(__dirname, '..', '.venv', 'bin', 'python3');
 
 const SEARCH_LAYERS = ['core', 'long-term', 'medium-term', 'recent']; // exclude compost
 
 // --- Helpers ---
 
+function getPythonPath() {
+  // Prefer venv python (has sentence-transformers installed)
+  if (existsSync(VENV_PYTHON)) return VENV_PYTHON;
+  return 'python3';
+}
+
 function pythonAvailable() {
   try {
-    execSync('python3 -c "from sentence_transformers import SentenceTransformer"', {
+    execSync(`${getPythonPath()} -c "from sentence_transformers import SentenceTransformer"`, {
       stdio: 'pipe',
       timeout: 10000,
     });
@@ -69,7 +76,7 @@ function loadMemory(agent, layer) {
 
 function callEmbed(texts) {
   const input = JSON.stringify(texts);
-  const result = execSync(`echo '${input.replace(/'/g, "\\'")}' | python3 "${EMBED_SCRIPT}"`, {
+  const result = execSync(`echo '${input.replace(/'/g, "\\'")}' | ${getPythonPath()} "${EMBED_SCRIPT}"`, {
     encoding: 'utf8',
     timeout: 120000,
     maxBuffer: 50 * 1024 * 1024,

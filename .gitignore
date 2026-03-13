@@ -1,0 +1,5 @@
+# Python virtual environment
+.venv/
+
+# Runtime data (per-project, not framework)
+pm/
