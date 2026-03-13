@@ -170,6 +170,28 @@ for (const [guide, patterns] of Object.entries(requiredGuides)) {
   }
 }
 
+// Planning Agent Templates
+console.log('\n📋 Planning Agent Templates:');
+const planningDir = resolve(__dirname, 'templates', 'planning-agents');
+const planningTemplates = {
+  'requirements-engineer.md': [/Requirements Engineer/, /REQ-\d{3}/, /Five Components/, /Actor/, /Acceptance Criteria/, /Quality Checklist/, /Anti-Pattern/, /Granularity/],
+  'value-analyst.md': [/Business Value Analyst/, /Business Value.*1-10/, /Complexity.*1-10/, /Priority Matrix/, /Cost of Not Building/, /Features to Cut/],
+  'product-manager.md': [/Technical Product Manager/, /Phase/, /Demo Sentence/, /Success Criteria/, /Handoff/, /Never One More Thing/, /Scope Control/],
+  'parallelization-analyst.md': [/Parallelization Analyst/, /Dependency Graph/, /Interface Contract/, /Critical Path/, /Work Stream/, /Decision Matrix/, /Bottleneck/],
+};
+
+for (const [template, patterns] of Object.entries(planningTemplates)) {
+  const tPath = resolve(planningDir, template);
+  if (!existsSync(tPath)) {
+    check(`planning-agents/${template} exists`, false);
+    continue;
+  }
+  const content = readFileSync(tPath, 'utf8');
+  for (const pattern of patterns) {
+    check(`planning-agents/${template} contains ${pattern.source}`, pattern.test(content));
+  }
+}
+
 // CLAUDE.md references new artifacts
 console.log('\n📋 CLAUDE.md — New Artifact References:');
 const claudeMdPath = resolve(__dirname, '..', 'CLAUDE.md');
@@ -182,6 +204,8 @@ check('CLAUDE.md references parallelization guide', /parallelization-guide/i.tes
 check('CLAUDE.md references agent lifecycle guide', /agent-lifecycle/i.test(claudeMd));
 check('CLAUDE.md has roadmap discipline section', /Roadmap Discipline/i.test(claudeMd));
 check('CLAUDE.md has "never one more thing" rule', /never.*one.*more.*thing|scope.*creep/i.test(claudeMd));
+check('CLAUDE.md references planning agents', /Planning Agents|Requirements Engineer|Value Analyst|Product Manager|Parallelization Analyst/i.test(claudeMd));
+check('CLAUDE.md documents planning pipeline', /Brain dump.*Requirements.*Priorities.*Roadmap.*Parallelization/i.test(claudeMd));
 
 // Maturation regression check
 // Fails if an agent's correction rate increased for 2+ consecutive weeks

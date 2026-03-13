@@ -59,6 +59,18 @@ Projects use specialist agents, each with:
 - **memory/** — 5-layer memory (core, long-term, medium-term, recent, compost)
 - **Domain patterns** — File patterns and keywords that route tasks
 
+### Planning Agents (run before execution)
+Projects should include planning-phase agents that produce standardized artifacts:
+
+| Role | Produces | Receives From |
+|------|----------|---------------|
+| Requirements Engineer | `requirements.md` (REQ-xxx) | Brain dump |
+| Business Value Analyst | `priorities.md` (value/complexity scores) | Requirements |
+| Technical Product Manager | `roadmap.md` (phased plan) | Requirements + Priorities |
+| Parallelization Analyst | `parallelization.md` (work streams) | Roadmap |
+
+Pipeline: `Brain dump → Requirements → Priorities → Roadmap → Parallelization → Execution agents build`
+
 ### Micro Cycle (Every Task)
 1. Read task from `tasks/queue/<task-id>.json`
 2. Read memory files (core, long-term, medium-term)

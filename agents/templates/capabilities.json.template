@@ -35,11 +35,26 @@
     },
     "notExpected": ["defeatTests", "semanticSearch"]
   },
-  "pm": {
-    "required": ["reqFormatCompliance", "roadmapUpdate", "parallelizationAnalysis"],
+  "requirements-engineer": {
+    "required": ["memoryRecall", "memoryRecord", "reqFormatCompliance"],
+    "conditional": {},
+    "notExpected": ["browserE2E", "defeatTests", "deployPipeline", "openclawBrowser", "openclawNotify"]
+  },
+  "value-analyst": {
+    "required": ["memoryRecall", "memoryRecord", "reqFormatCompliance"],
+    "conditional": {},
+    "notExpected": ["browserE2E", "defeatTests", "deployPipeline", "openclawBrowser", "openclawNotify"]
+  },
+  "product-manager": {
+    "required": ["memoryRecall", "memoryRecord", "reqFormatCompliance", "roadmapUpdate"],
+    "conditional": {},
+    "notExpected": ["browserE2E", "defeatTests", "deployPipeline", "openclawBrowser", "openclawNotify"]
+  },
+  "parallelization-analyst": {
+    "required": ["memoryRecall", "memoryRecord", "parallelizationAnalysis"],
     "conditional": {
-      "memoryRecall": "when evaluating backlog items"
+      "reqFormatCompliance": "when reviewing requirements for dependency mapping"
     },
-    "notExpected": ["browserE2E", "defeatTests", "deployPipeline"]
+    "notExpected": ["browserE2E", "defeatTests", "deployPipeline", "openclawBrowser", "openclawNotify"]
   }
 }

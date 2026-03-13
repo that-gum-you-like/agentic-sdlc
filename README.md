@@ -77,6 +77,7 @@ agentic-sdlc/
 │   ├── test-behavior.mjs        # Prompt quality validation
 │   ├── four-layer-validate.mjs  # AST anti-pattern scanning
 │   └── templates/               # Project setup templates
+│       └── planning-agents/     # 4 planning-phase agent templates
 ├── openspec/                    # OpenSpec workflow
 │   ├── README.md                # How to use OpenSpec
 │   └── templates/               # Artifact templates
