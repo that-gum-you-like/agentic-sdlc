@@ -33,6 +33,24 @@ Every change MUST go through: **proposal → design → specs → tasks → impl
 
 Every `proposal.md` MUST include a `## Value Analysis` section.
 
+### Intake & Spec Format
+- **Brain dump first:** Use `openspec/templates/braindump.md.template` to capture raw ideas before starting a change.
+- **REQ-xxx requirements:** Specs use numbered requirements (REQ-001, REQ-002...) with Statement, Acceptance Criteria, Dependencies, Complexity (S/M/L/XL), and Value (Critical/High/Medium/Low). See `framework/requirements-guide.md`.
+- **Roadmap for multi-phase work:** Use `openspec/templates/roadmap.md.template` to plan phases with demo sentences, success criteria, and handoff conditions.
+- **Parallelization:** Use `framework/parallelization-guide.md` to map dependency graphs, define interface contracts, and assign work streams.
+
+## Roadmap Discipline
+
+The biggest threat to your roadmap isn't bad planning — it's scope creep.
+
+**The "Never One More Thing" Rule:** When you get an idea mid-task: (1) capture it in BACKLOG.md or the roadmap, (2) don't execute — stay on current work, (3) review it in your next planning session.
+
+**In-repo roadmaps:** Keep your roadmap as structured markdown in the repo, not in GitHub Issues. Agents can parse and update markdown directly.
+
+**PM workflow:** Use a PM agent (or mindset) to capture ideas, evaluate priority, and update the roadmap — preventing dev agents from derailing their current task.
+
+See `framework/agent-lifecycle.md` for the full CTO mindset, agent create/specialize/terminate decisions, and monitoring guidance.
+
 ## Agent System
 
 ### Roster Concept

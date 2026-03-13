@@ -14,13 +14,76 @@
 
 ---
 
-## Acceptance Criteria
+## Requirements
+
+<!-- Numbered requirements with testable statements. Each requirement should be implementable in 1-3 days.
+     See framework/requirements-guide.md for the 5-component structure and quality checklist. -->
+
+### REQ-001: {{REQ_1_SHORT_NAME}}
+
+**Statement:** The system shall {{REQ_1_SPECIFIC_TESTABLE_BEHAVIOR}}
+
+**Acceptance Criteria:**
+- [ ] {{REQ_1_CONDITION_1}}
+- [ ] {{REQ_1_CONDITION_2}}
+- [ ] {{REQ_1_EDGE_CASE}}
+
+**Dependencies:** {{REQ_1_DEPENDENCIES_OR_NONE}}
+
+**Complexity:** {{S_M_L_XL}}
+
+**Value:** {{CRITICAL_HIGH_MEDIUM_LOW}}
+
+**Notes:** {{REQ_1_CLARIFICATIONS}}
+
+---
+
+### REQ-002: {{REQ_2_SHORT_NAME}}
+
+**Statement:** The system shall {{REQ_2_SPECIFIC_TESTABLE_BEHAVIOR}}
+
+**Acceptance Criteria:**
+- [ ] {{REQ_2_CONDITION_1}}
+- [ ] {{REQ_2_CONDITION_2}}
+- [ ] {{REQ_2_EDGE_CASE}}
+
+**Dependencies:** REQ-001
+
+**Complexity:** {{S_M_L_XL}}
+
+**Value:** {{CRITICAL_HIGH_MEDIUM_LOW}}
+
+**Notes:** {{REQ_2_CLARIFICATIONS}}
+
+---
+
+### REQ-003: {{REQ_3_SHORT_NAME}}
+
+**Statement:** The system shall {{REQ_3_SPECIFIC_TESTABLE_BEHAVIOR}}
+
+**Acceptance Criteria:**
+- [ ] {{REQ_3_CONDITION_1}}
+- [ ] {{REQ_3_CONDITION_2}}
+
+**Dependencies:** {{REQ_3_DEPENDENCIES_OR_NONE}}
+
+**Complexity:** {{S_M_L_XL}}
+
+**Value:** {{CRITICAL_HIGH_MEDIUM_LOW}}
+
+**Notes:** {{REQ_3_CLARIFICATIONS}}
+
+---
+
+## Acceptance Criteria (Scenarios)
 
 Each scenario below is a verifiable behavior. All scenarios must pass before this change is considered complete.
 
 ---
 
 ### Scenario 1: {{SCENARIO_1_TITLE}}
+
+**Verifies:** REQ-{{SCENARIO_1_REQ_REF}}
 
 **WHEN** {{SCENARIO_1_TRIGGER}}
 
@@ -32,6 +95,8 @@ Each scenario below is a verifiable behavior. All scenarios must pass before thi
 
 ### Scenario 2: {{SCENARIO_2_TITLE}}
 
+**Verifies:** REQ-{{SCENARIO_2_REQ_REF}}
+
 **WHEN** {{SCENARIO_2_TRIGGER}}
 
 **THEN** {{SCENARIO_2_PRIMARY_OUTCOME}}
@@ -41,6 +106,8 @@ Each scenario below is a verifiable behavior. All scenarios must pass before thi
 ---
 
 ### Scenario 3: {{SCENARIO_3_TITLE}}
+
+**Verifies:** REQ-{{SCENARIO_3_REQ_REF}}
 
 **WHEN** {{SCENARIO_3_TRIGGER}}
 
@@ -52,6 +119,8 @@ Each scenario below is a verifiable behavior. All scenarios must pass before thi
 
 ### Scenario 4: Error Case — {{SCENARIO_4_TITLE}}
 
+**Verifies:** REQ-{{SCENARIO_4_REQ_REF}}
+
 **WHEN** {{SCENARIO_4_ERROR_CONDITION}}
 
 **THEN** {{SCENARIO_4_ERROR_HANDLING}}
@@ -61,6 +130,8 @@ Each scenario below is a verifiable behavior. All scenarios must pass before thi
 ---
 
 ### Scenario 5: Edge Case — {{SCENARIO_5_TITLE}}
+
+**Verifies:** REQ-{{SCENARIO_5_REQ_REF}}
 
 **WHEN** {{SCENARIO_5_EDGE_CONDITION}}
 

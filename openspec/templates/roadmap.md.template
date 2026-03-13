@@ -1,0 +1,147 @@
+# Roadmap: {{CHANGE_NAME}}
+
+**Date**: {{DATE}}
+**Author**: {{AUTHOR}}
+**Status**: planning
+
+---
+
+## Summary
+
+<!-- High-level overview: what are we building, how many phases, what's the end state? -->
+
+{{ROADMAP_SUMMARY}}
+
+---
+
+## Dependency Graph
+
+<!-- Text-based dependency graph showing REQ→REQ chains. Identify the critical path (longest chain). -->
+
+```
+{{DEPENDENCY_GRAPH}}
+```
+
+**Critical Path:** {{CRITICAL_PATH_REQS}}
+
+---
+
+## Work Streams
+
+<!-- Which agents handle which requirement groups? Identify parallel tracks. -->
+
+### Backend Stream (Agent: {{BACKEND_AGENT}})
+- {{BACKEND_REQS}}
+
+### Frontend Stream (Agent: {{FRONTEND_AGENT}})
+- {{FRONTEND_REQS}}
+
+### Infrastructure Stream (Agent: {{INFRA_AGENT}})
+- {{INFRA_REQS}}
+
+**Parallel Tracks:** {{WHICH_STREAMS_RUN_SIMULTANEOUSLY}}
+
+---
+
+## Interface Contracts
+
+<!-- Define API contracts, type interfaces, or data schemas BEFORE agents start working.
+     This lets parallel streams build against shared contracts independently. -->
+
+```typescript
+{{INTERFACE_CONTRACTS}}
+```
+
+---
+
+## Phases
+
+### Phase 1: {{PHASE_1_NAME}}
+
+**Duration:** {{PHASE_1_ESTIMATED_TIME}}
+
+**Demo Sentence:** Users can {{PHASE_1_SPECIFIC_CAPABILITY}}
+
+**Requirements Included:**
+- REQ-{{PHASE_1_REQ_1}}: {{PHASE_1_REQ_1_NAME}}
+- REQ-{{PHASE_1_REQ_2}}: {{PHASE_1_REQ_2_NAME}}
+
+**Success Criteria:**
+- [ ] {{PHASE_1_MEASURABLE_OUTCOME_1}}
+- [ ] {{PHASE_1_MEASURABLE_OUTCOME_2}}
+- [ ] All tests passing
+
+**Risks/Blockers:**
+- {{PHASE_1_RISK_OR_BLOCKER}}
+
+**Handoff to Phase 2:**
+- {{PHASE_1_HANDOFF_CONDITION}}
+
+---
+
+### Phase 2: {{PHASE_2_NAME}}
+
+**Duration:** {{PHASE_2_ESTIMATED_TIME}}
+
+**Demo Sentence:** Users can {{PHASE_2_SPECIFIC_CAPABILITY}}
+
+**Requirements Included:**
+- REQ-{{PHASE_2_REQ_1}}: {{PHASE_2_REQ_1_NAME}}
+- REQ-{{PHASE_2_REQ_2}}: {{PHASE_2_REQ_2_NAME}}
+
+**Success Criteria:**
+- [ ] {{PHASE_2_MEASURABLE_OUTCOME_1}}
+- [ ] {{PHASE_2_MEASURABLE_OUTCOME_2}}
+- [ ] All tests passing
+
+**Risks/Blockers:**
+- {{PHASE_2_RISK_OR_BLOCKER}}
+
+**Handoff to Phase 3:**
+- {{PHASE_2_HANDOFF_CONDITION}}
+
+---
+
+### Phase 3: {{PHASE_3_NAME}}
+
+**Duration:** {{PHASE_3_ESTIMATED_TIME}}
+
+**Demo Sentence:** Users can {{PHASE_3_SPECIFIC_CAPABILITY}}
+
+**Requirements Included:**
+- REQ-{{PHASE_3_REQ_1}}: {{PHASE_3_REQ_1_NAME}}
+- REQ-{{PHASE_3_REQ_2}}: {{PHASE_3_REQ_2_NAME}}
+
+**Success Criteria:**
+- [ ] {{PHASE_3_MEASURABLE_OUTCOME_1}}
+- [ ] {{PHASE_3_MEASURABLE_OUTCOME_2}}
+- [ ] All tests passing
+
+**Risks/Blockers:**
+- {{PHASE_3_RISK_OR_BLOCKER}}
+
+---
+
+## Cut List
+
+<!-- Requirements that should be cut: low value, high complexity. -->
+
+- {{CUT_REQ}}: {{CUT_REASON}}
+
+## Human Decisions Needed
+
+<!-- Requirements that need human input before agents can proceed. -->
+
+- {{DECISION_NEEDED}}: {{WHAT_TO_DECIDE}}
+
+## Underspecified Requirements
+
+<!-- Requirements that need more detail before implementation. -->
+
+- {{UNDERSPECIFIED_REQ}}: {{WHAT_IS_MISSING}}
+
+---
+
+## Next Step
+
+Proceed to tasks phase using `openspec-continue-change`.

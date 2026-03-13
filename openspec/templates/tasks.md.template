@@ -25,6 +25,18 @@
 
 ---
 
+## Work Stream Summary
+
+<!-- Which agents handle which task groups? What runs in parallel? -->
+
+| Work Stream | Agent | Tasks | Parallel With |
+|-------------|-------|-------|---------------|
+| {{STREAM_1_NAME}} | {{STREAM_1_AGENT}} | {{STREAM_1_TASK_IDS}} | {{STREAM_1_PARALLEL}} |
+| {{STREAM_2_NAME}} | {{STREAM_2_AGENT}} | {{STREAM_2_TASK_IDS}} | {{STREAM_2_PARALLEL}} |
+| {{STREAM_3_NAME}} | {{STREAM_3_AGENT}} | {{STREAM_3_TASK_IDS}} | {{STREAM_3_PARALLEL}} |
+
+---
+
 ## Implementation Tasks
 
 Tasks are ordered by dependency. Complete them in sequence unless noted otherwise.
@@ -33,35 +45,53 @@ Tasks are ordered by dependency. Complete them in sequence unless noted otherwis
 
 - [ ] **{{TASK_1_ID}}**: {{TASK_1_DESCRIPTION}}
   - Files: `{{TASK_1_FILES}}`
-  - Spec: Scenario {{TASK_1_SCENARIO_REF}}
+  - Spec: REQ-{{TASK_1_REQ_REF}}
+  - Agent: {{TASK_1_AGENT}}
+  - Parallel: {{YES_NO_OR_BLOCKED_BY_TASK_ID}}
+  - Complexity: {{S_M_L_XL}}
   - Notes: {{TASK_1_NOTES}}
 
 - [ ] **{{TASK_2_ID}}**: {{TASK_2_DESCRIPTION}}
   - Files: `{{TASK_2_FILES}}`
-  - Spec: Scenario {{TASK_2_SCENARIO_REF}}
+  - Spec: REQ-{{TASK_2_REQ_REF}}
+  - Agent: {{TASK_2_AGENT}}
+  - Parallel: {{YES_NO_OR_BLOCKED_BY_TASK_ID}}
+  - Complexity: {{S_M_L_XL}}
   - Notes: {{TASK_2_NOTES}}
 
 ### Phase 2: {{PHASE_2_NAME}}
 
 - [ ] **{{TASK_3_ID}}**: {{TASK_3_DESCRIPTION}}
   - Files: `{{TASK_3_FILES}}`
-  - Spec: Scenario {{TASK_3_SCENARIO_REF}}
+  - Spec: REQ-{{TASK_3_REQ_REF}}
+  - Agent: {{TASK_3_AGENT}}
+  - Parallel: {{YES_NO_OR_BLOCKED_BY_TASK_ID}}
+  - Complexity: {{S_M_L_XL}}
   - Notes: {{TASK_3_NOTES}}
 
 - [ ] **{{TASK_4_ID}}**: {{TASK_4_DESCRIPTION}}
   - Files: `{{TASK_4_FILES}}`
-  - Spec: Scenario {{TASK_4_SCENARIO_REF}}
+  - Spec: REQ-{{TASK_4_REQ_REF}}
+  - Agent: {{TASK_4_AGENT}}
+  - Parallel: {{YES_NO_OR_BLOCKED_BY_TASK_ID}}
+  - Complexity: {{S_M_L_XL}}
   - Notes: {{TASK_4_NOTES}}
 
 ### Phase 3: Tests
 
 - [ ] **{{TASK_5_ID}}**: Write unit tests for {{UNIT_TEST_SUBJECT}}
   - Files: `{{UNIT_TEST_FILES}}`
-  - Covers: Scenarios {{UNIT_TEST_SCENARIOS}}
+  - Covers: REQ-{{UNIT_TEST_REQS}}
+  - Agent: {{TASK_5_AGENT}}
+  - Parallel: blocked-by Phase 1, Phase 2
+  - Complexity: {{S_M_L_XL}}
 
 - [ ] **{{TASK_6_ID}}**: Write integration tests for {{INTEGRATION_TEST_SUBJECT}}
   - Files: `{{INTEGRATION_TEST_FILES}}`
-  - Covers: Scenarios {{INTEGRATION_TEST_SCENARIOS}}
+  - Covers: REQ-{{INTEGRATION_TEST_REQS}}
+  - Agent: {{TASK_6_AGENT}}
+  - Parallel: blocked-by Phase 1, Phase 2
+  - Complexity: {{S_M_L_XL}}
 
 - [ ] **{{TASK_7_ID}}**: Run full test suite and confirm no regressions
   - Command: `{{TEST_CMD}}`

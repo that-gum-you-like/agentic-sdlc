@@ -1,0 +1,56 @@
+# Brain Dump: {{PROJECT_OR_FEATURE_NAME}}
+
+**Date**: {{DATE}}
+**Author**: {{AUTHOR}}
+
+---
+
+## Raw Ideas
+
+<!-- Unfiltered stream of consciousness. Don't organize, just capture everything. -->
+
+{{RAW_IDEAS}}
+
+---
+
+## Features I Want to Build
+
+<!-- List every feature you can think of. Don't worry about feasibility yet. -->
+
+- {{FEATURE_1}}
+- {{FEATURE_2}}
+- {{FEATURE_3}}
+
+---
+
+## Edge Cases & Nice-to-Haves
+
+<!-- What could go wrong? What would make it extra polished? -->
+
+- {{EDGE_CASE_1}}
+- {{NICE_TO_HAVE_1}}
+
+---
+
+## Constraints & Non-Negotiables
+
+<!-- What MUST be true? Tech stack requirements, privacy rules, performance limits, legal requirements. -->
+
+- {{CONSTRAINT_1}}
+- {{NON_NEGOTIABLE_1}}
+
+---
+
+## Target Users
+
+<!-- Who is this for? What are their pain points? What do they currently do instead? -->
+
+- **Primary user:** {{PRIMARY_USER_DESCRIPTION}}
+- **Secondary user:** {{SECONDARY_USER_DESCRIPTION}}
+- **Current workaround:** {{CURRENT_WORKAROUND}}
+
+---
+
+## Next Step
+
+Transform this brain dump into formal requirements using `/openspec-new-change` or a Requirements Engineer prompt. See `framework/requirements-guide.md` for the REQ-xxx format.

@@ -4,7 +4,9 @@
     "conditional": {
       "browserE2E": "when frontend files changed",
       "semanticSearch": "when sentence-transformers installed",
-      "cadenceTiming": "when cadence configured"
+      "cadenceTiming": "when cadence configured",
+      "reqFormatCompliance": "when writing specs — must use REQ-xxx format",
+      "roadmapUpdate": "when completing a phase — update roadmap progress"
     },
     "notExpected": ["openclawBrowser", "openclawNotify"]
   },
@@ -12,12 +14,14 @@
     "required": ["memoryRecall", "memoryRecord", "defeatTests", "learningRecord", "costTracking", "browserE2E"],
     "conditional": {
       "semanticSearch": "when sentence-transformers installed",
-      "cadenceTiming": "when cadence configured"
+      "cadenceTiming": "when cadence configured",
+      "reqFormatCompliance": "when writing specs — must use REQ-xxx format",
+      "roadmapUpdate": "when completing a phase — update roadmap progress"
     },
     "notExpected": ["openclawBrowser", "openclawNotify"]
   },
   "reviewer": {
-    "required": ["memoryRecall", "checklistReview"],
+    "required": ["memoryRecall", "checklistReview", "reqFormatCompliance"],
     "conditional": {
       "semanticSearch": "when sentence-transformers installed"
     },
@@ -26,8 +30,16 @@
   "release": {
     "required": ["deployPipeline", "openclawNotify"],
     "conditional": {
-      "browserE2E": "when deploy includes frontend changes"
+      "browserE2E": "when deploy includes frontend changes",
+      "roadmapUpdate": "when deploy completes a phase"
     },
     "notExpected": ["defeatTests", "semanticSearch"]
+  },
+  "pm": {
+    "required": ["reqFormatCompliance", "roadmapUpdate", "parallelizationAnalysis"],
+    "conditional": {
+      "memoryRecall": "when evaluating backlog items"
+    },
+    "notExpected": ["browserE2E", "defeatTests", "deployPipeline"]
   }
 }

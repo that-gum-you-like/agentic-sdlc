@@ -124,6 +124,65 @@ check('Checklist mentions console.log', /console\.log/i.test(checklist));
 check('Checklist mentions file size', /\b150\b.*line|\b200\b.*line|file\s*size/i.test(checklist));
 check('Checklist mentions { data, error }', /data.*error|return.*pattern/i.test(checklist));
 
+// Template & Framework Guide Integrity
+console.log('\n📋 Template & Framework Guide Integrity:');
+const frameworkDir = resolve(config.frameworkDir || resolve(__dirname, '..', 'framework'));
+const templatesDir = resolve(__dirname, '..', 'openspec', 'templates');
+
+// Required templates exist and contain key structural elements
+const requiredTemplates = {
+  'spec.md.template': [/REQ-\d{3}/, /Statement:/, /Acceptance Criteria:/, /Complexity:/, /Value:/, /WHEN/, /THEN/],
+  'roadmap.md.template': [/Phase/, /Demo Sentence:/, /Success Criteria:/, /Handoff/, /Work Stream/, /Dependency Graph/],
+  'tasks.md.template': [/Agent:/, /Parallel:/, /Work Stream Summary/, /Complexity:/],
+  'braindump.md.template': [/Raw Ideas/, /Features/, /Constraints/, /Target Users/],
+  'proposal.md.template': [/Value Analysis/, /Benefits/, /Costs/],
+  'design.md.template': [/Goals/, /Non-Goals/, /Components/, /Data Flow/],
+};
+
+for (const [template, patterns] of Object.entries(requiredTemplates)) {
+  const tPath = resolve(templatesDir, template);
+  if (!existsSync(tPath)) {
+    check(`${template} exists`, false);
+    continue;
+  }
+  const content = readFileSync(tPath, 'utf8');
+  for (const pattern of patterns) {
+    check(`${template} contains ${pattern.source}`, pattern.test(content));
+  }
+}
+
+// Required framework guides exist and contain key concepts
+const requiredGuides = {
+  'requirements-guide.md': [/REQ-\d{3}/, /Actor/, /Action/, /Condition/, /Constraint/, /Acceptance Criteria/, /Anti-Pattern/, /Granularity/],
+  'parallelization-guide.md': [/Dependency Graph/, /Interface Contract/, /Work Stream/, /Critical Path/, /Decision Matrix/],
+  'agent-lifecycle.md': [/Create/, /Specialize/, /Terminate/, /CTO/, /Never One More Thing/, /Roadmap Discipline/],
+};
+
+for (const [guide, patterns] of Object.entries(requiredGuides)) {
+  const gPath = resolve(frameworkDir, guide);
+  if (!existsSync(gPath)) {
+    check(`framework/${guide} exists`, false);
+    continue;
+  }
+  const content = readFileSync(gPath, 'utf8');
+  for (const pattern of patterns) {
+    check(`framework/${guide} contains ${pattern.source}`, pattern.test(content));
+  }
+}
+
+// CLAUDE.md references new artifacts
+console.log('\n📋 CLAUDE.md — New Artifact References:');
+const claudeMdPath = resolve(__dirname, '..', 'CLAUDE.md');
+const claudeMd = existsSync(claudeMdPath) ? readFileSync(claudeMdPath, 'utf8') : '';
+check('CLAUDE.md references REQ-xxx format', /REQ-xxx|REQ-\d{3}/i.test(claudeMd));
+check('CLAUDE.md references roadmap template', /roadmap\.md\.template|roadmap/i.test(claudeMd));
+check('CLAUDE.md references braindump template', /braindump/i.test(claudeMd));
+check('CLAUDE.md references requirements guide', /requirements-guide/i.test(claudeMd));
+check('CLAUDE.md references parallelization guide', /parallelization-guide/i.test(claudeMd));
+check('CLAUDE.md references agent lifecycle guide', /agent-lifecycle/i.test(claudeMd));
+check('CLAUDE.md has roadmap discipline section', /Roadmap Discipline/i.test(claudeMd));
+check('CLAUDE.md has "never one more thing" rule', /never.*one.*more.*thing|scope.*creep/i.test(claudeMd));
+
 // Maturation regression check
 // Fails if an agent's correction rate increased for 2+ consecutive weeks
 // after 2+ consecutive weeks of decline (regression after improvement).

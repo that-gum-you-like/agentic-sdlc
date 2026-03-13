@@ -32,6 +32,17 @@ Use this checklist before marking any task complete or submitting work for revie
 - [ ] No merge commits in feature work — rebase instead
 - [ ] No sensitive values (tokens, passwords, keys) in committed files
 
+## Spec Format Compliance
+
+- [ ] Requirements use REQ-xxx numbering format (REQ-001, REQ-002, etc.)
+- [ ] Each requirement has: Statement, Acceptance Criteria, Dependencies, Complexity, Value
+- [ ] Acceptance criteria are checkbox items (testable conditions)
+- [ ] Complexity is one of S/M/L/XL — nothing marked XL without being split
+- [ ] Dependencies are explicit — no hidden coupling between requirements
+- [ ] Each requirement is atomic — one testable behavior, not multiple bundled
+- [ ] No vague qualifiers ("user-friendly", "fast", "good") — use measurable criteria
+- [ ] Multi-phase work has a roadmap with demo sentences and handoff conditions
+
 ## General
 
 - [ ] The task spec is fully addressed — nothing left half-done

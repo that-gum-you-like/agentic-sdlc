@@ -63,7 +63,10 @@ agentic-sdlc/
 │   ├── iteration-cycles.md      # Micro/Daily/Weekly/Monthly
 │   ├── validation-patterns.md   # 4-layer validation, defeat tests
 │   ├── case-studies.md          # Real failure case studies
-│   └── evolution-timeline.md    # 6-week agent maturation timeline
+│   ├── evolution-timeline.md    # 6-week agent maturation timeline
+│   ├── requirements-guide.md    # REQ-xxx format, 5-component structure, anti-patterns
+│   ├── parallelization-guide.md # Dependency graphs, interface contracts, work streams
+│   └── agent-lifecycle.md       # Create/specialize/terminate, CTO mindset, roadmap discipline
 ├── agents/                      # Scripts and templates
 │   ├── load-config.mjs          # Cross-directory config loader
 │   ├── queue-drainer.mjs        # Task queue management
