@@ -2,7 +2,7 @@
 
 ## Requirements
 
-1. **Type mode (default)** — Inject transcription text into active terminal window via `xdotool type` (X11) or `wtype` (Wayland). Text appears as if typed by keyboard. Does NOT auto-press Enter — operator reviews and submits manually.
+1. **Type mode (default)** — Inject transcription text into active terminal window via `xdotool type` (X11) or `wtype` (Wayland). Text appears as if typed by keyboard. **Auto-presses Enter** to submit immediately to the active Claude Code session. Claude receives the voice input as a normal message, can ask clarifying questions, and routes through the SDLC process (openspec → tasks) when appropriate.
 2. **Clipboard mode** — Copy transcription to system clipboard via `xclip` (X11) or `wl-copy` (Wayland). Print notification that text is ready to paste.
 3. **Mailbox mode** — Append transcription to `pm/voice-inbox.md` with ISO timestamp header. Format: `## YYYY-MM-DDTHH:MM:SS\n\n<transcription>\n\n---\n`
 4. **Stdout mode** — Print transcription to stdout. Useful for piping: `voice-intake.sh --mode stdout | claude`
@@ -12,7 +12,7 @@
 
 ## Acceptance Criteria
 
-- [ ] Type mode injects text into active window without pressing Enter
+- [ ] Type mode injects text into active window and auto-presses Enter to submit
 - [ ] Clipboard mode copies text and notifies user
 - [ ] Mailbox mode appends timestamped entry to voice-inbox.md
 - [ ] Stdout mode prints clean text

@@ -15,7 +15,7 @@
 
 ## 3. Text Routing
 
-- [ ] 3.1 Implement `type` mode — detect `$XDG_SESSION_TYPE`. X11: `xdotool type --delay 10 "$TEXT"`. Wayland: `wtype "$TEXT"`. Small delay between chars prevents dropped input.
+- [ ] 3.1 Implement `type` mode — detect `$XDG_SESSION_TYPE`. X11: `xdotool type --delay 10 "$TEXT" && xdotool key Return`. Wayland: `wtype "$TEXT" && wtype -k Return`. Auto-submits to Claude Code so voice input flows through the SDLC process (Claude asks questions → openspec → tasks).
 - [ ] 3.2 Implement `clip` mode — X11: `echo "$TEXT" | xclip -selection clipboard`. Wayland: `echo "$TEXT" | wl-copy`. Print `📋 Copied to clipboard`.
 - [ ] 3.3 Implement `mailbox` mode — append to `pm/voice-inbox.md` with ISO timestamp header.
 - [ ] 3.4 Implement `stdout` mode — `echo "$TEXT"`.
@@ -23,7 +23,7 @@
 
 ## 4. Configuration
 
-- [ ] 4.1 Create `agents/voice-config.json` — default config with key, mode, model, language, maxSeconds, groqApiKeyEnv, mailboxPath, audioFormat, sampleRate.
+- [ ] 4.1 Create `agents/voice-config.json` — default config with key (F8), mode (type), model (whisper-large-v3-turbo), language (en), maxSeconds (120), autoSubmit (true), groqApiKeyEnv (GROQ_API_KEY), mailboxPath (pm/voice-inbox.md), audioFormat (wav), sampleRate (16000).
 - [ ] 4.2 Load config in `voice-intake.sh` — parse JSON with `jq` (add to dependency check). CLI flags override config values.
 - [ ] 4.3 Update `setup.mjs` — scaffold `voice-config.json` during project setup (optional section).
 

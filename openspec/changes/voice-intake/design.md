@@ -12,10 +12,11 @@ The operator wants to press a Function key, speak, and have the transcription fl
 ## Goals / Non-Goals
 
 **Goals:**
-- Push-to-talk via configurable Function key (default: F5)
+- Push-to-talk via a dedicated key. **Note:** The hardware Fn key is intercepted by keyboard firmware before the OS sees it — it cannot be bound by `keyd` or any Linux tool. Options: (a) use a specific F-key like F8 or F12 that's unlikely to conflict, (b) use a modifier combo like Super+V, (c) remap Fn to a scancode via firmware if the keyboard supports it. Default: **F8**.
 - Audio capture → Groq Whisper API → text, end-to-end < 2 seconds for a 30-second clip
-- Text injected into the active terminal (Claude Code session) via clipboard paste or stdin pipe
-- Voice-to-mailbox mode for async workflows
+- Text injected into the active terminal (Claude Code session) via clipboard paste or stdin pipe, **with auto-Enter** so it submits immediately
+- Voice always flows through the SDLC process: transcription → Claude Code → Claude asks clarifying questions → Claude parses into openspec/tasks when ready
+- Voice-to-mailbox mode as fallback for when no Claude session is active
 - Works on X11 and Wayland
 - Zero local ML — all transcription via Groq API
 - Graceful failure: if mic unavailable or API fails, show error and fall back to typing
@@ -95,8 +96,9 @@ The operator wants to press a Function key, speak, and have the transcription fl
 
 ```json
 {
-  "key": "F5",
+  "key": "F8",
   "mode": "type",
+  "autoSubmit": true,
   "model": "whisper-large-v3-turbo",
   "language": "en",
   "maxSeconds": 120,
@@ -115,8 +117,8 @@ The operator wants to press a Function key, speak, and have the transcription fl
 - **[keyd requires root]** → Initial setup requires `sudo`. Document clearly. Provide xbindkeys fallback.
 - **[Background noise on 2011 hardware]** → Older built-in mics may have noise. Groq Whisper handles this well. Can add `sox` noise reduction filter if needed.
 
-## Open Questions
+## Resolved Questions
 
-1. Which Function key does the operator prefer? (Proposal says configurable, default F5)
-2. Should `type` mode auto-submit (press Enter) or let the operator review first? Recommend: no auto-submit.
-3. Should voice-inbox entries be auto-parsed into tasks, or just logged for manual review?
+1. **Which key?** — Operator wanted Fn but that's hardware-level (can't bind). Using **F8** as default, configurable. Operator should pick whichever F-key they don't use.
+2. **Auto-submit?** — **Yes.** Auto-press Enter after typing so it submits to Claude Code immediately.
+3. **How are voice entries processed?** — Voice input always goes through the SDLC process: transcription → Claude Code session → Claude asks clarifying questions → Claude routes to openspec/tasks when the requirement is clear. Voice is just another input channel to Claude, not a separate pipeline. Mailbox mode is the fallback when no Claude session is active.
