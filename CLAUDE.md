@@ -501,7 +501,8 @@ Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 | `agents/schema-validator.mjs` | JSON Schema validation for inter-agent data contracts |
 | `agents/capability-monitor.mjs` | Capability drift detection, usage reports, health checks |
 | `agents/alignment-monitor.mjs` | Unified quality/alignment check, prompt suggestions, self-improving checklist |
-| `agents/model-manager.mjs` | Token budget monitoring, model swaps, performance ledger, recommendations |
+| `agents/model-manager.mjs` | Token budget monitoring, predictive swaps, cross-provider recommendations, model intelligence, quality-aware routing |
+| `agents/model-intel.json` | Model intelligence database: costs, strengths, limitations for all providers |
 | `agents/adapters/load-adapter.mjs` | Dynamic adapter loader for orchestration and LLM providers |
 | `agents/paperclip-sync.mjs` | Push SDLC agent config (model, role, instructions) → Paperclip |
 | `agents/garden-roadmap.mjs` | Archive completed roadmap items, keep roadmap focused |

@@ -1,0 +1,255 @@
+{
+  "_meta": {
+    "description": "Model intelligence database — costs, capabilities, and quality ratings for all known LLM models. Updated by `model-manager.mjs research` or manually.",
+    "lastUpdated": "2026-04-07",
+    "version": 1
+  },
+  "models": {
+    "claude-opus-4-6": {
+      "provider": "anthropic",
+      "displayName": "Claude Opus 4.6",
+      "costPer1MInput": 15.00,
+      "costPer1MOutput": 75.00,
+      "contextWindow": 200000,
+      "maxOutput": 32000,
+      "latencyTier": "slow",
+      "strengths": {
+        "coding": 5,
+        "review": 5,
+        "documentation": 5,
+        "architecture": 5,
+        "research": 5
+      },
+      "limitations": [
+        "Most expensive Anthropic model",
+        "Slower response times than Sonnet"
+      ],
+      "bestFor": ["Complex architecture decisions", "Multi-file refactors", "Research spikes"],
+      "pricingUrl": "https://docs.anthropic.com/en/docs/about-claude/models"
+    },
+    "claude-sonnet-4-6": {
+      "provider": "anthropic",
+      "displayName": "Claude Sonnet 4.6",
+      "costPer1MInput": 3.00,
+      "costPer1MOutput": 15.00,
+      "contextWindow": 200000,
+      "maxOutput": 16000,
+      "latencyTier": "medium",
+      "strengths": {
+        "coding": 4,
+        "review": 4,
+        "documentation": 4,
+        "architecture": 4,
+        "research": 4
+      },
+      "limitations": [
+        "Occasionally less thorough than Opus on complex reasoning"
+      ],
+      "bestFor": ["Daily development tasks", "Features", "Code review"],
+      "pricingUrl": "https://docs.anthropic.com/en/docs/about-claude/models"
+    },
+    "claude-haiku-4-5": {
+      "provider": "anthropic",
+      "displayName": "Claude Haiku 4.5",
+      "costPer1MInput": 0.80,
+      "costPer1MOutput": 4.00,
+      "contextWindow": 200000,
+      "maxOutput": 8192,
+      "latencyTier": "fast",
+      "strengths": {
+        "coding": 3,
+        "review": 3,
+        "documentation": 4,
+        "architecture": 2,
+        "research": 2
+      },
+      "limitations": [
+        "Weaker on complex multi-step reasoning",
+        "May miss subtle code review issues"
+      ],
+      "bestFor": ["Simple fixes", "Documentation", "Config changes", "Formatting"],
+      "pricingUrl": "https://docs.anthropic.com/en/docs/about-claude/models"
+    },
+
+    "gpt-4o": {
+      "provider": "openai",
+      "displayName": "GPT-4o",
+      "costPer1MInput": 2.50,
+      "costPer1MOutput": 10.00,
+      "contextWindow": 128000,
+      "maxOutput": 16384,
+      "latencyTier": "medium",
+      "strengths": {
+        "coding": 4,
+        "review": 4,
+        "documentation": 4,
+        "architecture": 4,
+        "research": 4
+      },
+      "limitations": [
+        "128K context vs 200K for Claude",
+        "Less consistent on very long outputs"
+      ],
+      "bestFor": ["General development", "Multi-modal tasks"],
+      "pricingUrl": "https://openai.com/api/pricing/"
+    },
+    "gpt-4o-mini": {
+      "provider": "openai",
+      "displayName": "GPT-4o Mini",
+      "costPer1MInput": 0.15,
+      "costPer1MOutput": 0.60,
+      "contextWindow": 128000,
+      "maxOutput": 16384,
+      "latencyTier": "fast",
+      "strengths": {
+        "coding": 3,
+        "review": 3,
+        "documentation": 3,
+        "architecture": 2,
+        "research": 2
+      },
+      "limitations": [
+        "Weaker reasoning than full GPT-4o",
+        "May struggle with complex refactors"
+      ],
+      "bestFor": ["Simple fixes", "Documentation", "Boilerplate generation"],
+      "pricingUrl": "https://openai.com/api/pricing/"
+    },
+    "gpt-4-turbo": {
+      "provider": "openai",
+      "displayName": "GPT-4 Turbo",
+      "costPer1MInput": 10.00,
+      "costPer1MOutput": 30.00,
+      "contextWindow": 128000,
+      "maxOutput": 4096,
+      "latencyTier": "medium",
+      "strengths": {
+        "coding": 4,
+        "review": 4,
+        "documentation": 4,
+        "architecture": 4,
+        "research": 4
+      },
+      "limitations": [
+        "Superseded by GPT-4o (more expensive, similar quality)",
+        "4K max output"
+      ],
+      "bestFor": ["Legacy compatibility"],
+      "pricingUrl": "https://openai.com/api/pricing/"
+    },
+    "o1": {
+      "provider": "openai",
+      "displayName": "o1",
+      "costPer1MInput": 15.00,
+      "costPer1MOutput": 60.00,
+      "contextWindow": 200000,
+      "maxOutput": 100000,
+      "latencyTier": "slow",
+      "strengths": {
+        "coding": 5,
+        "review": 4,
+        "documentation": 3,
+        "architecture": 5,
+        "research": 5
+      },
+      "limitations": [
+        "No system message support",
+        "No temperature control",
+        "Very expensive",
+        "High latency due to chain-of-thought"
+      ],
+      "bestFor": ["Complex reasoning", "Architecture decisions", "Difficult bugs"],
+      "pricingUrl": "https://openai.com/api/pricing/"
+    },
+    "o3-mini": {
+      "provider": "openai",
+      "displayName": "o3-mini",
+      "costPer1MInput": 1.10,
+      "costPer1MOutput": 4.40,
+      "contextWindow": 200000,
+      "maxOutput": 100000,
+      "latencyTier": "medium",
+      "strengths": {
+        "coding": 4,
+        "review": 3,
+        "documentation": 3,
+        "architecture": 4,
+        "research": 4
+      },
+      "limitations": [
+        "No system message support",
+        "No temperature control",
+        "Reasoning model quirks"
+      ],
+      "bestFor": ["Math-heavy tasks", "Algorithm design", "Complex logic"],
+      "pricingUrl": "https://openai.com/api/pricing/"
+    },
+
+    "llama-3.3-70b-versatile": {
+      "provider": "groq",
+      "displayName": "Llama 3.3 70B (Groq)",
+      "costPer1MInput": 0.59,
+      "costPer1MOutput": 0.79,
+      "contextWindow": 128000,
+      "maxOutput": 32768,
+      "latencyTier": "fast",
+      "strengths": {
+        "coding": 3,
+        "review": 3,
+        "documentation": 3,
+        "architecture": 3,
+        "research": 3
+      },
+      "limitations": [
+        "Open-source model — less reliable on edge cases",
+        "Groq rate limits under heavy load"
+      ],
+      "bestFor": ["Cost-sensitive tasks", "High-throughput simple work"],
+      "pricingUrl": "https://groq.com/pricing/"
+    },
+    "llama-3.1-8b-instant": {
+      "provider": "groq",
+      "displayName": "Llama 3.1 8B (Groq)",
+      "costPer1MInput": 0.05,
+      "costPer1MOutput": 0.08,
+      "contextWindow": 128000,
+      "maxOutput": 8192,
+      "latencyTier": "fast",
+      "strengths": {
+        "coding": 2,
+        "review": 2,
+        "documentation": 2,
+        "architecture": 1,
+        "research": 1
+      },
+      "limitations": [
+        "Small model — limited reasoning",
+        "Unreliable on complex tasks"
+      ],
+      "bestFor": ["Formatting", "Simple string manipulation", "Boilerplate"],
+      "pricingUrl": "https://groq.com/pricing/"
+    },
+    "mixtral-8x7b-32768": {
+      "provider": "groq",
+      "displayName": "Mixtral 8x7B (Groq)",
+      "costPer1MInput": 0.24,
+      "costPer1MOutput": 0.24,
+      "contextWindow": 32768,
+      "maxOutput": 4096,
+      "latencyTier": "fast",
+      "strengths": {
+        "coding": 3,
+        "review": 2,
+        "documentation": 3,
+        "architecture": 2,
+        "research": 2
+      },
+      "limitations": [
+        "32K context window limits large codebase work",
+        "MoE architecture can be inconsistent"
+      ],
+      "bestFor": ["Short-context tasks", "Quick iterations"],
+      "pricingUrl": "https://groq.com/pricing/"
+    }
+  }
+}

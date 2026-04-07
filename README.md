@@ -73,9 +73,12 @@ node ~/agentic-sdlc/agents/rem-sleep.mjs                      # Consolidate memo
 node ~/agentic-sdlc/agents/four-layer-validate.mjs            # Anti-pattern scan
 node ~/agentic-sdlc/agents/test-behavior.mjs                  # Prompt quality check
 
-# Budget
-node ~/agentic-sdlc/agents/model-manager.mjs check            # Token utilization
-node ~/agentic-sdlc/agents/model-manager.mjs recommend        # Model suggestions
+# Budget & Model Intelligence
+node ~/agentic-sdlc/agents/model-manager.mjs check            # Utilization + predictive swap
+node ~/agentic-sdlc/agents/model-manager.mjs models           # All known models with costs
+node ~/agentic-sdlc/agents/model-manager.mjs suggest coding   # Best model for task type
+node ~/agentic-sdlc/agents/model-manager.mjs recommend        # Cross-provider recommendations
+node ~/agentic-sdlc/agents/model-manager.mjs research         # Fetch latest pricing
 node ~/agentic-sdlc/agents/cost-tracker.mjs report             # Cost report
 ```
 

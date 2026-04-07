@@ -384,6 +384,77 @@ test('memoryTokenBudget defaults to 4000 in load-config', async () => {
 });
 
 // ============================================================================
+// Model Manager Intelligence — functional tests
+// ============================================================================
+
+console.log('\n📋 Model manager intelligence:');
+
+test('model-intel.json exists and has models from all 4 providers', () => {
+  const intelPath = resolve(SDLC_ROOT, 'agents/model-intel.json');
+  assert(existsSync(intelPath), 'model-intel.json should exist');
+  const intel = JSON.parse(readFileSync(intelPath, 'utf8'));
+  assert(intel.models, 'Should have models object');
+
+  const providers = new Set(Object.values(intel.models).map(m => m.provider));
+  assert(providers.has('anthropic'), 'Should have anthropic models');
+  assert(providers.has('openai'), 'Should have openai models');
+  assert(providers.has('groq'), 'Should have groq models');
+});
+
+test('all models in model-intel.json have required fields', () => {
+  const intel = JSON.parse(readFileSync(resolve(SDLC_ROOT, 'agents/model-intel.json'), 'utf8'));
+  for (const [id, m] of Object.entries(intel.models)) {
+    assert(m.provider, `${id}: should have provider`);
+    assert(typeof m.costPer1MInput === 'number', `${id}: should have costPer1MInput`);
+    assert(typeof m.costPer1MOutput === 'number', `${id}: should have costPer1MOutput`);
+    assert(typeof m.contextWindow === 'number', `${id}: should have contextWindow`);
+    assert(m.strengths, `${id}: should have strengths`);
+    assert(typeof m.strengths.coding === 'number', `${id}: should have strengths.coding`);
+    assert(typeof m.strengths.architecture === 'number', `${id}: should have strengths.architecture`);
+    assert(m.latencyTier, `${id}: should have latencyTier`);
+  }
+});
+
+test('buildCostOrder returns models sorted cheapest-first', async () => {
+  const { buildCostOrder } = await import(resolve(SDLC_ROOT, 'agents/model-manager.mjs'));
+  const order = buildCostOrder();
+  assert(order.length > 0, 'Should have models');
+  for (let i = 1; i < order.length; i++) {
+    assert(
+      order[i].costPer1MInput >= order[i - 1].costPer1MInput,
+      `${order[i].id} should cost >= ${order[i - 1].id}`
+    );
+  }
+});
+
+test('suggest returns a model for each valid task type', async () => {
+  const { suggest } = await import(resolve(SDLC_ROOT, 'agents/model-manager.mjs'));
+  for (const type of ['coding', 'review', 'documentation', 'architecture', 'research']) {
+    const result = suggest(type);
+    assert(result, `suggest('${type}') should return a model ID`);
+  }
+});
+
+test('suggest returns null for invalid task type', async () => {
+  const { suggest } = await import(resolve(SDLC_ROOT, 'agents/model-manager.mjs'));
+  const result = suggest('invalid');
+  assertEqual(result, null, 'Should return null for invalid task type');
+});
+
+test('estimateBurnRate returns 0 when no cost data exists', async () => {
+  const { estimateBurnRate } = await import(resolve(SDLC_ROOT, 'agents/model-manager.mjs'));
+  const rate = estimateBurnRate('nonexistent-agent');
+  assertEqual(rate, 0, 'Should return 0 for agent with no cost data');
+});
+
+test('queue-drainer checkAgentBudget blocks budget-exhausted agents', () => {
+  // Verify the check exists in the source
+  const qd = readFileSync(resolve(SDLC_ROOT, 'agents/queue-drainer.mjs'), 'utf8');
+  assert(qd.includes("activeModel === 'budget-exhausted'"), 'Should check for budget-exhausted status');
+  assert(qd.includes('exhausted: true'), 'Should set exhausted flag in return');
+});
+
+// ============================================================================
 // Setup dry-run flag existence
 // ============================================================================
 

@@ -224,6 +224,17 @@ function checkAgentBudget(agentName) {
   const agentBudget = budget.agents?.[budgetKey];
   if (!agentBudget) return { allowed: true };
 
+  // Check if model-manager has marked this agent as budget-exhausted
+  if (agentBudget.activeModel === 'budget-exhausted') {
+    return {
+      allowed: false,
+      used: agentBudget.dailyTokens,
+      limit: agentBudget.dailyTokens,
+      exhausted: true,
+      conservation: budget.conservationMode || false,
+    };
+  }
+
   const dailyLimit = budget.conservationMode
     ? Math.floor(agentBudget.dailyTokens / 2)
     : agentBudget.dailyTokens;
@@ -502,7 +513,10 @@ switch (cmd) {
         // 9.5: budget check uses base agent name
         const budgetCheck = checkAgentBudget(agent);
         if (!budgetCheck.allowed) {
-          console.log(`  ⚠️  [${task.id}] Skipped — ${agent} over budget (${budgetCheck.used}/${budgetCheck.limit} tokens)`);
+          const reason = budgetCheck.exhausted
+            ? `${agent} budget-exhausted (all fallback models depleted)`
+            : `${agent} over budget (${budgetCheck.used}/${budgetCheck.limit} tokens)`;
+          console.log(`  ⚠️  [${task.id}] Skipped — ${reason}`);
           continue;
         }
         task.status = 'in_progress';
@@ -526,7 +540,10 @@ switch (cmd) {
       }
       const budgetCheck = checkAgentBudget(agent);
       if (!budgetCheck.allowed) {
-        console.log(`⚠️  Agent ${agent} over budget (${budgetCheck.used}/${budgetCheck.limit} tokens). Skipping.`);
+        const reason = budgetCheck.exhausted
+          ? `${agent} budget-exhausted (all fallback models depleted)`
+          : `${agent} over budget (${budgetCheck.used}/${budgetCheck.limit} tokens)`;
+        console.log(`⚠️  ${reason}. Skipping.`);
         break;
       }
       task.status = 'in_progress';

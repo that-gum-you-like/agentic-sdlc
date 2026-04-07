@@ -11,6 +11,7 @@
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
+import { fileURLToPath } from 'url';
 import { loadConfig } from './load-config.mjs';
 
 let triggerNotification;
@@ -25,6 +26,8 @@ const config = loadConfig();
 const BUDGET_PATH = config.budgetPath;
 const COST_LOG_PATH = config.costLogPath;
 const LEDGER_PATH = config.performanceLedgerPath;
+const INTEL_PATH = resolve(config.agentsDir, 'model-intel.json');
+const PREDICTIVE_SWAP_HOURS = config.predictiveSwapHours ?? 1;
 
 // --- Helpers ---
 
@@ -60,6 +63,54 @@ function loadCostLog() {
   } catch {
     return {};
   }
+}
+
+function loadModelIntel() {
+  if (!existsSync(INTEL_PATH)) return { models: {} };
+  try { return JSON.parse(readFileSync(INTEL_PATH, 'utf8')); } catch { return { models: {} }; }
+}
+
+function saveModelIntel(intel) {
+  writeFileSync(INTEL_PATH, JSON.stringify(intel, null, 2));
+}
+
+/**
+ * Build a cost-sorted list of all models from model-intel.json.
+ * Returns array sorted cheapest-first by costPer1MInput.
+ */
+function buildCostOrder() {
+  const intel = loadModelIntel();
+  return Object.entries(intel.models || {})
+    .map(([id, m]) => ({ id, ...m }))
+    .sort((a, b) => (a.costPer1MInput || 0) - (b.costPer1MInput || 0));
+}
+
+/**
+ * Estimate burn rate (tokens/hour) for an agent from recent cost-log.
+ * Looks at the last `windowHours` of data.
+ */
+function estimateBurnRate(agentName, windowHours = 2) {
+  const costLog = loadCostLog();
+  const now = Date.now();
+  const windowMs = windowHours * 60 * 60 * 1000;
+  const cutoff = new Date(now - windowMs).toISOString();
+
+  const recentEntries = (Array.isArray(costLog) ? costLog : [])
+    .filter(e => e.agent === agentName && e.timestamp > cutoff);
+
+  if (recentEntries.length === 0) return 0;
+
+  const totalTokens = recentEntries.reduce(
+    (sum, e) => sum + (e.inputTokens || 0) + (e.outputTokens || 0), 0
+  );
+
+  // Find actual time span of entries
+  const timestamps = recentEntries.map(e => new Date(e.timestamp).getTime()).sort();
+  const spanMs = timestamps[timestamps.length - 1] - timestamps[0];
+  if (spanMs <= 0) return totalTokens; // All in same instant — return total as hourly rate
+
+  const spanHours = spanMs / (60 * 60 * 1000);
+  return Math.round(totalTokens / spanHours);
 }
 
 // --- check: Monitor utilization and swap models ---
@@ -115,15 +166,56 @@ function check() {
           `CRITICAL: ${name} exhausted all fallback models at ${pct}% utilization. No tasks will be assigned until budget resets.`
         );
       }
-    } else if (pct >= 90) {
-      console.log(`  ⚡ ${name}: ${pct}% — pre-swap alert (model: ${model})`);
-      appendLedger({ event: 'budget-warning', agent: name, model, utilizationPct: pct, severity: 'high' });
-      triggerNotification('budgetAlert',
-        `${name} at ${pct}% daily budget on ${model}. Fallback will engage at 100%.`
-      );
     } else if (pct >= 80) {
-      console.log(`  📊 ${name}: ${pct}% — warning (model: ${model})`);
-      appendLedger({ event: 'budget-warning', agent: name, model, utilizationPct: pct, severity: 'medium' });
+      // Predictive swap: estimate burn rate and project depletion
+      const burnRate = estimateBurnRate(name);
+      const remainingTokens = dailyTokens - usedTokens;
+      const hoursToDepletion = burnRate > 0 ? remainingTokens / burnRate : Infinity;
+
+      if (hoursToDepletion <= PREDICTIVE_SWAP_HOURS && burnRate > 0) {
+        // Pre-emptive swap to avoid downtime
+        const chain = agentCfg.fallbackChain || [agentCfg.model];
+        const currentIdx = chain.indexOf(model);
+        const nextModel = currentIdx >= 0 && currentIdx < chain.length - 1
+          ? chain[currentIdx + 1]
+          : null;
+
+        if (nextModel) {
+          agents[name].activeModel = nextModel;
+          console.log(`  🔮 ${name}: ${pct}% — PREDICTIVE SWAP ${model} → ${nextModel} (depletes in ~${hoursToDepletion.toFixed(1)}h at ${burnRate.toLocaleString()} tok/hr)`);
+          appendLedger({
+            event: 'predictive-swap',
+            agent: name,
+            fromModel: model,
+            toModel: nextModel,
+            utilizationPct: pct,
+            burnRate,
+            projectedDepletionHours: Math.round(hoursToDepletion * 10) / 10,
+          });
+          triggerNotification('budgetAlert',
+            `Predictive swap: ${name} moved ${model} → ${nextModel} (projected depletion in ${hoursToDepletion.toFixed(1)}h)`
+          );
+          swapCount++;
+        } else if (pct >= 90) {
+          console.log(`  ⚡ ${name}: ${pct}% — depletes in ~${hoursToDepletion.toFixed(1)}h, NO fallback remaining`);
+          appendLedger({ event: 'budget-warning', agent: name, model, utilizationPct: pct, severity: 'critical', burnRate, projectedDepletionHours: Math.round(hoursToDepletion * 10) / 10 });
+          triggerNotification('budgetAlert',
+            `CRITICAL: ${name} at ${pct}% with no fallback. Depletes in ~${hoursToDepletion.toFixed(1)}h.`
+          );
+        } else {
+          console.log(`  📊 ${name}: ${pct}% — warning, depletes in ~${hoursToDepletion.toFixed(1)}h (model: ${model})`);
+          appendLedger({ event: 'budget-warning', agent: name, model, utilizationPct: pct, severity: 'medium', burnRate });
+        }
+      } else if (pct >= 90) {
+        console.log(`  ⚡ ${name}: ${pct}% — pre-swap alert (model: ${model})`);
+        appendLedger({ event: 'budget-warning', agent: name, model, utilizationPct: pct, severity: 'high' });
+        triggerNotification('budgetAlert',
+          `${name} at ${pct}% daily budget on ${model}. Fallback will engage at 100%.`
+        );
+      } else {
+        console.log(`  📊 ${name}: ${pct}% — warning (model: ${model})`);
+        appendLedger({ event: 'budget-warning', agent: name, model, utilizationPct: pct, severity: 'medium' });
+      }
     } else {
       console.log(`  ✅ ${name}: ${pct}% (model: ${model})`);
     }
@@ -200,42 +292,59 @@ function recommend() {
   console.log('Model Manager — Recommendations');
   console.log('═'.repeat(60));
 
-  const MODEL_COST_ORDER = [
-    'claude-opus-4-6',
-    'claude-sonnet-4-6',
-    'claude-haiku-4-5',
-    'claude-haiku-4-5-20251001',
-    'llama-3.3-70b-versatile',
-    'llama-3.1-8b-instant',
-    'mixtral-8x7b-32768',
-  ];
+  // Dynamic cost order from model-intel.json (cheapest first)
+  const costOrder = buildCostOrder();
+  const costOrderIds = costOrder.map(m => m.id);
+  const intel = loadModelIntel();
 
   let hasRecs = false;
+  const budget = loadBudget();
 
-  // Check for agents succeeding on cheaper models
   for (const g of Object.values(groups)) {
     const successRate = g.tasks ? (g.successes / g.tasks) : 0;
     const confidence = g.tasks >= 10 ? 'high' : g.tasks >= 5 ? 'medium' : 'low';
 
     if (successRate >= 0.9 && g.tasks >= 10) {
-      // Check if this is already a cheaper model than their preferred
-      const budget = loadBudget();
+      // Agent succeeding — check if a cheaper model could work
       const preferred = budget.agents?.[g.agent]?.model;
-      const preferredIdx = MODEL_COST_ORDER.indexOf(preferred);
-      const currentIdx = MODEL_COST_ORDER.indexOf(g.model);
+      const currentCost = intel.models?.[g.model]?.costPer1MInput || 0;
+      const preferredCost = intel.models?.[preferred]?.costPer1MInput || 0;
 
-      if (currentIdx > preferredIdx && preferredIdx >= 0) {
-        console.log(`  📉 ${g.agent}: Consider downgrading preferred model from ${preferred} to ${g.model}`);
+      if (currentCost < preferredCost) {
+        const savings = Math.round((1 - currentCost / preferredCost) * 100);
+        console.log(`  📉 ${g.agent}: Consider downgrading from ${preferred} to ${g.model} (${savings}% cheaper)`);
         console.log(`     Evidence: ${Math.round(successRate * 100)}% success over ${g.tasks} tasks (confidence: ${confidence})`);
         hasRecs = true;
+      }
+
+      // Cross-provider suggestion: find even cheaper models with acceptable quality
+      const currentModel = intel.models?.[g.model];
+      if (currentModel) {
+        for (const cheaper of costOrder) {
+          if (cheaper.id === g.model) break; // Already at this cost level or cheaper
+          if (cheaper.costPer1MInput >= currentCost) continue;
+          // Check if quality ratings are at least 3 for coding
+          if ((cheaper.strengths?.coding || 0) >= 3) {
+            const xSavings = Math.round((1 - cheaper.costPer1MInput / currentCost) * 100);
+            if (xSavings >= 30) { // Only suggest if meaningful savings
+              console.log(`  💡 ${g.agent}: Cross-provider option — ${cheaper.id} (${cheaper.provider}) is ${xSavings}% cheaper`);
+              console.log(`     Note: Quality rating ${cheaper.strengths.coding}/5 for coding. Test before committing.`);
+              hasRecs = true;
+              break; // Only suggest the best alternative
+            }
+          }
+        }
       }
     }
 
     if (successRate < 0.7 && g.tasks >= 5) {
-      const currentIdx = MODEL_COST_ORDER.indexOf(g.model);
-      const upgrade = currentIdx > 0 ? MODEL_COST_ORDER[currentIdx - 1] : null;
+      // Agent struggling — suggest upgrade
+      const currentIdx = costOrderIds.indexOf(g.model);
+      // Find next more expensive model
+      const upgrades = costOrder.slice(currentIdx + 1).filter(m => (m.strengths?.coding || 0) >= 4);
+      const upgrade = upgrades[0]; // Cheapest model that's better quality
       if (upgrade) {
-        console.log(`  📈 ${g.agent}: Consider upgrading from ${g.model} to ${upgrade}`);
+        console.log(`  📈 ${g.agent}: Consider upgrading from ${g.model} to ${upgrade.id} (${upgrade.provider})`);
         console.log(`     Evidence: ${Math.round(successRate * 100)}% success over ${g.tasks} tasks (confidence: ${confidence})`);
         hasRecs = true;
       }
@@ -272,7 +381,202 @@ function reset() {
   }
 }
 
+// --- models: Display all known models ---
+
+function models() {
+  const intel = loadModelIntel();
+  const sorted = Object.entries(intel.models || {})
+    .map(([id, m]) => ({ id, ...m }))
+    .sort((a, b) => (a.costPer1MInput || 0) - (b.costPer1MInput || 0));
+
+  console.log('Model Manager — Known Models');
+  console.log('═'.repeat(90));
+  console.log(pad('Model', 28) + pad('Provider', 10) + pad('$/1M In', 10) + pad('$/1M Out', 10) + pad('Context', 9) + pad('Latency', 8) + pad('Code', 6) + pad('Arch', 6));
+  console.log('─'.repeat(90));
+
+  for (const m of sorted) {
+    console.log(
+      pad(m.id, 28) +
+      pad(m.provider, 10) +
+      pad(`$${m.costPer1MInput?.toFixed(2) || '?'}`, 10) +
+      pad(`$${m.costPer1MOutput?.toFixed(2) || '?'}`, 10) +
+      pad(`${(m.contextWindow / 1000).toFixed(0)}K`, 9) +
+      pad(m.latencyTier || '?', 8) +
+      pad(`${m.strengths?.coding || '?'}/5`, 6) +
+      pad(`${m.strengths?.architecture || '?'}/5`, 6)
+    );
+  }
+
+  console.log(`\nSource: ${INTEL_PATH}`);
+  console.log(`Last updated: ${intel._meta?.lastUpdated || 'unknown'}`);
+  console.log(`Update with: node model-manager.mjs research\n`);
+}
+
+// --- suggest: Recommend best model for a task type ---
+
+function suggest(taskType) {
+  const validTypes = ['coding', 'review', 'documentation', 'architecture', 'research'];
+  if (!taskType || !validTypes.includes(taskType)) {
+    console.log(`Usage: node model-manager.mjs suggest <task-type>`);
+    console.log(`Types: ${validTypes.join(', ')}`);
+    return null;
+  }
+
+  const intel = loadModelIntel();
+  const budget = loadBudget();
+
+  // Get all configured providers from budget.json agents
+  const configuredProviders = new Set();
+  for (const agentCfg of Object.values(budget.agents || {})) {
+    if (agentCfg.provider) configuredProviders.add(agentCfg.provider);
+  }
+  // Also accept all providers if none configured
+  if (configuredProviders.size === 0) {
+    configuredProviders.add('anthropic');
+    configuredProviders.add('openai');
+    configuredProviders.add('groq');
+  }
+
+  // Score models: quality × cost-efficiency
+  const candidates = Object.entries(intel.models || {})
+    .filter(([, m]) => configuredProviders.has(m.provider))
+    .map(([id, m]) => {
+      const qualityScore = m.strengths?.[taskType] || 1;
+      const costPerM = m.costPer1MInput || 0.01; // avoid div by zero
+      // Value = quality^2 / cost (favor quality, penalize cost)
+      const value = (qualityScore * qualityScore) / costPerM;
+      return { id, ...m, qualityScore, value };
+    })
+    .sort((a, b) => b.value - a.value);
+
+  console.log(`\nBest models for "${taskType}" tasks (configured providers: ${[...configuredProviders].join(', ')}):`);
+  console.log('─'.repeat(70));
+
+  const top3 = candidates.slice(0, 3);
+  for (let i = 0; i < top3.length; i++) {
+    const m = top3[i];
+    const medal = ['🥇', '🥈', '🥉'][i];
+    console.log(`  ${medal} ${m.id} (${m.provider}) — quality ${m.qualityScore}/5, $${m.costPer1MInput?.toFixed(2)}/1M input`);
+    if (m.bestFor?.length) console.log(`     Best for: ${m.bestFor.join(', ')}`);
+  }
+  console.log('');
+
+  return top3[0]?.id || null;
+}
+
+// --- research: Fetch latest pricing and update model-intel.json ---
+
+async function research() {
+  console.log('Model Manager — Research');
+  console.log('═'.repeat(50));
+  console.log('Fetching latest model pricing and capabilities...\n');
+
+  const intel = loadModelIntel();
+  const pricingUrls = {
+    anthropic: 'https://docs.anthropic.com/en/docs/about-claude/models',
+    openai: 'https://openai.com/api/pricing/',
+    groq: 'https://groq.com/pricing/',
+  };
+
+  let updated = false;
+
+  for (const [provider, url] of Object.entries(pricingUrls)) {
+    console.log(`  📡 Fetching ${provider} pricing from ${url}...`);
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'AgenticSDLC-ModelManager/1.0' },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!res.ok) {
+        console.log(`     ⚠️  HTTP ${res.status} — skipping`);
+        continue;
+      }
+
+      const html = await res.text();
+
+      // Extract pricing data based on provider-specific patterns
+      if (provider === 'anthropic') {
+        // Look for Claude model pricing patterns
+        const priceMatch = html.match(/claude[^"]*?(?:opus|sonnet|haiku)[^"]*?/gi);
+        if (priceMatch) {
+          console.log(`     Found ${priceMatch.length} model references`);
+        } else {
+          console.log(`     No structured pricing found — page may require JS rendering`);
+        }
+      } else if (provider === 'openai') {
+        const priceMatch = html.match(/gpt-4[^"]*|o1[^"]*|o3[^"]*/gi);
+        if (priceMatch) {
+          console.log(`     Found ${[...new Set(priceMatch)].length} model references`);
+        } else {
+          console.log(`     No structured pricing found — page may require JS rendering`);
+        }
+      } else {
+        console.log(`     Page fetched (${html.length} bytes) — manual review recommended`);
+      }
+
+      // Note: Full HTML parsing of pricing pages is fragile and provider-specific.
+      // For now, we log what we find and recommend manual updates for accurate pricing.
+      // Future: structured API endpoints (e.g., OpenAI /v1/models) for reliable data.
+
+    } catch (err) {
+      console.log(`     ❌ Failed: ${err.message}`);
+    }
+  }
+
+  // Try structured API endpoints where available
+  console.log('\n  📡 Checking OpenAI /v1/models API...');
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (apiKey) {
+      const res = await fetch('https://api.openai.com/v1/models', {
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const gptModels = data.data?.filter(m => m.id.startsWith('gpt-') || m.id.startsWith('o1') || m.id.startsWith('o3')) || [];
+        console.log(`     Found ${gptModels.length} GPT/o-series models available on your account`);
+
+        // Check for new models not in our intel
+        for (const m of gptModels) {
+          if (!intel.models[m.id]) {
+            console.log(`     🆕 New model detected: ${m.id} — add to model-intel.json manually`);
+            updated = true;
+          }
+        }
+      }
+    } else {
+      console.log('     Skipped (OPENAI_API_KEY not set)');
+    }
+  } catch (err) {
+    console.log(`     ❌ Failed: ${err.message}`);
+  }
+
+  // Update timestamp
+  intel._meta = intel._meta || {};
+  intel._meta.lastUpdated = new Date().toISOString().split('T')[0];
+  saveModelIntel(intel);
+
+  console.log(`\n  Updated lastUpdated timestamp in model-intel.json`);
+  if (!updated) {
+    console.log('  No automatic pricing updates applied — review pricing pages manually for changes.');
+  }
+  console.log('  Edit agents/model-intel.json directly to update costs and ratings.\n');
+}
+
+// --- Exports ---
+
+export { check, report, recommend, reset, models, suggest, research, buildCostOrder, loadModelIntel, estimateBurnRate };
+
 // --- CLI ---
+
+const __filename_mm = fileURLToPath(import.meta.url);
+const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename_mm;
+
+if (!__isMainModule) {
+  // Imported as module — don't run CLI
+} else {
 
 const cmd = process.argv[2];
 
@@ -289,13 +593,27 @@ switch (cmd) {
   case 'reset':
     reset();
     break;
+  case 'models':
+    models();
+    break;
+  case 'suggest':
+    suggest(process.argv[3]);
+    break;
+  case 'research':
+    await research();
+    break;
   default:
     console.log(`Usage: node model-manager.mjs <command>
 
 Commands:
-  check      Monitor utilization, swap models if needed
-  report     Aggregated performance stats by agent × model
-  recommend  Data-driven model assignment recommendations
-  reset      Clear all activeModel overrides (daily budget reset)`);
+  check              Monitor utilization, swap models if needed (runs on cron)
+  report             Aggregated performance stats by agent × model
+  recommend          Data-driven model assignment recommendations
+  models             Display all known models with costs and ratings
+  suggest <type>     Recommend best model for a task type (coding/review/documentation/architecture/research)
+  research           Fetch latest pricing info and check for new models
+  reset              Clear all activeModel overrides (daily budget reset)`);
     process.exit(1);
 }
+
+} // end __isMainModule

@@ -196,6 +196,8 @@ export function loadConfig() {
     llm: {
       defaultProvider: raw.llm?.defaultProvider || 'anthropic',
     },
+    // Predictive swap — hours before projected budget depletion to trigger pre-emptive model swap
+    predictiveSwapHours: raw.predictiveSwapHours ?? 1,
     // Memory token budget — when total memory exceeds this, recall auto-summarizes
     memoryTokenBudget: raw.memoryTokenBudget ?? 4000,
     // Done checklist — steps required before reporting a task as complete
