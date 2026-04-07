@@ -123,6 +123,31 @@ node ~/agentic-sdlc/agents/test-behavior.mjs
 
 ---
 
+## Supported Frontmatter Subset
+
+The `parseFrontmatter()` function in `setup.mjs` is a hand-rolled parser that supports a **subset** of YAML. It does **not** use a full YAML parser (`js-yaml` is not a dependency).
+
+### Supported Features
+
+| Feature | Example | Notes |
+|---------|---------|-------|
+| Flat key-value | `role_keywords: "backend"` | Strings, with or without quotes |
+| JSON arrays | `default_patterns: ["src/", "*.ts"]` | Must be valid JSON (double quotes) or single quotes (auto-converted) |
+| JSON objects | `capabilities: {"required": ["memoryRecall"]}` | Same quoting rules as arrays |
+| Single-level objects | `capabilities:\n  required: ["a"]` | Key on its own line, indented children |
+
+### Unsupported Features
+
+- **Multiline strings** (`|`, `>`)
+- **YAML comments** (`# comment`)
+- **Deep nesting** (more than one level of indentation)
+- **YAML flow sequences** (`[a, b]` without quotes)
+- **Anchors and aliases** (`&`, `*`)
+
+If parsing fails, `setup.mjs` outputs: `"Frontmatter parse error in {file}. Supported: flat key-value pairs, JSON arrays, single-level objects."`
+
+---
+
 ## Creating New Templates
 
 To create a template for a role not covered by the existing 15:

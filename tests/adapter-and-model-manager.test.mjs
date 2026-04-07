@@ -313,6 +313,37 @@ test('backend template has field-proven failure patterns', () => {
   assert(/maybeSingle|single\(\)|N\+1|queries/i.test(backend), 'Should reference LinguaFlow-learned patterns');
 });
 
+test('all 15 templates use only supported frontmatter features', () => {
+  const execDir = resolve(SDLC_ROOT, 'agents/templates/execution-agents');
+  const files = readdirSync(execDir).filter(f => f.endsWith('.md'));
+
+  for (const file of files) {
+    const content = readFileSync(resolve(execDir, file), 'utf8');
+    const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+    assert(fmMatch, `${file}: should have frontmatter`);
+
+    const fmLines = fmMatch[1].split('\n');
+    for (const line of fmLines) {
+      // Skip empty lines
+      if (line.trim() === '') continue;
+
+      // Supported: flat key-value (key: value), key-only (key:), indented child (  key: value), indented key-only (  key:)
+      const isKeyValue = /^\w[\w_]*\s*:\s*.+$/.test(line);
+      const isKeyOnly = /^\w[\w_]*:\s*$/.test(line);
+      const isIndentedChild = /^\s+\w[\w_]*\s*:\s*.+$/.test(line);
+      const isIndentedKeyOnly = /^\s+\w[\w_]*:\s*$/.test(line);
+      assert(
+        isKeyValue || isKeyOnly || isIndentedChild || isIndentedKeyOnly,
+        `${file}: unsupported frontmatter line: "${line}"`
+      );
+
+      // Ensure no unsupported YAML features
+      assert(!line.includes(' #'), `${file}: YAML comments not supported: "${line}"`);
+      assert(!/[|>]\s*$/.test(line.split(':').pop()), `${file}: multiline strings not supported: "${line}"`);
+    }
+  }
+});
+
 test('capabilities.json.template has all 15 execution archetypes', () => {
   const caps = JSON.parse(readFileSync(resolve(SDLC_ROOT, 'agents/templates/capabilities.json.template'), 'utf8'));
   const expected = [

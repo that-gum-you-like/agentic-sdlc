@@ -58,21 +58,34 @@ function fillTemplate(content, vars) {
 
 const EXEC_TEMPLATES_DIR = join(SDLC_DIR, 'agents/templates/execution-agents');
 
-function parseFrontmatter(content) {
+function parseFrontmatter(content, filePath = '<unknown>') {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!match) return { metadata: {}, content };
   const lines = match[1].split('\n');
   const metadata = {};
   let currentKey = null;
   let currentObj = null;
+
+  function parseJsonValue(val, line) {
+    try {
+      return JSON.parse(val.replace(/'/g, '"'));
+    } catch (e) {
+      throw new Error(
+        `Frontmatter parse error in ${filePath} at line: "${line.trim()}". ` +
+        `Supported: flat key-value pairs, JSON arrays, single-level objects. ` +
+        `Detail: ${e.message}`
+      );
+    }
+  }
+
   for (const line of lines) {
     const kvMatch = line.match(/^(\w[\w_]*)\s*:\s*(.+)$/);
     if (kvMatch) {
       const [, key, val] = kvMatch;
       if (val.startsWith('[')) {
-        metadata[key] = JSON.parse(val.replace(/'/g, '"'));
+        metadata[key] = parseJsonValue(val, line);
       } else if (val.startsWith('{')) {
-        metadata[key] = JSON.parse(val.replace(/'/g, '"'));
+        metadata[key] = parseJsonValue(val, line);
       } else {
         metadata[key] = val.trim().replace(/^["']|["']$/g, '');
       }
@@ -85,7 +98,7 @@ function parseFrontmatter(content) {
     } else if (currentObj && line.match(/^\s+(\w[\w_]*)\s*:\s*(.+)$/)) {
       const [, k, v] = line.match(/^\s+(\w[\w_]*)\s*:\s*(.+)$/);
       if (v.startsWith('[')) {
-        currentObj[k] = JSON.parse(v.replace(/'/g, '"'));
+        currentObj[k] = parseJsonValue(v, line);
       } else {
         currentObj[k] = v.trim().replace(/^["']|["']$/g, '');
       }
@@ -98,8 +111,9 @@ function loadExecutionTemplates() {
   if (!existsSync(EXEC_TEMPLATES_DIR)) return [];
   const files = readdirSync(EXEC_TEMPLATES_DIR).filter(f => f.endsWith('.md'));
   return files.map(f => {
-    const raw = readFileSync(join(EXEC_TEMPLATES_DIR, f), 'utf8');
-    const { metadata, content } = parseFrontmatter(raw);
+    const filePath = join(EXEC_TEMPLATES_DIR, f);
+    const raw = readFileSync(filePath, 'utf8');
+    const { metadata, content } = parseFrontmatter(raw, filePath);
     return { file: f, slug: f.replace('.md', ''), metadata, content };
   });
 }
