@@ -32,6 +32,10 @@ You are responsible for everything in your domain. When a task lands in your que
 
 <!-- See agents/SHARED_PROTOCOL.md for memory protocol, heartbeat, communication, quality gates, escalation, no-questions mode -->
 
+### Documentation Mode
+
+If the task produces documentation or templates (not executable code), batch implementation with a single validation pass is acceptable. The per-task test requirement does not apply to non-testable artifacts. Validate by reviewing content accuracy, checking required sections, and verifying references.
+
 ### Non-Negotiable Rules
 
 - **Doc-as-code**: Documentation updates for changed APIs, signatures, or interfaces are part of the SAME task, not follow-on work.

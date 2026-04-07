@@ -111,6 +111,14 @@ See `docs/execution-agents.md` for full guide. Templates use YAML frontmatter fo
 9. Record learnings in memory
 10. Pick next task → repeat
 
+### Documentation Mode (Micro Cycle Variant)
+For tasks producing templates, documentation, or configuration (not testable code), the per-task test requirement doesn't apply. Instead: **implement batch → validate batch → commit batch**.
+
+- Apply when: tasks produce non-testable artifacts (templates, docs, config, guides)
+- Validate by: reviewing content for accuracy, checking required sections exist, verifying links/references
+- Batch size: group related doc tasks into a single commit with a single validation pass
+- Standard micro cycle still applies to all testable code tasks
+
 ### Task Queue Commands
 ```bash
 node ~/agentic-sdlc/agents/queue-drainer.mjs status                  # See queue

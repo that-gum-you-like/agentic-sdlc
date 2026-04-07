@@ -30,6 +30,22 @@ Rules:
 - Keep commits atomic: one logical change per commit.
 - If fix-and-retry exceeds three attempts, escalate or decompose the requirement further.
 
+### Documentation Mode Variant
+
+For tasks producing templates, documentation, or configuration (not testable code), the per-task test-then-commit cycle doesn't apply. Instead:
+
+```
+1. Implement batch of related doc tasks
+       |
+2. Validate batch (review accuracy, check sections, verify references)
+       |
+3. Commit batch
+       |
+4. Next batch
+```
+
+This variant applies only to non-testable artifacts. All testable code tasks use the standard micro cycle.
+
 ---
 
 ## Daily Cycle (Hours)
