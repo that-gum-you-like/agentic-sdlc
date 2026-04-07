@@ -1,5 +1,6 @@
 {
   "conservationMode": false,
+  "emergencyFallbackModel": "llama-3.3-70b-versatile",
   "agents": {
     "sdlc-developer": {
       "model": "claude-opus-4-6",
@@ -7,7 +8,7 @@
       "dailyTokens": 500000,
       "permissions": "full-edit",
       "maxInstances": 1,
-      "fallbackChain": ["claude-opus-4-6", "claude-sonnet-4-6"],
+      "fallbackChain": ["claude-opus-4-6", "claude-sonnet-4-6", "gpt-4o-mini", "llama-3.3-70b-versatile"],
       "activeModel": null,
       "modelPreferences": {
         "simple fix": "claude-sonnet-4-6",
@@ -21,7 +22,7 @@
       "dailyTokens": 200000,
       "permissions": "read-only",
       "maxInstances": 1,
-      "fallbackChain": ["claude-sonnet-4-6", "claude-haiku-4-5"],
+      "fallbackChain": ["claude-sonnet-4-6", "claude-haiku-4-5", "gpt-4o-mini", "llama-3.3-70b-versatile"],
       "activeModel": null,
       "modelPreferences": {}
     },
@@ -31,7 +32,7 @@
       "dailyTokens": 200000,
       "permissions": "full-edit",
       "maxInstances": 1,
-      "fallbackChain": ["claude-sonnet-4-6", "claude-haiku-4-5"],
+      "fallbackChain": ["claude-sonnet-4-6", "claude-haiku-4-5", "gemini-2.5-flash", "llama-3.3-70b-versatile"],
       "activeModel": null,
       "modelPreferences": {}
     }
