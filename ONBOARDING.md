@@ -256,7 +256,7 @@ Once integrated, the framework provides:
 | Code review | Automated checklist with severity verdicts | Built into reviewer agent |
 | Browser E2E | Production build testing with screenshots | Built into QA agent |
 | Safety mechanisms | 14 guards: circuit breakers, stale claims, REM sleep, etc. | See `docs/safety-mechanisms.md` |
-| Adapters | Pluggable orchestration (file-based/Paperclip) and LLM providers (Anthropic/Groq/Ollama) | Configure in `project.json` |
+| Adapters | Pluggable orchestration (file-based/Paperclip) and LLM providers (Anthropic/OpenAI/Groq/Ollama) | Configure in `project.json` |
 
 **Full documentation:** `CLAUDE.md` (framework rules), `docs/` (guides), `framework/` (methodology).
 

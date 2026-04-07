@@ -6,6 +6,13 @@ A methodology for running multi-agent AI development teams. Plug it into your ex
 
 Works with any AI coding tool: Claude Code, Cursor, Windsurf, Copilot, Aider, or local agents.
 
+| Tool | How it picks up rules |
+|------|----------------------|
+| Claude Code | Reads `CLAUDE.md` automatically |
+| Cursor | Reads `.cursorrules` automatically |
+| Windsurf | Reads `.windsurfrules` automatically |
+| Copilot / Aider / Others | Point them at `ONBOARDING.md` — it's the universal entry point |
+
 ## Get Started
 
 ### Option A: Point your AI agent at this repo
@@ -33,7 +40,7 @@ Outputs a JSON analysis of your project (language, framework, tests, CI) without
 - **Task queue** — JSON-based with priority, dependencies, domain routing, and parallel assignment
 - **5-layer memory** — agents learn from mistakes via core, long-term, medium-term, recent, and compost memory layers
 - **Model manager** — monitors token budgets, swaps models on exhaustion, tracks performance by agent/model/task-type
-- **Adapter layer** — pluggable orchestration (file-based, Paperclip, Claude Code native) and LLM providers (Anthropic, Groq, Ollama)
+- **Adapter layer** — pluggable orchestration (file-based, Paperclip, Claude Code native) and LLM providers (Anthropic, OpenAI, Groq, Ollama)
 - **OpenSpec workflow** — structured change management: proposal → design → specs → tasks → implement
 - **14 safety mechanisms** — budget circuit breakers, stale claim detection, test-gated completion, REM sleep, and more
 - **Defeat tests** — anti-pattern scanners with shrinking allowlists that track technical debt
@@ -82,6 +89,7 @@ node ~/agentic-sdlc/agents/cost-tracker.mjs report             # Cost report
 | [docs/safety-mechanisms.md](docs/safety-mechanisms.md) | 14 safety mechanisms explained |
 | [framework/maturity-model.md](framework/maturity-model.md) | Full maturity model with checklists |
 | [framework/lesson-plan.md](framework/lesson-plan.md) | 7-hour structured learning curriculum |
+| [docs/cursor-setup.md](docs/cursor-setup.md) | Cursor + OpenAI setup guide |
 | [docs/comparison.md](docs/comparison.md) | vs LangGraph, AutoGen, CrewAI, MetaGPT |
 
 ## Optional: Semantic Memory Search
