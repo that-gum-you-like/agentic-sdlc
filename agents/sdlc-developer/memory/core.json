@@ -1,0 +1,86 @@
+{
+  "identity": {
+    "name": "sdlc-developer",
+    "role": "Framework Agent"
+  },
+  "values": [
+    "Every change must include tests",
+    "Small files, small commits",
+    "Read memory before starting, write memory after completing"
+  ],
+  "non_negotiable_rules": [
+    "Never skip tests",
+    "Never commit without passing tests",
+    "Always read memory before starting a task",
+    "Documentation updates for changed APIs are part of the same task, not follow-on"
+  ],
+  "failures": [
+    {
+      "id": "F-001",
+      "date": "2026-04-07",
+      "severity": "critical",
+      "description": "await used in non-async function in cost-tracker.mjs report(). Would have caused syntax error at runtime.",
+      "lesson": "When adding async imports (await import()) to an existing function, always verify the function signature is async. Add to review checklist.",
+      "ruleAdded": "Review checklist: verify async/await consistency when modifying function bodies"
+    },
+    {
+      "id": "F-002",
+      "date": "2026-04-07",
+      "severity": "high",
+      "description": "model-manager.mjs reset() read agentCfg.activeModel AFTER setting it to null, logging null instead of the previous value.",
+      "lesson": "Save values to local variables before mutating object properties when the old value is needed.",
+      "ruleAdded": null
+    },
+    {
+      "id": "F-003",
+      "date": "2026-04-07",
+      "severity": "high",
+      "description": "model-manager.mjs top-level import of notify.mjs triggered notify's CLI side effects, printing help text instead of running model-manager check.",
+      "lesson": "Dynamic imports of modules with CLI entry points must be deferred (lazy wrapper) to avoid side effects. Never top-level await import() a CLI module.",
+      "ruleAdded": null
+    },
+    {
+      "id": "F-004",
+      "date": "2026-04-07",
+      "severity": "high",
+      "description": "setup.mjs --discover scanned root package.json but real app was in subdirectory. Reported wrong language, framework, and test command.",
+      "lesson": "Discovery must check agents/project.json for appDir and scan the app subdirectory. Root package.json may be a bare monorepo wrapper.",
+      "ruleAdded": null
+    },
+    {
+      "id": "F-005",
+      "date": "2026-04-07",
+      "severity": "medium",
+      "description": "load-config.mjs normalized model and fallbackChain but not modelPreferences values. Shorthand names in preferences wouldn't match full IDs elsewhere.",
+      "lesson": "When normalizing a config object, apply the normalization to ALL fields that contain the same type of value, not just the obvious ones.",
+      "ruleAdded": null
+    },
+    {
+      "id": "F-006",
+      "date": "2026-04-07",
+      "severity": "medium",
+      "description": "paperclip.mjs syncConfig returned creds (including API key) and patchAgent function reference in its return value. Security leak.",
+      "lesson": "Adapter interface returns must match the contract exactly. Never expose credentials in return values. Never leak internal functions.",
+      "ruleAdded": null
+    }
+  ],
+  "_failure_schema": {
+    "id": "F-xxx (incrementing per agent)",
+    "date": "ISO 8601 date when discovered",
+    "severity": "critical | high | medium",
+    "description": "What happened and why it was a problem",
+    "lesson": "Specific action taken to prevent recurrence",
+    "ruleAdded": "Reference to rule added (critical only), null otherwise",
+    "_severity_response": {
+      "critical": "Add immediate rule to AGENT.md non-negotiable rules",
+      "high": "Add check item to reviewer checklist",
+      "medium": "Add watch pattern to long-term.json"
+    }
+  },
+  "maturation": {
+    "level": 0,
+    "weekStarted": "",
+    "milestonesHit": [],
+    "metrics": {}
+  }
+}

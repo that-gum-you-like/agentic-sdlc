@@ -1,0 +1,17 @@
+{
+  "sdlc-developer": {
+    "name": "SDLC Developer",
+    "role": "Framework Developer",
+    "patterns": ["agents/*.mjs", "agents/adapters/", "agents/cycles/", "agents/templates/", "setup.mjs", "tests/"]
+  },
+  "sdlc-reviewer": {
+    "name": "SDLC Reviewer",
+    "role": "Code Reviewer",
+    "patterns": []
+  },
+  "sdlc-documentarian": {
+    "name": "SDLC Documentarian",
+    "role": "Documentarian",
+    "patterns": ["docs/", "framework/", "CLAUDE.md", "README.md", "ONBOARDING.md"]
+  }
+}

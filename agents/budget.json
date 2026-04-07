@@ -1,0 +1,39 @@
+{
+  "conservationMode": false,
+  "agents": {
+    "sdlc-developer": {
+      "model": "claude-opus-4-6",
+      "provider": "anthropic",
+      "dailyTokens": 500000,
+      "permissions": "full-edit",
+      "maxInstances": 1,
+      "fallbackChain": ["claude-opus-4-6", "claude-sonnet-4-6"],
+      "activeModel": null,
+      "modelPreferences": {
+        "simple fix": "claude-sonnet-4-6",
+        "feature": "claude-opus-4-6",
+        "architecture": "claude-opus-4-6"
+      }
+    },
+    "sdlc-reviewer": {
+      "model": "claude-sonnet-4-6",
+      "provider": "anthropic",
+      "dailyTokens": 200000,
+      "permissions": "read-only",
+      "maxInstances": 1,
+      "fallbackChain": ["claude-sonnet-4-6", "claude-haiku-4-5"],
+      "activeModel": null,
+      "modelPreferences": {}
+    },
+    "sdlc-documentarian": {
+      "model": "claude-sonnet-4-6",
+      "provider": "anthropic",
+      "dailyTokens": 200000,
+      "permissions": "full-edit",
+      "maxInstances": 1,
+      "fallbackChain": ["claude-sonnet-4-6", "claude-haiku-4-5"],
+      "activeModel": null,
+      "modelPreferences": {}
+    }
+  }
+}

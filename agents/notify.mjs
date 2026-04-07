@@ -636,8 +636,13 @@ export function notifyHumanTask(task) {
 export { sendNotification, loadApproval, saveApproval, listApprovals, NOTIF };
 
 // ---------------------------------------------------------------------------
-// CLI router
+// CLI router — only runs when notify.mjs is invoked directly, not when imported
 // ---------------------------------------------------------------------------
+
+const __notify_filename = fileURLToPath(import.meta.url);
+const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __notify_filename;
+
+if (__isMainModule) {
 
 const [,, cmd, ...args] = process.argv;
 
@@ -709,3 +714,5 @@ Trigger types (set in project.json → notification.triggers):
   blocker, budgetAlert, deployComplete, highSeverityFailure,
   dailySummary, approvalTimeout, capabilityDrift`);
 }
+
+} // end if (__isMainModule)
