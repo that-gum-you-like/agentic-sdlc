@@ -23,6 +23,8 @@ Every orchestration adapter must export 7 named functions. See `agents/adapters/
 
 The `syncConfig` method is a no-op for adapters that have no external platform (e.g., `file-based` returns empty drift). For platform-backed adapters like `paperclip`, it pushes SDLC agent configuration and reports drift.
 
+**Queue-drainer now uses the orchestration adapter.** All task loading, saving, and archiving goes through `agents/adapters/orchestration/file-based.mjs` (the default adapter). The adapter produces identical behavior to the previous inline I/O — this is a refactor, not a behavior change.
+
 ## LLM Provider Adapter Interface
 
 Every LLM adapter must export 5 named functions. See `agents/adapters/llm/interface.md` for the full contract.

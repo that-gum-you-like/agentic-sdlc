@@ -16,7 +16,7 @@
  * If not found, falls back to manual assignment.
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, renameSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { resolve, join } from 'path';
 import { execSync } from 'child_process';
 import { loadConfig } from './load-config.mjs';
@@ -60,50 +60,27 @@ function loadAgentDomains() {
 
 const AGENT_DOMAINS = loadAgentDomains();
 
-// Orchestration adapter available via loadOrchestrationAdapter(config) for async use.
-// Current task I/O is synchronous (file-based) for backward compatibility.
+// Load orchestration adapter (file-based by default, configurable via project.json)
+import * as fileBased from './adapters/orchestration/file-based.mjs';
 
 function loadTasks() {
-  const tasks = [];
-  if (!existsSync(TASKS_DIR)) return tasks;
-  const files = readdirSync(TASKS_DIR).filter(f => f.endsWith('.json')).sort();
-  for (const file of files) {
-    try {
-      const task = JSON.parse(readFileSync(join(TASKS_DIR, file), 'utf8'));
-      task._file = file;
-      tasks.push(task);
-    } catch { /* skip malformed */ }
-  }
-  return tasks;
+  return fileBased.loadTasks(TASKS_DIR);
 }
 
 function loadCompletedCount() {
-  if (!existsSync(COMPLETED_DIR)) return 0;
-  return readdirSync(COMPLETED_DIR).filter(f => f.endsWith('.json')).length;
+  return fileBased.loadCompletedCount(COMPLETED_DIR);
 }
 
 function loadHumanTasks() {
-  const humanQueueDir = config.humanQueueDir;
-  if (!existsSync(humanQueueDir)) return [];
-  const files = readdirSync(humanQueueDir).filter(f => f.endsWith('.json')).sort();
-  const tasks = [];
-  for (const file of files) {
-    try {
-      const task = JSON.parse(readFileSync(join(humanQueueDir, file), 'utf8'));
-      task._file = file;
-      tasks.push(task);
-    } catch { /* skip malformed */ }
-  }
-  return tasks;
+  return fileBased.loadHumanTasks(config.humanQueueDir);
 }
 
 function saveHumanTask(task) {
-  const humanQueueDir = config.humanQueueDir;
-  writeFileSync(join(humanQueueDir, task._file), JSON.stringify(task, null, 2));
+  fileBased.saveHumanTask(config.humanQueueDir, task);
 }
 
 function saveTask(task) {
-  writeFileSync(join(TASKS_DIR, task._file), JSON.stringify(task, null, 2));
+  fileBased.saveTask(TASKS_DIR, task);
 }
 
 /**
@@ -710,16 +687,13 @@ switch (cmd) {
   }
 
   case 'archive': {
-    if (!existsSync(COMPLETED_DIR)) mkdirSync(COMPLETED_DIR, { recursive: true });
     const completedTasks = tasks.filter(t => t.status === 'completed');
     if (completedTasks.length === 0) {
       console.log('No completed tasks to archive.');
       break;
     }
     for (const task of completedTasks) {
-      const src = join(TASKS_DIR, task._file);
-      const dest = join(COMPLETED_DIR, task._file);
-      renameSync(src, dest);
+      fileBased.archiveTask(TASKS_DIR, COMPLETED_DIR, task);
       console.log(`  Archived ${task._file}`);
     }
     console.log(`\n📦 Archived ${completedTasks.length} completed tasks to tasks/completed/`);
