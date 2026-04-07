@@ -50,6 +50,22 @@
       "script": "node ~/agentic-sdlc/agents/model-manager.mjs check",
       "description": "Monitor agent token utilization, perform model swaps on budget exhaustion, log to performance ledger",
       "session": "isolated"
+    },
+    {
+      "name": "dependency-audit",
+      "cron": "0 8 * * *",
+      "script": "node ~/agentic-sdlc/agents/queue-drainer.mjs run --agent dependency-auditor",
+      "description": "Daily dependency audit — scan for CVEs, license violations, version drift, deprecated packages",
+      "session": "isolated",
+      "agentRequired": "dependency-auditor"
+    },
+    {
+      "name": "performance-check",
+      "cron": "0 */4 * * *",
+      "script": "node ~/agentic-sdlc/agents/queue-drainer.mjs run --agent performance-sentinel",
+      "description": "Periodic performance benchmark — check bundle size, API latency, test duration against baselines",
+      "session": "isolated",
+      "agentRequired": "performance-sentinel"
     }
   ]
 }

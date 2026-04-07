@@ -309,6 +309,34 @@ if (existsSync(mmAgentMd)) {
   check('model-manager: mentions notifications', /notif/i.test(mmMd));
 }
 
+// Execution Agent Templates — verify all 15 exist with valid frontmatter
+console.log('\n📋 Execution Agent Templates:');
+const execDir = resolve(__dirname, 'templates', 'execution-agents');
+const expectedTemplates = [
+  'cto-orchestrator', 'code-reviewer', 'release-manager', 'backend-developer',
+  'frontend-developer', 'ai-engineer', 'documentarian', 'security-engineer',
+  'qa-engineer', 'integration-tester', 'ethics-advisor', 'architect',
+  'dependency-auditor', 'performance-sentinel', 'research-agent',
+];
+for (const tmpl of expectedTemplates) {
+  const tmplPath = resolve(execDir, `${tmpl}.md`);
+  const tmplExists = existsSync(tmplPath);
+  check(`${tmpl}.md exists`, tmplExists);
+  if (tmplExists) {
+    const content = readFileSync(tmplPath, 'utf8');
+    check(`${tmpl}.md has YAML frontmatter`, content.startsWith('---'));
+    check(`${tmpl}.md defines role_keywords`, /role_keywords:/.test(content));
+  }
+}
+// CTO is a replacement template, all others are addenda
+const ctoContent = existsSync(resolve(execDir, 'cto-orchestrator.md'))
+  ? readFileSync(resolve(execDir, 'cto-orchestrator.md'), 'utf8') : '';
+check('cto-orchestrator is replacement type', /template_type:\s*"?replacement/i.test(ctoContent));
+const backendContent = existsSync(resolve(execDir, 'backend-developer.md'))
+  ? readFileSync(resolve(execDir, 'backend-developer.md'), 'utf8') : '';
+check('backend-developer is addendum type', /template_type:\s*"?addendum/i.test(backendContent));
+check('CLAUDE.md documents execution agent templates', /Execution Agent Templates/i.test(claudeMd));
+
 // Adapter layer existence checks
 console.log('\n📋 Adapter Layer:');
 check('load-adapter.mjs exists', existsSync(resolve(__dirname, 'adapters', 'load-adapter.mjs')));

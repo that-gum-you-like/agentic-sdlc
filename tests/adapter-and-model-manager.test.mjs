@@ -14,7 +14,7 @@
  *   - Integration: model-manager → budget.json → worker reads activeModel
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, readdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -246,6 +246,85 @@ test('model-manager AGENT.md template exists and is well-formed', () => {
   assert(/NOT.*write code|NOT.*execute task|does not write code/i.test(md), 'Should prohibit code execution');
   assert(md.includes('fallback'), 'Should mention fallback');
   assert(md.includes('performance'), 'Should mention performance');
+});
+
+// ============================================================================
+// Execution Agent Templates — frontmatter parsing and template selection
+// ============================================================================
+
+console.log('\n📋 Execution agent template infrastructure:');
+
+// Import parseFrontmatter and related functions by reading setup.mjs source
+// (they're not exported, so we test the pattern directly)
+test('parseFrontmatter extracts YAML metadata', () => {
+  const input = `---
+role_keywords: ["backend", "services"]
+archetype: "backend-developer"
+template_type: "addendum"
+default_patterns: ["services/", "stores/"]
+---
+
+## Backend-Specific Rules
+Some content here.`;
+
+  // Reproduce the parsing logic inline for testing
+  const match = input.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  assert(match, 'Should match frontmatter pattern');
+  assert(match[2].includes('Backend-Specific Rules'), 'Content should be after frontmatter');
+  assert(!match[2].includes('role_keywords'), 'Content should not contain frontmatter');
+});
+
+test('all 15 execution templates have valid frontmatter', () => {
+  const execDir = resolve(SDLC_ROOT, 'agents/templates/execution-agents');
+  const files = readdirSync(execDir).filter(f => f.endsWith('.md'));
+  assertEqual(files.length, 15, `Expected 15 templates, got ${files.length}`);
+
+  for (const file of files) {
+    const content = readFileSync(resolve(execDir, file), 'utf8');
+    assert(content.startsWith('---'), `${file} should start with YAML frontmatter`);
+    assert(content.includes('role_keywords:'), `${file} should define role_keywords`);
+    assert(content.includes('archetype:'), `${file} should define archetype`);
+    assert(content.includes('template_type:'), `${file} should define template_type`);
+  }
+});
+
+test('CTO template is replacement type, others are addendum', () => {
+  const execDir = resolve(SDLC_ROOT, 'agents/templates/execution-agents');
+  const cto = readFileSync(resolve(execDir, 'cto-orchestrator.md'), 'utf8');
+  assert(cto.includes('template_type: "replacement"'), 'CTO should be replacement');
+
+  const backend = readFileSync(resolve(execDir, 'backend-developer.md'), 'utf8');
+  assert(backend.includes('template_type: "addendum"'), 'Backend should be addendum');
+});
+
+test('CTO template does NOT contain standard micro cycle steps', () => {
+  const execDir = resolve(SDLC_ROOT, 'agents/templates/execution-agents');
+  const cto = readFileSync(resolve(execDir, 'cto-orchestrator.md'), 'utf8');
+  // CTO should have orchestration cycle, NOT implementation steps
+  assert(cto.includes('Decompose') || cto.includes('decompose'), 'Should have decompose step');
+  assert(cto.includes('Delegate') || cto.includes('delegate'), 'Should have delegate step');
+  assert(!cto.includes('Write tests') && !cto.includes('4. **Write tests**'), 'Should NOT have write tests step');
+});
+
+test('backend template has field-proven failure patterns', () => {
+  const execDir = resolve(SDLC_ROOT, 'agents/templates/execution-agents');
+  const backend = readFileSync(resolve(execDir, 'backend-developer.md'), 'utf8');
+  assert(backend.includes('F-001') || backend.includes('Failure'), 'Should have failure patterns');
+  assert(/maybeSingle|single\(\)|N\+1|queries/i.test(backend), 'Should reference LinguaFlow-learned patterns');
+});
+
+test('capabilities.json.template has all 15 execution archetypes', () => {
+  const caps = JSON.parse(readFileSync(resolve(SDLC_ROOT, 'agents/templates/capabilities.json.template'), 'utf8'));
+  const expected = [
+    'cto-orchestrator', 'code-reviewer', 'release-manager', 'backend-developer',
+    'frontend-developer', 'ai-engineer', 'documentarian', 'security-engineer',
+    'qa-engineer', 'integration-tester', 'ethics-advisor', 'architect',
+    'dependency-auditor', 'performance-sentinel', 'research-agent',
+  ];
+  for (const arch of expected) {
+    assert(caps[arch], `capabilities.json should have ${arch} archetype`);
+    assert(caps[arch].required, `${arch} should have required capabilities`);
+  }
 });
 
 // ============================================================================

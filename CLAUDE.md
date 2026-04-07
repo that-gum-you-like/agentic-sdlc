@@ -72,6 +72,30 @@ Projects should include planning-phase agents that produce standardized artifact
 
 Pipeline: `Brain dump → Requirements → Priorities → Roadmap → Parallelization → Execution agents build`
 
+### Execution Agent Templates
+
+The framework provides 15 execution agent templates in `agents/templates/execution-agents/`. During `setup.mjs`, role keywords are matched to templates which auto-configure domain patterns, capabilities, and operating rules.
+
+| Template | Domain | Pattern |
+|----------|--------|---------|
+| `cto-orchestrator` | Decompose, delegate, monitor, unblock | Replacement (different micro cycle) |
+| `code-reviewer` | Universal review checklist, verdicts | Addendum |
+| `release-manager` | Merge sequencing, deploy pipeline | Addendum |
+| `backend-developer` | Services, stores, data layer | Addendum |
+| `frontend-developer` | Screens, components, accessibility | Addendum |
+| `ai-engineer` | LLM integration, prompts, transcription | Addendum |
+| `documentarian` | API docs, guides, README | Addendum |
+| `security-engineer` | OWASP, CVE audit, auth/RLS | Addendum |
+| `qa-engineer` | E2E, smoke tests, visual regression | Addendum |
+| `integration-tester` | Contract tests, boundary validation | Addendum |
+| `ethics-advisor` | Bias, privacy, user impact | Addendum |
+| `architect` | ADRs, system design, API contracts | Addendum |
+| `dependency-auditor` | CVE scanning, license compliance (cron) | Addendum |
+| `performance-sentinel` | Benchmarks, regression detection (cron) | Addendum |
+| `research-agent` | Context gathering before execution | Addendum |
+
+See `docs/execution-agents.md` for full guide. Templates use YAML frontmatter for `role_keywords`, `default_patterns`, and `capabilities` — `setup.mjs` reads this automatically.
+
 ### Micro Cycle (Every Task)
 1. Read task from `tasks/queue/<task-id>.json`
 2. Read memory files (core, long-term, medium-term)

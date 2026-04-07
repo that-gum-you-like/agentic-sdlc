@@ -19,15 +19,36 @@ Brain dump → Requirements Engineer → Value Analyst → Product Manager → P
 
 ## Execution Phase Agents
 
+### Task-Driven Agents
+
+These agents are assigned work from the task queue during normal execution cycles.
+
 | Trigger Condition | Agent | Action |
 |-------------------|-------|--------|
-| Backend task (API, database, services, stores, hooks) | **Backend Developer** | Implement + test |
-| AI/ML task (transcription, prompts, AI services) | **AI Pipeline Engineer** | Implement + test |
+| Planning/delegation tasks, monitoring, unblocking | **CTO Orchestrator** | Delegate to specialists, resolve blockers, monitor progress |
+| Backend task (API, database, services, stores, hooks, migrations) | **Backend Developer** | Implement + test |
 | Frontend task (screens, components, navigation, styling) | **Frontend Developer** | Implement + test + browser E2E |
-| Code submitted for review | **Code Reviewer** | Review against checklist, approve/reject |
+| AI/ML task (LLM integration, transcription, prompts) | **AI/ML Engineer** | Implement + test |
+| Code submitted for review | **Code Reviewer** | Review all submissions against quality checklist, approve/reject |
 | UI/UX quality review (design tokens, a11y, visual polish) | **UI/UX Designer** | Audit design system, accessibility, visual hierarchy, Storybook stories |
-| Deploy, release, CI/CD | **Release Manager** | Execute deploy pipeline |
-| Documentation needed | **Documentarian** | Write/update docs |
+| Deploy, release, CI/CD | **Release Manager** | Merge sequencing, execute deploy pipeline |
+| Documentation needed | **Documentarian** | Write/update docs, README, guides, API docs |
+| Security review, dependency audit, RLS/auth | **Security Engineer** | Security review, auth policy validation, RLS audit |
+| E2E testing, smoke tests, module certification | **QA Engineer** | End-to-end test plans, smoke tests, module certification |
+| Contract tests, service boundary validation | **Integration Tester** | Contract tests, service boundary validation, API compatibility |
+| Ethical review, bias detection, privacy audit | **Ethics Advisor** | Ethical review, bias detection, privacy compliance audit |
+| System design, ADRs, API contract design | **Architect** | System design decisions, ADRs, API contract definitions |
+| Context gathering before execution tasks | **Research Agent** | Investigation spikes, gather context for other agents |
+
+### Cron-Based Agents
+
+These agents run on a schedule (via OpenClaw cron or similar), not from the task queue.
+
+| Schedule | Agent | Action |
+|----------|-------|--------|
+| Daily / on-demand | **Dependency Auditor** | CVE scanning, license compliance, dependency freshness |
+| Daily / on-demand | **Performance Sentinel** | Benchmarks, regression detection, bundle size tracking |
+| Daily / on-demand | **Model Manager** | Token budget monitoring, model swap recommendations, performance ledger |
 
 ## Operational Triggers
 
@@ -56,18 +77,30 @@ Is this a PLANNING task?
 │       └── No → Is it about WHEN/ORDER?
 │           ├── Yes → Product Manager
 │           └── No → Parallelization Analyst
-└── No → Is this an IMPLEMENTATION task?
-    ├── Yes → Route by domain (see domains.json)
-    │   ├── Backend files → Backend Developer
-    │   ├── AI/ML files → AI Pipeline Engineer
-    │   ├── Frontend files → Frontend Developer
-    │   ├── Style/design/a11y files → UI/UX Designer
-    │   └── Other → Generic agent
-    └── No → Is this a REVIEW/RELEASE task?
-        ├── Code review → Code Reviewer
-        ├── Design/a11y review → UI/UX Designer
-        ├── Deploy → Release Manager
-        └── Docs → Documentarian
+└── No → Is this an ORCHESTRATION task?
+    ├── Yes → (delegation, unblocking, monitoring) → CTO Orchestrator
+    └── No → Is this an IMPLEMENTATION task?
+        ├── Yes → Route by domain (see domains.json)
+        │   ├── Backend files (services, stores, hooks, migrations, API) → Backend Developer
+        │   ├── AI/ML files (LLM, transcription, prompts) → AI/ML Engineer
+        │   ├── Frontend files (screens, components, navigation, styling) → Frontend Developer
+        │   ├── Style/design/a11y files → UI/UX Designer
+        │   ├── System design / ADR / API contracts → Architect
+        │   └── Need context first? → Research Agent → then route to specialist
+        └── No → Is this a QUALITY task?
+            ├── Code review → Code Reviewer
+            ├── Security review / auth / RLS → Security Engineer
+            ├── E2E / smoke tests / certification → QA Engineer
+            ├── Contract tests / service boundaries → Integration Tester
+            ├── Ethical review / bias / privacy → Ethics Advisor
+            ├── Design/a11y review → UI/UX Designer
+            └── No → Is this a RELEASE/DOCS task?
+                ├── Deploy / merge sequencing → Release Manager
+                ├── Docs / README / guides → Documentarian
+                └── No → Is this a SCHEDULED task?
+                    ├── CVE / license scan → Dependency Auditor (cron)
+                    ├── Benchmarks / perf regression → Performance Sentinel (cron)
+                    └── Token budget / model swap → Model Manager (cron)
 ```
 
 ## Parallel vs Sequential
@@ -80,3 +113,8 @@ Is this a PLANNING task?
 | Code change + review | Sequential (implement then review) |
 | Multiple independent roadmap phases | Parallel (one agent per phase) |
 | Same file needs multiple changes | Sequential (one agent) |
+| Research + implementation | Sequential (Research Agent gathers context first) |
+| Security review + ethical review | Parallel (independent quality gates) |
+| QA + integration testing | Parallel if testing different boundaries |
+| Cron agents (auditor, sentinel, model-manager) | Parallel (independent scheduled runs) |
+| Architect designs API contract + devs implement | Sequential (Architect first, then parallel Backend + Frontend) |

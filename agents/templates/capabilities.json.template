@@ -78,5 +78,108 @@
       "notification": "when notify provider configured"
     },
     "notExpected": ["browserE2E", "defeatTests", "deployPipeline", "openclawBrowser", "memoryRecord"]
+  },
+  "cto-orchestrator": {
+    "required": ["memoryRecall", "memoryRecord", "costTracking"],
+    "conditional": {
+      "reqFormatCompliance": "when reviewing planning artifacts"
+    },
+    "notExpected": ["browserE2E", "defeatTests", "deployPipeline"]
+  },
+  "code-reviewer": {
+    "required": ["memoryRecall", "checklistReview", "reqFormatCompliance"],
+    "conditional": {
+      "semanticSearch": "when sentence-transformers installed"
+    },
+    "notExpected": ["browserE2E", "deployPipeline", "costTracking"]
+  },
+  "release-manager": {
+    "required": ["deployPipeline", "memoryRecall", "memoryRecord"],
+    "conditional": {
+      "browserE2E": "when deploy includes frontend changes",
+      "notification": "when deploy completes"
+    },
+    "notExpected": ["defeatTests", "semanticSearch"]
+  },
+  "backend-developer": {
+    "required": ["memoryRecall", "memoryRecord", "defeatTests", "learningRecord", "costTracking"],
+    "conditional": {
+      "browserE2E": "when frontend files changed",
+      "semanticSearch": "when sentence-transformers installed"
+    },
+    "notExpected": ["openclawBrowser", "deployPipeline"]
+  },
+  "frontend-developer": {
+    "required": ["memoryRecall", "memoryRecord", "defeatTests", "learningRecord", "costTracking", "browserE2E"],
+    "conditional": {
+      "semanticSearch": "when sentence-transformers installed"
+    },
+    "notExpected": ["openclawBrowser", "deployPipeline"]
+  },
+  "ai-engineer": {
+    "required": ["memoryRecall", "memoryRecord", "defeatTests", "learningRecord", "costTracking"],
+    "conditional": {
+      "semanticSearch": "when sentence-transformers installed"
+    },
+    "notExpected": ["browserE2E", "deployPipeline", "openclawBrowser"]
+  },
+  "documentarian": {
+    "required": ["memoryRecall", "memoryRecord"],
+    "conditional": {
+      "reqFormatCompliance": "when documenting specs"
+    },
+    "notExpected": ["browserE2E", "defeatTests", "deployPipeline", "openclawBrowser"]
+  },
+  "security-engineer": {
+    "required": ["memoryRecall", "memoryRecord", "costTracking"],
+    "conditional": {
+      "notification": "when critical vulnerability found"
+    },
+    "notExpected": ["browserE2E", "deployPipeline", "openclawBrowser"]
+  },
+  "qa-engineer": {
+    "required": ["memoryRecall", "memoryRecord", "browserE2E", "costTracking"],
+    "conditional": {
+      "notification": "when smoke test fails on production"
+    },
+    "notExpected": ["defeatTests", "deployPipeline"]
+  },
+  "integration-tester": {
+    "required": ["memoryRecall", "memoryRecord", "defeatTests", "costTracking"],
+    "conditional": {},
+    "notExpected": ["browserE2E", "deployPipeline", "openclawBrowser"]
+  },
+  "ethics-advisor": {
+    "required": ["memoryRecall", "memoryRecord"],
+    "conditional": {},
+    "notExpected": ["browserE2E", "defeatTests", "deployPipeline", "openclawBrowser", "costTracking"]
+  },
+  "architect": {
+    "required": ["memoryRecall", "memoryRecord", "costTracking"],
+    "conditional": {
+      "reqFormatCompliance": "when reviewing requirements for architectural feasibility"
+    },
+    "notExpected": ["browserE2E", "defeatTests", "deployPipeline"]
+  },
+  "dependency-auditor": {
+    "required": ["memoryRecall", "memoryRecord", "costTracking"],
+    "conditional": {
+      "notification": "when critical CVE found"
+    },
+    "notExpected": ["browserE2E", "defeatTests", "deployPipeline"]
+  },
+  "performance-sentinel": {
+    "required": ["memoryRecall", "memoryRecord", "performanceBenchmark", "costTracking"],
+    "conditional": {
+      "browserE2E": "when measuring frontend performance"
+    },
+    "notExpected": ["defeatTests", "deployPipeline"]
+  },
+  "research-agent": {
+    "required": ["memoryRecall", "memoryRecord", "costTracking"],
+    "conditional": {
+      "semanticSearch": "when sentence-transformers installed"
+    },
+    "notExpected": ["browserE2E", "defeatTests", "deployPipeline"]
   }
 }

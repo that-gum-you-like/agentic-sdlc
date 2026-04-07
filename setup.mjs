@@ -52,6 +52,67 @@ function fillTemplate(content, vars) {
   return result;
 }
 
+// ---------------------------------------------------------------------------
+// Execution agent template discovery
+// ---------------------------------------------------------------------------
+
+const EXEC_TEMPLATES_DIR = join(SDLC_DIR, 'agents/templates/execution-agents');
+
+function parseFrontmatter(content) {
+  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!match) return { metadata: {}, content };
+  const lines = match[1].split('\n');
+  const metadata = {};
+  let currentKey = null;
+  let currentObj = null;
+  for (const line of lines) {
+    const kvMatch = line.match(/^(\w[\w_]*)\s*:\s*(.+)$/);
+    if (kvMatch) {
+      const [, key, val] = kvMatch;
+      if (val.startsWith('[')) {
+        metadata[key] = JSON.parse(val.replace(/'/g, '"'));
+      } else if (val.startsWith('{')) {
+        metadata[key] = JSON.parse(val.replace(/'/g, '"'));
+      } else {
+        metadata[key] = val.trim().replace(/^["']|["']$/g, '');
+      }
+      currentKey = null;
+      currentObj = null;
+    } else if (line.match(/^(\w[\w_]*):\s*$/)) {
+      currentKey = line.match(/^(\w[\w_]*)/)[1];
+      currentObj = {};
+      metadata[currentKey] = currentObj;
+    } else if (currentObj && line.match(/^\s+(\w[\w_]*)\s*:\s*(.+)$/)) {
+      const [, k, v] = line.match(/^\s+(\w[\w_]*)\s*:\s*(.+)$/);
+      if (v.startsWith('[')) {
+        currentObj[k] = JSON.parse(v.replace(/'/g, '"'));
+      } else {
+        currentObj[k] = v.trim().replace(/^["']|["']$/g, '');
+      }
+    }
+  }
+  return { metadata, content: match[2] };
+}
+
+function loadExecutionTemplates() {
+  if (!existsSync(EXEC_TEMPLATES_DIR)) return [];
+  const files = readdirSync(EXEC_TEMPLATES_DIR).filter(f => f.endsWith('.md'));
+  return files.map(f => {
+    const raw = readFileSync(join(EXEC_TEMPLATES_DIR, f), 'utf8');
+    const { metadata, content } = parseFrontmatter(raw);
+    return { file: f, slug: f.replace('.md', ''), metadata, content };
+  });
+}
+
+function matchTemplate(role, templates) {
+  const roleLower = role.toLowerCase();
+  for (const tmpl of templates) {
+    const keywords = tmpl.metadata.role_keywords || [];
+    if (keywords.some(kw => roleLower.includes(kw))) return tmpl;
+  }
+  return null;
+}
+
 function ensureDir(dir) {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
@@ -108,15 +169,29 @@ async function main() {
     ? agentInput.split(',').map(a => a.trim().toLowerCase()).filter(Boolean)
     : [];
 
-  // Gather roles for each agent
+  // Gather roles for each agent — match against execution templates for auto-config
   const agentRoles = {};
   const agentDomains = {};
+  const agentTemplateMatches = {}; // agent → matched template or null
+  const execTemplates = loadExecutionTemplates();
+  if (execTemplates.length > 0) {
+    console.log(`  (${execTemplates.length} execution agent templates available)`);
+  }
 
   for (const agent of agents) {
     const role = await ask(`  Role for "${agent}"`, 'Developer');
     agentRoles[agent] = role;
 
-    const patterns = await ask(`  File patterns for "${agent}" (comma-separated)`, '');
+    // Match role against execution templates
+    const matched = matchTemplate(role, execTemplates);
+    agentTemplateMatches[agent] = matched;
+    let defaultPatterns = '';
+    if (matched) {
+      console.log(`    → Matched template: ${matched.slug}`);
+      defaultPatterns = (matched.metadata.default_patterns || []).join(', ');
+    }
+
+    const patterns = await ask(`  File patterns for "${agent}" (comma-separated)`, defaultPatterns);
     agentDomains[agent] = {
       name: agent.charAt(0).toUpperCase() + agent.slice(1),
       role,
@@ -280,14 +355,41 @@ async function main() {
     ensureDir(agentDir);
     ensureDir(memoryDir);
 
-    // AGENT.md from template
-    const agentMdTemplate = readTemplate('agents/templates/AGENT.md.template');
-    const agentMd = fillTemplate(agentMdTemplate, {
-      NAME: agentDomains[agent]?.name || agent,
-      ROLE: agentRoles[agent] || 'Developer',
-      RESPONSIBILITIES: `Responsible for ${agentRoles[agent] || 'development'} tasks in ${projectName}.`,
-      CODEBASE_STATE: `New project. Agent initialized on ${today}.`,
-    });
+    // AGENT.md — check if matched template is a replacement (CTO) or addendum
+    const matched = agentTemplateMatches[agent];
+    const isReplacement = matched?.metadata.template_type === 'replacement';
+
+    let agentMd;
+    if (isReplacement && matched) {
+      // Full replacement template (e.g., CTO orchestrator — different micro cycle)
+      agentMd = fillTemplate(matched.content, {
+        NAME: agentDomains[agent]?.name || agent,
+        ROLE: agentRoles[agent] || 'Developer',
+        RESPONSIBILITIES: `Responsible for ${agentRoles[agent] || 'orchestration'} tasks in ${projectName}.`,
+        CODEBASE_STATE: `New project. Agent initialized on ${today}.`,
+        TECH_STACK: '',
+        ETHICAL_FRAMEWORK: '',
+      });
+    } else {
+      // Base template + optional addendum
+      const agentMdTemplate = readTemplate('agents/templates/AGENT.md.template');
+      agentMd = fillTemplate(agentMdTemplate, {
+        NAME: agentDomains[agent]?.name || agent,
+        ROLE: agentRoles[agent] || 'Developer',
+        RESPONSIBILITIES: `Responsible for ${agentRoles[agent] || 'development'} tasks in ${projectName}.`,
+        CODEBASE_STATE: `New project. Agent initialized on ${today}.`,
+      });
+      // Append matched execution template addendum (stripped of frontmatter)
+      if (matched) {
+        const addendum = fillTemplate(matched.content, {
+          NAME: agentDomains[agent]?.name || agent,
+          ROLE: agentRoles[agent] || 'Developer',
+          TECH_STACK: '',
+          ETHICAL_FRAMEWORK: '',
+        });
+        agentMd += '\n' + addendum;
+      }
+    }
     writeIfNotExists(join(agentDir, 'AGENT.md'), agentMd, `agents/${agent}/AGENT.md`);
 
     // Append UIX-specific operating rules if this is a uix agent
@@ -388,14 +490,22 @@ In addition to the standard micro cycle, every task MUST include:
       const capTemplate = JSON.parse(readFileSync(capTemplateSource, 'utf8'));
       const capabilities = {};
       for (const agent of agents) {
-        const role = (agentRoles[agent] || '').toLowerCase();
-        // Map role keywords to archetype
-        let archetype = 'backend'; // default
-        if (role.includes('ui/ux') || role.includes('uix') || role.includes('design')) archetype = 'uix';
-        else if (role.includes('frontend') || role.includes('ui')) archetype = 'frontend';
-        else if (role.includes('review')) archetype = 'reviewer';
-        else if (role.includes('release') || role.includes('deploy')) archetype = 'release';
-        capabilities[agent] = capTemplate[archetype] || capTemplate.backend;
+        const matched = agentTemplateMatches[agent];
+        if (matched?.metadata.capabilities) {
+          // Use template-provided capabilities
+          capabilities[agent] = matched.metadata.capabilities;
+        } else {
+          // Fall back to archetype lookup
+          const role = (agentRoles[agent] || '').toLowerCase();
+          let archetype = matched?.metadata.archetype || 'backend';
+          if (!matched) {
+            if (role.includes('ui/ux') || role.includes('uix') || role.includes('design')) archetype = 'uix';
+            else if (role.includes('frontend') || role.includes('ui')) archetype = 'frontend';
+            else if (role.includes('review')) archetype = 'reviewer';
+            else if (role.includes('release') || role.includes('deploy')) archetype = 'release';
+          }
+          capabilities[agent] = capTemplate[archetype] || capTemplate.backend;
+        }
       }
       writeIfNotExists(
         join(agentsDir, 'capabilities.json'),
