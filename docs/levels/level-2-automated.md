@@ -10,6 +10,12 @@ implement, test, commit.
 - A test framework configured and working (Jest, pytest, Go test, etc.)
 - At least some existing tests to validate against
 
+**No tests yet?** If your project has zero tests:
+1. Install a test framework: `npm install --save-dev jest` (JS/TS), `pip install pytest` (Python), or use your language's built-in test runner (Go, Rust)
+2. Write one test for any existing function — even a trivial one
+3. Verify the test command works: `npx jest` / `pytest` / `cargo test` / `go test ./...`
+4. Then proceed with the steps below
+
 ## What You'll Add
 
 - Micro cycle discipline: implement -> test -> commit
@@ -84,6 +90,4 @@ tests and that the full suite passed before the commit was created.
 
 ## Next Level
 
-When a single agent is not enough -- you have a queue of tasks, multiple
-domains, or want parallel work -- move to Level 3 for multi-agent
-orchestration. See `docs/levels/level-3-orchestrated.md`.
+When a single agent is not enough — you have a queue of tasks, multiple domains, or want parallel work — move to [Level 3: Multi-Agent Task Queue](level-3-orchestrated.md).

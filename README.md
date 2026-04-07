@@ -9,6 +9,8 @@ Works with any AI coding tool: Claude Code, Cursor, Windsurf, Copilot, Aider, or
 ### Option A: Point your AI agent at this repo
 Tell your AI agent: *"Read ONBOARDING.md in this repo and help me integrate this framework into my project."* The onboarding guide walks the agent through discovering your project, assessing your current practices, and integrating incrementally.
 
+**Prerequisites:** Node.js 18+, git
+
 ### Option B: Run the setup script
 ```bash
 git clone https://github.com/that-gum-you-like/agentic-sdlc.git ~/agentic-sdlc

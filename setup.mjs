@@ -253,6 +253,21 @@ async function main() {
     const dirIdx = process.argv.indexOf('--dir');
     const dir = dirIdx !== -1 ? resolve(process.argv[dirIdx + 1]) : process.cwd();
     const report = discoverProject(dir);
+
+    if (process.argv.includes('--human')) {
+      const levelReasons = {
+        0: 'no AI config detected',
+        1: 'has CLAUDE.md or .cursorrules',
+        3: 'has task queue',
+        5: 'has memory',
+      };
+      const reason = levelReasons[report.suggestedLevel] || '';
+      const lang = report.language !== 'unknown' ? report.language : '?';
+      const fw = report.framework !== 'unknown' ? `/${report.framework}` : '';
+      const agents = report.suggestedAgents.join(', ');
+      console.log(`${lang}${fw} project at Level ${report.suggestedLevel}${reason ? ` (${reason})` : ''}. Suggested: ${agents}`);
+    }
+
     console.log(JSON.stringify(report, null, 2));
     rl.close();
     return;

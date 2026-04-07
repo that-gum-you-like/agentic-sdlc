@@ -6,6 +6,14 @@
 
 ---
 
+## Prerequisites
+
+- **Node.js 18+** — required to run framework scripts (`setup.mjs`, `queue-drainer.mjs`, etc.)
+- **Git** — the framework assumes git for commits, history, and hooks
+- **Framework cloned** — `git clone https://github.com/that-gum-you-like/agentic-sdlc.git ~/agentic-sdlc`
+
+---
+
 ## Phase 1: Discover the Project
 
 Before recommending anything, understand what exists. Read these files in the user's project directory:
@@ -40,11 +48,38 @@ Before recommending anything, understand what exists. Read these files in the us
 - How many tests? (count test files)
 - Git history — how many contributors? How active? (`git log --oneline -20`)
 
-**Quick discovery command** (if the user's project has Node.js):
+**Quick discovery command:**
 ```bash
 node ~/agentic-sdlc/setup.mjs --discover --dir /path/to/project
 ```
-This outputs a JSON report without modifying any files.
+This outputs a JSON report without modifying any files. Add `--human` for a summary line:
+```bash
+node ~/agentic-sdlc/setup.mjs --discover --human --dir /path/to/project
+# Output: "TypeScript/React Native project at Level 5 (has memory). Suggested: backend, reviewer, frontend"
+# { "projectDir": "...", "language": "typescript", "framework": "react-native", ... }
+```
+
+**Example discovery output:**
+```json
+{
+  "projectDir": "/home/user/my-app",
+  "language": "typescript",       // Detected from package.json devDependencies
+  "framework": "react",           // Detected from dependencies (react, next, vue, etc.)
+  "testFramework": "jest",        // Detected from jest.config or package.json
+  "testCmd": "npm test",          // From package.json scripts.test
+  "ci": "github-actions",         // Detected from .github/workflows/
+  "packageManager": "npm",        // Detected from lockfile (yarn.lock, pnpm-lock.yaml)
+  "hasExistingAgents": false,     // agents/ directory exists?
+  "hasTaskQueue": false,          // tasks/queue/ directory exists?
+  "hasMemory": false,             // agents/*/memory/core.json exists?
+  "suggestedAgents": ["backend", "frontend", "reviewer"],
+  "suggestedLevel": 0             // Based on what's already in place
+}
+```
+
+**Greenfield project (no code yet)?** If discovery finds nothing — no package.json, no source files, no tests — start at Level 1: create a `CLAUDE.md` with your intended tech stack and coding conventions. Write some initial code and at least one test. Then come back and run `setup.mjs` when ready for Level 3.
+
+**Monorepo or subdirectory project?** If your app lives in a subdirectory (e.g., `packages/web/`, `app/`), the framework handles this. During `setup.mjs`, set the "App subdirectory" to your app's location. Discovery auto-detects this from `agents/project.json` when it exists.
 
 ---
 
@@ -100,6 +135,17 @@ Present the options based on their current level. DO NOT push everything — let
 - See `docs/levels/level-6-self-improving.md`.
 
 **Ask the user:** "Which level would you like to start with? I can walk you through the integration step by step."
+
+**Non-JavaScript projects — adaptation notes:**
+
+| Language | Test Command | Directory Convention | CLAUDE.md Notes |
+|----------|-------------|---------------------|----------------|
+| Python | `pytest` or `python -m pytest` | `src/`, `tests/`, `requirements.txt` | Add: "Use type hints. Follow PEP 8. Virtual env in `.venv/`." |
+| Rust | `cargo test` | `src/`, `tests/`, `Cargo.toml` | Add: "Use `clippy` for linting. Follow Rust API guidelines." |
+| Go | `go test ./...` | `cmd/`, `pkg/`, `internal/`, `go.mod` | Add: "Use `golint`. Follow effective Go conventions." |
+| Java/Kotlin | `./gradlew test` or `mvn test` | `src/main/`, `src/test/`, `pom.xml` | Add: build tool conventions, package structure. |
+
+The framework scripts are language-agnostic — they manage JSON task files, agent memory, and orchestration. The test command, file patterns, and coding conventions are project-specific and set during `setup.mjs`.
 
 ---
 
@@ -226,3 +272,7 @@ Once integrated, the framework provides:
 | Tests fail on first run | Verify test command in `agents/project.json` matches your project's test runner |
 | Memory files empty | Expected — memory accumulates as agents work. Run a task first. |
 | Model-manager shows 0% for all agents | Expected — utilization tracks within current day. Run some tasks first. |
+| Discovery shows `"language": "unknown"` | App is likely in a subdirectory. Set `appDir` in `agents/project.json` or use `--dir` pointing to the app directory |
+| CLAUDE.md not being read by AI tool | Verify you're running the AI tool from the project root (where CLAUDE.md lives), not a subdirectory |
+| No `agents/` directory after setup | Run `setup.mjs` from the project directory, not the framework directory. Use `--dir` if needed. |
+| Test command fails during agent tasks | Verify `testCmd` in `agents/project.json` matches your actual test runner. Use full path: `node_modules/.bin/jest` not `npx jest` |

@@ -63,5 +63,4 @@ your conventions without any manual correction.
 
 ## Next Level
 
-When you are comfortable with AI writing code that matches your standards,
-move to Level 2 to add test-gated commits. See `docs/levels/level-2-automated.md`.
+When you are comfortable with AI writing code that matches your standards, move to [Level 2: AI Writes, Tests, and Commits](level-2-automated.md).
