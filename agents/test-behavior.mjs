@@ -23,6 +23,11 @@ const config = loadConfig();
 const AGENTS = config.agents;
 const AGENTS_DIR = config.agentsDir;
 const dryRun = process.argv.includes('--dry-run');
+const frameworkOnly = process.argv.includes('--framework');
+const projectOnly = process.argv.includes('--project');
+
+const claudeMdPath = resolve(__dirname, '..', 'CLAUDE.md');
+const claudeMd = existsSync(claudeMdPath) ? readFileSync(claudeMdPath, 'utf8') : '';
 
 let passed = 0;
 let failed = 0;
@@ -60,7 +65,15 @@ function readChecklist() {
 
 // Tests
 console.log('🧪 Agent Behavior Tests');
+if (frameworkOnly) console.log('  Mode: --framework (framework tests only)');
+if (projectOnly) console.log('  Mode: --project (project tests only)');
 console.log('═'.repeat(50));
+
+// ---------------------------------------------------------------------------
+// Project-specific tests (agent content, domain patterns, memory content)
+// ---------------------------------------------------------------------------
+
+if (!frameworkOnly) {
 
 // Roy-specific checks
 console.log('\n📋 Roy (Backend):');
@@ -123,6 +136,14 @@ check('Checklist mentions any types', /\bany\b.*type|no.*\bany\b/i.test(checklis
 check('Checklist mentions console.log', /console\.log/i.test(checklist));
 check('Checklist mentions file size', /\b150\b.*line|\b200\b.*line|file\s*size/i.test(checklist));
 check('Checklist mentions { data, error }', /data.*error|return.*pattern/i.test(checklist));
+
+} // end !frameworkOnly
+
+// ---------------------------------------------------------------------------
+// Framework tests (template quality, scripts, CLAUDE.md, adapters)
+// ---------------------------------------------------------------------------
+
+if (!projectOnly) {
 
 // Template & Framework Guide Integrity
 console.log('\n📋 Template & Framework Guide Integrity:');
@@ -211,8 +232,6 @@ check('alignment-monitor.mjs exists', existsSync(alignMonPath));
 
 // CLAUDE.md references new artifacts
 console.log('\n📋 CLAUDE.md — New Artifact References:');
-const claudeMdPath = resolve(__dirname, '..', 'CLAUDE.md');
-const claudeMd = existsSync(claudeMdPath) ? readFileSync(claudeMdPath, 'utf8') : '';
 check('CLAUDE.md references REQ-xxx format', /REQ-xxx|REQ-\d{3}/i.test(claudeMd));
 check('CLAUDE.md references roadmap template', /roadmap\.md\.template|roadmap/i.test(claudeMd));
 check('CLAUDE.md references braindump template', /braindump/i.test(claudeMd));
@@ -256,6 +275,14 @@ check('autonomous-launcher.sh exists', existsSync(launcherPath));
 // Garden roadmap
 const gardenPath = resolve(__dirname, 'garden-roadmap.mjs');
 check('garden-roadmap.mjs exists', existsSync(gardenPath));
+
+} // end !projectOnly (framework tests)
+
+// ---------------------------------------------------------------------------
+// Project-specific tests (continued): maturation, model-manager
+// ---------------------------------------------------------------------------
+
+if (!frameworkOnly) {
 
 // Maturation regression check
 // Fails if an agent's correction rate increased for 2+ consecutive weeks
@@ -309,6 +336,14 @@ if (existsSync(mmAgentMd)) {
   check('model-manager: mentions notifications', /notif/i.test(mmMd));
 }
 
+} // end !frameworkOnly (project tests, continued)
+
+// ---------------------------------------------------------------------------
+// Framework tests (continued): execution templates, adapter layer
+// ---------------------------------------------------------------------------
+
+if (!projectOnly) {
+
 // Execution Agent Templates — verify all 15 exist with valid frontmatter
 console.log('\n📋 Execution Agent Templates:');
 const execDir = resolve(__dirname, 'templates', 'execution-agents');
@@ -344,6 +379,8 @@ check('file-based orchestration adapter exists', existsSync(resolve(__dirname, '
 check('anthropic LLM adapter exists', existsSync(resolve(__dirname, 'adapters', 'llm', 'anthropic.mjs')));
 check('CLAUDE.md documents adapter configuration', /Adapter Configuration/i.test(claudeMd));
 check('CLAUDE.md documents model-manager', /model-manager/i.test(claudeMd));
+
+} // end !projectOnly (framework tests, continued)
 
 // Summary
 console.log(`\n${'═'.repeat(50)}`);
