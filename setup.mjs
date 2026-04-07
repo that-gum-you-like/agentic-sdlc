@@ -134,7 +134,107 @@ function writeIfNotExists(filePath, content, description) {
 // Main
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Project discovery (non-destructive analysis)
+// ---------------------------------------------------------------------------
+
+function discoverProject(dir) {
+  const result = {
+    projectDir: dir,
+    language: 'unknown',
+    framework: 'unknown',
+    testFramework: 'unknown',
+    testCmd: '',
+    ci: 'none',
+    packageManager: 'unknown',
+    hasExistingAgents: existsSync(join(dir, 'agents')),
+    hasTaskQueue: existsSync(join(dir, 'tasks/queue')),
+    hasMemory: false,
+    hasCLAUDEmd: existsSync(join(dir, 'CLAUDE.md')),
+    hasCursorRules: existsSync(join(dir, '.cursorrules')),
+    suggestedAgents: [],
+    suggestedLevel: 0,
+  };
+
+  // Detect language and framework
+  if (existsSync(join(dir, 'package.json'))) {
+    try {
+      const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
+      result.language = pkg.devDependencies?.typescript || pkg.dependencies?.typescript ? 'typescript' : 'javascript';
+      result.packageManager = existsSync(join(dir, 'yarn.lock')) ? 'yarn' : existsSync(join(dir, 'pnpm-lock.yaml')) ? 'pnpm' : 'npm';
+      result.testCmd = pkg.scripts?.test || '';
+
+      // Detect framework
+      const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
+      if (allDeps['next']) result.framework = 'nextjs';
+      else if (allDeps['react-native'] || allDeps['expo']) result.framework = 'react-native';
+      else if (allDeps['react']) result.framework = 'react';
+      else if (allDeps['vue']) result.framework = 'vue';
+      else if (allDeps['@angular/core']) result.framework = 'angular';
+      else if (allDeps['express'] || allDeps['fastify'] || allDeps['hono']) result.framework = 'node-api';
+      else if (allDeps['svelte'] || allDeps['@sveltejs/kit']) result.framework = 'svelte';
+
+      // Detect test framework
+      if (allDeps['jest'] || pkg.jest) result.testFramework = 'jest';
+      else if (allDeps['vitest']) result.testFramework = 'vitest';
+      else if (allDeps['mocha']) result.testFramework = 'mocha';
+      else if (allDeps['playwright'] || allDeps['@playwright/test']) result.testFramework = 'playwright';
+    } catch { /* malformed package.json */ }
+  } else if (existsSync(join(dir, 'requirements.txt')) || existsSync(join(dir, 'pyproject.toml'))) {
+    result.language = 'python';
+    result.packageManager = 'pip';
+    if (existsSync(join(dir, 'pytest.ini')) || existsSync(join(dir, 'pyproject.toml'))) result.testFramework = 'pytest';
+  } else if (existsSync(join(dir, 'Cargo.toml'))) {
+    result.language = 'rust';
+    result.packageManager = 'cargo';
+    result.testFramework = 'cargo-test';
+  } else if (existsSync(join(dir, 'go.mod'))) {
+    result.language = 'go';
+    result.packageManager = 'go-modules';
+    result.testFramework = 'go-test';
+  }
+
+  // Detect CI
+  if (existsSync(join(dir, '.github/workflows'))) result.ci = 'github-actions';
+  else if (existsSync(join(dir, '.gitlab-ci.yml'))) result.ci = 'gitlab-ci';
+  else if (existsSync(join(dir, 'Jenkinsfile'))) result.ci = 'jenkins';
+
+  // Check for existing memory
+  if (result.hasExistingAgents) {
+    try {
+      const agentDirs = readdirSync(join(dir, 'agents'), { withFileTypes: true }).filter(d => d.isDirectory());
+      result.hasMemory = agentDirs.some(d => existsSync(join(dir, 'agents', d.name, 'memory', 'core.json')));
+    } catch { /* agents dir unreadable */ }
+  }
+
+  // Suggest agents based on detected tech
+  const suggestedAgents = ['backend', 'reviewer'];
+  const fw = result.framework;
+  if (['react', 'react-native', 'nextjs', 'vue', 'angular', 'svelte'].includes(fw)) suggestedAgents.push('frontend');
+  if (result.language === 'typescript' || result.language === 'python') suggestedAgents.push('integration-tester');
+
+  result.suggestedAgents = suggestedAgents;
+
+  // Assess current level
+  if (result.hasMemory) result.suggestedLevel = 5;
+  else if (result.hasTaskQueue) result.suggestedLevel = 3;
+  else if (result.hasCLAUDEmd || result.hasCursorRules) result.suggestedLevel = 1;
+  else result.suggestedLevel = 0;
+
+  return result;
+}
+
 async function main() {
+  // Handle --discover flag (non-destructive, outputs JSON)
+  if (process.argv.includes('--discover')) {
+    const dirIdx = process.argv.indexOf('--dir');
+    const dir = dirIdx !== -1 ? resolve(process.argv[dirIdx + 1]) : process.cwd();
+    const report = discoverProject(dir);
+    console.log(JSON.stringify(report, null, 2));
+    rl.close();
+    return;
+  }
+
   console.log('');
   console.log('═'.repeat(50));
   console.log('  Agentic SDLC — Project Bootstrap');

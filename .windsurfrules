@@ -1,0 +1,21 @@
+# Agentic SDLC Framework
+
+This is a multi-agent software development lifecycle framework. It provides task queues, agent memory, quality gates, and progressive maturity levels for AI-assisted development.
+
+## If you're helping a user integrate this framework
+
+Read `ONBOARDING.md` for the full integration protocol. The key principle: **discover the user's project first, then integrate incrementally** — never force the full framework at once.
+
+Quick reference:
+- `node ~/agentic-sdlc/setup.mjs --discover --dir .` — analyze project without changes
+- `node ~/agentic-sdlc/setup.mjs` — interactive setup
+- `docs/levels/` — per-maturity-level integration guides
+- `docs/execution-agents.md` — available agent templates
+
+## If you're working on this framework itself
+
+Read `CLAUDE.md` for the full rules. Key points:
+- Every change goes through OpenSpec: proposal → design → specs → tasks → implement
+- Every task needs tests
+- Agents follow micro cycle: pick → implement → test → commit → next
+- This is a framework repo — changes here propagate to all projects using it

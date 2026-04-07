@@ -328,6 +328,46 @@ test('capabilities.json.template has all 15 execution archetypes', () => {
 });
 
 // ============================================================================
+// AI Onboarding — file existence and content checks
+// ============================================================================
+
+console.log('\n📋 AI onboarding infrastructure:');
+
+test('ONBOARDING.md exists and has 5-phase protocol', () => {
+  const content = readFileSync(resolve(SDLC_ROOT, 'ONBOARDING.md'), 'utf8');
+  assert(content.includes('Phase 1: Discover'), 'Should have Phase 1: Discover');
+  assert(content.includes('Phase 2: Assess'), 'Should have Phase 2: Assess');
+  assert(content.includes('Phase 3: Choose'), 'Should have Phase 3: Choose');
+  assert(content.includes('Phase 4: Integrate'), 'Should have Phase 4: Integrate');
+  assert(content.includes('Phase 5: Validate'), 'Should have Phase 5: Validate');
+});
+
+test('.cursorrules exists and references ONBOARDING.md', () => {
+  const content = readFileSync(resolve(SDLC_ROOT, '.cursorrules'), 'utf8');
+  assert(content.includes('ONBOARDING.md'), 'Should reference ONBOARDING.md');
+});
+
+test('all 6 level guides exist', () => {
+  const levels = [
+    'level-1-assisted.md', 'level-2-automated.md', 'level-3-orchestrated.md',
+    'level-4-quality.md', 'level-5-evolution.md', 'level-6-self-improving.md',
+  ];
+  for (const level of levels) {
+    assert(existsSync(resolve(SDLC_ROOT, 'docs/levels', level)), `${level} should exist`);
+  }
+});
+
+test('setup.mjs --discover outputs valid JSON', async () => {
+  const { execSync } = await import('child_process');
+  const output = execSync(`node ${resolve(SDLC_ROOT, 'setup.mjs')} --discover --dir ${SDLC_ROOT}`, { encoding: 'utf8' });
+  const parsed = JSON.parse(output);
+  assert(parsed.projectDir, 'Should have projectDir');
+  assert(parsed.language, 'Should have language');
+  assert(parsed.suggestedLevel !== undefined, 'Should have suggestedLevel');
+  assert(Array.isArray(parsed.suggestedAgents), 'suggestedAgents should be array');
+});
+
+// ============================================================================
 // Summary
 // ============================================================================
 

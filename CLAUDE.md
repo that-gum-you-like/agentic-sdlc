@@ -1,6 +1,8 @@
 # Agentic SDLC Framework
 
-This repo contains Bryce's universal methodology for AI-assisted software development. It provides scripts, templates, and documentation for running a multi-agent development team with Claude Code.
+> **Setting up for the first time?** Read [ONBOARDING.md](ONBOARDING.md) — it walks you (or your AI agent) through discovery, assessment, and incremental integration. The rules below apply once the framework is integrated.
+
+This repo contains a universal methodology for AI-assisted software development. It provides scripts, templates, and documentation for running a multi-agent development team with any AI coding tool.
 
 **This is a framework repo, not a project repo.** To use it with a project, run `node ~/agentic-sdlc/setup.mjs` in your project directory.
 
