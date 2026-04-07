@@ -359,6 +359,30 @@ test('capabilities.json.template has all 15 execution archetypes', () => {
 });
 
 // ============================================================================
+// Memory Scaling — estimateTokens and recall summarization
+// ============================================================================
+
+console.log('\n📋 Memory scaling:');
+
+test('estimateTokens returns chars/4 approximation', async () => {
+  const { estimateTokens } = await import(resolve(SDLC_ROOT, 'agents/memory-manager.mjs'));
+  assertEqual(estimateTokens(''), 0);
+  assertEqual(estimateTokens(null), 0);
+  // 100 chars → 25 tokens
+  const text100 = 'a'.repeat(100);
+  assertEqual(estimateTokens(text100), 25);
+  // 7 chars → ceil(7/4) = 2
+  assertEqual(estimateTokens('1234567'), 2);
+});
+
+test('memoryTokenBudget defaults to 4000 in load-config', async () => {
+  const { loadConfig } = await import(resolve(SDLC_ROOT, 'agents/load-config.mjs'));
+  const config = loadConfig();
+  assert(config.memoryTokenBudget !== undefined, 'memoryTokenBudget should be defined');
+  assert(typeof config.memoryTokenBudget === 'number', 'memoryTokenBudget should be a number');
+});
+
+// ============================================================================
 // AI Onboarding — file existence and content checks
 // ============================================================================
 

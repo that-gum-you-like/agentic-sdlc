@@ -196,6 +196,8 @@ export function loadConfig() {
     llm: {
       defaultProvider: raw.llm?.defaultProvider || 'anthropic',
     },
+    // Memory token budget — when total memory exceeds this, recall auto-summarizes
+    memoryTokenBudget: raw.memoryTokenBudget ?? 4000,
     // Done checklist — steps required before reporting a task as complete
     // Default for app projects: full pipeline. Framework repos: no deploy/verify/notify.
     doneChecklist: raw.doneChecklist || ['openspec', 'tests', 'commit', 'deploy', 'verify', 'notify'],

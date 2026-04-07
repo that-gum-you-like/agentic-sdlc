@@ -206,6 +206,37 @@ Without periodic consolidation:
 
 REM Sleep ensures that what agents learn in individual sessions does not disappear when `recent` entries age out. The most important learnings are systematically elevated to where they will be read on future tasks.
 
+## Memory Scaling — Token Budget Recall
+
+As agent memory grows (60+ entries across layers), loading ALL memory before every task wastes tokens. The `recall` command auto-summarizes when total memory exceeds a configurable threshold.
+
+### Configuration
+
+Add `memoryTokenBudget` to `project.json` (default: 4000):
+
+```json
+{
+  "memoryTokenBudget": 4000
+}
+```
+
+### How It Works
+
+When `memory-manager.mjs recall <agent>` is called and total memory tokens exceed the budget:
+
+| Layer | Behavior |
+|-------|----------|
+| Core | Always returned **in full** (failures are critical) |
+| Long-term | Entries returned up to remaining budget, rest omitted |
+| Medium-term | Each entry truncated to 1-line summary (80 chars max) |
+| Recent | Only the 5 most recent entries returned |
+
+A `[summarized — N tokens exceeds budget of M]` note is printed when summarization is active.
+
+### Better Alternative: Semantic Search
+
+When `sentence-transformers` is installed (`pip install -r agents/requirements-nlp.txt`), use `memory-manager.mjs search <agent> "<query>"` for targeted retrieval instead of loading everything. Semantic search returns only the most relevant entries, staying well within token budgets.
+
 ## Memory Protocol for Agent Sessions
 
 Every agent session follows this memory access pattern:

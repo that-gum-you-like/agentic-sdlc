@@ -39,6 +39,15 @@ const config = loadConfig();
 const AGENTS = config.agents;
 const AGENTS_DIR = config.agentsDir;
 const LAYERS = ['core', 'long-term', 'medium-term', 'recent', 'compost'];
+const MEMORY_TOKEN_BUDGET = config.memoryTokenBudget ?? 4000;
+
+/**
+ * Estimate token count for a string. Uses chars/4 approximation.
+ */
+function estimateTokens(text) {
+  if (!text) return 0;
+  return Math.ceil(text.length / 4);
+}
 
 function getMemoryPath(agent, layer) {
   return resolve(AGENTS_DIR, agent, 'memory', `${layer}.json`);
@@ -63,11 +72,29 @@ function recall(agent) {
 
   try { logCapabilityUsage('memoryRecall', agent, process.env.TASK_ID || 'unknown', 'memory-manager.mjs', 'recall'); } catch {}
 
+  // Load all memory layers
+  const core = loadMemory(agent, 'core');
+  const longTerm = loadMemory(agent, 'long-term');
+  const mediumTerm = loadMemory(agent, 'medium-term');
+  const recent = loadMemory(agent, 'recent');
+
+  // Estimate total tokens across all layers
+  const coreStr = JSON.stringify(core);
+  const longTermStr = longTerm.entries?.map(e => e.content).join('\n') || '';
+  const mediumTermStr = mediumTerm.entries?.map(e => e.content).join('\n') || '';
+  const recentStr = recent.entries?.map(e => e.content).join('\n') || '';
+  const totalTokens = estimateTokens(coreStr) + estimateTokens(longTermStr) +
+    estimateTokens(mediumTermStr) + estimateTokens(recentStr);
+
+  const summarize = totalTokens > MEMORY_TOKEN_BUDGET;
+
   console.log(`\n🧠 Memory Recall for ${agent}`);
+  if (summarize) {
+    console.log(`  [summarized — ${totalTokens} tokens exceeds budget of ${MEMORY_TOKEN_BUDGET}]`);
+  }
   console.log('═'.repeat(50));
 
-  // Core — always loaded
-  const core = loadMemory(agent, 'core');
+  // Core — always returned in full (failures are critical)
   console.log('\n📌 CORE (non-negotiable):');
   console.log(`   Identity: ${core.identity?.name} — ${core.identity?.role}`);
   if (core.values) {
@@ -83,25 +110,50 @@ function recall(agent) {
     core.failures.forEach(f => console.log(`     ❌ ${f.description} (${f.date})`));
   }
 
-  // Long-term
-  const longTerm = loadMemory(agent, 'long-term');
+  // Long-term — full if within budget, otherwise up to remaining budget
   if (longTerm.entries?.length > 0) {
     console.log('\n📚 LONG-TERM (patterns learned):');
-    longTerm.entries.forEach(e => console.log(`   • ${e.content} (${e.date})`));
+    if (summarize) {
+      // Show entries up to remaining budget after core
+      const budgetAfterCore = MEMORY_TOKEN_BUDGET - estimateTokens(coreStr);
+      let usedTokens = 0;
+      let shown = 0;
+      for (const e of longTerm.entries) {
+        const entryTokens = estimateTokens(e.content);
+        if (usedTokens + entryTokens > budgetAfterCore) break;
+        console.log(`   • ${e.content} (${e.date})`);
+        usedTokens += entryTokens;
+        shown++;
+      }
+      if (shown < longTerm.entries.length) {
+        console.log(`   ... ${longTerm.entries.length - shown} more entries omitted (over budget)`);
+      }
+    } else {
+      longTerm.entries.forEach(e => console.log(`   • ${e.content} (${e.date})`));
+    }
   }
 
-  // Medium-term
-  const mediumTerm = loadMemory(agent, 'medium-term');
+  // Medium-term — 1-line summaries when over budget
   if (mediumTerm.entries?.length > 0) {
     console.log('\n📋 MEDIUM-TERM (sprint context):');
-    mediumTerm.entries.forEach(e => console.log(`   • ${e.content} (${e.date})`));
+    if (summarize) {
+      mediumTerm.entries.forEach(e => {
+        const summary = e.content.length > 80 ? e.content.slice(0, 77) + '...' : e.content;
+        console.log(`   • ${summary}`);
+      });
+    } else {
+      mediumTerm.entries.forEach(e => console.log(`   • ${e.content} (${e.date})`));
+    }
   }
 
-  // Recent
-  const recent = loadMemory(agent, 'recent');
+  // Recent — latest 5 entries only when over budget
   if (recent.entries?.length > 0) {
     console.log('\n🕐 RECENT (this session):');
-    recent.entries.forEach(e => console.log(`   • ${e.content} (${e.date})`));
+    const entries = summarize ? recent.entries.slice(-5) : recent.entries;
+    entries.forEach(e => console.log(`   • ${e.content} (${e.date})`));
+    if (summarize && recent.entries.length > 5) {
+      console.log(`   ... ${recent.entries.length - 5} older entries omitted`);
+    }
   }
 
   console.log('');
@@ -364,7 +416,13 @@ function searchMemory(agent, query, topK = 5) {
   console.log('');
 }
 
+// Export for use by other scripts
+export { recall, record, consolidate, compostEntry, searchMemory, loadMemory, saveMemory, estimateTokens };
+
 // CLI
+const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
+
+if (__isMainModule) {
 const [,, cmd, ...args] = process.argv;
 
 switch (cmd) {
@@ -400,3 +458,4 @@ switch (cmd) {
 Agents: ${AGENTS.join(', ')}
 Layers: ${LAYERS.join(', ')}`);
 }
+} // end __isMainModule
