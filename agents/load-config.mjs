@@ -196,6 +196,9 @@ export function loadConfig() {
     llm: {
       defaultProvider: raw.llm?.defaultProvider || 'anthropic',
     },
+    // Done checklist — steps required before reporting a task as complete
+    // Default for app projects: full pipeline. Framework repos: no deploy/verify/notify.
+    doneChecklist: raw.doneChecklist || ['openspec', 'tests', 'commit', 'deploy', 'verify', 'notify'],
     // Performance ledger for model-manager
     performanceLedgerPath: resolve(raw.projectDir, 'pm/model-performance.jsonl'),
   };

@@ -65,7 +65,11 @@ If the task produces documentation or templates (not executable code), batch imp
 
 ## What "Done" Means
 
-A task is done when:
+A task is done when every step in the project's `doneChecklist` (from `project.json`) is complete. The checklist varies by project type:
+- **App projects:** openspec → tests → commit → deploy → verify → notify
+- **Framework repos:** openspec → tests → commit → push
+
+At minimum:
 - The implementation is complete
 - Tests are written and passing
 - The commit is clean and pushed

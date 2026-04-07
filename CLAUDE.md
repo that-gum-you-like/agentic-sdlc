@@ -363,19 +363,24 @@ node ~/agentic-sdlc/agents/paperclip-sync.mjs --pull-spent  # Pull spend data fr
 2. Mark in-progress tasks with status notes in their task JSON
 3. Commit and push all work
 
-### Done Checklist (For Frontend Changes)
+### Done Checklist (Configurable)
 
-"Wrote the code" is NOT "shipped the fix." Every step must complete before reporting done:
+The done checklist is configured per project in `project.json` via the `doneChecklist` array. Steps are only required if they appear in your project's checklist.
 
-1. **Tests pass** — unit + defeat + behavior
-2. **Browser E2E pass** — run browser automation (e.g., Playwright) against the production build for any frontend change
-3. **Commit + push** — atomic commit, push to remote
-4. **Deploy via pipeline** — use the project's deploy script/pipeline, never manual deploys
-5. **Post-deploy browser verification** — exercise every changed feature in a real browser against the production URL:
-   - Screenshot at every step
-   - Visually confirm each screenshot shows correct rendering
-   - Fix and re-deploy if any verification fails
-6. **Notify stakeholder LAST** — only after browser verification passes on production
+**Default for app projects:** `["openspec", "tests", "commit", "deploy", "verify", "notify"]`
+**Default for framework repos:** `["openspec", "tests", "commit", "push"]`
+
+"Wrote the code" is NOT "shipped the fix." Every configured step must complete before reporting done:
+
+| Step | Description |
+|------|-------------|
+| `openspec` | Change went through OpenSpec workflow |
+| `tests` | Tests pass — unit + defeat + behavior |
+| `commit` | Atomic commit with clear message |
+| `push` | Push to remote |
+| `deploy` | Deploy via pipeline (never manual deploys) |
+| `verify` | Post-deploy browser verification with screenshots |
+| `notify` | Notify stakeholder LAST — only after verification passes |
 
 ## Instance Scaling
 

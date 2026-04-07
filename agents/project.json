@@ -29,5 +29,6 @@
   },
   "llm": {
     "defaultProvider": "anthropic"
-  }
+  },
+  "doneChecklist": ["openspec", "tests", "commit", "push"]
 }
