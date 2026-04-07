@@ -127,7 +127,18 @@ function matchTemplate(role, templates) {
   return null;
 }
 
+// Dry-run tracking
+const DRY_RUN = process.argv.includes('--dry-run');
+const dryRunPlan = { files: [], dirs: [] };
+
 function ensureDir(dir) {
+  if (DRY_RUN) {
+    if (!existsSync(dir)) {
+      dryRunPlan.dirs.push(dir);
+      console.log(`  [DRY RUN] Would create directory: ${dir}`);
+    }
+    return;
+  }
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
     console.log(`  📁 Created ${dir}`);
@@ -138,6 +149,12 @@ function writeIfNotExists(filePath, content, description) {
   if (existsSync(filePath)) {
     console.log(`  ⏭️  ${description} already exists, skipping`);
     return false;
+  }
+  if (DRY_RUN) {
+    const lines = content.split('\n').length;
+    dryRunPlan.files.push({ path: filePath, lines, description });
+    console.log(`  [DRY RUN] Would create: ${description} (${lines} lines)`);
+    return true;
   }
   writeFileSync(filePath, content);
   console.log(`  ✅ Created ${description}`);
@@ -614,7 +631,11 @@ In addition to the standard micro cycle, every task MUST include:
 `;
       const agentMdPath = join(agentDir, 'AGENT.md');
       if (existsSync(agentMdPath)) {
-        appendFileSync(agentMdPath, uixAddendum);
+        if (DRY_RUN) {
+          console.log(`  [DRY RUN] Would append UIX addendum to AGENT.md`);
+        } else {
+          appendFileSync(agentMdPath, uixAddendum);
+        }
       }
     }
 
@@ -713,8 +734,13 @@ In addition to the standard micro cycle, every task MUST include:
       const src = join(openspecTemplatesSource, tmplFile);
       const dest = join(openspecTemplatesDest, tmplFile);
       if (!existsSync(dest)) {
-        cpSync(src, dest);
-        console.log(`  ✅ Copied openspec template: ${tmplFile}`);
+        if (DRY_RUN) {
+          dryRunPlan.files.push({ path: dest, lines: 0, description: `openspec template: ${tmplFile}` });
+          console.log(`  [DRY RUN] Would copy openspec template: ${tmplFile}`);
+        } else {
+          cpSync(src, dest);
+          console.log(`  ✅ Copied openspec template: ${tmplFile}`);
+        }
       }
     }
   }
@@ -772,8 +798,13 @@ ${agents.map(a => `| ${agentDomains[a]?.name || a} | ${agentRoles[a] || 'Develop
       const src = join(skillsSource, skill, 'SKILL.md');
       const dest = join(destSkillDir, 'SKILL.md');
       if (!existsSync(dest)) {
-        cpSync(src, dest);
-        console.log(`  ✅ Copied skill: ${skill}`);
+        if (DRY_RUN) {
+          dryRunPlan.files.push({ path: dest, lines: 0, description: `skill: ${skill}` });
+          console.log(`  [DRY RUN] Would copy skill: ${skill}`);
+        } else {
+          cpSync(src, dest);
+          console.log(`  ✅ Copied skill: ${skill}`);
+        }
       }
     }
   }
@@ -803,34 +834,71 @@ Use \`/openspec-new-change\` to start, \`/openspec-continue-change\` to advance,
   if (existsSync(claudeMdPath)) {
     const existing = readFileSync(claudeMdPath, 'utf8');
     if (!existing.includes('Agentic SDLC')) {
-      appendFileSync(claudeMdPath, sdlcSection);
-      console.log(`  ✅ Appended SDLC section to CLAUDE.md`);
+      if (DRY_RUN) {
+        console.log(`  [DRY RUN] Would append SDLC section to CLAUDE.md`);
+      } else {
+        appendFileSync(claudeMdPath, sdlcSection);
+        console.log(`  ✅ Appended SDLC section to CLAUDE.md`);
+      }
     } else {
       console.log(`  ⏭️  CLAUDE.md already has SDLC section`);
     }
   } else {
-    writeFileSync(claudeMdPath, `# ${projectName}\n${sdlcSection}`);
-    console.log(`  ✅ Created CLAUDE.md`);
+    if (DRY_RUN) {
+      dryRunPlan.files.push({ path: claudeMdPath, lines: sdlcSection.split('\n').length, description: 'CLAUDE.md' });
+      console.log(`  [DRY RUN] Would create CLAUDE.md`);
+    } else {
+      writeFileSync(claudeMdPath, `# ${projectName}\n${sdlcSection}`);
+      console.log(`  ✅ Created CLAUDE.md`);
+    }
   }
 
   // 12. Set up cron jobs (if OpenClaw available)
-  try {
-    execSync('which openclaw', { stdio: 'pipe' });
-    const cronJobs = [
-      { name: 'sdlc-update', cron: '0 4 * * *', cmd: 'cd ~/agentic-sdlc && git pull --ff-only', desc: 'daily SDLC update (04:00)' },
-      { name: 'rem-sleep-weekly', cron: '0 23 * * 0', cmd: `cd ${projectDir} && node ~/agentic-sdlc/agents/rem-sleep.mjs`, desc: 'weekly REM sleep (Sun 23:00)' },
-      { name: 'cost-report-daily', cron: '0 6 * * *', cmd: `cd ${projectDir} && node ~/agentic-sdlc/agents/cost-tracker.mjs report`, desc: 'daily cost report (06:00)' },
-    ];
-    for (const job of cronJobs) {
-      try {
-        execSync(`openclaw cron add ${job.name} "${job.cron}" "${job.cmd}"`, { stdio: 'pipe' });
-        console.log(`  ✅ Set up ${job.desc}`);
-      } catch {
-        console.log(`  ℹ️  Cron "${job.name}" skipped (may already exist)`);
+  if (DRY_RUN) {
+    console.log(`  [DRY RUN] Would set up 3 cron jobs (sdlc-update, rem-sleep-weekly, cost-report-daily)`);
+  } else {
+    try {
+      execSync('which openclaw', { stdio: 'pipe' });
+      const cronJobs = [
+        { name: 'sdlc-update', cron: '0 4 * * *', cmd: 'cd ~/agentic-sdlc && git pull --ff-only', desc: 'daily SDLC update (04:00)' },
+        { name: 'rem-sleep-weekly', cron: '0 23 * * 0', cmd: `cd ${projectDir} && node ~/agentic-sdlc/agents/rem-sleep.mjs`, desc: 'weekly REM sleep (Sun 23:00)' },
+        { name: 'cost-report-daily', cron: '0 6 * * *', cmd: `cd ${projectDir} && node ~/agentic-sdlc/agents/cost-tracker.mjs report`, desc: 'daily cost report (06:00)' },
+      ];
+      for (const job of cronJobs) {
+        try {
+          execSync(`openclaw cron add ${job.name} "${job.cron}" "${job.cmd}"`, { stdio: 'pipe' });
+          console.log(`  ✅ Set up ${job.desc}`);
+        } catch {
+          console.log(`  ℹ️  Cron "${job.name}" skipped (may already exist)`);
+        }
+      }
+    } catch {
+      console.log(`  ℹ️  OpenClaw not available — skip cron setup`);
+    }
+  }
+
+  // Dry-run summary
+  if (DRY_RUN) {
+    console.log('');
+    console.log('═'.repeat(50));
+    console.log('  DRY RUN SUMMARY');
+    console.log('═'.repeat(50));
+    console.log(`  Would create ${dryRunPlan.dirs.length} directories and ${dryRunPlan.files.length} files.`);
+    if (dryRunPlan.dirs.length > 0) {
+      console.log('\n  Directories:');
+      for (const d of dryRunPlan.dirs) console.log(`    ${d}`);
+    }
+    if (dryRunPlan.files.length > 0) {
+      console.log('\n  Files:');
+      for (const f of dryRunPlan.files) {
+        const lineInfo = f.lines > 0 ? ` (${f.lines} lines)` : '';
+        console.log(`    ${f.description}${lineInfo}`);
       }
     }
-  } catch {
-    console.log(`  ℹ️  OpenClaw not available — skip cron setup`);
+    console.log(`\n  Re-run without --dry-run to apply.`);
+    console.log('═'.repeat(50));
+    rl.close();
+    return;
   }
 
   // Done!

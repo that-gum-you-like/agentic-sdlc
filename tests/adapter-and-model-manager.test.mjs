@@ -383,6 +383,21 @@ test('memoryTokenBudget defaults to 4000 in load-config', async () => {
 });
 
 // ============================================================================
+// Setup dry-run flag existence
+// ============================================================================
+
+console.log('\n📋 Setup dry-run:');
+
+test('setup.mjs source contains --dry-run flag handling', () => {
+  const setupContent = readFileSync(resolve(SDLC_ROOT, 'setup.mjs'), 'utf8');
+  assert(setupContent.includes('--dry-run'), 'setup.mjs should check for --dry-run flag');
+  assert(setupContent.includes('DRY_RUN'), 'setup.mjs should have DRY_RUN constant');
+  assert(setupContent.includes('dryRunPlan'), 'setup.mjs should track planned files');
+  assert(setupContent.includes('[DRY RUN]'), 'setup.mjs should log [DRY RUN] prefix');
+  assert(setupContent.includes('Re-run without --dry-run'), 'setup.mjs should print re-run instructions');
+});
+
+// ============================================================================
 // AI Onboarding — file existence and content checks
 // ============================================================================
 
