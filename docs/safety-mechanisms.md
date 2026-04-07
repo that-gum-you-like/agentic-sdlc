@@ -235,3 +235,53 @@ node agents/rem-sleep.mjs --dry-run
 # 5. Test-gated completion — attempt failing completion, verify rejection
 node agents/queue-drainer.mjs complete NONEXISTENT failing
 ```
+
+## 11. Redundant Heartbeat Requirement
+
+**Purpose:** Prevent cascade stalls caused by single-point-of-failure when only one agent has an active heartbeat.
+
+**Learned from:** LinguaFlow 17-day stall (2026-03-14 to 2026-03-31) where only the CTO agent had a heartbeat. When CTO got stuck, all other agents remained idle.
+
+**How it works:**
+- `setup.mjs` warns if only 1 agent has a heartbeat/cron configured
+- Recommend 2+ agents with active oversight (CTO + CEO, or any combination)
+- If one oversight agent stalls, the other can detect and recover
+
+## 12. Budget Exhaustion Auto-Response
+
+**Purpose:** Prevent agents from silently starving when their token budget runs out.
+
+**How it works:**
+- When model-manager is configured: monitors utilization every 15 minutes, swaps to fallback models at 100%, alerts at 90%
+- When model-manager is NOT configured: `cost-tracker.mjs report` sends a notification via `notify.mjs` at 90% utilization
+- `budget.json` supports `fallbackChain` per agent for automatic model downgrade
+- Daily reset at midnight restores preferred models
+
+**Commands:**
+```bash
+node agents/model-manager.mjs check      # Manual utilization check
+node agents/model-manager.mjs report     # Performance stats by agent × model
+node agents/model-manager.mjs recommend  # Data-driven model suggestions
+node agents/model-manager.mjs reset      # Clear all active model overrides
+```
+
+## 13. Exception Normalization Guard
+
+**Purpose:** Prevent one-time code review exceptions from becoming permanent anti-patterns.
+
+**Learned from:** LinguaFlow reviewer (Richmond) approved one service-call-from-screen exception that became a normalized pattern across the codebase.
+
+**How it works:**
+- Reviewer checklist requires approved exceptions to have an expiry date or linked tech debt ticket
+- `daily-review.mjs` flags exceptions past their expiry as "stale approval — review or remove"
+- Rule: Hard-block violations, never soft-suggest. One-time approvals must not become permanent.
+
+## 14. Stale OpenSpec Hygiene
+
+**Purpose:** Prevent openspec change queue from accumulating stale items that confuse orchestration.
+
+**How it works:**
+- `daily-review.mjs` scans `openspec/changes/*/status.json`
+- Flags changes stuck in proposal/design >14 days
+- Flags shipped changes not archived >7 days
+- Output appears in daily review and dashboard

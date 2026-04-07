@@ -1,0 +1,9 @@
+{
+  "_description": "Defeat test allowlist — documents pre-existing violations that are tracked as technical debt. The allowlist NEVER grows via automation. New violations fail the build. Fixed violations are removed automatically with --update flag. Only a human may add entries with a commit message explaining the debt.",
+  "_usage": "node ~/agentic-sdlc/agents/four-layer-validate.mjs --allowlist <this-file> [--update]",
+  "any-type": [],
+  "console-log": [],
+  "file-size": [],
+  "missing-error-handling": [],
+  "hardcoded-values": []
+}

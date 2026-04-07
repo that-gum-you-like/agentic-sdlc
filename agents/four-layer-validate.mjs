@@ -41,6 +41,61 @@ const args = process.argv.slice(2);
 const jsonMode = args.includes('--json');
 const filesIdx = args.indexOf('--files');
 const filesGlob = filesIdx !== -1 ? args[filesIdx + 1] : null;
+const allowlistIdx = args.indexOf('--allowlist');
+const allowlistPath = allowlistIdx !== -1 ? args[allowlistIdx + 1] : null;
+const allowlistUpdate = args.includes('--update');
+
+// Load allowlist if provided
+let allowlist = null;
+if (allowlistPath && fs.existsSync(allowlistPath)) {
+  try {
+    allowlist = JSON.parse(fs.readFileSync(allowlistPath, 'utf8'));
+  } catch {
+    console.error(`Failed to parse allowlist: ${allowlistPath}`);
+  }
+}
+
+/**
+ * Filter violations against the allowlist.
+ * Returns { newViolations, knownDebt, fixedEntries }.
+ */
+function applyAllowlist(violations, category) {
+  if (!allowlist || !allowlist[category]) return { newViolations: violations, knownDebt: [], fixedEntries: [] };
+
+  const allowedFiles = new Set(allowlist[category]);
+  const newViolations = [];
+  const knownDebt = [];
+  const seenFiles = new Set();
+
+  for (const v of violations) {
+    // Extract file path from violation string (format: [category] path:line — message)
+    const match = v.match(/\] ([^:]+):/);
+    const filePath = match ? match[1] : '';
+    if (allowedFiles.has(filePath)) {
+      knownDebt.push(v);
+      seenFiles.add(filePath);
+    } else {
+      newViolations.push(v);
+    }
+  }
+
+  // Find allowlist entries that are now clean (violation fixed)
+  const fixedEntries = [...allowedFiles].filter(f => !seenFiles.has(f));
+
+  return { newViolations, knownDebt, fixedEntries };
+}
+
+/**
+ * Shrink the allowlist by removing fixed entries. Write back if --update.
+ */
+function shrinkAllowlist(category, fixedEntries) {
+  if (!allowlist || !fixedEntries.length) return;
+  allowlist[category] = allowlist[category].filter(f => !fixedEntries.includes(f));
+  if (allowlistUpdate && allowlistPath) {
+    fs.writeFileSync(allowlistPath, JSON.stringify(allowlist, null, 2));
+    console.log(`  Allowlist shrunk: removed ${fixedEntries.length} fixed entries from ${category}`);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -333,6 +388,32 @@ async function runLayer2(targetFiles) {
       violations.push(
         `[file-size] ${relPath} — screen is ${lineCount} lines (limit: 200)`,
       );
+    }
+  }
+
+  // Apply allowlist filtering if configured
+  if (allowlist && violations.length > 0) {
+    let allNew = [];
+    let allKnown = [];
+    for (const category of ['any-type', 'console-log', 'file-size']) {
+      const categoryViolations = violations.filter(v => v.startsWith(`[${category}]`));
+      const { newViolations, knownDebt, fixedEntries } = applyAllowlist(categoryViolations, category);
+      allNew.push(...newViolations);
+      allKnown.push(...knownDebt);
+      shrinkAllowlist(category, fixedEntries);
+    }
+    // Include non-categorized violations as-is
+    const categorized = new Set([...allNew, ...allKnown]);
+    const uncategorized = violations.filter(v => !categorized.has(v));
+    allNew.push(...uncategorized);
+
+    if (allNew.length > 0) {
+      const details = [...allNew];
+      if (allKnown.length > 0) details.push(`(${allKnown.length} known debt items in allowlist — not blocking)`);
+      return { name: layerName, status: 'fail', details };
+    }
+    if (allKnown.length > 0) {
+      return { name: layerName, status: 'pass', details: [`${allKnown.length} known debt items in allowlist (no new violations)`] };
     }
   }
 

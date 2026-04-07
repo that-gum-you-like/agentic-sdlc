@@ -71,5 +71,12 @@
       "semanticSearch": "when sentence-transformers installed"
     },
     "notExpected": ["defeatTests", "deployPipeline", "openclawBrowser", "openclawNotify"]
+  },
+  "model-manager": {
+    "required": ["costTracking", "budgetMonitoring", "modelSwap", "performanceLedger"],
+    "conditional": {
+      "notification": "when notify provider configured"
+    },
+    "notExpected": ["browserE2E", "defeatTests", "deployPipeline", "openclawBrowser", "memoryRecord"]
   }
 }

@@ -267,6 +267,31 @@ node agents/test-behavior.mjs
 
 This runs a 30-point test suite validating that agent system prompts correctly encode the micro cycle, memory protocol, anti-pattern rules, and other operating requirements. If `test-behavior.mjs` fails, the agent's `AGENT.md` has stale or incomplete content and must be updated.
 
+## Model Manager
+
+The **model-manager** is a dedicated agent responsible for token budget monitoring, model assignment, and performance tracking. It does not write code or execute tasks.
+
+**How it works:**
+- Runs on a cron schedule (default: every 15 minutes) or on-demand
+- Reads cost-tracker utilization data for all agents
+- At 90%+ budget: sends alert, prepares fallback model
+- At 100%: writes `activeModel` to `budget.json` with next model from `fallbackChain`
+- Logs all events to `pm/model-performance.jsonl` (the performance ledger)
+- Daily reset clears all `activeModel` overrides, restoring preferred models
+
+**Performance ledger** (`pm/model-performance.jsonl`): Append-only JSONL recording task completions with agent, model, provider, success/failure, tokens, duration. Enables data-driven model selection.
+
+**Fallback chains** in `budget.json`: Each agent defines an ordered list of models to fall back to when budget runs out (e.g., `["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5"]`).
+
+**Model preferences** in `budget.json`: Per-task-type overrides (e.g., `"simple fix": "claude-haiku-4-5"`, `"architecture": "claude-opus-4-6"`). The worker reads these when spawning agents.
+
+```bash
+node agents/model-manager.mjs check      # Monitor utilization, swap if needed
+node agents/model-manager.mjs report     # Stats by agent × model
+node agents/model-manager.mjs recommend  # Data-driven model suggestions
+node agents/model-manager.mjs reset      # Daily budget reset
+```
+
 ## Operational Commands Reference
 
 ### Queue Management

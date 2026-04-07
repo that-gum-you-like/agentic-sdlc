@@ -266,19 +266,62 @@ When editing any agent's AGENT.md:
 
 ### On Session Start
 1. Read CLAUDE.md (this file)
-2. Source Paperclip env: `source .paperclip.env` (connects to Paperclip dashboard at http://localhost:3100)
-3. Check task queue status: `node ~/agentic-sdlc/agents/queue-drainer.mjs status`
-3.5. Check mailbox: `node ~/agentic-sdlc/agents/notify.mjs check-mailbox`
+2. Check task queue status: `node ~/agentic-sdlc/agents/queue-drainer.mjs status`
+3. Check mailbox: `node ~/agentic-sdlc/agents/notify.mjs check-mailbox`
 4. Read PM dashboard: `pm/DASHBOARD.md`
 5. Pick up next unblocked tasks
+6. If using Paperclip: `source .paperclip.env`
 
-### Paperclip Integration
-This project is managed via Paperclip (http://localhost:3100) as the **Agentic SDLC** company.
+### Adapter Configuration
+
+The framework is platform-agnostic. Orchestration and LLM providers are configured via adapters in `project.json`:
+
+```json
+{
+  "orchestration": { "adapter": "file-based" },
+  "llm": { "defaultProvider": "anthropic" }
+}
+```
+
+**Orchestration adapters** (how tasks are managed):
+- `file-based` (default) — local JSON task files, zero external dependencies
+- `paperclip` — Paperclip control plane (requires `.paperclip.env`)
+- `claude-code-native` — Claude Code Agent tool subagents
+
+**LLM provider adapters** (which models agents use):
+- `anthropic` (default) — Claude models via `ANTHROPIC_API_KEY`
+- `groq` — Groq-hosted models via `GROQ_API_KEY`
+- `ollama` — Local models via Ollama at `http://localhost:11434`
+
+Adapters live in `agents/adapters/orchestration/` and `agents/adapters/llm/`. See `docs/adapter-guide.md` for writing custom adapters.
+
+### SDLC as Source of Truth
+
+**The Agentic SDLC controls agent configuration.** Orchestration platforms (Paperclip, etc.) are execution layers. Change agent config in SDLC files, then sync to the platform.
+
+**SDLC files that define agents:**
+- `agents/budget.json` — model, provider, daily token limits, permissions, maxInstances, fallbackChain, modelPreferences
+- `agents/domains.json` — agent names, roles, domain routing patterns
+- `agents/<name>/AGENT.md` — system prompts (identity, operating rules, memory protocol)
+- `agents/project.json` — agent roster, adapter config, notification config
+
+**To change an agent's model or role:** Edit `budget.json` or `domains.json`, then sync to your orchestration platform if applicable.
+
+### Paperclip Adapter (Optional)
+
+When using the Paperclip orchestration adapter:
 - Source `.paperclip.env` to connect to the dashboard
-- Use the `/paperclip` skill to check assignments, update task status, and coordinate
-- Company: `06a6d823-ee33-4703-af9c-dba5503f5e1b`
+- Use the `/paperclip` skill for assignments, status updates, and coordination
+- Sync command: `node ~/agentic-sdlc/agents/paperclip-sync.mjs`
+- SDLC → Paperclip: model, role, instructions path. Paperclip-only: budgetMonthlyCents, heartbeat config.
+- Paperclip adds: heartbeat execution, issue tracking, approval gates, run audit trails.
 
-**Producer-Consumer Model:** This company produces the framework (scripts, templates, workflows, agent prompts). Product companies (like LinguaFlow) consume it. All product agents run `node ~/agentic-sdlc/agents/<script>.mjs` — so improvements here propagate to every product company automatically. Each product company is its own Paperclip company with its own agent roster.
+```bash
+node ~/agentic-sdlc/agents/paperclip-sync.mjs              # Push SDLC → Paperclip
+node ~/agentic-sdlc/agents/paperclip-sync.mjs --status      # Compare SDLC vs Paperclip
+node ~/agentic-sdlc/agents/paperclip-sync.mjs --dry-run     # Preview changes
+node ~/agentic-sdlc/agents/paperclip-sync.mjs --pull-spent  # Pull spend data from Paperclip
+```
 
 ### On Context Getting Low
 1. Update PM dashboard with current progress
@@ -417,6 +460,9 @@ Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 | `agents/schema-validator.mjs` | JSON Schema validation for inter-agent data contracts |
 | `agents/capability-monitor.mjs` | Capability drift detection, usage reports, health checks |
 | `agents/alignment-monitor.mjs` | Unified quality/alignment check, prompt suggestions, self-improving checklist |
+| `agents/model-manager.mjs` | Token budget monitoring, model swaps, performance ledger, recommendations |
+| `agents/adapters/load-adapter.mjs` | Dynamic adapter loader for orchestration and LLM providers |
+| `agents/paperclip-sync.mjs` | Push SDLC agent config (model, role, instructions) → Paperclip |
 | `agents/garden-roadmap.mjs` | Archive completed roadmap items, keep roadmap focused |
 | `agents/autonomous-launcher.sh` | Headless Claude Code launcher for autonomous operation |
 | `agents/voice-intake.sh` | Terminal-based voice input with multiple modes |

@@ -317,6 +317,50 @@ try {
   // capability-monitor not yet installed — skip silently
 }
 
+// OpenSpec Hygiene Check — flag stale changes and unarchived shipped changes
+try {
+  const openspecDir = path.resolve(config.projectDir, 'openspec/changes');
+  if (fs.existsSync(openspecDir)) {
+    const changeDirs = fs.readdirSync(openspecDir, { withFileTypes: true }).filter(d => d.isDirectory() && d.name !== 'archive');
+    const now = Date.now();
+    for (const dir of changeDirs) {
+      const statusPath = path.resolve(openspecDir, dir.name, 'status.json');
+      if (!fs.existsSync(statusPath)) continue;
+      try {
+        const status = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+        const updatedAt = status.updatedAt ? new Date(status.updatedAt).getTime() : 0;
+        const ageDays = Math.round((now - updatedAt) / (1000 * 60 * 60 * 24));
+
+        if ((status.phase === 'proposal' || status.phase === 'design') && ageDays > 14) {
+          console.log(`\n⚠ STALE: openspec "${dir.name}" has been in ${status.phase} for ${ageDays} days`);
+        }
+        if (status.phase === 'shipped' && ageDays > 7) {
+          console.log(`\n📦 ARCHIVE: openspec "${dir.name}" shipped ${ageDays} days ago, needs archiving`);
+        }
+      } catch { /* malformed status.json — skip */ }
+    }
+  }
+} catch { /* openspec dir not found — skip */ }
+
+// Model Manager Health Summary (if performance ledger exists)
+try {
+  const ledgerPath = config.performanceLedgerPath;
+  if (fs.existsSync(ledgerPath)) {
+    const lines = fs.readFileSync(ledgerPath, 'utf8').split('\n').filter(l => l.trim());
+    const recentSwaps = lines
+      .map(l => { try { return JSON.parse(l); } catch { return null; } })
+      .filter(e => e && e.event === 'model-swap')
+      .filter(e => Date.now() - new Date(e.ts).getTime() < 24 * 60 * 60 * 1000);
+
+    if (recentSwaps.length > 0) {
+      console.log(`\n🔄 Model Manager: ${recentSwaps.length} model swap(s) in last 24h`);
+      for (const s of recentSwaps) {
+        console.log(`   ${s.agent}: ${s.fromModel} → ${s.toModel} (${s.reason})`);
+      }
+    }
+  }
+} catch { /* model-manager not configured — skip */ }
+
 // Record cycle history
 recordCycleHistory('daily-review', { completed: completedCount, inProgress: inProgressCount, blocked: blockedCount, total: tasks.length });
 

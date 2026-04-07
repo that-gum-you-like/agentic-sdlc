@@ -1,0 +1,15 @@
+{
+  "conservationMode": false,
+  "agents": {
+    "{{AGENT_NAME}}": {
+      "model": "claude-sonnet-4-6",
+      "provider": "anthropic",
+      "dailyTokens": 100000,
+      "permissions": "full-edit",
+      "maxInstances": 1,
+      "fallbackChain": ["claude-sonnet-4-6", "claude-haiku-4-5"],
+      "activeModel": null,
+      "modelPreferences": {}
+    }
+  }
+}

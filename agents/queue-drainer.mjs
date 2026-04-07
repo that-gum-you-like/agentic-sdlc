@@ -22,6 +22,7 @@ import { execSync } from 'child_process';
 import { loadConfig } from './load-config.mjs';
 import { triggerNotification, notifyHumanTask, runWellnessCheck } from './notify.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
+import { loadOrchestrationAdapter } from './adapters/load-adapter.mjs';
 
 let validate = null;
 try {
@@ -59,15 +60,19 @@ function loadAgentDomains() {
 
 const AGENT_DOMAINS = loadAgentDomains();
 
+// Orchestration adapter available via loadOrchestrationAdapter(config) for async use.
+// Current task I/O is synchronous (file-based) for backward compatibility.
+
 function loadTasks() {
   const tasks = [];
   if (!existsSync(TASKS_DIR)) return tasks;
-
   const files = readdirSync(TASKS_DIR).filter(f => f.endsWith('.json')).sort();
   for (const file of files) {
-    const task = JSON.parse(readFileSync(join(TASKS_DIR, file), 'utf8'));
-    task._file = file;
-    tasks.push(task);
+    try {
+      const task = JSON.parse(readFileSync(join(TASKS_DIR, file), 'utf8'));
+      task._file = file;
+      tasks.push(task);
+    } catch { /* skip malformed */ }
   }
   return tasks;
 }
@@ -363,7 +368,14 @@ function showStatus(tasks) {
       const claimed = t.claimedBy ? ` [claimed: ${t.claimedBy}]` : '';
       const tokens = t.estimatedTokens != null ? ` ~${t.estimatedTokens.toLocaleString()} tokens` : '';
       const perm = getAgentPermission(t.assignee);
-      console.log(`  [${t.id}] ${t.title} → ${getAgentName(t.assignee)} [${perm}]${claimed}${tokens}${staleStr}`);
+      // Show escalation info if task has structured blockedBy with escalation data
+      let escalationStr = '';
+      if (t.blockedBy && typeof t.blockedBy === 'object' && t.blockedBy.tier) {
+        const esc = t.blockedBy;
+        const escAge = esc.escalatedAt ? Math.round((Date.now() - new Date(esc.escalatedAt).getTime()) / 60000) : 0;
+        escalationStr = ` 🔺 ESCALATION tier:${esc.tier} (${escAge}m) — ${esc.reason || 'no reason'}`;
+      }
+      console.log(`  [${t.id}] ${t.title} → ${getAgentName(t.assignee)} [${perm}]${claimed}${tokens}${staleStr}${escalationStr}`);
       if (stale) {
         triggerNotification('blocker', `🚫 Task ${t.id} "${t.title}" has a stale claim (${t.claimedBy}, started ${t.claimedAt})`);
       }
@@ -669,6 +681,29 @@ switch (cmd) {
     task.test_status = 'passing';
     task.completed_at = new Date().toISOString();
     saveTask(task);
+
+    // Append to performance ledger for model-manager analysis
+    try {
+      const ledgerPath = config.performanceLedgerPath;
+      const agentBudget = config.agentConfigs?.[task.claimedBy] || {};
+      const ledgerEntry = {
+        ts: task.completed_at,
+        event: 'task-complete',
+        agent: task.claimedBy || 'unknown',
+        model: agentBudget.activeModel || agentBudget.model || 'unknown',
+        provider: agentBudget.provider || 'anthropic',
+        taskId: task.id,
+        taskType: task.taskType || 'unknown',
+        tokensUsed: task.tokensUsed || task.estimatedTokens || 0,
+        success: true,
+        testsPassed: testStatus === 'passing',
+        duration: task.started_at ? Math.round((Date.now() - new Date(task.started_at).getTime()) / 1000) : 0,
+        firstAttempt: !task.retryCount || task.retryCount === 0,
+      };
+      const { appendFileSync: appendLedger } = await import('fs');
+      appendLedger(ledgerPath, JSON.stringify(ledgerEntry) + '\n');
+    } catch { /* performance ledger is best-effort */ }
+
     console.log(`✅ Completed [${task.id}] ${task.title} (tests: passing)`);
     triggerNotification('deployComplete', `✅ Task ${task.id} completed: ${task.title}`);
     break;

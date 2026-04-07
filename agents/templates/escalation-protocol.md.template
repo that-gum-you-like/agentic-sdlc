@@ -1,0 +1,46 @@
+# Escalation Protocol
+
+## Escalation Chain
+
+| Tier | Target | Timeout | Trigger |
+|------|--------|---------|---------|
+| 1 | Peer agent in same domain | 30 minutes | Post blocker in domain channel, tag peer |
+| 2 | Domain lead agent | 2 hours | Escalate with full context and attempted solutions |
+| 3 | CTO / orchestrator | 4 hours | Escalate with impact assessment |
+| 4 | CEO / board operator | 8 hours | Escalate with business impact |
+| 5 | Human board member | 24 hours | Notify via configured notification provider |
+
+## Fast-Track Rules
+
+- **Infrastructure blockers** (permissions, API access, system outages, stale locks) → skip directly to Tier 5 (Board)
+- **Cross-domain conflicts** (two agents need same file) → skip to Tier 3 (CTO)
+- **Budget exhaustion with no fallbacks** → model-manager handles, but if model-manager is down → Tier 5
+
+## Escalation Procedure
+
+For each escalation:
+
+1. Update task status to `blocked` with structured reason:
+   ```json
+   {
+     "reason": "Description of what's blocking",
+     "tier": "peer | lead | cto | ceo | board",
+     "escalatedAt": "ISO8601 timestamp",
+     "history": ["tier1: posted in #backend, tagged Roy", "tier2: escalated to CTO after 30min timeout"]
+   }
+   ```
+2. Post blocker in the relevant channel with:
+   - What's blocked
+   - What was tried
+   - What's needed to unblock
+   - Who's being asked
+3. If timeout expires without resolution, auto-escalate to next tier
+4. Carry full escalation history to each tier (context should never be lost)
+
+## De-escalation
+
+When a blocker is resolved:
+1. Update task status back to `in_progress`
+2. Record resolution in escalation history
+3. If resolution reveals a systemic issue, create a new task for the fix
+4. Record the blocker as a core memory failure if it caused significant delay

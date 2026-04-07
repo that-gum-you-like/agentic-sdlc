@@ -30,11 +30,13 @@ You are responsible for everything in your domain. When a task lands in your que
 8. **Output capability checklist** — Output which capabilities you used this task as a `<!-- CAPABILITY_CHECKLIST -->` JSON block (required for every task — see the Capability Checklist section in your worker prompt).
 9. **Hand off** — Mark the task complete and move to the next one.
 
-### Memory Protocol
+<!-- See agents/SHARED_PROTOCOL.md for memory protocol, heartbeat, communication, quality gates, escalation, no-questions mode -->
 
-- **Before starting**: Read `recent.json` (last session context), `core.json` (values and rules), and any domain-specific memory.
-- **After completing**: Write a summary to `recent.json`. If a pattern or lesson is worth keeping, add it to `medium-term.json` or `long-term.json`.
-- **Never start a task cold** — memory exists to prevent repeated mistakes and lost context.
+### Non-Negotiable Rules
+
+- **Doc-as-code**: Documentation updates for changed APIs, signatures, or interfaces are part of the SAME task, not follow-on work.
+- **No-questions mode**: Resolve ambiguity independently, record decisions in memory. Questions come after work, not before.
+- **Pipeline-only deploys**: Never bypass the deploy pipeline with manual commands (release agents only).
 
 ### Testing Rules
 
@@ -47,8 +49,7 @@ You are responsible for everything in your domain. When a task lands in your que
 
 - Leave the codebase cleaner than you found it.
 - If you discover a problem outside your task scope, create a new task for it rather than expanding the current one.
-- Update any affected documentation inline — do not leave stale comments or outdated docstrings.
-- If a task is blocked (missing dependency, unclear spec, external issue), mark it blocked with a reason. Do not silently skip it.
+- If a task is blocked, follow the escalation protocol in SHARED_PROTOCOL.md.
 
 ---
 

@@ -164,6 +164,12 @@ async function main() {
   }
 
   console.log('');
+  console.log('🔌 Platform Configuration');
+  console.log('─'.repeat(40));
+  const orchAdapter = await ask('Orchestration adapter (file-based/paperclip/claude-code-native)', 'file-based');
+  const llmProvider = await ask('Default LLM provider (anthropic/groq/ollama)', 'anthropic');
+
+  console.log('');
   console.log('═'.repeat(50));
   console.log('  Creating project structure...');
   console.log('═'.repeat(50));
@@ -216,6 +222,12 @@ async function main() {
       driftThreshold: 3,
       windowSize: 10,
     },
+    orchestration: {
+      adapter: orchAdapter,
+    },
+    llm: {
+      defaultProvider: llmProvider,
+    },
   };
   writeIfNotExists(
     join(agentsDir, 'project.json'),
@@ -224,12 +236,23 @@ async function main() {
   );
 
   // 5. Create budget.json
+  const MODEL_FULL_IDS = { opus: 'claude-opus-4-6', sonnet: 'claude-sonnet-4-6', haiku: 'claude-haiku-4-5' };
+  const toFullId = (m) => MODEL_FULL_IDS[m] || m;
+
   const budgetJson = {
     conservationMode: false,
     agents: Object.fromEntries(
       Object.entries(modelConfig).map(([agent, cfg]) => [
         agent,
-        { ...cfg, maxInstances: 1 },
+        {
+          ...cfg,
+          model: toFullId(cfg.model),
+          provider: llmProvider,
+          maxInstances: 1,
+          fallbackChain: [toFullId(cfg.model)],
+          activeModel: null,
+          modelPreferences: {},
+        },
       ])
     ),
   };
@@ -382,6 +405,33 @@ In addition to the standard micro cycle, every task MUST include:
     } catch {
       console.log('  ℹ️  Could not scaffold capabilities.json (template error)');
     }
+  }
+
+  // 7c. Create SHARED_PROTOCOL.md from template
+  const sharedProtoTemplate = join(SDLC_DIR, 'agents/templates/SHARED_PROTOCOL.md.template');
+  if (existsSync(sharedProtoTemplate)) {
+    writeIfNotExists(
+      join(agentsDir, 'SHARED_PROTOCOL.md'),
+      readFileSync(sharedProtoTemplate, 'utf8'),
+      'agents/SHARED_PROTOCOL.md'
+    );
+  }
+
+  // 7d. Create defeat-allowlist.json from template
+  const allowlistTemplate = join(SDLC_DIR, 'agents/templates/defeat-allowlist.json.template');
+  if (existsSync(allowlistTemplate)) {
+    writeIfNotExists(
+      join(agentsDir, 'defeat-allowlist.json'),
+      readFileSync(allowlistTemplate, 'utf8'),
+      'agents/defeat-allowlist.json'
+    );
+  }
+
+  // 7e. Validate redundant heartbeats (warn if only 1 agent configured)
+  if (agents.length >= 2) {
+    console.log('  ℹ️  Ensure 2+ agents have heartbeats/crons to avoid single-point-of-failure stalls');
+  } else if (agents.length === 1) {
+    console.log('  ⚠️  Only 1 agent configured. Recommend 2+ agents with heartbeats to prevent cascade stalls (ref: LinguaFlow 17-day stall incident)');
   }
 
   // 8. Initialize cost-log.json

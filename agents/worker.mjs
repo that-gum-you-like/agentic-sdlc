@@ -348,7 +348,23 @@ console.log(`Worker Prompt for ${agent} on ${taskId}`);
 console.log('═'.repeat(60));
 console.log(prompt);
 console.log('═'.repeat(60));
+// Resolve effective model: activeModel > modelPreferences[taskType] > model
+const agentBudget = config.agentConfigs?.[agent] || {};
+const effectiveModel = agentBudget.activeModel
+  || (task.taskType && agentBudget.modelPreferences?.[task.taskType])
+  || agentBudget.model
+  || 'sonnet';
+
+// Map full model IDs to Claude Code model shorthand for Agent tool
+const MODEL_SHORTHAND = {
+  'claude-opus-4-6': 'opus',
+  'claude-sonnet-4-6': 'sonnet',
+  'claude-haiku-4-5': 'haiku',
+  'claude-haiku-4-5-20251001': 'haiku',
+};
+const modelShort = MODEL_SHORTHAND[effectiveModel] || effectiveModel;
+
 console.log(`\nTo launch this agent, use the Task tool with:`);
 console.log(`  subagent_type: "general-purpose"`);
-console.log(`  model: "sonnet"`);
+console.log(`  model: "${modelShort}"${agentBudget.activeModel ? ' (swapped by model-manager)' : ''}`);
 console.log(`  prompt: <the above prompt>`);

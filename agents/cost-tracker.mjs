@@ -152,7 +152,7 @@ export function computeSessionHours(log, cutoffDate) {
   return (totalMs / (1000 * 60 * 60)) + (sessionCount * 5 / 60);
 }
 
-function report(weekly) {
+async function report(weekly) {
   const log = loadLog();
   const budget = loadBudget();
   const now = new Date();
@@ -205,6 +205,20 @@ function report(weekly) {
     const pct = periodLimit ? ` (${Math.round(stats.total / periodLimit * 100)}%)` : '';
 
     console.log(`  ${agent.padEnd(12)} ${stats.total.toLocaleString().padStart(8)} tokens${budgetStr}${pct} | ${stats.tasks} tasks`);
+
+    // Budget exhaustion alert — when model-manager is not configured, cost-tracker sends alerts
+    if (periodLimit && stats.total / periodLimit >= 0.9) {
+      const utilPct = Math.round(stats.total / periodLimit * 100);
+      try {
+        const mmPath = new URL('./model-manager.mjs', import.meta.url).pathname;
+        const { existsSync: fsExists } = await import('fs');
+        if (!fsExists(mmPath)) {
+          const { triggerNotification: notify } = await import('./notify.mjs');
+          notify('budgetAlert', `⚠ ${agent} at ${utilPct}% daily budget. No model-manager configured — manual intervention may be needed.`);
+        }
+      } catch { /* notify not available */ }
+    }
+
     try {
       const eff = computeEfficiencyMetrics(agent);
       const avgK = (eff.avgTokensPerTask / 1000).toFixed(1);
@@ -270,7 +284,7 @@ switch (cmd) {
     break;
 
   case 'report':
-    report(args.includes('--weekly'));
+    await report(args.includes('--weekly'));
     break;
 
   default:

@@ -95,6 +95,17 @@ export function loadConfig() {
     projectAgentsDir = resolve(raw.projectDir, 'agents');
   }
 
+  // Model shorthand → full ID mapping for backward compatibility
+  const MODEL_FULL = {
+    opus: 'claude-opus-4-6',
+    sonnet: 'claude-sonnet-4-6',
+    haiku: 'claude-haiku-4-5',
+  };
+
+  function normalizeModel(model) {
+    return MODEL_FULL[model] || model;
+  }
+
   // Load budget.json agent configs and default permissions
   let agentConfigs = {};
   const budgetPath = resolve(projectAgentsDir, 'budget.json');
@@ -103,10 +114,18 @@ export function loadConfig() {
       const budget = JSON.parse(readFileSync(budgetPath, 'utf8'));
       if (budget.agents) {
         for (const [key, val] of Object.entries(budget.agents)) {
+          const normalizedModel = normalizeModel(val.model || 'sonnet');
           agentConfigs[key] = {
             ...val,
+            model: normalizedModel,
+            provider: val.provider || 'anthropic',
             permissions: val.permissions || 'full-edit',
             maxInstances: val.maxInstances ?? 1,
+            fallbackChain: (val.fallbackChain || [normalizedModel]).map(normalizeModel),
+            activeModel: val.activeModel ? normalizeModel(val.activeModel) : null,
+            modelPreferences: Object.fromEntries(
+              Object.entries(val.modelPreferences || {}).map(([k, v]) => [k, normalizeModel(v)])
+            ),
           };
         }
       }
@@ -170,6 +189,15 @@ export function loadConfig() {
     },
     // Paths used by capability monitoring
     capabilityLogPath: resolve(raw.projectDir, 'pm/capability-log.jsonl'),
+    // Adapter configuration (platform-agnostic orchestration + LLM)
+    orchestration: {
+      adapter: raw.orchestration?.adapter || 'file-based',
+    },
+    llm: {
+      defaultProvider: raw.llm?.defaultProvider || 'anthropic',
+    },
+    // Performance ledger for model-manager
+    performanceLedgerPath: resolve(raw.projectDir, 'pm/model-performance.jsonl'),
   };
 
   return _cached;

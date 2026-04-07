@@ -123,3 +123,65 @@ Common issues and solutions when running the Agentic SDLC framework.
 - **Check capabilities.json:** Ensure `agents/capabilities.json` defines `required` capabilities for each agent.
 - **Run manually:** `node ~/agentic-sdlc/agents/capability-monitor.mjs check`
 - **Check threshold:** Default is 3 consecutive skips. Configurable via `capabilityMonitoring.driftThreshold` in `project.json`.
+
+---
+
+## 17-Day Stall Recovery Playbook
+
+Documents a real failure pattern from the LinguaFlow project where all development activity stopped for over two weeks without detection or automatic recovery.
+
+### Symptoms
+
+- No commits for 14+ days
+- All execution agents idle (no tasks claimed or in progress)
+- Dashboard shows 0% progress across all active work items
+- Stale execution run locks in orchestration platform (e.g., Paperclip runs stuck in "executing" state)
+
+### Root Causes (from LinguaFlow incident)
+
+1. **Single heartbeat point of failure.** Only the CTO agent had a heartbeat enabled. When the CTO stalled, no other agent could detect or recover the situation.
+2. **Agent activation bottleneck.** The Board agent had to manually enable execution agents. With the Board inactive, no agents were activated to pick up work.
+3. **Stale execution locks.** Orchestration platform runs entered a locked state that could not be released automatically, preventing new runs from starting.
+4. **Budget exhaustion without auto-scaling.** The CEO-tier agent hit 95% utilization with no fallback chain configured. No automatic model downgrade or budget expansion occurred.
+5. **Missing orchestration when multiple blockers hit simultaneously.** Each blocker alone was survivable, but the combination created a deadlock with no automated recovery path.
+
+### Diagnosis Steps
+
+1. **Check which agents have active heartbeats/crons.** If only one agent has a heartbeat, any failure in that agent stalls the entire system.
+2. **Check budget utilization:**
+   ```bash
+   node ~/agentic-sdlc/agents/cost-tracker.mjs report
+   ```
+   Look for agents at or near 100% daily or monthly budget.
+3. **Check for stale claims:**
+   ```bash
+   node ~/agentic-sdlc/agents/queue-drainer.mjs status
+   ```
+   Look for tasks stuck in `in_progress` for hours or days.
+4. **Check orchestration platform for locked execution runs.** In Paperclip, inspect agent run history for runs stuck in "executing" status with no recent activity.
+5. **Review model performance log:**
+   ```bash
+   cat pm/model-performance.jsonl | tail -20
+   ```
+   Look for recent model swaps, budget-exhausted events, or error spikes.
+
+### Recovery
+
+1. **Enable heartbeats on 2+ agents (redundant oversight).** At minimum, both the CTO and one execution agent should have heartbeats. If one stalls, the other detects the problem.
+2. **Expand budgets or configure fallback chains in budget.json.** Add `fallbackModel` entries so agents automatically downgrade to a cheaper model when primary budget is exhausted:
+   ```json
+   { "cto": { "model": "opus", "fallbackModel": "sonnet", "dailyTokenLimit": 500000 } }
+   ```
+3. **Release stale task claims:**
+   ```bash
+   node ~/agentic-sdlc/agents/queue-drainer.mjs reset <task-id>
+   ```
+   Do this for every task stuck in `in_progress`.
+4. **Decompose the backlog into executable tasks.** After a long stall, the existing task queue may be stale or too coarse. Re-seed with smaller, independent tasks that agents can pick up immediately.
+5. **Configure model-manager cron to prevent future budget exhaustion.** Set up automated monitoring that swaps models or raises alerts before budgets hit 100%.
+
+### Prevention
+
+- **`setup.mjs` now warns if only 1 agent has a heartbeat.** The setup wizard flags single-heartbeat configurations as a risk during project initialization.
+- **Model-manager agent monitors budgets and swaps models before exhaustion.** Proactive model downgrades prevent budget-related stalls from cascading.
+- **`daily-review.mjs` flags stale openspec changes and budget alerts.** The daily review explicitly checks for changes with no activity in 7+ days and agents approaching budget limits, surfacing both in the dashboard and via notification triggers.

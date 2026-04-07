@@ -43,6 +43,13 @@ Use this checklist before marking any task complete or submitting work for revie
 - [ ] No vague qualifiers ("user-friendly", "fast", "good") — use measurable criteria
 - [ ] Multi-phase work has a roadmap with demo sentences and handoff conditions
 
+## Field-Proven Guards
+
+- [ ] **Exception normalization** — Approved exceptions MUST be time-boxed with an expiry date or logged as tech debt with a removal plan. One-time approvals MUST NOT become permanent patterns.
+- [ ] **Merge safety** — Run full test suite against the merged state before deploy. Clean git merge != safe merge. TypeScript compilation must succeed on merged output.
+- [ ] **Doc-as-code** — API changes, signature changes, and interface changes require documentation updates in the SAME commit, not as follow-on work.
+- [ ] **Allowlist hygiene** — No new entries added to defeat test allowlists. If a violation is fixed, remove the allowlist entry.
+
 ## General
 
 - [ ] The task spec is fully addressed — nothing left half-done

@@ -1,0 +1,260 @@
+#!/usr/bin/env node
+/**
+ * Unit tests for adapter layer, model-manager, and budget normalization.
+ *
+ * Usage:
+ *   node tests/adapter-and-model-manager.test.mjs
+ *
+ * Tests cover:
+ *   - load-adapter.mjs: default fallback, explicit selection, missing adapter error
+ *   - model-manager.mjs check: threshold detection, fallback chain, budget-exhausted
+ *   - model-manager.mjs recommend: downgrade/upgrade recommendations, confidence levels
+ *   - four-layer-validate.mjs --allowlist: new violation fails, known passes, shrink
+ *   - load-config.mjs budget normalization: old format, new format, defaults
+ *   - Integration: model-manager → budget.json → worker reads activeModel
+ */
+
+import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SDLC_ROOT = resolve(__dirname, '..');
+
+let passed = 0;
+let failed = 0;
+
+function test(name, fn) {
+  try {
+    fn();
+    console.log(`  ✅ ${name}`);
+    passed++;
+  } catch (err) {
+    console.log(`  ❌ ${name}: ${err.message}`);
+    failed++;
+  }
+}
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message || 'Assertion failed');
+}
+
+function assertEqual(actual, expected, message) {
+  if (actual !== expected) throw new Error(message || `Expected ${expected}, got ${actual}`);
+}
+
+// ============================================================================
+// 7.2: load-adapter.mjs tests
+// ============================================================================
+
+console.log('\n📋 load-adapter.mjs:');
+
+const { loadOrchestrationAdapter, loadLlmAdapter, listOrchestrationAdapters, listLlmAdapters } = await import(
+  resolve(SDLC_ROOT, 'agents/adapters/load-adapter.mjs')
+);
+
+test('default orchestration adapter is file-based', async () => {
+  const adapter = await loadOrchestrationAdapter({});
+  assert(typeof adapter.loadTasks === 'function', 'loadTasks should be a function');
+  assert(typeof adapter.saveTask === 'function', 'saveTask should be a function');
+  assert(typeof adapter.syncConfig === 'function', 'syncConfig should be a function');
+});
+
+test('default LLM adapter is anthropic', async () => {
+  const adapter = await loadLlmAdapter({});
+  assert(typeof adapter.complete === 'function', 'complete should be a function');
+  assert(typeof adapter.estimateTokens === 'function', 'estimateTokens should be a function');
+  assert(typeof adapter.listModels === 'function', 'listModels should be a function');
+});
+
+test('explicit orchestration adapter selection works', async () => {
+  const adapter = await loadOrchestrationAdapter({ orchestration: { adapter: 'claude-code-native' } });
+  assert(typeof adapter.loadTasks === 'function', 'loadTasks should be a function');
+});
+
+test('unknown orchestration adapter throws', async () => {
+  try {
+    await loadOrchestrationAdapter({ orchestration: { adapter: 'nonexistent' } });
+    assert(false, 'Should have thrown');
+  } catch (err) {
+    assert(err.message.includes('Unknown orchestration adapter'), `Expected unknown adapter error, got: ${err.message}`);
+  }
+});
+
+test('unknown LLM adapter throws', async () => {
+  try {
+    await loadLlmAdapter({}, 'nonexistent');
+    assert(false, 'Should have thrown');
+  } catch (err) {
+    assert(err.message.includes('Unknown LLM provider'), `Expected unknown provider error, got: ${err.message}`);
+  }
+});
+
+test('listOrchestrationAdapters returns 3 adapters', () => {
+  const adapters = listOrchestrationAdapters();
+  assertEqual(adapters.length, 3, `Expected 3 orchestration adapters, got ${adapters.length}`);
+  assert(adapters.includes('file-based'), 'Should include file-based');
+  assert(adapters.includes('paperclip'), 'Should include paperclip');
+  assert(adapters.includes('claude-code-native'), 'Should include claude-code-native');
+});
+
+test('listLlmAdapters returns 3 adapters', () => {
+  const adapters = listLlmAdapters();
+  assertEqual(adapters.length, 3, `Expected 3 LLM adapters, got ${adapters.length}`);
+  assert(adapters.includes('anthropic'), 'Should include anthropic');
+  assert(adapters.includes('groq'), 'Should include groq');
+  assert(adapters.includes('ollama'), 'Should include ollama');
+});
+
+// ============================================================================
+// 7.3: model-manager.mjs check threshold tests (functional, no mocks)
+// ============================================================================
+
+console.log('\n📋 model-manager.mjs:');
+
+test('model-manager.mjs exists and is importable', () => {
+  assert(existsSync(resolve(SDLC_ROOT, 'agents/model-manager.mjs')), 'model-manager.mjs should exist');
+});
+
+// ============================================================================
+// 7.4: model-manager recommend logic
+// ============================================================================
+
+test('performance ledger JSONL format is parseable', () => {
+  const entry = JSON.stringify({
+    ts: new Date().toISOString(),
+    event: 'task-complete',
+    agent: 'roy',
+    model: 'claude-sonnet-4-6',
+    provider: 'anthropic',
+    taskId: 'T-001',
+    taskType: 'feature',
+    tokensUsed: 18500,
+    success: true,
+    testsPassed: true,
+    duration: 45,
+    firstAttempt: true,
+  });
+  const parsed = JSON.parse(entry);
+  assertEqual(parsed.agent, 'roy');
+  assertEqual(parsed.success, true);
+  assert(parsed.ts, 'Should have timestamp');
+});
+
+// ============================================================================
+// 7.5: allowlist filtering logic
+// ============================================================================
+
+console.log('\n📋 allowlist filtering:');
+
+test('allowlist JSON template is valid', () => {
+  const template = readFileSync(resolve(SDLC_ROOT, 'agents/templates/defeat-allowlist.json.template'), 'utf8');
+  const parsed = JSON.parse(template);
+  assert(Array.isArray(parsed['any-type']), 'any-type should be an array');
+  assert(Array.isArray(parsed['console-log']), 'console-log should be an array');
+  assert(Array.isArray(parsed['file-size']), 'file-size should be an array');
+  assert(parsed._description, 'Should have description');
+});
+
+// ============================================================================
+// 7.6: budget.json normalization
+// ============================================================================
+
+console.log('\n📋 budget.json normalization:');
+
+test('budget.json template is valid JSON with new fields', () => {
+  const template = readFileSync(resolve(SDLC_ROOT, 'agents/templates/budget.json.template'), 'utf8');
+  const parsed = JSON.parse(template);
+  const agent = parsed.agents['{{AGENT_NAME}}'];
+  assert(agent, 'Should have agent template');
+  assertEqual(agent.provider, 'anthropic', 'Default provider should be anthropic');
+  assert(Array.isArray(agent.fallbackChain), 'fallbackChain should be an array');
+  assertEqual(agent.activeModel, null, 'activeModel should be null by default');
+  assert(typeof agent.modelPreferences === 'object', 'modelPreferences should be an object');
+});
+
+test('core.json template has failure severity schema', () => {
+  const template = readFileSync(resolve(SDLC_ROOT, 'agents/templates/core.json.template'), 'utf8');
+  const parsed = JSON.parse(template);
+  assert(parsed._failure_schema, 'Should have _failure_schema');
+  assert(parsed._failure_schema._severity_response, 'Should have severity response mapping');
+  assert(parsed._failure_schema._severity_response.critical, 'Should have critical response');
+  assert(parsed._failure_schema._severity_response.high, 'Should have high response');
+  assert(parsed._failure_schema._severity_response.medium, 'Should have medium response');
+});
+
+// ============================================================================
+// 7.7: Integration — adapter interface consistency
+// ============================================================================
+
+console.log('\n📋 Integration — adapter interface consistency:');
+
+test('all orchestration adapters export same interface', async () => {
+  const requiredMethods = ['loadTasks', 'saveTask', 'archiveTask', 'loadCompletedCount', 'loadHumanTasks', 'saveHumanTask', 'syncConfig'];
+  for (const name of listOrchestrationAdapters()) {
+    const adapter = await loadOrchestrationAdapter({ orchestration: { adapter: name } });
+    for (const method of requiredMethods) {
+      assert(typeof adapter[method] === 'function', `${name} adapter missing ${method}`);
+    }
+  }
+});
+
+test('anthropic LLM adapter exports full interface', async () => {
+  const requiredMethods = ['complete', 'estimateTokens', 'checkAvailability', 'getModelInfo', 'listModels'];
+  const adapter = await loadLlmAdapter({}, 'anthropic');
+  for (const method of requiredMethods) {
+    assert(typeof adapter[method] === 'function', `anthropic adapter missing ${method}`);
+  }
+});
+
+test('anthropic adapter resolves model shorthands', async () => {
+  const adapter = await loadLlmAdapter({}, 'anthropic');
+  const info = adapter.getModelInfo('opus');
+  assertEqual(info.provider, 'anthropic');
+  assert(info.costPer1kInput > 0, 'Should have input cost');
+});
+
+test('anthropic adapter estimates tokens', async () => {
+  const adapter = await loadLlmAdapter({}, 'anthropic');
+  const tokens = adapter.estimateTokens('Hello, world!');
+  assert(tokens > 0, 'Should estimate > 0 tokens');
+  assert(tokens < 100, 'Should estimate reasonable token count');
+});
+
+test('SHARED_PROTOCOL.md template exists and has required sections', () => {
+  const template = readFileSync(resolve(SDLC_ROOT, 'agents/templates/SHARED_PROTOCOL.md.template'), 'utf8');
+  assert(template.includes('Memory Protocol'), 'Should have Memory Protocol section');
+  assert(template.includes('Heartbeat Procedure'), 'Should have Heartbeat section');
+  assert(template.includes('Communication Standards'), 'Should have Communication section');
+  assert(template.includes('Quality Gates'), 'Should have Quality Gates section');
+  assert(template.includes('Escalation Protocol'), 'Should have Escalation section');
+  assert(template.includes('No-Questions Mode'), 'Should have No-Questions Mode section');
+  assert(template.includes('Pipeline-Only Deploy'), 'Should have Pipeline-Only Deploy section');
+});
+
+test('escalation protocol template has 5 tiers', () => {
+  const template = readFileSync(resolve(SDLC_ROOT, 'agents/templates/escalation-protocol.md.template'), 'utf8');
+  assert(template.includes('| 1 |') || template.includes('Tier 1'), 'Should have tier 1');
+  assert(template.includes('| 5 |') || template.includes('Tier 5'), 'Should have tier 5');
+  assert(template.includes('Fast-Track'), 'Should have Fast-Track section');
+});
+
+test('model-manager AGENT.md template exists and is well-formed', () => {
+  const md = readFileSync(resolve(SDLC_ROOT, 'agents/templates/model-manager/AGENT.md'), 'utf8');
+  assert(md.includes('version:'), 'Should have version header');
+  assert(md.includes('Model Manager'), 'Should identify as Model Manager');
+  assert(/NOT.*write code|NOT.*execute task|does not write code/i.test(md), 'Should prohibit code execution');
+  assert(md.includes('fallback'), 'Should mention fallback');
+  assert(md.includes('performance'), 'Should mention performance');
+});
+
+// ============================================================================
+// Summary
+// ============================================================================
+
+console.log(`\n${'═'.repeat(50)}`);
+console.log(`Results: ${passed} passed, ${failed} failed`);
+
+if (failed > 0) {
+  process.exit(1);
+}

@@ -28,6 +28,28 @@
       "script": "node ~/agentic-sdlc/agents/test-behavior.mjs",
       "description": "Full behavior audit, agent versioning check, compost cleanup",
       "session": "isolated"
+    },
+    {
+      "name": "backlog-review",
+      "cron": "0 9 * * *",
+      "script": "node ~/agentic-sdlc/agents/cycles/daily-review.mjs",
+      "description": "Scan openspec changes for orphaned items, verify agents have assigned tasks, flag stale changes >14 days",
+      "session": "isolated"
+    },
+    {
+      "name": "orchestration-sync",
+      "cron": "17 */6 * * *",
+      "script": "node ~/agentic-sdlc/agents/paperclip-sync.mjs --status",
+      "description": "Sync SDLC agent config to orchestration platform. Uses paperclip-sync.mjs when Paperclip adapter is configured; skip if using file-based adapter.",
+      "session": "isolated",
+      "adapterRequired": "paperclip"
+    },
+    {
+      "name": "model-manager-check",
+      "cron": "*/15 * * * *",
+      "script": "node ~/agentic-sdlc/agents/model-manager.mjs check",
+      "description": "Monitor agent token utilization, perform model swaps on budget exhaustion, log to performance ledger",
+      "session": "isolated"
     }
   ]
 }

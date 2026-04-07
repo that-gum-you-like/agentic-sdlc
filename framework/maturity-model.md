@@ -100,6 +100,8 @@ Use this checklist when starting any project. Work through the levels sequential
 - [ ] Senior developer review checklist
 - [ ] Post-commit review hook
 - [ ] Defeat tests for known anti-patterns
+- [ ] Shrinking allowlist defeat tests — pre-existing violations tracked, never grow, auto-shrink on fix
+- [ ] Failure severity taxonomy — F-xxx IDs with critical/high/medium response mapping
 - [ ] Static analysis (linting, type checking, semantic analysis)
 - [ ] Browser E2E: critical user flows tested in real browser (login → navigate → interact → verify)
 - [ ] Refresh resilience: route groups survive hard browser refresh
@@ -115,6 +117,9 @@ Use this checklist when starting any project. Work through the levels sequential
 - [ ] Memory migration on version changes
 - [ ] Agent maturation tracking (6 levels: New → Evolving)
 - [ ] Performance feedback metrics injected into agent prompts
+- [ ] Model-manager agent — token monitoring, live model swaps, performance ledger
+- [ ] Performance ledger (pm/model-performance.jsonl) — task outcomes by model × agent
+- [ ] Platform-agnostic adapter layer — orchestration + LLM providers pluggable
 - [ ] Semantic clustering in pattern-hunt
 - [ ] Capability monitoring — system-instrumented logs + agent self-report
 - [ ] User journey coverage: new features require corresponding browser journey test
@@ -128,6 +133,7 @@ Use this checklist when starting any project. Work through the levels sequential
 - [ ] Cost tracking, efficiency metrics, and session hours monitoring
 - [ ] Pattern hunt → defeat test loop (with semantic clustering)
 - [ ] Conservation mode trigger at 80% budget
+- [ ] Data-driven model recommendations — model-manager analyzes performance ledger for optimal assignments
 - [ ] Instance scaling — multiple instances of same agent type
 - [ ] Execution cadence — staggered commit windows
 - [ ] Human task queue — bidirectional human-agent task flow

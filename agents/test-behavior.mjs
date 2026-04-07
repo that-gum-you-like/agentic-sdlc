@@ -296,6 +296,27 @@ for (const agent of AGENTS) {
   );
 }
 
+// Model Manager Prompt Quality (if model-manager agent exists)
+const mmAgentMd = resolve(AGENTS_DIR, 'model-manager', 'AGENT.md');
+if (existsSync(mmAgentMd)) {
+  console.log('\n📋 Model Manager — Prompt Quality:');
+  const mmMd = readFileSync(mmAgentMd, 'utf8');
+  check('model-manager: defines token monitoring domain', /token.*budget|budget.*monitor|utilization/i.test(mmMd));
+  check('model-manager: prohibits code execution', /NOT.*write code|NOT.*execute task|NOT.*code change|does not write code/i.test(mmMd));
+  check('model-manager: mentions performance ledger', /performance.*ledger|model-performance/i.test(mmMd));
+  check('model-manager: mentions fallback chain', /fallback/i.test(mmMd));
+  check('model-manager: mentions daily reset', /daily.*reset|reset.*daily/i.test(mmMd));
+  check('model-manager: mentions notifications', /notif/i.test(mmMd));
+}
+
+// Adapter layer existence checks
+console.log('\n📋 Adapter Layer:');
+check('load-adapter.mjs exists', existsSync(resolve(__dirname, 'adapters', 'load-adapter.mjs')));
+check('file-based orchestration adapter exists', existsSync(resolve(__dirname, 'adapters', 'orchestration', 'file-based.mjs')));
+check('anthropic LLM adapter exists', existsSync(resolve(__dirname, 'adapters', 'llm', 'anthropic.mjs')));
+check('CLAUDE.md documents adapter configuration', /Adapter Configuration/i.test(claudeMd));
+check('CLAUDE.md documents model-manager', /model-manager/i.test(claudeMd));
+
 // Summary
 console.log(`\n${'═'.repeat(50)}`);
 console.log(`Results: ${passed} passed, ${failed} failed`);
