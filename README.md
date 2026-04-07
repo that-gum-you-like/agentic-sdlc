@@ -1,5 +1,7 @@
 # Agentic SDLC Framework
 
+[![Tests](https://github.com/that-gum-you-like/agentic-sdlc/actions/workflows/test.yml/badge.svg)](https://github.com/that-gum-you-like/agentic-sdlc/actions/workflows/test.yml)
+
 A methodology for running multi-agent AI development teams. Plug it into your existing project to get task queues, agent memory, quality gates, and progressive automation — from "AI helps me code" to "agents ship features overnight."
 
 Works with any AI coding tool: Claude Code, Cursor, Windsurf, Copilot, Aider, or local agents.
