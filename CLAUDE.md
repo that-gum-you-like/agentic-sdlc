@@ -16,6 +16,7 @@ This repo contains a universal methodology for AI-assisted software development.
 6. **Serialize dependent work. Parallelize independent work.** One agent doing 5 related things beats 5 agents conflicting.
 7. **Anti-patterns get named specifically.** Not "it's bad" — "it's not modular" / "it's not testable" / "silent fallback to zero."
 8. **Failures become core memories.** Every mistake an agent makes gets recorded and drives future self-correction.
+9. **Scripts that export functions MUST guard their CLI entry point with `__isMainModule`.** Importing a script must never trigger CLI side effects. The `four-layer-validate.mjs` Layer 5 scan enforces this automatically.
 
 ## OpenSpec Workflow (Mandatory)
 

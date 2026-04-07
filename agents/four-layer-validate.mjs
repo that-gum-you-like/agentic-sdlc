@@ -674,6 +674,82 @@ async function runLayer4(targetFiles) {
 }
 
 // ---------------------------------------------------------------------------
+// Layer 5: CLI Guards — Side Effect Safety for .mjs Scripts
+// ---------------------------------------------------------------------------
+
+async function runLayer5_CLIGuards() {
+  const layerName = 'CLI Guards (Side Effect Safety)';
+  const violations = [];
+
+  // Scan all .mjs files in agents/ directory
+  const agentsDir = __dirname;
+  const mjsFiles = collectFiles(agentsDir, (f) => f.endsWith('.mjs'));
+
+  // Allowlist: pure CLI tools that don't export functions (no guard needed)
+  const allowlistFile = path.join(agentsDir, 'cli-guard-allowlist.json');
+  let allowedFiles = [];
+  if (fs.existsSync(allowlistFile)) {
+    try {
+      allowedFiles = JSON.parse(fs.readFileSync(allowlistFile, 'utf8'));
+    } catch { /* ignore parse errors */ }
+  }
+
+  for (const filePath of mjsFiles) {
+    const relPath = path.relative(agentsDir, filePath);
+
+    // Skip allowlisted files
+    if (allowedFiles.includes(relPath)) continue;
+
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    // Check for ES module exports (must be at start of line or after semicolon)
+    // Matches: export function, export const, export class, export default, export {
+    const lines = content.split('\n');
+    const hasExports = lines.some(line => {
+      const trimmed = line.trimStart();
+      return /^export\s+(function|const|let|var|class|default|async\s+function|\{)/.test(trimmed);
+    });
+    if (!hasExports) continue; // Pure CLI tool — no risk of import side effects
+
+    // Check for CLI routing patterns: top-level destructuring of process.argv
+    // e.g. `const [,, cmd, ...args] = process.argv;` or `const args = process.argv.slice(2);`
+    // These indicate the script has a CLI entry point that parses arguments at module level.
+    // process.argv used inside function bodies (like load-config.mjs reading --project-dir)
+    // is legitimate library behavior and doesn't need a guard.
+    const hasCLIRouting = /^(?:const|let|var)\s+.*=\s*process\.argv/m.test(content);
+    if (!hasCLIRouting) continue; // No CLI routing — safe
+
+    // Check for __isMainModule guard wrapping the CLI routing
+    // Pattern: process.argv usage should only appear inside an __isMainModule guard
+    // or inside a function definition (not at top level)
+    const hasGuard = /__isMainModule/.test(content);
+    if (hasGuard) continue; // Properly guarded
+
+    violations.push(
+      `${relPath}: has exports AND unguarded process.argv CLI routing. ` +
+      `Wrap CLI code in: if (__isMainModule) { ... }`
+    );
+  }
+
+  if (violations.length > 0) {
+    return {
+      name: layerName,
+      status: 'fail',
+      details: [
+        `${violations.length} script(s) have unguarded CLI side effects:`,
+        ...violations.map(v => `  ${v}`),
+      ],
+    };
+  }
+
+  return {
+    name: layerName,
+    status: 'pass',
+    details: [`Scanned ${mjsFiles.length} .mjs files — all CLI entry points properly guarded`],
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -682,14 +758,15 @@ async function main() {
 
   const targetFiles = await resolveTargetFiles();
 
-  const [layer1, layer2, layer3, layer4] = await Promise.all([
+  const [layer1, layer2, layer3, layer4, layer5] = await Promise.all([
     runLayer1(targetFiles),
     runLayer2(targetFiles),
     runLayer3(targetFiles),
     runLayer4(targetFiles),
+    runLayer5_CLIGuards(),
   ]);
 
-  const layers = [layer1, layer2, layer3, layer4];
+  const layers = [layer1, layer2, layer3, layer4, layer5];
   const passed = layers.every((l) => l.status === 'pass' || l.status === 'warn');
 
   const report = { passed, layers };

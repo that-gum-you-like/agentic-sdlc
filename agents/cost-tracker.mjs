@@ -272,6 +272,9 @@ async function report(weekly) {
 }
 
 // CLI
+const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
+
+if (__isMainModule) {
 const [,, cmd, ...args] = process.argv;
 
 switch (cmd) {
@@ -293,3 +296,4 @@ switch (cmd) {
   cost-tracker.mjs report            # Daily summary
   cost-tracker.mjs report --weekly   # Weekly summary`);
 }
+} // end __isMainModule

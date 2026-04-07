@@ -294,6 +294,9 @@ function showStatus(agent) {
 export { buildIndex, addEntry, search, pythonAvailable, loadVectors, saveVectors, getAllMemoryEntries };
 
 // --- CLI ---
+const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
+
+if (__isMainModule) {
 const [,, cmd, ...args] = process.argv;
 
 switch (cmd) {
@@ -335,3 +338,4 @@ switch (cmd) {
   semantic-index.mjs add <agent> <id> "<content>"     # Add single entry
   semantic-index.mjs status <agent>                   # Show index stats`);
 }
+} // end __isMainModule

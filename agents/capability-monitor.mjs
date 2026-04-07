@@ -438,6 +438,9 @@ export {
 // CLI entry point
 // ---------------------------------------------------------------------------
 
+const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
+
+if (__isMainModule) {
 const [,, cmd] = process.argv;
 
 switch (cmd) {
@@ -465,3 +468,4 @@ Configuration (project.json):
 
 Per-agent expected capabilities: agents/capabilities.json`);
 }
+} // end __isMainModule
