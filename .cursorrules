@@ -1,24 +1,159 @@
-# Agentic SDLC Framework
+# Agentic SDLC Framework — Cursor Integration
 
-This is a multi-agent software development lifecycle framework. It provides task queues, agent memory, quality gates, and progressive maturity levels for AI-assisted development.
+This project uses the Agentic SDLC framework for structured, multi-agent AI development.
 
-## If you're helping a user integrate this framework
+## Quick Start
 
-Read `ONBOARDING.md` for the full integration protocol. The key principle: **discover the user's project first, then integrate incrementally** — never force the full framework at once.
+```bash
+node ~/agentic-sdlc/setup.mjs --discover --dir .   # Analyze project (no changes)
+node ~/agentic-sdlc/setup.mjs                       # Interactive setup
+node ~/agentic-sdlc/agents/queue-drainer.mjs status  # Check task queue
+```
 
-Quick reference:
-- `node ~/agentic-sdlc/setup.mjs --discover --dir .` — analyze project without changes
-- `node ~/agentic-sdlc/setup.mjs` — interactive setup
-- `docs/levels/` — per-maturity-level integration guides
-- `docs/execution-agents.md` — available agent templates
+Read `ONBOARDING.md` for the full 5-phase integration protocol.
 
-## If you're working on this framework itself
+## Core Rules
 
-Read `CLAUDE.md` for the full rules. Key points:
-- Every change goes through OpenSpec: proposal → design → specs → tasks → implement
-- Every task needs tests
-- Agents follow micro cycle: pick → implement → test → commit → next
-- This is a framework repo — changes here propagate to all projects using it
-- 15 execution agent templates in `agents/templates/execution-agents/`
-- 5 planning agent templates in `agents/templates/planning-agents/`
-- Adapter layer in `agents/adapters/` for pluggable orchestration and LLM providers
+1. **Every change goes through OpenSpec:** proposal → design → specs → tasks → implement → archive
+2. **Every task must include tests.** No exceptions.
+3. **Micro cycle:** Pick task → Implement → Write tests → Run tests → Commit if passing → Next
+4. **Small files, small commits.** Services < 150 lines, screens < 200 lines.
+5. **Agents read memory before starting** and write memory after completing.
+
+## OpenSpec Workflow (Cursor Edition)
+
+Since Cursor doesn't have Claude Code's `/skill` system, use these commands directly. When the user says "openspec" or asks to start/continue a change, follow the matching workflow below.
+
+### Start a New Change
+
+When user says: "start a new change", "openspec new", or describes a feature/fix to build:
+
+1. Ask what they want to build (if not clear)
+2. Derive a kebab-case name (e.g., "add user auth" → `add-user-auth`)
+3. **Discovery first** — read existing files in the affected area, note specific paths
+4. Run: `openspec new change "<name>"`
+5. Run: `openspec status --change "<name>"`
+6. Run: `openspec instructions <first-ready-artifact> --change "<name>"`
+7. Show the template and STOP — wait for user direction
+
+### Continue a Change
+
+When user says: "continue", "next artifact", or "openspec continue":
+
+1. Run: `openspec list --json` to find active changes
+2. Run: `openspec status --change "<name>" --json` to find next ready artifact
+3. Run: `openspec instructions <artifact-id> --change "<name>" --json`
+4. Draft the artifact content based on instructions and project context
+5. Write the artifact file
+6. Show status and STOP
+
+### Fast-Forward a Change
+
+When user says: "fast forward", "ff", or "create all artifacts":
+
+1. Run: `openspec status --change "<name>" --json`
+2. Loop through all ready artifacts in dependency order:
+   - Get instructions: `openspec instructions <artifact> --change "<name>" --json`
+   - Draft and write the artifact
+3. Stop when all pre-implementation artifacts are complete
+4. Show final status
+
+### Implement a Change
+
+When user says: "implement", "apply", or "build this":
+
+1. Run: `openspec status --change "<name>" --json`
+2. Read all context: proposal, design, specs, tasks
+3. For each pending task:
+   - Implement the code change
+   - Write tests
+   - Run tests
+   - Mark task complete in tasks.md
+4. Commit after each task (or batch for doc-mode tasks)
+
+### Verify a Change
+
+When user says: "verify", "check implementation":
+
+1. Read the specs and tasks for the change
+2. Search codebase for evidence of each requirement
+3. Report: CRITICAL (missing), WARNING (partial), SUGGESTION (improvement)
+4. List any requirements without implementation evidence
+
+### Archive a Change
+
+When user says: "archive", "done with this change":
+
+1. Run: `openspec status --change "<name>" --json`
+2. Verify all tasks are complete
+3. Move: `mv openspec/changes/<name> openspec/changes/archive/$(date +%Y-%m-%d)-<name>`
+
+### Sync Specs
+
+When user says: "sync specs":
+
+1. Read delta specs from the change
+2. Apply ADDED/MODIFIED/REMOVED requirements to main specs in `openspec/specs/`
+
+### Explore
+
+When user says: "explore", "think about", "investigate":
+
+1. This is thinking-partner mode — no implementation
+2. Read relevant code, draw diagrams, explore options
+3. Can create OpenSpec artifacts if the exploration leads to a change
+
+## Task Queue Commands
+
+```bash
+node ~/agentic-sdlc/agents/queue-drainer.mjs status                  # Queue overview
+node ~/agentic-sdlc/agents/queue-drainer.mjs run                     # Assign next task
+node ~/agentic-sdlc/agents/queue-drainer.mjs claim <id> <agent>      # Claim a task
+node ~/agentic-sdlc/agents/queue-drainer.mjs complete <id> passing    # Mark done
+node ~/agentic-sdlc/agents/queue-drainer.mjs archive                  # Archive completed
+```
+
+## Memory Commands
+
+```bash
+node ~/agentic-sdlc/agents/memory-manager.mjs recall <agent>         # Show all memories
+node ~/agentic-sdlc/agents/memory-manager.mjs record <agent> <layer> "<entry>"
+node ~/agentic-sdlc/agents/memory-manager.mjs search <agent> "<query>"
+```
+
+## Testing
+
+```bash
+node ~/agentic-sdlc/agents/four-layer-validate.mjs     # 5-layer validation
+node ~/agentic-sdlc/agents/test-behavior.mjs            # Agent prompt quality
+```
+
+## LLM Configuration
+
+Configure in `agents/project.json`:
+
+```json
+{
+  "llm": { "defaultProvider": "openai" }
+}
+```
+
+Available providers: `anthropic`, `openai`, `groq`, `ollama`
+
+Set the API key for your provider:
+- `OPENAI_API_KEY` for OpenAI
+- `ANTHROPIC_API_KEY` for Anthropic
+- `GROQ_API_KEY` for Groq
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `CLAUDE.md` | Full framework rules (works for any AI) |
+| `ONBOARDING.md` | 5-phase integration protocol |
+| `agents/project.json` | Project config, adapter selection |
+| `agents/budget.json` | Per-agent token limits |
+| `agents/domains.json` | Agent domain routing |
+| `docs/execution-agents.md` | 15 agent templates |
+| `docs/adapter-guide.md` | Custom adapter creation |
+| `docs/cursor-setup.md` | Cursor-specific setup guide |

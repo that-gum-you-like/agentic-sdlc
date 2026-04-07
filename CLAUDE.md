@@ -326,6 +326,7 @@ The framework is platform-agnostic. Orchestration and LLM providers are configur
 **LLM provider adapters** (which models agents use):
 - `anthropic` (default) — Claude models via `ANTHROPIC_API_KEY`
 - `groq` — Groq-hosted models via `GROQ_API_KEY`
+- `openai` — OpenAI GPT models via `OPENAI_API_KEY`
 - `ollama` — Local models via Ollama at `http://localhost:11434`
 
 Adapters live in `agents/adapters/orchestration/` and `agents/adapters/llm/`. See `docs/adapter-guide.md` for writing custom adapters.
@@ -509,6 +510,7 @@ Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 | `agents/voice-intake-toggle.sh` | Headless voice-to-clipboard (bind to hotkey) |
 | `agents/voice-config.json` | Voice input configuration (model, language, max duration) |
 | `docs/comparison.md` | Framework comparison (vs LangGraph, Autogen, CrewAI, etc.) |
+| `docs/cursor-setup.md` | Cursor IDE setup guide (OpenAI, OpenSpec without skills) |
 | `docs/troubleshooting.md` | Common issues and recovery patterns |
 | `docs/voice-intake.md` | Voice input setup and usage guide |
 

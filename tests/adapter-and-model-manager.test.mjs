@@ -98,12 +98,13 @@ test('listOrchestrationAdapters returns 3 adapters', () => {
   assert(adapters.includes('claude-code-native'), 'Should include claude-code-native');
 });
 
-test('listLlmAdapters returns 3 adapters', () => {
+test('listLlmAdapters returns 4 adapters', () => {
   const adapters = listLlmAdapters();
-  assertEqual(adapters.length, 3, `Expected 3 LLM adapters, got ${adapters.length}`);
+  assertEqual(adapters.length, 4, `Expected 4 LLM adapters, got ${adapters.length}`);
   assert(adapters.includes('anthropic'), 'Should include anthropic');
   assert(adapters.includes('groq'), 'Should include groq');
   assert(adapters.includes('ollama'), 'Should include ollama');
+  assert(adapters.includes('openai'), 'Should include openai');
 });
 
 // ============================================================================
