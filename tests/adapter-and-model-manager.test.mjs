@@ -98,13 +98,15 @@ test('listOrchestrationAdapters returns 3 adapters', () => {
   assert(adapters.includes('claude-code-native'), 'Should include claude-code-native');
 });
 
-test('listLlmAdapters returns 4 adapters', () => {
+test('listLlmAdapters returns 6 adapters', () => {
   const adapters = listLlmAdapters();
-  assertEqual(adapters.length, 4, `Expected 4 LLM adapters, got ${adapters.length}`);
+  assertEqual(adapters.length, 6, `Expected 6 LLM adapters, got ${adapters.length}`);
   assert(adapters.includes('anthropic'), 'Should include anthropic');
   assert(adapters.includes('groq'), 'Should include groq');
   assert(adapters.includes('ollama'), 'Should include ollama');
   assert(adapters.includes('openai'), 'Should include openai');
+  assert(adapters.includes('gemini'), 'Should include gemini');
+  assert(adapters.includes('cerebras'), 'Should include cerebras');
 });
 
 // ============================================================================
@@ -452,6 +454,56 @@ test('queue-drainer checkAgentBudget blocks budget-exhausted agents', () => {
   const qd = readFileSync(resolve(SDLC_ROOT, 'agents/queue-drainer.mjs'), 'utf8');
   assert(qd.includes("activeModel === 'budget-exhausted'"), 'Should check for budget-exhausted status');
   assert(qd.includes('exhausted: true'), 'Should set exhausted flag in return');
+});
+
+// ============================================================================
+// Model Manager Resilience — health checks, stale tasks, cross-provider
+// ============================================================================
+
+console.log('\n📋 Model manager resilience:');
+
+test('model-intel.json has providerHealth tracking', () => {
+  const intel = JSON.parse(readFileSync(resolve(SDLC_ROOT, 'agents/model-intel.json'), 'utf8'));
+  assert(intel.providerHealth, 'Should have providerHealth object');
+  assert(intel.providerHealth.groq, 'Should track groq health');
+  assert(intel.providerHealth.gemini, 'Should track gemini health');
+  assert(intel.providerHealth.cerebras, 'Should track cerebras health');
+});
+
+test('model-intel.json has free-tier models from Gemini and Cerebras', () => {
+  const intel = JSON.parse(readFileSync(resolve(SDLC_ROOT, 'agents/model-intel.json'), 'utf8'));
+  assert(intel.models['gemini-2.5-flash'], 'Should have gemini-2.5-flash');
+  assert(intel.models['gemini-2.5-flash'].free === true, 'gemini-2.5-flash should be marked free');
+  assert(intel.models['llama3.1-8b-cerebras'], 'Should have llama3.1-8b-cerebras');
+  assert(intel.models['llama3.1-8b-cerebras'].free === true, 'cerebras model should be marked free');
+});
+
+test('model-manager has health check and stale task reset functions', () => {
+  const mm = readFileSync(resolve(SDLC_ROOT, 'agents/model-manager.mjs'), 'utf8');
+  assert(mm.includes('checkAllProviderHealth'), 'Should have checkAllProviderHealth function');
+  assert(mm.includes('pingProvider'), 'Should have pingProvider function');
+  assert(mm.includes('resetStaleTasks'), 'Should have resetStaleTasks function');
+  assert(mm.includes('findHealthyFallback'), 'Should have findHealthyFallback function');
+  assert(mm.includes('provider-down-swap'), 'Should log provider-down-swap events');
+  assert(mm.includes('stale-task-reset'), 'Should log stale-task-reset events');
+});
+
+test('Gemini adapter exports all 5 required functions', async () => {
+  const adapter = await import(resolve(SDLC_ROOT, 'agents/adapters/llm/gemini.mjs'));
+  assert(typeof adapter.complete === 'function', 'Should export complete');
+  assert(typeof adapter.estimateTokens === 'function', 'Should export estimateTokens');
+  assert(typeof adapter.checkAvailability === 'function', 'Should export checkAvailability');
+  assert(typeof adapter.getModelInfo === 'function', 'Should export getModelInfo');
+  assert(typeof adapter.listModels === 'function', 'Should export listModels');
+});
+
+test('Cerebras adapter exports all 5 required functions', async () => {
+  const adapter = await import(resolve(SDLC_ROOT, 'agents/adapters/llm/cerebras.mjs'));
+  assert(typeof adapter.complete === 'function', 'Should export complete');
+  assert(typeof adapter.estimateTokens === 'function', 'Should export estimateTokens');
+  assert(typeof adapter.checkAvailability === 'function', 'Should export checkAvailability');
+  assert(typeof adapter.getModelInfo === 'function', 'Should export getModelInfo');
+  assert(typeof adapter.listModels === 'function', 'Should export listModels');
 });
 
 // ============================================================================

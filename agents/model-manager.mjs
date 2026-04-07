@@ -9,7 +9,7 @@
  *   node model-manager.mjs reset                # Clear all activeModel overrides (daily reset)
  */
 
-import { readFileSync, writeFileSync, appendFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync } from 'fs';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { loadConfig } from './load-config.mjs';
@@ -86,6 +86,219 @@ function buildCostOrder() {
 }
 
 /**
+ * Health check endpoints per provider. Minimal request to test reachability.
+ */
+const HEALTH_ENDPOINTS = {
+  anthropic: {
+    url: 'https://api.anthropic.com/v1/messages',
+    method: 'POST',
+    headers: (key) => ({ 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }),
+    body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] }),
+    keyEnv: 'ANTHROPIC_API_KEY',
+  },
+  openai: {
+    url: 'https://api.openai.com/v1/chat/completions',
+    method: 'POST',
+    headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
+    body: JSON.stringify({ model: 'gpt-4o-mini', max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] }),
+    keyEnv: 'OPENAI_API_KEY',
+  },
+  groq: {
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    method: 'POST',
+    headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
+    body: JSON.stringify({ model: 'llama-3.1-8b-instant', max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] }),
+    keyEnv: 'GROQ_API_KEY',
+  },
+  gemini: {
+    url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent',
+    method: 'POST',
+    headers: () => ({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ contents: [{ parts: [{ text: 'hi' }] }], generationConfig: { maxOutputTokens: 1 } }),
+    keyEnv: 'GEMINI_API_KEY',
+    urlSuffix: (key) => `?key=${key}`,
+  },
+  cerebras: {
+    url: 'https://api.cerebras.ai/v1/chat/completions',
+    method: 'POST',
+    headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
+    body: JSON.stringify({ model: 'llama3.1-8b', max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] }),
+    keyEnv: 'CEREBRAS_API_KEY',
+  },
+};
+
+/**
+ * Ping a provider's API to check if it's reachable and functional.
+ * Returns { up: boolean, error: string|null, latencyMs: number }
+ */
+async function pingProvider(provider) {
+  const ep = HEALTH_ENDPOINTS[provider];
+  if (!ep) return { up: false, error: 'unknown provider', latencyMs: 0 };
+
+  const apiKey = process.env[ep.keyEnv];
+  if (!apiKey) return { up: false, error: `${ep.keyEnv} not set`, latencyMs: 0 };
+
+  const start = Date.now();
+  try {
+    let url = ep.url;
+    if (ep.urlSuffix) url += ep.urlSuffix(apiKey);
+
+    const res = await fetch(url, {
+      method: ep.method,
+      headers: ep.headers(apiKey),
+      body: ep.body,
+      signal: AbortSignal.timeout(10000),
+    });
+
+    const latencyMs = Date.now() - start;
+
+    // 200 = success, 429 = rate limited (provider is up, just busy), 402 = billing (up but account issue)
+    if (res.ok || res.status === 429) {
+      return { up: true, error: null, latencyMs };
+    }
+    if (res.status === 402 || res.status === 403) {
+      return { up: true, error: `billing/auth issue (${res.status})`, latencyMs };
+    }
+    return { up: false, error: `HTTP ${res.status}`, latencyMs };
+  } catch (err) {
+    return { up: false, error: err.message, latencyMs: Date.now() - start };
+  }
+}
+
+/**
+ * Run health checks on all providers used by configured agents.
+ * Updates providerHealth in model-intel.json.
+ * Returns map of provider → health status.
+ */
+async function checkAllProviderHealth() {
+  const intel = loadModelIntel();
+  const budget = loadBudget();
+  const health = intel.providerHealth || {};
+
+  // Determine which providers are actually configured
+  const usedProviders = new Set();
+  for (const agentCfg of Object.values(budget.agents || {})) {
+    if (agentCfg.provider) usedProviders.add(agentCfg.provider);
+    // Also check fallback chain models for their providers
+    for (const model of (agentCfg.fallbackChain || [])) {
+      const modelInfo = intel.models?.[model];
+      if (modelInfo?.provider) usedProviders.add(modelInfo.provider);
+    }
+  }
+
+  // Always check free-tier providers (they're universal fallbacks)
+  usedProviders.add('groq');
+  usedProviders.add('gemini');
+  usedProviders.add('cerebras');
+
+  const results = {};
+  const now = new Date().toISOString();
+
+  // Ping all providers in parallel
+  const pings = [...usedProviders].map(async (provider) => {
+    const result = await pingProvider(provider);
+    const prev = health[provider] || { status: 'unknown', consecutiveFailures: 0 };
+
+    if (result.up) {
+      const wasDown = prev.status === 'down';
+      results[provider] = { status: 'up', lastChecked: now, consecutiveFailures: 0, latencyMs: result.latencyMs };
+      if (wasDown) {
+        appendLedger({ event: 'provider-recovered', provider, latencyMs: result.latencyMs });
+        triggerNotification('budgetAlert', `Provider recovered: ${provider} is back online (${result.latencyMs}ms)`);
+        console.log(`  🟢 ${provider}: RECOVERED (was down, now up in ${result.latencyMs}ms)`);
+      } else {
+        console.log(`  🟢 ${provider}: up (${result.latencyMs}ms)`);
+      }
+    } else {
+      const failures = (prev.consecutiveFailures || 0) + 1;
+      results[provider] = { status: failures >= 2 ? 'down' : 'degraded', lastChecked: now, consecutiveFailures: failures, error: result.error };
+
+      if (failures >= 2) {
+        console.log(`  🔴 ${provider}: DOWN (${failures} consecutive failures: ${result.error})`);
+        appendLedger({ event: 'provider-down', provider, consecutiveFailures: failures, error: result.error });
+      } else {
+        console.log(`  🟡 ${provider}: degraded (${result.error})`);
+      }
+    }
+  });
+
+  await Promise.all(pings);
+
+  // Save health state
+  intel.providerHealth = results;
+  saveModelIntel(intel);
+
+  return results;
+}
+
+/**
+ * Find a healthy model from a fallback chain, skipping models whose provider is down.
+ */
+function findHealthyFallback(fallbackChain, currentModel, providerHealth) {
+  const intel = loadModelIntel();
+  const currentIdx = fallbackChain.indexOf(currentModel);
+
+  for (let i = currentIdx + 1; i < fallbackChain.length; i++) {
+    const model = fallbackChain[i];
+    const modelInfo = intel.models?.[model];
+    const provider = modelInfo?.provider;
+    if (provider && providerHealth[provider]?.status !== 'down') {
+      return model;
+    }
+  }
+  return null; // All fallbacks are on down providers
+}
+
+/**
+ * Detect and auto-reset stale tasks (in_progress > 30 min).
+ */
+function resetStaleTasks() {
+  const tasksDir = config.tasksDir;
+  if (!existsSync(tasksDir)) return 0;
+
+  const files = readdirSync(tasksDir).filter(f => f.endsWith('.json'));
+  const now = Date.now();
+  let resetCount = 0;
+
+  for (const file of files) {
+    try {
+      const taskPath = resolve(tasksDir, file);
+      const task = JSON.parse(readFileSync(taskPath, 'utf8'));
+
+      if (task.status !== 'in_progress') continue;
+
+      const startedAt = task.started_at || task.claimedAt;
+      if (!startedAt) continue;
+
+      const elapsed = now - new Date(startedAt).getTime();
+      const STALE_MS = 30 * 60 * 1000; // 30 minutes
+
+      if (elapsed > STALE_MS) {
+        const agent = task.assignee || task.claimedBy || 'unknown';
+        console.log(`  🔄 Resetting stale task [${task.id}] — stuck with ${agent} for ${Math.round(elapsed / 60000)}min`);
+
+        task.status = 'pending';
+        task.assignee = null;
+        task.claimedBy = null;
+        task.claimedAt = null;
+        delete task.started_at;
+        delete task.instanceId;
+
+        writeFileSync(taskPath, JSON.stringify(task, null, 2));
+        appendLedger({ event: 'stale-task-reset', taskId: task.id, previousAgent: agent, staleMinutes: Math.round(elapsed / 60000) });
+        triggerNotification('blocker', `Stale task reset: [${task.id}] ${task.title} — was stuck with ${agent} for ${Math.round(elapsed / 60000)}min`);
+        resetCount++;
+      }
+    } catch { /* skip malformed */ }
+  }
+
+  if (resetCount > 0) {
+    console.log(`  Reset ${resetCount} stale task(s)`);
+  }
+  return resetCount;
+}
+
+/**
  * Estimate burn rate (tokens/hour) for an agent from recent cost-log.
  * Looks at the last `windowHours` of data.
  */
@@ -113,16 +326,67 @@ function estimateBurnRate(agentName, windowHours = 2) {
   return Math.round(totalTokens / spanHours);
 }
 
-// --- check: Monitor utilization and swap models ---
+// --- check: Monitor utilization, health, and swap models ---
 
-function check() {
+async function check() {
+  console.log('Model Manager — Health & Utilization Check');
+  console.log('═'.repeat(50));
+
+  // Phase 1: Provider health checks
+  console.log('\n📡 Provider Health:');
+  const providerHealth = await checkAllProviderHealth();
+
+  // Phase 2: Auto-reset stale tasks
+  console.log('\n🔄 Stale Task Detection:');
+  const staleCount = resetStaleTasks();
+  if (staleCount === 0) console.log('  No stale tasks');
+
+  // Phase 3: Provider-down swaps (swap agents off down providers)
   const budget = loadBudget();
-  const costLog = loadCostLog();
   const agents = budget.agents || {};
   let swapCount = 0;
+  const intel = loadModelIntel();
 
-  console.log('Model Manager — Utilization Check');
-  console.log('═'.repeat(50));
+  for (const [name, agentCfg] of Object.entries(agents)) {
+    const model = agentCfg.activeModel || agentCfg.model || 'unknown';
+    const modelInfo = intel.models?.[model];
+    const provider = modelInfo?.provider || agentCfg.provider;
+
+    if (provider && providerHealth[provider]?.status === 'down') {
+      // Provider is down — find a healthy fallback
+      const chain = agentCfg.fallbackChain || [];
+      const healthyModel = findHealthyFallback(chain, model, providerHealth);
+
+      if (healthyModel) {
+        agents[name].activeModel = healthyModel;
+        const newProvider = intel.models?.[healthyModel]?.provider || 'unknown';
+        console.log(`\n  🚨 ${name}: ${provider} DOWN — SWAP ${model} → ${healthyModel} (${newProvider})`);
+        appendLedger({ event: 'provider-down-swap', agent: name, fromModel: model, toModel: healthyModel, downProvider: provider, newProvider });
+        triggerNotification('highSeverityFailure',
+          `Provider ${provider} is DOWN. ${name} swapped from ${model} to ${healthyModel} (${newProvider}). Work continues on fallback.`
+        );
+        swapCount++;
+      } else {
+        agents[name].activeModel = 'budget-exhausted';
+        console.log(`\n  💀 ${name}: ${provider} DOWN — NO HEALTHY FALLBACK AVAILABLE`);
+        appendLedger({ event: 'all-fallbacks-down', agent: name, model, downProvider: provider });
+        triggerNotification('highSeverityFailure',
+          `CRITICAL: Provider ${provider} is DOWN and ${name} has no healthy fallback. Agent is fully blocked. Add a cross-provider fallback chain or wait for recovery.`
+        );
+      }
+      continue; // Skip budget check for this agent — provider is down
+    }
+  }
+
+  if (swapCount > 0) {
+    saveBudget(budget);
+    console.log(`\n${swapCount} provider-down swap(s) applied`);
+  }
+
+  // Phase 4: Budget utilization checks (only for agents on healthy providers)
+  console.log('\n📊 Budget Utilization:');
+  const costLog = loadCostLog();
+  swapCount = 0;
 
   for (const [name, agentCfg] of Object.entries(agents)) {
     const dailyTokens = agentCfg.dailyTokens || 100000;
@@ -582,7 +846,7 @@ const cmd = process.argv[2];
 
 switch (cmd) {
   case 'check':
-    check();
+    await check();
     break;
   case 'report':
     report();

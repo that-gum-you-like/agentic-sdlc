@@ -327,7 +327,11 @@ The framework is platform-agnostic. Orchestration and LLM providers are configur
 - `anthropic` (default) — Claude models via `ANTHROPIC_API_KEY`
 - `groq` — Groq-hosted models via `GROQ_API_KEY`
 - `openai` — OpenAI GPT models via `OPENAI_API_KEY`
+- `gemini` — Google Gemini models via `GEMINI_API_KEY` (free tier: 250 req/day, no CC)
+- `cerebras` — Cerebras Inference via `CEREBRAS_API_KEY` (free tier: 1M tokens/day, no CC)
 - `ollama` — Local models via Ollama at `http://localhost:11434`
+
+**Free emergency fallbacks:** Groq, Gemini, and Cerebras all offer free tiers with no credit card. Every agent's fallback chain should end with a free-tier model to guarantee zero downtime.
 
 Adapters live in `agents/adapters/orchestration/` and `agents/adapters/llm/`. See `docs/adapter-guide.md` for writing custom adapters.
 
