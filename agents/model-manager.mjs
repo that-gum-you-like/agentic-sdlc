@@ -13,12 +13,19 @@ import { readFileSync, writeFileSync, appendFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { loadConfig } from './load-config.mjs';
 
-let triggerNotification;
+// Notification is best-effort — notify.mjs may have CLI side effects on import
+let triggerNotification = () => {};
 try {
-  const notify = await import('./notify.mjs');
-  triggerNotification = notify.triggerNotification;
+  // Only import if notify.mjs exports triggerNotification without side effects
+  const notifyPath = new URL('./notify.mjs', import.meta.url).pathname;
+  if (existsSync(notifyPath)) {
+    // Defer notification to avoid triggering notify.mjs CLI
+    triggerNotification = (type, message) => {
+      import('./notify.mjs').then(m => m.triggerNotification?.(type, message)).catch(() => {});
+    };
+  }
 } catch {
-  triggerNotification = () => {};
+  // notify not available
 }
 
 const config = loadConfig();

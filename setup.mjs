@@ -156,15 +156,30 @@ function discoverProject(dir) {
     suggestedLevel: 0,
   };
 
-  // Detect language and framework
-  if (existsSync(join(dir, 'package.json'))) {
+  // Check for existing agents/project.json to find appDir and test command
+  let appDir = dir;
+  const projectJsonPath = join(dir, 'agents', 'project.json');
+  if (existsSync(projectJsonPath)) {
     try {
-      const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
+      const projConfig = JSON.parse(readFileSync(projectJsonPath, 'utf8'));
+      if (projConfig.appDir && projConfig.appDir !== '.') {
+        appDir = join(dir, projConfig.appDir);
+      }
+      if (projConfig.testCmd) result.testCmd = projConfig.testCmd;
+      if (projConfig.agents) result.existingAgents = projConfig.agents;
+    } catch { /* malformed project.json */ }
+  }
+
+  // Detect language and framework — check appDir first, fall back to project root
+  function detectFromPackageJson(pkgDir) {
+    const pkgPath = join(pkgDir, 'package.json');
+    if (!existsSync(pkgPath)) return false;
+    try {
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
       result.language = pkg.devDependencies?.typescript || pkg.dependencies?.typescript ? 'typescript' : 'javascript';
       result.packageManager = existsSync(join(dir, 'yarn.lock')) ? 'yarn' : existsSync(join(dir, 'pnpm-lock.yaml')) ? 'pnpm' : 'npm';
-      result.testCmd = pkg.scripts?.test || '';
+      if (!result.testCmd) result.testCmd = pkg.scripts?.test || '';
 
-      // Detect framework
       const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
       if (allDeps['next']) result.framework = 'nextjs';
       else if (allDeps['react-native'] || allDeps['expo']) result.framework = 'react-native';
@@ -174,24 +189,32 @@ function discoverProject(dir) {
       else if (allDeps['express'] || allDeps['fastify'] || allDeps['hono']) result.framework = 'node-api';
       else if (allDeps['svelte'] || allDeps['@sveltejs/kit']) result.framework = 'svelte';
 
-      // Detect test framework
       if (allDeps['jest'] || pkg.jest) result.testFramework = 'jest';
       else if (allDeps['vitest']) result.testFramework = 'vitest';
       else if (allDeps['mocha']) result.testFramework = 'mocha';
       else if (allDeps['playwright'] || allDeps['@playwright/test']) result.testFramework = 'playwright';
-    } catch { /* malformed package.json */ }
-  } else if (existsSync(join(dir, 'requirements.txt')) || existsSync(join(dir, 'pyproject.toml'))) {
-    result.language = 'python';
-    result.packageManager = 'pip';
-    if (existsSync(join(dir, 'pytest.ini')) || existsSync(join(dir, 'pyproject.toml'))) result.testFramework = 'pytest';
-  } else if (existsSync(join(dir, 'Cargo.toml'))) {
-    result.language = 'rust';
-    result.packageManager = 'cargo';
-    result.testFramework = 'cargo-test';
-  } else if (existsSync(join(dir, 'go.mod'))) {
-    result.language = 'go';
-    result.packageManager = 'go-modules';
-    result.testFramework = 'go-test';
+      return true;
+    } catch { return false; }
+  }
+
+  // Try appDir first (for monorepo/subdirectory projects), then root
+  if (appDir !== dir) detectFromPackageJson(appDir);
+  if (result.framework === 'unknown') detectFromPackageJson(dir);
+
+  if (result.language === 'unknown') {
+    if (existsSync(join(dir, 'requirements.txt')) || existsSync(join(dir, 'pyproject.toml'))) {
+      result.language = 'python';
+      result.packageManager = 'pip';
+      if (existsSync(join(dir, 'pytest.ini')) || existsSync(join(dir, 'pyproject.toml'))) result.testFramework = 'pytest';
+    } else if (existsSync(join(dir, 'Cargo.toml'))) {
+      result.language = 'rust';
+      result.packageManager = 'cargo';
+      result.testFramework = 'cargo-test';
+    } else if (existsSync(join(dir, 'go.mod'))) {
+      result.language = 'go';
+      result.packageManager = 'go-modules';
+      result.testFramework = 'go-test';
+    }
   }
 
   // Detect CI
