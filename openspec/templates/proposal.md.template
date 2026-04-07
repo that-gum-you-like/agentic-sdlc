@@ -14,6 +14,17 @@
 
 ---
 
+## Discovery
+
+<!-- What files, patterns, and tests already exist in the affected area? What did you read before writing this proposal? Reference specific file paths and line numbers — not vague claims like "I checked the codebase." This section prevents proposals that conflict with or duplicate existing code. -->
+
+- **Files examined**: {{FILES_EXAMINED}}
+- **Existing patterns**: {{EXISTING_PATTERNS}}
+- **Existing tests**: {{EXISTING_TESTS}}
+- **Key findings**: {{DISCOVERY_FINDINGS}}
+
+---
+
 ## Proposed Solution
 
 <!-- What are we going to build or change? One paragraph. Not a technical spec — just the idea. -->
