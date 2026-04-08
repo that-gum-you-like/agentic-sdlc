@@ -234,22 +234,35 @@ function assessSecurity() {
   const ignoresEnv = gitignore.includes('.env');
   if (ignoresEnv) { score += 0.5; evidence.push('.gitignore excludes .env files'); }
 
-  // Dependency audit
-  const auditResult = runCmd('npm audit --json 2>/dev/null');
-  if (auditResult) {
+  // Dependency audit — check if zero-dep first
+  const pkg = readFile('package.json');
+  let isZeroDep = false;
+  if (pkg) {
     try {
-      const audit = JSON.parse(auditResult);
-      const vulns = audit.metadata?.vulnerabilities || {};
-      const critical = vulns.critical || 0;
-      const high = vulns.high || 0;
-      if (critical === 0 && high === 0) { score += 1.5; evidence.push('No critical/high vulnerabilities in dependencies'); }
-      else evidence.push(`Vulnerabilities: ${critical} critical, ${high} high`);
-    } catch { evidence.push('npm audit ran but output unparseable'); }
+      const parsed = JSON.parse(pkg);
+      isZeroDep = Object.keys(parsed.dependencies || {}).length === 0 && Object.keys(parsed.devDependencies || {}).length === 0;
+    } catch {}
+  }
+
+  if (isZeroDep) {
+    score += 1.5;
+    evidence.push('Zero dependencies — no supply chain attack surface');
   } else {
-    // Not an npm project or no package-lock
-    const hasLockfile = fileExists('package-lock.json') || fileExists('yarn.lock') || fileExists('pnpm-lock.yaml');
-    if (hasLockfile) { score += 0.5; evidence.push('Lock file present (dependency pinning)'); }
-    else evidence.push('No lock file found');
+    const auditResult = runCmd('npm audit --json 2>/dev/null');
+    if (auditResult) {
+      try {
+        const audit = JSON.parse(auditResult);
+        const vulns = audit.metadata?.vulnerabilities || {};
+        const critical = vulns.critical || 0;
+        const high = vulns.high || 0;
+        if (critical === 0 && high === 0) { score += 1.5; evidence.push('No critical/high vulnerabilities in dependencies'); }
+        else evidence.push(`Vulnerabilities: ${critical} critical, ${high} high`);
+      } catch { evidence.push('npm audit ran but output unparseable'); }
+    } else {
+      const hasLockfile = fileExists('package-lock.json') || fileExists('yarn.lock') || fileExists('pnpm-lock.yaml');
+      if (hasLockfile) { score += 0.5; evidence.push('Lock file present (dependency pinning)'); }
+      else evidence.push('No lock file found');
+    }
   }
 
   // Auth patterns
@@ -281,7 +294,36 @@ function assessDependencyHealth() {
     }
   }
 
-  // Lock file
+  // Check for intentional zero-dependency design
+  let parsedPkg;
+  try { parsedPkg = JSON.parse(pkg); } catch { parsedPkg = {}; }
+  const depCount = Object.keys(parsedPkg.dependencies || {}).length;
+  const devDepCount = Object.keys(parsedPkg.devDependencies || {}).length;
+  const isZeroDep = depCount === 0 && devDepCount === 0;
+
+  if (isZeroDep) {
+    // Zero-dependency is a deliberate architectural choice for portability
+    score = 3;
+    evidence.push('Zero-dependency by design — maximum portability (git clone + node)');
+    evidence.push('No dependency vulnerabilities possible (zero attack surface)');
+    evidence.push('No lock file needed (nothing to lock)');
+
+    // Bonus: check if engines are specified (good practice even for zero-dep)
+    if (parsedPkg.engines?.node) {
+      score += 0.5;
+      evidence.push(`Node engine requirement specified: ${parsedPkg.engines.node}`);
+    }
+
+    // Bonus: package.json is well-formed
+    if (parsedPkg.name && parsedPkg.version && parsedPkg.type === 'module') {
+      score += 0.5;
+      evidence.push('Well-formed manifest (name, version, type:module)');
+    }
+
+    return { dimension: 'Dependency Health', score: Math.min(score, 5), evidence };
+  }
+
+  // Standard dependency health checks for projects with deps
   const hasLock = fileExists('package-lock.json') || fileExists('yarn.lock') || fileExists('pnpm-lock.yaml');
   if (hasLock) { score += 1; evidence.push('Lock file committed'); }
   else evidence.push('No lock file — builds are non-deterministic');
