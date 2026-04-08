@@ -136,7 +136,7 @@ async function pingProvider(provider) {
   if (!ep) return { up: false, error: 'unknown provider', latencyMs: 0 };
 
   const apiKey = process.env[ep.keyEnv];
-  if (!apiKey) return { up: false, error: `${ep.keyEnv} not set`, latencyMs: 0 };
+  if (!apiKey) return { up: null, error: `${ep.keyEnv} not set (not configured)`, latencyMs: 0, notConfigured: true };
 
   const start = Date.now();
   try {
@@ -199,7 +199,11 @@ async function checkAllProviderHealth() {
     const result = await pingProvider(provider);
     const prev = health[provider] || { status: 'unknown', consecutiveFailures: 0 };
 
-    if (result.up) {
+    if (result.notConfigured) {
+      // No API key — don't count as failure, don't trigger swaps
+      results[provider] = { status: 'not-configured', lastChecked: now, consecutiveFailures: 0, error: result.error };
+      console.log(`  ⚪ ${provider}: not configured (no API key)`);
+    } else if (result.up) {
       const wasDown = prev.status === 'down';
       results[provider] = { status: 'up', lastChecked: now, consecutiveFailures: 0, latencyMs: result.latencyMs };
       if (wasDown) {
