@@ -1,6 +1,9 @@
 # Python virtual environment
 .venv/
 
+# Environment secrets (never commit actual keys)
+.env
+
 # Runtime data (per-project, not framework)
 pm/
 .paperclip.env
