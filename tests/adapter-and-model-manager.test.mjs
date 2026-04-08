@@ -280,7 +280,7 @@ Some content here.`;
 test('all 15 execution templates have valid frontmatter', () => {
   const execDir = resolve(SDLC_ROOT, 'agents/templates/execution-agents');
   const files = readdirSync(execDir).filter(f => f.endsWith('.md'));
-  assertEqual(files.length, 15, `Expected 15 templates, got ${files.length}`);
+  assertEqual(files.length, 16, `Expected 16 templates, got ${files.length}`);
 
   for (const file of files) {
     const content = readFileSync(resolve(execDir, file), 'utf8');
@@ -347,13 +347,14 @@ test('all 15 templates use only supported frontmatter features', () => {
   }
 });
 
-test('capabilities.json.template has all 15 execution archetypes', () => {
+test('capabilities.json.template has all 16 execution archetypes', () => {
   const caps = JSON.parse(readFileSync(resolve(SDLC_ROOT, 'agents/templates/capabilities.json.template'), 'utf8'));
   const expected = [
     'cto-orchestrator', 'code-reviewer', 'release-manager', 'backend-developer',
     'frontend-developer', 'ai-engineer', 'documentarian', 'security-engineer',
     'qa-engineer', 'integration-tester', 'ethics-advisor', 'architect',
     'dependency-auditor', 'performance-sentinel', 'research-agent',
+    'platform-maturity-sentinel',
   ];
   for (const arch of expected) {
     assert(caps[arch], `capabilities.json should have ${arch} archetype`);

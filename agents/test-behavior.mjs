@@ -352,6 +352,7 @@ const expectedTemplates = [
   'frontend-developer', 'ai-engineer', 'documentarian', 'security-engineer',
   'qa-engineer', 'integration-tester', 'ethics-advisor', 'architect',
   'dependency-auditor', 'performance-sentinel', 'research-agent',
+  'platform-maturity-sentinel',
 ];
 for (const tmpl of expectedTemplates) {
   const tmplPath = resolve(execDir, `${tmpl}.md`);

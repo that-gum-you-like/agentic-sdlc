@@ -95,6 +95,7 @@ The framework provides 15 execution agent templates in `agents/templates/executi
 | `architect` | ADRs, system design, API contracts | Addendum |
 | `dependency-auditor` | CVE scanning, license compliance (cron) | Addendum |
 | `performance-sentinel` | Benchmarks, regression detection (cron) | Addendum |
+| `platform-maturity-sentinel` | Maturity assessment, production readiness, DORA metrics | Addendum |
 | `research-agent` | Context gathering before execution | Addendum |
 
 See `docs/execution-agents.md` for full guide. Templates use YAML frontmatter for `role_keywords`, `default_patterns`, and `capabilities` — `setup.mjs` reads this automatically.
@@ -507,6 +508,7 @@ Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 | `agents/alignment-monitor.mjs` | Unified quality/alignment check, prompt suggestions, self-improving checklist |
 | `agents/model-manager.mjs` | Token budget monitoring, predictive swaps, cross-provider recommendations, model intelligence, quality-aware routing |
 | `agents/model-intel.json` | Model intelligence database: costs, strengths, limitations for all providers |
+| `agents/maturity-assess.mjs` | Platform maturity assessment: 8-dimension scoring, DORA metrics, production readiness |
 | `agents/adapters/load-adapter.mjs` | Dynamic adapter loader for orchestration and LLM providers |
 | `agents/paperclip-sync.mjs` | Push SDLC agent config (model, role, instructions) → Paperclip |
 | `agents/garden-roadmap.mjs` | Archive completed roadmap items, keep roadmap focused |

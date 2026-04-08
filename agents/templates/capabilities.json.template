@@ -181,5 +181,12 @@
       "semanticSearch": "when sentence-transformers installed"
     },
     "notExpected": ["browserE2E", "defeatTests", "deployPipeline"]
+  },
+  "platform-maturity-sentinel": {
+    "required": ["memoryRecall", "memoryRecord", "costTracking"],
+    "conditional": {
+      "browserE2E": "when assessing frontend production readiness"
+    },
+    "notExpected": ["defeatTests", "deployPipeline"]
   }
 }
