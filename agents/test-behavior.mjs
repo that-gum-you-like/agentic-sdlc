@@ -382,9 +382,13 @@ check('CLAUDE.md documents model-manager', /model-manager/i.test(claudeMd));
 
 } // end !projectOnly (framework tests, continued)
 
-// Summary
+// Summary — print FIRST so the result is visible without scrolling
+const summaryLine = `Results: ${passed} passed, ${failed} failed`;
 console.log(`\n${'═'.repeat(50)}`);
-console.log(`Results: ${passed} passed, ${failed} failed`);
+console.log(summaryLine);
+if (failed > 0) {
+  console.log('\nFailing checks are marked with ❌ above.');
+}
 
 if (failed > 0 && !dryRun) {
   process.exit(1);

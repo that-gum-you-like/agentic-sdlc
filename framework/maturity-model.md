@@ -31,12 +31,12 @@ A universal methodology for AI-assisted software development. This model applies
 - Parallel execution of independent tasks.
 - Coordinated merging and conflict resolution.
 
-### Level 4: Autonomous
+### Level 4: Quality
 
-- Agents work overnight without supervision.
-- Merge while you sleep.
-- Human reviews results in the morning.
-- Human handles exceptions only.
+- Automated code review with growing checklists.
+- Defeat tests catch known anti-patterns.
+- Browser E2E testing for frontend changes.
+- Quality gates must pass before commits land.
 
 ### Level 5: Evolving
 
@@ -60,13 +60,13 @@ A universal methodology for AI-assisted software development. This model applies
 Each level builds on the previous. No skipping.
 
 ```
-7. MASTERY               — Self-improving agent team
-6. CONTINUOUS IMPROVEMENT — TDD + Behavior testing
-5. EVOLUTION             — Memory + Character
-4. QUALITY               — Checklists + Static Analysis
-3. SCALE                 — Multi-agent + Release Management
-2. AUTOMATION            — Headless agents + Test suites
-1. FOUNDATION            — Brain dump → Roadmap
+6. SELF-IMPROVING   — Pattern detection, behavior tests, drift monitoring
+5. EVOLVING         — Agent memory, failure tracking, model manager
+4. QUALITY          — Defeat tests, code reviewer, browser E2E
+3. ORCHESTRATED     — Task queue, multiple agents, domain routing
+2. AUTOMATED        — Micro cycle: implement → test → commit
+1. ASSISTED         — CLAUDE.md with project rules
+0. MANUAL           — No AI involvement (starting point)
 ```
 
 Each pass through the pyramid makes the system more robust. You will revisit earlier levels as the system grows — this is expected.
@@ -77,7 +77,7 @@ Each pass through the pyramid makes the system more robust. You will revisit ear
 
 Use this checklist when starting any project. Work through the levels sequentially.
 
-### Level 1–2 (Foundation + Automation)
+### Level 1–2 (Assisted + Automated)
 
 - [ ] `CLAUDE.md` (or equivalent) with project rules and LLM-friendly style guide
 - [ ] Spec system initialized: `openspec/changes/`, `openspec/archive/`, `openspec/specs/`
@@ -85,7 +85,7 @@ Use this checklist when starting any project. Work through the levels sequential
 - [ ] Testing: unit + integration + e2e scripts, pre-commit hooks
 - [ ] Micro cycle defined: pick → implement → test → commit → next
 
-### Level 3 (Scale)
+### Level 3 (Orchestrated)
 
 - [ ] Specialist agents with character sheets (`AGENT.md`)
 - [ ] Task queue: `tasks/queue/*.json` with priority + claim fields
@@ -107,7 +107,7 @@ Use this checklist when starting any project. Work through the levels sequential
 - [ ] Refresh resilience: route groups survive hard browser refresh
 - [ ] Deploy gate: browser E2E must pass before production deploy
 
-### Level 5 (Evolution)
+### Level 5 (Evolving)
 
 - [ ] 5-layer memory per agent (core, long-term, medium-term, recent, compost)
 - [ ] Failure memories populated in `core.json`
@@ -126,7 +126,7 @@ Use this checklist when starting any project. Work through the levels sequential
 - [ ] Dead link audit: navigation targets verified to have content
 - [ ] State persistence testing: user interactions survive navigation and reload
 
-### Level 6 (Continuous Improvement + Mastery)
+### Level 6 (Self-Improving)
 
 - [ ] Behavior tests for prompt changes + maturation regression
 - [ ] Per-agent token budgets + circuit breakers

@@ -214,7 +214,7 @@ Queue-drainer enforces permissions on task assignment. Worker injects constraint
 
 ## Verification Checklist
 
-Run these to confirm all six mechanisms are working:
+Run these to confirm all 14 safety mechanisms are working:
 
 ```bash
 # 1. Conservation mode — toggle on, check report shows halved limits, restore

@@ -19,6 +19,7 @@ Works with any AI coding tool: Claude Code, Cursor, Windsurf, Copilot, Aider, or
 Tell your AI agent: *"Read ONBOARDING.md in this repo and help me integrate this framework into my project."* The onboarding guide walks the agent through discovering your project, assessing your current practices, and integrating incrementally.
 
 **Prerequisites:** Node.js 18+, git
+**Optional:** `npm install -g openspec` (required for Cursor/Windsurf OpenSpec workflows)
 
 ### Option B: Run the setup script
 ```bash
@@ -33,17 +34,35 @@ node ~/agentic-sdlc/setup.mjs --discover --dir ~/your-project
 ```
 Outputs a JSON analysis of your project (language, framework, tests, CI) without changing any files.
 
+### Try It (5 minutes)
+
+```bash
+# 1. Clone
+git clone https://github.com/that-gum-you-like/agentic-sdlc.git ~/agentic-sdlc
+
+# 2. See what it would do (no changes)
+node ~/agentic-sdlc/setup.mjs --discover --dir ~/your-project
+
+# 3. Preview the files it would create
+node ~/agentic-sdlc/setup.mjs --dry-run --dir ~/your-project
+
+# 4. Check the model intelligence database
+node ~/agentic-sdlc/agents/model-manager.mjs models
+
+# 5. If you like what you see, run setup for real
+node ~/agentic-sdlc/setup.mjs --dir ~/your-project
+```
+
 ## What's Included
 
-- **15 execution agent templates** — battle-tested roles (backend, frontend, reviewer, release manager, AI engineer, security, QA, architect, and more) with built-in failure patterns and quality rules
-- **5 planning agent templates** — requirements engineering, value analysis, product management, parallelization, quality alignment
-- **Task queue** — JSON-based with priority, dependencies, domain routing, and parallel assignment
-- **5-layer memory** — agents learn from mistakes via core, long-term, medium-term, recent, and compost memory layers
-- **Model manager** — monitors token budgets, swaps models on exhaustion, tracks performance by agent/model/task-type
-- **Adapter layer** — pluggable orchestration (file-based, Paperclip, Claude Code native) and LLM providers (Anthropic, OpenAI, Groq, Ollama)
-- **OpenSpec workflow** — structured change management: proposal → design → specs → tasks → implement
-- **14 safety mechanisms** — budget circuit breakers, stale claim detection, test-gated completion, REM sleep, and more
-- **Defeat tests** — anti-pattern scanners with shrinking allowlists that track technical debt
+- **Agents remember past mistakes** — 5-layer memory system means agents learn from failures and don't repeat them
+- **Budget can't run away** — model manager monitors token spend, predictively swaps to cheaper models before budget runs out, falls back to free-tier providers so work never stops
+- **Quality improves automatically** — defeat tests catch known anti-patterns, shrinking allowlists ensure technical debt only goes down
+- **Every change is governed** — OpenSpec workflow (proposal → design → specs → tasks → implement) prevents cowboy coding
+- **Works with your AI tool** — 6 LLM providers (Anthropic, OpenAI, Groq, Gemini, Cerebras, Ollama), adapters for Claude Code, Cursor, Windsurf, and any other agent
+- **20 agent templates** — 15 execution roles (backend, frontend, reviewer, QA, architect, etc.) + 5 planning agents, each with battle-tested operating rules
+- **Self-healing** — health checks detect provider outages, auto-swap to healthy providers, reset stuck tasks, alert you via notification
+- **Adopt incrementally** — start with a rules file (Level 1), add as you need. No big-bang migration
 
 ## Maturity Model
 
@@ -51,6 +70,7 @@ Adopt incrementally — each level builds on the previous:
 
 | Level | Name | What You Add | Guide |
 |-------|------|-------------|-------|
+| 0 | Manual | No AI involvement (your starting point) | — |
 | 1 | Assisted | CLAUDE.md with project rules | [Level 1](docs/levels/level-1-assisted.md) |
 | 2 | Automated | Micro cycle: implement → test → commit | [Level 2](docs/levels/level-2-automated.md) |
 | 3 | Orchestrated | Task queue, multiple agents, domain routing | [Level 3](docs/levels/level-3-orchestrated.md) |
@@ -82,26 +102,19 @@ node ~/agentic-sdlc/agents/model-manager.mjs research         # Fetch latest pri
 node ~/agentic-sdlc/agents/cost-tracker.mjs report             # Cost report
 ```
 
-## Documentation
+## Documentation (Recommended Reading Order)
 
-| Guide | For |
-|-------|-----|
-| [ONBOARDING.md](ONBOARDING.md) | AI-agent-guided integration (start here) |
-| [docs/execution-agents.md](docs/execution-agents.md) | Choosing and customizing agent templates |
-| [docs/adapter-guide.md](docs/adapter-guide.md) | Writing custom orchestration/LLM adapters |
-| [docs/safety-mechanisms.md](docs/safety-mechanisms.md) | 14 safety mechanisms explained |
-| [framework/maturity-model.md](framework/maturity-model.md) | Full maturity model with checklists |
-| [framework/lesson-plan.md](framework/lesson-plan.md) | 7-hour structured learning curriculum |
-| [docs/cursor-setup.md](docs/cursor-setup.md) | Cursor + OpenAI setup guide |
-| [docs/comparison.md](docs/comparison.md) | vs LangGraph, AutoGen, CrewAI, MetaGPT |
-
-## Optional: Semantic Memory Search
-
-```bash
-pip install -r agents/requirements-nlp.txt
-```
-
-Enables vector-embedding-based memory search. Without it, memory search falls back to full recall.
+| # | Guide | When to read |
+|---|-------|-------------|
+| 1 | [ONBOARDING.md](ONBOARDING.md) | **Start here** — 5-phase integration protocol |
+| 2 | [docs/levels/](docs/levels/) | Read the guide matching your current level |
+| 3 | [docs/cursor-setup.md](docs/cursor-setup.md) | If using Cursor or Windsurf |
+| 4 | [docs/execution-agents.md](docs/execution-agents.md) | When choosing agent templates (Level 3+) |
+| 5 | [docs/safety-mechanisms.md](docs/safety-mechanisms.md) | When adding quality gates (Level 4+) |
+| 6 | [docs/adapter-guide.md](docs/adapter-guide.md) | When writing custom adapters |
+| 7 | [framework/maturity-model.md](framework/maturity-model.md) | Strategic planning and full checklists |
+| 8 | [docs/comparison.md](docs/comparison.md) | If evaluating alternatives |
+| 9 | [framework/lesson-plan.md](framework/lesson-plan.md) | 7-hour deep-dive curriculum |
 
 ## License
 

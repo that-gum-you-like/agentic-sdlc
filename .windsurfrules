@@ -1,5 +1,7 @@
 # Agentic SDLC Framework — Windsurf Integration
 
+> Note: This file intentionally mirrors `.cursorrules` — both Cursor and Windsurf read rules files the same way. The OpenSpec workflows and commands below work identically in both tools.
+
 This project uses the Agentic SDLC framework for structured, multi-agent AI development.
 
 ## Quick Start

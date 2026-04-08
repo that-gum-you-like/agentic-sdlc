@@ -279,6 +279,32 @@ function discoverProject(dir) {
 }
 
 async function main() {
+  // Handle --help flag
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(`Agentic SDLC — Project Bootstrap
+
+Usage:
+  node setup.mjs                          Interactive setup (creates files)
+  node setup.mjs --dir <path>             Set project directory
+  node setup.mjs --dry-run                Preview what would be created (no writes)
+  node setup.mjs --dry-run --dir <path>   Preview for a specific directory
+  node setup.mjs --discover --dir <path>  Analyze project without changes (JSON output)
+  node setup.mjs --discover --human       Human-readable summary line
+
+Flags:
+  --dir <path>    Target project directory (default: current directory)
+  --dry-run       Show what files/directories would be created, then exit
+  --discover      Non-destructive project analysis, outputs JSON report
+  --human         With --discover: add human-readable summary line
+
+Examples:
+  node ~/agentic-sdlc/setup.mjs --discover --dir ~/my-project
+  node ~/agentic-sdlc/setup.mjs --dry-run --dir ~/my-project
+  node ~/agentic-sdlc/setup.mjs --dir ~/my-project`);
+    rl.close();
+    return;
+  }
+
   // Handle --discover flag (non-destructive, outputs JSON)
   if (process.argv.includes('--discover')) {
     const dirIdx = process.argv.indexOf('--dir');
@@ -907,11 +933,22 @@ Use \`/openspec-new-change\` to start, \`/openspec-continue-change\` to advance,
   console.log('  Setup complete!');
   console.log('═'.repeat(50));
   console.log('');
-  console.log('  Next steps:');
+  console.log('  Your project is now configured with the Agentic SDLC framework.');
+  console.log('');
+  console.log('  What to do right now:');
+  console.log('');
   console.log(`  1. cd ${projectDir}`);
-  console.log('  2. Run `claude` — SDLC rules loaded automatically');
-  console.log('  3. Use `/openspec-new-change` to start your first change');
-  console.log('  4. Use `node ~/agentic-sdlc/agents/queue-drainer.mjs status` to check queue');
+  console.log('  2. Check your task queue:');
+  console.log('     node ~/agentic-sdlc/agents/queue-drainer.mjs status');
+  console.log('  3. Start your first change (pick one):');
+  console.log('     - Claude Code: run `claude` then type `/openspec-new-change`');
+  console.log('     - Cursor: open the project, say "start a new openspec change"');
+  console.log('     - Any tool: tell it "read ONBOARDING.md and help me start"');
+  console.log('');
+  console.log('  Useful commands:');
+  console.log('     node ~/agentic-sdlc/agents/model-manager.mjs models     # See available LLM models');
+  console.log('     node ~/agentic-sdlc/agents/test-behavior.mjs --dry-run  # Check agent quality');
+  console.log('     node ~/agentic-sdlc/agents/memory-manager.mjs recall <agent>  # Read agent memory');
   console.log('');
   console.log('  Suggested .gitignore additions:');
   console.log('    agents/cost-log.json');

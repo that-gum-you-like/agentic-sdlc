@@ -7,6 +7,7 @@ This guide covers setting up the Agentic SDLC framework in a Cursor environment,
 - Node.js 18+
 - Cursor IDE
 - An OpenAI API key (or another supported LLM provider)
+- Optional: `npm install -g openspec` (enables the OpenSpec workflow commands in .cursorrules)
 
 ## Setup
 

@@ -158,6 +158,18 @@ Once the user chooses a level, follow the corresponding guide in `docs/levels/`.
 3. **Step-by-step** — numbered actions to follow
 4. **Validation** — how to confirm it's working
 
+**Configure your LLM provider (if using framework scripts that call LLM APIs):**
+
+The framework itself doesn't require an LLM API key for core operations (task queue, memory, testing). But some advanced features (model-manager research, semantic search) use API keys. Set the one matching your provider:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."   # For Claude models
+export OPENAI_API_KEY="sk-..."          # For GPT models
+export GROQ_API_KEY="gsk_..."           # For Groq models (free tier available)
+export GEMINI_API_KEY="..."             # For Google Gemini (free tier available)
+export CEREBRAS_API_KEY="..."           # For Cerebras (free tier available)
+```
+
 **Key integration principles:**
 
 - **Add to what exists** — don't replace their current setup, extend it
@@ -276,3 +288,21 @@ Once integrated, the framework provides:
 | CLAUDE.md not being read by AI tool | Verify you're running the AI tool from the project root (where CLAUDE.md lives), not a subdirectory |
 | No `agents/` directory after setup | Run `setup.mjs` from the project directory, not the framework directory. Use `--dir` if needed. |
 | Test command fails during agent tasks | Verify `testCmd` in `agents/project.json` matches your actual test runner. Use full path: `node_modules/.bin/jest` not `npx jest` |
+
+---
+
+## Glossary
+
+Terms used throughout the framework documentation:
+
+| Term | Definition |
+|------|-----------|
+| **Micro cycle** | The atomic unit of agent work: pick task → implement → write tests → run tests → commit → next |
+| **OpenSpec** | The governance workflow for changes: proposal → design → specs → tasks → implement → archive. Prevents unstructured coding. |
+| **Defeat test** | A test that catches a known anti-pattern (e.g., `console.log` in production, `:any` types). Shrinking allowlists ensure these only decrease over time. |
+| **REM sleep** | Automated weekly memory consolidation. Promotes recent memories to long-term, deduplicates, and archives stale entries. Named after the brain's memory consolidation during sleep. |
+| **Domain routing** | Automatically assigning tasks to the right agent based on file patterns. Backend tasks go to the backend agent, frontend tasks to the frontend agent. |
+| **Fallback chain** | Ordered list of LLM models an agent can use. When the primary runs out of budget or goes down, it falls through to the next model. Should end with a free-tier model. |
+| **Model intel** | The `agents/model-intel.json` database of all known LLM models with costs, quality ratings, and capabilities. Updated by `model-manager.mjs research`. |
+| **Core memory** | Permanent agent memory (`core.json`) containing identity, values, and failure memories. Never deleted, always read before every task. |
+| **Maturation** | Agent improvement tracking across 6 levels (New → Corrected → Remembering → Teaching → Autonomous → Evolving). Agents advance by demonstrating self-correction. |

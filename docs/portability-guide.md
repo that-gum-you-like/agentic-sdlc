@@ -7,7 +7,7 @@ The agent system is designed to be dropped into any project without modification
 The recommended way to initialize a new project is to run the setup script:
 
 ```bash
-node agents/setup.mjs
+node ~/agentic-sdlc/setup.mjs --dir /path/to/your-project
 ```
 
 `setup.mjs` walks through the required configuration interactively, creates the directory structure, scaffolds empty memory files for each agent, and validates that the resulting setup can be loaded correctly. It is the fastest path from a bare repository to a running agent system.
