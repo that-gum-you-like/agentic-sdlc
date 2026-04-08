@@ -1,0 +1,27 @@
+{
+  "name": "agentic-sdlc",
+  "version": "1.0.0",
+  "description": "A methodology for running multi-agent AI development teams. Task queues, agent memory, quality gates, and progressive automation.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node tests/adapter-and-model-manager.test.mjs",
+    "test:behavior": "node agents/test-behavior.mjs --framework",
+    "test:all": "node tests/adapter-and-model-manager.test.mjs && node agents/test-behavior.mjs --framework",
+    "validate": "node agents/four-layer-validate.mjs --files 'agents/*.mjs'",
+    "assess": "node agents/maturity-assess.mjs",
+    "models": "node agents/model-manager.mjs models",
+    "check": "node agents/model-manager.mjs check",
+    "setup": "node setup.mjs",
+    "setup:discover": "node setup.mjs --discover",
+    "setup:dry-run": "node setup.mjs --dry-run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/that-gum-you-like/agentic-sdlc.git"
+  },
+  "keywords": ["ai", "agents", "sdlc", "multi-agent", "devops", "automation"]
+}
