@@ -134,16 +134,24 @@ Configure in `agents/project.json`:
 
 ```json
 {
-  "llm": { "defaultProvider": "openai" }
+  "llm": { "defaultProvider": "anthropic" }
 }
 ```
 
-Available providers: `anthropic`, `openai`, `groq`, `ollama`
+Available providers and their env vars:
 
-Set the API key for your provider:
-- `OPENAI_API_KEY` for OpenAI
-- `ANTHROPIC_API_KEY` for Anthropic
-- `GROQ_API_KEY` for Groq
+| Provider | Env var(s) | Notes |
+|---|---|---|
+| `anthropic` | `ANTHROPIC_API_KEY` | Claude direct |
+| `openai` | `OPENAI_API_KEY` | OpenAI direct |
+| `groq` | `GROQ_API_KEY` | Free tier available |
+| `gemini` | `GEMINI_API_KEY` | Free tier (250 req/day) |
+| `cerebras` | `CEREBRAS_API_KEY` | Free tier (1M tokens/day) |
+| `ollama` | `OLLAMA_HOST` | Local models |
+| `azure-openai` | `AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_API_KEY` | GPT-4o/o-series via Azure. See `docs/azure-foundry-integration.md` |
+| `azure-foundry-claude` | `AZURE_FOUNDRY_ENDPOINT` + `AZURE_FOUNDRY_API_KEY` | Claude via Microsoft Foundry (Anthropic Messages API). Enterprise/MCA-E only. |
+
+For Azure/Foundry setup (Cursor + enterprise policy), see `docs/azure-foundry-integration.md` and `.cursor/rules/azure-foundry.mdc`.
 
 ## Key Files
 

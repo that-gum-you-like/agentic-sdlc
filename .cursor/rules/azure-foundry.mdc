@@ -1,0 +1,76 @@
+---
+description: "Rules for wiring Azure OpenAI and Microsoft Foundry (Claude, GPT) as LLM providers via the Agentic SDLC adapter pattern. Load when touching project.json, budget.json, or LLM adapter files."
+globs: ["agents/project.json", "agents/budget.json", "agents/adapters/llm/**/*.mjs", "**/.env", "**/.env.example", "docs/azure-foundry-integration.md"]
+alwaysApply: false
+---
+
+# Azure / Microsoft Foundry Integration
+
+This project can route LLM calls through Azure OpenAI or Microsoft Foundry. The framework stays provider-neutral — only the adapter choice + env vars change.
+
+## Choosing a provider
+
+| Use case | `defaultProvider` | Env vars |
+|---|---|---|
+| GPT-4o / o-series via Azure OpenAI | `azure-openai` | `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY` |
+| Claude (Opus 4.7, Sonnet 4.6, Haiku 4.5) via Foundry | `azure-foundry-claude` | `AZURE_FOUNDRY_ENDPOINT`, `AZURE_FOUNDRY_API_KEY` |
+| Anthropic direct (not via Azure) | `anthropic` | `ANTHROPIC_API_KEY` |
+
+Claude in Foundry requires **Enterprise or MCA-E subscription** and deployment in **East US 2** or **Sweden Central**.
+
+## Setting it up in Cursor
+
+1. Set env vars in your shell (or `.env` at project root — Cursor inherits shell env).
+2. Edit `agents/project.json`:
+   ```json
+   { "llm": { "defaultProvider": "azure-foundry-claude" } }
+   ```
+3. In `agents/budget.json`, reference models by **deployment name** (the name you chose in Foundry), not the model id. If the name differs from the model family, map it:
+   ```json
+   {
+     "llm": {
+       "azureOpenAI": { "deployments": { "gpt4o-prod": "gpt-4o" } }
+     }
+   }
+   ```
+4. Restart Cursor's agent session so it picks up new env vars.
+
+## Auth: API key vs Entra ID
+
+| | API key | Entra ID (Bearer) |
+|---|---|---|
+| Header | `api-key` (OpenAI) / `x-api-key` (Claude) | `Authorization: Bearer <token>` |
+| Env var | `AZURE_*_API_KEY` | `AZURE_*_AUTH_TOKEN` |
+| Best for | Local dev | Production / SSO / audit |
+
+For Entra, acquire a token via `az account get-access-token --scope https://ai.azure.com/.default` and set the `AZURE_*_AUTH_TOKEN` env var. Tokens expire — set up refresh or use `DefaultAzureCredential` in a wrapper.
+
+## Claude-specific features in Foundry
+
+Claude via Foundry is the native Anthropic Messages API — the adapter supports:
+
+- `thinking`: `{ type: "adaptive" | "enabled" | "disabled" }` — adaptive lets the model decide
+- `effort`: `"low" | "medium" | "high" | "max"` (max only on Opus 4.7 / 4.6 / Sonnet 4.6)
+- Prompt caching via cache_control on message blocks
+- MCP connector and tool use
+- 1M context window on Opus 4.7 / 4.6 and Sonnet 4.6
+
+Pass these as `options.thinking` / `options.effort` when calling `complete()`.
+
+## When editing project.json or budget.json
+
+- Keep model references as **deployment names** consistent with what's in Foundry.
+- `budget.json` `fallbackChain` can mix providers — put the Azure adapter first for organisational policy, free-tier (Groq/Gemini/Cerebras) last for emergency fallback.
+- Running `node ~/agentic-sdlc/agents/paperclip-sync.mjs` after editing pushes the config to the Paperclip orchestrator (if you're using it — optional).
+
+## Microsoft Agent Framework interop
+
+Microsoft Agent Framework (AutoGen + Semantic Kernel merged, GA Q1 end 2026) builds individual agents. Agentic SDLC orchestrates a team of them over the SDLC — no overlap.
+
+- **Your execution agent is an MAF agent?** Wrap its invocation in a shell script; have `worker.mjs` invoke it. SDLC owns the task queue, memory, governance.
+- **You want SDLC scripts exposed as MAF tools?** Wrap `queue-drainer.mjs`, `notify.mjs`, etc. as HTTP endpoints (Azure Functions works well) and add them as tools in the MAF agent manifest.
+- Both speak MCP and A2A — use those as the interop protocol, not bespoke REST.
+
+## Full guide
+
+See `docs/azure-foundry-integration.md` for auth details, Azure Pipelines CI example, model deployment cheat sheet, troubleshooting table, and neutral ethics framing for OpenAI-weight policies.

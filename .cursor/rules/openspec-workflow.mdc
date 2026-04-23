@@ -1,0 +1,96 @@
+---
+description: "OpenSpec workflow — how to run proposal → design → specs → tasks → implement → archive via the openspec CLI. Load when the user mentions OpenSpec, starts a new change, or asks to continue/verify/archive one."
+alwaysApply: false
+---
+
+# OpenSpec Workflow (Cursor Edition)
+
+OpenSpec is mandatory for every change in this project — no direct commits without a corresponding change folder. Cursor doesn't have Claude Code's `/skill` system, so run the CLI commands directly.
+
+## Start a new change
+
+Triggers: "start a new change", "openspec new", "let's add X", described feature/fix.
+
+1. Ask what to build (if unclear). Derive a kebab-case name: "add user auth" → `add-user-auth`.
+2. **Discovery first** — read existing files in the affected area, note specific paths.
+3. Run:
+   ```bash
+   openspec new change "<name>"
+   openspec status --change "<name>"
+   openspec instructions <first-ready-artifact> --change "<name>"
+   ```
+4. Show the template and **STOP** — wait for user direction on content.
+
+## Continue a change
+
+Triggers: "continue", "next artifact", "openspec continue".
+
+1. `openspec list --json` → find active changes.
+2. `openspec status --change "<name>" --json` → find next ready artifact.
+3. `openspec instructions <artifact-id> --change "<name>" --json` → get template.
+4. Draft content based on instructions + project context.
+5. Write the artifact file.
+6. Show status, **STOP**.
+
+## Fast-forward
+
+Triggers: "fast forward", "ff", "create all artifacts".
+
+1. `openspec status --change "<name>" --json`.
+2. Loop all ready artifacts in dependency order:
+   - Get instructions.
+   - Draft and write.
+3. Stop when all pre-implementation artifacts are complete.
+4. Show final status.
+
+## Implement
+
+Triggers: "implement", "apply", "build this".
+
+1. `openspec status --change "<name>" --json`.
+2. Read all context: proposal, design, specs, tasks.
+3. For each pending task:
+   - Implement the code change.
+   - Write tests (happy path + one error case).
+   - Run tests.
+   - Mark task complete in `tasks.md`.
+4. Commit after each task (or batch for doc-mode tasks).
+
+## Verify
+
+Triggers: "verify", "check implementation".
+
+1. Read the specs and tasks for the change.
+2. Grep codebase for evidence of each REQ-xxx.
+3. Report: **CRITICAL** (missing), **WARNING** (partial), **SUGGESTION** (improvement).
+4. List any requirements without implementation evidence.
+
+## Archive
+
+Triggers: "archive", "done with this change".
+
+1. `openspec status --change "<name>" --json` — verify all tasks complete.
+2. `mv openspec/changes/<name> openspec/changes/archive/$(date +%Y-%m-%d)-<name>`.
+
+## Sync specs
+
+Triggers: "sync specs".
+
+1. Read delta specs from the change.
+2. Apply ADDED / MODIFIED / REMOVED requirements to main specs in `openspec/specs/`.
+
+## Explore (no implementation)
+
+Triggers: "explore", "think about", "investigate".
+
+1. Thinking-partner mode — do not implement.
+2. Read relevant code, consider options.
+3. Can create OpenSpec artifacts if exploration leads to a change.
+
+## Required sections in every artifact
+
+- **proposal.md** MUST include a `## Value Analysis` section.
+- **specs/<capability>/spec.md** uses REQ-xxx with Statement, Acceptance Criteria, Dependencies, Complexity (S/M/L/XL), Value (Critical/High/Medium/Low).
+- **tasks.md** uses `- [ ]` checkboxes. Each task is 1-3 hours of work.
+
+See `framework/requirements-guide.md` for the REQ-xxx schema and `openspec/templates/` for the templates.

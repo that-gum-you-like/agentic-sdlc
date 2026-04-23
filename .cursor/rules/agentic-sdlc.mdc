@@ -1,0 +1,87 @@
+---
+description: "Agentic SDLC core framework rules — micro cycle, tests, OpenSpec, memory. Load for every agent turn in a project using this framework."
+alwaysApply: true
+---
+
+# Agentic SDLC — Core Operating Rules
+
+This project uses the Agentic SDLC framework. The full rules live in `CLAUDE.md` (also read by Claude Code, same content). Below is the condensed version for Cursor.
+
+## Non-Negotiable Rules
+
+1. **Every change goes through OpenSpec:** proposal → design → specs → tasks → implement → archive. Never skip.
+2. **Every task must include tests.** Commits without tests are blocked.
+3. **Micro cycle:** Pick task → Implement → Write tests → Run tests → Commit if passing → Next.
+4. **Small files, small commits.** Services < 150 lines, screens < 200 lines. One logical change per commit.
+5. **Read memory before starting, write memory after completing.**
+6. **Anti-patterns get named specifically** — "not modular" / "silent fallback to zero", not just "bad".
+7. **Failures become core memories.** Record every mistake in the agent's memory so it doesn't repeat.
+
+## Micro Cycle (every task)
+
+1. Read task from `tasks/queue/<task-id>.json` (if using task queue) or user request.
+2. Read agent memory: `node ~/agentic-sdlc/agents/memory-manager.mjs recall <agent>`.
+3. Implement the change in the smallest reasonable scope.
+4. Write tests (happy path + at least one error case).
+5. Run the project's test command.
+6. If frontend files changed → run browser E2E against a local production build.
+7. If tests pass → commit → mark task complete. If they fail → fix and re-run (max 3 attempts, then flag blocked).
+8. Append to `plans/devlog.md` with what changed.
+
+## OpenSpec Commands (Cursor-friendly — no `/skill` system)
+
+When the user asks for OpenSpec workflow actions, run the matching CLI:
+
+| User says | Action |
+|---|---|
+| "start a new change" / "openspec new" | `openspec new change "<kebab-name>"` then `openspec instructions <first-artifact>` |
+| "continue" / "next artifact" | `openspec list --json` → `openspec status --change "<name>" --json` → draft the next artifact |
+| "fast forward" / "ff" | Loop all ready artifacts in dependency order |
+| "implement" / "apply" | Read proposal + design + specs + tasks, then follow the micro cycle per task |
+| "verify" / "check" | Grep codebase for each REQ-xxx, report CRITICAL / WARNING / SUGGESTION |
+| "archive" / "done" | Move `openspec/changes/<name>` → `openspec/changes/archive/YYYY-MM-DD-<name>` |
+
+Ask the user before jumping from one artifact to the next — don't speed-run the whole workflow unless they explicitly say "ff".
+
+## Testing Tiers
+
+```bash
+<project-test-cmd>                                   # Tier 1: unit
+<integration-cmd>                                    # Tier 2: service↔store
+<defeat-cmd>                                         # Tier 3: anti-pattern scans
+node ~/agentic-sdlc/agents/four-layer-validate.mjs   # 4-layer AST validation
+node ~/agentic-sdlc/agents/test-behavior.mjs         # Agent prompt quality
+# Tier 5 (browser E2E) when frontend touched
+```
+
+- After any code change: run full test suite.
+- Before every commit: run defeat tests if configured.
+- After editing any `AGENT.md`: run behavior tests — MUST pass before committing.
+
+## Done Checklist (project.json configurable)
+
+Default for app projects: `["openspec", "tests", "commit", "deploy", "verify", "notify"]`.
+Default for framework repos: `["openspec", "tests", "commit", "push"]`.
+
+"Wrote the code" is NOT "shipped the fix." Every step in the project's configured list must complete before reporting done.
+
+## Key Framework Scripts (all Node.js, zero dependencies)
+
+| Command | Use |
+|---|---|
+| `node ~/agentic-sdlc/agents/queue-drainer.mjs status` | See task queue |
+| `node ~/agentic-sdlc/agents/memory-manager.mjs recall <agent>` | Read agent memory |
+| `node ~/agentic-sdlc/agents/four-layer-validate.mjs` | Anti-pattern scan |
+| `node ~/agentic-sdlc/agents/test-behavior.mjs` | Agent prompt quality check |
+| `node ~/agentic-sdlc/agents/model-manager.mjs check` | Budget + predictive model swap |
+| `node ~/agentic-sdlc/agents/cost-tracker.mjs report` | Cost/efficiency report |
+
+## Reference Docs
+
+- `CLAUDE.md` — full framework rules (canonical source)
+- `ONBOARDING.md` — 5-phase integration protocol for new projects
+- `docs/execution-agents.md` — 15 agent template catalog
+- `docs/safety-mechanisms.md` — budget, stale claims, REM sleep
+- `docs/adapter-guide.md` — writing custom LLM/orchestration adapters
+- `docs/azure-foundry-integration.md` — Azure OpenAI / Claude-in-Foundry
+- `framework/maturity-model.md` — 7-level progressive adoption
