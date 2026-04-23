@@ -394,10 +394,13 @@ test('memoryTokenBudget defaults to 4000 in load-config', async () => {
 
 console.log('\n📋 Model manager intelligence:');
 
-test('model-intel.json exists and has models from all 4 providers', () => {
-  const intelPath = resolve(SDLC_ROOT, 'agents/model-intel.json');
-  assert(existsSync(intelPath), 'model-intel.json should exist');
-  const intel = JSON.parse(readFileSync(intelPath, 'utf8'));
+// model-intel.json is a runtime cache (gitignored). Tests read the shipped
+// default catalog at agents/model-intel.default.json.
+const INTEL_DEFAULT_PATH = resolve(SDLC_ROOT, 'agents/model-intel.default.json');
+
+test('model-intel.default.json exists and has models from all 4 providers', () => {
+  assert(existsSync(INTEL_DEFAULT_PATH), 'model-intel.default.json should exist');
+  const intel = JSON.parse(readFileSync(INTEL_DEFAULT_PATH, 'utf8'));
   assert(intel.models, 'Should have models object');
 
   const providers = new Set(Object.values(intel.models).map(m => m.provider));
@@ -406,8 +409,8 @@ test('model-intel.json exists and has models from all 4 providers', () => {
   assert(providers.has('groq'), 'Should have groq models');
 });
 
-test('all models in model-intel.json have required fields', () => {
-  const intel = JSON.parse(readFileSync(resolve(SDLC_ROOT, 'agents/model-intel.json'), 'utf8'));
+test('all models in model-intel.default.json have required fields', () => {
+  const intel = JSON.parse(readFileSync(INTEL_DEFAULT_PATH, 'utf8'));
   for (const [id, m] of Object.entries(intel.models)) {
     assert(m.provider, `${id}: should have provider`);
     assert(typeof m.costPer1MInput === 'number', `${id}: should have costPer1MInput`);
@@ -465,16 +468,16 @@ test('queue-drainer checkAgentBudget blocks budget-exhausted agents', () => {
 
 console.log('\n📋 Model manager resilience:');
 
-test('model-intel.json has providerHealth tracking', () => {
-  const intel = JSON.parse(readFileSync(resolve(SDLC_ROOT, 'agents/model-intel.json'), 'utf8'));
+test('model-intel.default.json has providerHealth schema', () => {
+  const intel = JSON.parse(readFileSync(INTEL_DEFAULT_PATH, 'utf8'));
   assert(intel.providerHealth, 'Should have providerHealth object');
   assert(intel.providerHealth.groq, 'Should track groq health');
   assert(intel.providerHealth.gemini, 'Should track gemini health');
   assert(intel.providerHealth.cerebras, 'Should track cerebras health');
 });
 
-test('model-intel.json has free-tier models from Gemini and Cerebras', () => {
-  const intel = JSON.parse(readFileSync(resolve(SDLC_ROOT, 'agents/model-intel.json'), 'utf8'));
+test('model-intel.default.json has free-tier models from Gemini and Cerebras', () => {
+  const intel = JSON.parse(readFileSync(INTEL_DEFAULT_PATH, 'utf8'));
   assert(intel.models['gemini-2.5-flash'], 'Should have gemini-2.5-flash');
   assert(intel.models['gemini-2.5-flash'].free === true, 'gemini-2.5-flash should be marked free');
   assert(intel.models['llama3.1-8b-cerebras'], 'Should have llama3.1-8b-cerebras');

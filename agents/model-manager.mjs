@@ -66,8 +66,16 @@ function loadCostLog() {
 }
 
 function loadModelIntel() {
-  if (!existsSync(INTEL_PATH)) return { models: {} };
-  try { return JSON.parse(readFileSync(INTEL_PATH, 'utf8')); } catch { return { models: {} }; }
+  if (existsSync(INTEL_PATH)) {
+    try { return JSON.parse(readFileSync(INTEL_PATH, 'utf8')); } catch { /* fall through to default */ }
+  }
+  // model-intel.json is a runtime cache (gitignored). Fall back to the
+  // shipped default catalog so first-run / fresh clones have model data.
+  const defaultPath = resolve(config.agentsDir, 'model-intel.default.json');
+  if (existsSync(defaultPath)) {
+    try { return JSON.parse(readFileSync(defaultPath, 'utf8')); } catch { /* fall through */ }
+  }
+  return { models: {} };
 }
 
 function saveModelIntel(intel) {
