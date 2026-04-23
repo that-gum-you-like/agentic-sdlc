@@ -19,7 +19,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const AGENTS_DIR = resolve(__dirname, '..');
 
-const VENV_PYTHON = '/home/bryce/agentic-sdlc/.venv/bin/python3';
+const VENV_PYTHON = resolve(AGENTS_DIR, '..', '.venv', 'bin', 'python3');
 const PYTHON_PATH = existsSync(VENV_PYTHON) ? VENV_PYTHON : 'python3';
 let PYTHON_AVAILABLE = false;
 try {

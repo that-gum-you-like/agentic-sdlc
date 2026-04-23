@@ -98,15 +98,17 @@ test('listOrchestrationAdapters returns 3 adapters', () => {
   assert(adapters.includes('claude-code-native'), 'Should include claude-code-native');
 });
 
-test('listLlmAdapters returns 6 adapters', () => {
+test('listLlmAdapters returns 8 adapters', () => {
   const adapters = listLlmAdapters();
-  assertEqual(adapters.length, 6, `Expected 6 LLM adapters, got ${adapters.length}`);
+  assertEqual(adapters.length, 8, `Expected 8 LLM adapters, got ${adapters.length}`);
   assert(adapters.includes('anthropic'), 'Should include anthropic');
   assert(adapters.includes('groq'), 'Should include groq');
   assert(adapters.includes('ollama'), 'Should include ollama');
   assert(adapters.includes('openai'), 'Should include openai');
   assert(adapters.includes('gemini'), 'Should include gemini');
   assert(adapters.includes('cerebras'), 'Should include cerebras');
+  assert(adapters.includes('azure-openai'), 'Should include azure-openai');
+  assert(adapters.includes('azure-foundry-claude'), 'Should include azure-foundry-claude');
 });
 
 // ============================================================================
@@ -505,6 +507,26 @@ test('Cerebras adapter exports all 5 required functions', async () => {
   assert(typeof adapter.checkAvailability === 'function', 'Should export checkAvailability');
   assert(typeof adapter.getModelInfo === 'function', 'Should export getModelInfo');
   assert(typeof adapter.listModels === 'function', 'Should export listModels');
+});
+
+test('Azure OpenAI adapter exports all 5 required functions', async () => {
+  const adapter = await import(resolve(SDLC_ROOT, 'agents/adapters/llm/azure-openai.mjs'));
+  assert(typeof adapter.complete === 'function', 'Should export complete');
+  assert(typeof adapter.estimateTokens === 'function', 'Should export estimateTokens');
+  assert(typeof adapter.checkAvailability === 'function', 'Should export checkAvailability');
+  assert(typeof adapter.getModelInfo === 'function', 'Should export getModelInfo');
+  assert(typeof adapter.listModels === 'function', 'Should export listModels');
+  assert(adapter.listModels().includes('gpt-4o'), 'Should include gpt-4o');
+});
+
+test('Azure Foundry Claude adapter exports all 5 required functions', async () => {
+  const adapter = await import(resolve(SDLC_ROOT, 'agents/adapters/llm/azure-foundry-claude.mjs'));
+  assert(typeof adapter.complete === 'function', 'Should export complete');
+  assert(typeof adapter.estimateTokens === 'function', 'Should export estimateTokens');
+  assert(typeof adapter.checkAvailability === 'function', 'Should export checkAvailability');
+  assert(typeof adapter.getModelInfo === 'function', 'Should export getModelInfo');
+  assert(typeof adapter.listModels === 'function', 'Should export listModels');
+  assert(adapter.listModels().includes('claude-sonnet-4-6'), 'Should include claude-sonnet-4-6');
 });
 
 // ============================================================================

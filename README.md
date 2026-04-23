@@ -18,8 +18,55 @@ Works with any AI coding tool: Claude Code, Cursor, Windsurf, Copilot, Aider, or
 ### Option A: Point your AI agent at this repo
 Tell your AI agent: *"Read ONBOARDING.md in this repo and help me integrate this framework into my project."* The onboarding guide walks the agent through discovering your project, assessing your current practices, and integrating incrementally.
 
-**Prerequisites:** Node.js 18+, git
-**Optional:** `npm install -g openspec` (required for Cursor/Windsurf OpenSpec workflows)
+**Required:** Node.js 18+, git. That's it. The framework has zero npm dependencies (pure Node stdlib) and installs nothing globally.
+
+**Optional (only if you opt in):**
+- `npm install -g openspec` — required for Cursor/Windsurf OpenSpec workflows
+- Python 3 + `pip install -r agents/requirements-nlp.txt` — only for semantic memory search (non-semantic search works without it)
+- An LLM provider API key — Anthropic / Groq / Gemini / Cerebras / OpenAI / Ollama (only needed for scripts that call a model; the orchestration scripts run locally with no network)
+
+## What Running This Repo Does (and Doesn't Do) — Safety Review
+
+If you're cloning this onto a work or locked-down machine, here's exactly what you're getting:
+
+| Concern | Reality |
+|---|---|
+| **Does cloning run any code?** | No. `git clone` just downloads source files. |
+| **Does `setup.mjs` install anything globally?** | No. It creates files in *your* project directory (`agents/`, `plans/`, `openspec/`, config files). It never modifies your system, shell, or PATH. Run with `--dry-run` to preview. |
+| **Any npm dependencies?** | Zero. Every script uses Node.js stdlib only. The only `package.json` with deps is empty. |
+| **Any network calls at rest?** | No. Scripts only call the network when you explicitly invoke a model (via a provider adapter you configured) or run `model-manager.mjs research` (fetches provider pricing pages). |
+| **Any telemetry?** | None. The framework writes logs *locally* to `pm/` — never transmits anywhere. |
+| **Does it need OpenClaw, Paperclip, Matrix, or WhatsApp?** | **No — all optional adapters.** See below. |
+
+### Optional integrations (adapters — skip any you don't want)
+
+| Adapter | What it is | Skip by… |
+|---|---|---|
+| **OpenClaw** | A personal WhatsApp/browser automation gateway the author uses locally. Appears in `notify.mjs` as one of three notification providers. | Default. Leave `notification.provider: "none"` (the default) in `project.json`. No OpenClaw binary means OpenClaw code paths are never entered. |
+| **Paperclip** | Cloud orchestration control plane. Requires `.paperclip.env` with API keys. | Default. Leave `orchestration.adapter: "file-based"` (the default) in `project.json`. Without `.paperclip.env`, Paperclip code never runs. |
+| **Matrix** | Self-hosted agent-to-agent chat (`matrix-client/`). Requires you to run your own Synapse/conduwuit homeserver. | Simply don't use `matrix-cli.mjs`. Nothing else depends on it. |
+| **WhatsApp / external channels** | Delivery targets for `notify.mjs`. | `notification.provider: "file"` writes to `pm/notifications.log` instead — zero external network. |
+
+### Using the framework with Microsoft / Azure (Foundry, Agent Framework, Cursor)
+
+The framework is provider-neutral via its LLM adapter pattern. For Microsoft-ecosystem teams, two adapters ship out of the box:
+
+- **`azure-openai`** — OpenAI models (GPT-4o, o-series) deployed in Azure OpenAI / Foundry. Uses the v1 chat/completions API. API-key or Entra ID auth.
+- **`azure-foundry-claude`** — Claude models deployed in Foundry via the Anthropic Messages API. Supports `thinking`, `effort`, prompt caching, and MCP just like Claude direct. Enterprise/MCA-E only, East US 2 / Sweden Central.
+
+Point `llm.defaultProvider` in `agents/project.json` at either, set the `AZURE_*_ENDPOINT` and `AZURE_*_API_KEY` env vars, and the rest of the framework (queue, memory, cost tracker, micro cycle) runs unchanged. Cursor users get this automatically — `.cursorrules` is loaded every turn, so the SDLC micro cycle and OpenSpec workflow drive Cursor's agent while Foundry serves the models.
+
+**Microsoft Agent Framework** (merged AutoGen + Semantic Kernel, GA end of Q1 2026) doesn't overlap with this framework — MAF builds individual agents, this framework orchestrates a team of them over the SDLC. MAF agents can be wrapped as execution agents, or SDLC scripts can be exposed as tools in a MAF agent. Both sides speak MCP and A2A.
+
+See [docs/azure-foundry-integration.md](docs/azure-foundry-integration.md) for the full guide (auth, CI/CD, deployment cheat sheet, troubleshooting).
+
+**Bottom line for a work machine:** clone, run `setup.mjs --dry-run` first, review what it would create, and keep all adapter settings at their defaults (`file-based` / `none`). You can use the framework with nothing but Node.js and your AI coding tool of choice.
+
+### What to review before trusting it
+- `setup.mjs` — the only script that modifies your filesystem outside `pm/` (creates template files in *your* project)
+- `agents/*.mjs` — the orchestration scripts. All stay inside your project directory.
+- `agents/adapters/llm/*.mjs` — these are the only files that make network calls to third parties (and only when you invoke them with a configured provider)
+- `agents/templates/` — string templates written into your project by `setup.mjs`; inspect anything you don't want copied
 
 ### Option B: Run the setup script
 ```bash

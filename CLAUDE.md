@@ -331,6 +331,8 @@ The framework is platform-agnostic. Orchestration and LLM providers are configur
 - `gemini` — Google Gemini models via `GEMINI_API_KEY` (free tier: 250 req/day, no CC)
 - `cerebras` — Cerebras Inference via `CEREBRAS_API_KEY` (free tier: 1M tokens/day, no CC)
 - `ollama` — Local models via Ollama at `http://localhost:11434`
+- `azure-openai` — GPT-4o/o-series deployed in Azure OpenAI / Foundry via `AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_API_KEY`
+- `azure-foundry-claude` — Claude deployed in Foundry (Anthropic Messages API) via `AZURE_FOUNDRY_ENDPOINT` + `AZURE_FOUNDRY_API_KEY`. Enterprise/MCA-E only.
 
 **Free emergency fallbacks:** Groq, Gemini, and Cerebras all offer free tiers with no credit card. Every agent's fallback chain should end with a free-tier model to guarantee zero downtime.
 
@@ -498,7 +500,6 @@ Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
 | `agents/cycles/daily-review.mjs` | Daily summary + dashboard + bottleneck detection |
 | `agents/cycles/weekly-review.mjs` | Weekly review + REM sleep + maturation metrics |
 | `agents/matrix-client/matrix-cli.mjs` | Matrix communication CLI (+ schema validation) |
-| `agents/start.sh` | System startup (Matrix + queue status) |
 | `agents/notify.mjs` | Notification, approval, wellness checks |
 | `agents/mailbox-sync.mjs` | Sync inbound WhatsApp messages to mailbox |
 | `agents/semantic-index.mjs` | Vector embedding index for semantic memory search |

@@ -143,10 +143,9 @@ You can add or remove rooms to match your team structure. Update agent system pr
 
 **Communication commands:**
 
-```bash
-# Start the Matrix server
-bash agents/start.sh
+Matrix is optional — start your own Matrix/Synapse/conduwuit homeserver (or skip Matrix entirely and use another channel). Once your homeserver is running:
 
+```bash
 # Send a message to a room
 node agents/matrix-client/matrix-cli.mjs send <agent> <room> "<message>"
 
@@ -325,10 +324,10 @@ node agents/cost-tracker.mjs report                                    # Daily c
 node agents/cost-tracker.mjs report --weekly                           # Weekly cost summary
 ```
 
-### Matrix Communication
+### Matrix Communication (Optional)
 
 ```bash
-bash agents/start.sh                                               # Start the Matrix server
+# Matrix/conduwuit/Synapse homeserver runs separately — not shipped with this framework.
 node agents/matrix-client/matrix-cli.mjs send <agent> <room> "<message>"
 node agents/matrix-client/matrix-cli.mjs read <agent> <room> --limit N
 ```
