@@ -1,0 +1,122 @@
+---
+description: "Run a named housekeeping cycle (daily-review, weekly-review, rem-sleep, pattern-hunt, cost-tracker, alignment-monitor, capability-monitor) and commit any output. Loads when a Cursor Background Agent's goal mentions one of these cycle names."
+globs: ["pm/auto/**", "agents/cycles/**", "agents/cost-tracker.mjs", "agents/rem-sleep.mjs", "agents/pattern-hunt.mjs", "agents/alignment-monitor.mjs", "agents/capability-monitor.mjs"]
+alwaysApply: false
+---
+
+# SDLC Housekeeping Rules (for Background Agents)
+
+You are a Cursor Background Agent fired by a scheduled Automation. The user's goal mentions a housekeeping cycle name (daily-review, weekly-review, rem-sleep, pattern-hunt, cost-tracker, alignment-monitor, capability-monitor). Your job: run the corresponding script, capture its output, commit it.
+
+## Cycle → command mapping
+
+| Cycle keyword | Command |
+|---|---|
+| `daily-review` | `node ~/agentic-sdlc/agents/cycles/daily-review.mjs` |
+| `weekly-review` | `node ~/agentic-sdlc/agents/cycles/weekly-review.mjs` |
+| `rem-sleep` | `node ~/agentic-sdlc/agents/rem-sleep.mjs` |
+| `pattern-hunt` | `node ~/agentic-sdlc/agents/pattern-hunt.mjs` |
+| `cost-tracker` | `node ~/agentic-sdlc/agents/cost-tracker.mjs report` |
+| `alignment-monitor` | `node ~/agentic-sdlc/agents/alignment-monitor.mjs` |
+| `capability-monitor` | `node ~/agentic-sdlc/agents/capability-monitor.mjs check` |
+
+## Pre-flight
+
+1. Confirm `~/agentic-sdlc/` exists. If missing, clone:
+   ```bash
+   git clone https://github.com/that-gum-you-like/agentic-sdlc.git ~/agentic-sdlc
+   ```
+2. Confirm `agents/project.json` exists in the current repo (this is a framework-using project, not the framework itself)
+
+## Run the cycle
+
+3. Identify the cycle from your Automation prompt (which keyword does it mention?). Pick exactly one — if ambiguous, exit with an error message asking the user to clarify.
+4. Run the corresponding command, capturing both stdout and stderr to a temp file:
+   ```bash
+   mkdir -p pm/auto
+   <command> > /tmp/cycle-output.txt 2>&1
+   EXIT_CODE=$?
+   ```
+5. Check the exit code:
+   - 0: success, proceed
+   - non-zero: log the failure to `pm/auto/<cycle>-<YYYY-MM-DD>-FAILED.md` with the captured output and the exit code; commit; exit non-zero
+
+## Decide whether to commit an artifact
+
+6. Inspect the captured output:
+   - **If output is empty or "no changes" / "nothing to report":** log a no-op message to stdout and exit 0. No commit. (Prevents `pm/auto/` from filling with empty files.)
+   - **If output has substantive content:** commit it. Continue to step 7.
+
+## Write the artifact
+
+7. Move the captured output to a dated file:
+   ```bash
+   mv /tmp/cycle-output.txt pm/auto/<cycle>-<YYYY-MM-DD>.md
+   ```
+   File format conventions:
+   - Filename uses ISO date (UTC) — easy to grep
+   - First line of the file is a markdown header: `# <cycle-name> — <date>`
+   - If the script outputs structured data (JSON), preserve it as a fenced code block
+   - If the output is a long log, trim repetitive lines and link to the full log if one exists
+
+8. If the cycle modified other files (e.g. `rem-sleep.mjs` may consolidate memory files): include those in the commit too. Use `git status` to see what changed.
+
+## Commit and push
+
+9. Branch off main:
+   ```bash
+   git checkout -b agent/cursor/<cycle>-<YYYY-MM-DD>
+   ```
+10. Stage exactly the modified files: `git add pm/auto/<file> [other-files]`. Never `git add .`.
+11. Commit:
+    ```
+    <cycle>: <one-line summary of what the report shows>
+
+    Cycle: <cycle-name>
+    Agent: cursor-agent (housekeeping)
+    Date: <YYYY-MM-DD>
+    ```
+12. Push the branch:
+    ```bash
+    git push -u origin agent/cursor/<cycle>-<YYYY-MM-DD>
+    ```
+13. If `gh` available, open a PR with auto-merge enabled (housekeeping artifacts rarely need human review):
+    ```bash
+    gh pr create --title "<cycle>: <date>" --body "Automated housekeeping report. Safe to auto-merge if CI passes."
+    ```
+    Else: leave the branch pushed.
+
+## Special-case: rem-sleep modifies memory files
+
+`rem-sleep.mjs` rewrites `agents/<agent>/memory/*.json` files in-place. After running it:
+- Run `git diff agents/` to see which memory files changed
+- Include all modified memory files in the commit alongside the `pm/auto/rem-sleep-<date>.md` summary
+- The summary should list which agents had memory consolidated and how many entries were promoted/pruned
+
+## Special-case: pattern-hunt may propose new defeat tests
+
+`pattern-hunt.mjs` may suggest new anti-pattern tests in `tests/defeat/`. After running it:
+- Do NOT auto-commit the suggested test files. They need human review.
+- The `pm/auto/pattern-hunt-<date>.md` artifact should list the suggestions with file paths
+- Add a TODO line to the artifact: "Review suggested defeat tests at <path> before adding to suite"
+
+## Special-case: alignment-monitor may suggest prompt updates
+
+`alignment-monitor.mjs` may suggest changes to `AGENT.md` files. After running it:
+- Do NOT auto-modify `AGENT.md` files. Behavior tests must run after any prompt change.
+- The `pm/auto/alignment-monitor-<date>.md` artifact lists suggestions
+- Add a TODO: "Review prompt suggestions, run `test-behavior.mjs` after any AGENT.md edit"
+
+## Exit cleanly
+
+14. Print one final line summarizing what was done:
+    - "Cycle <name> complete. Artifact: pm/auto/<file>. Branch: agent/cursor/<cycle>-<date>."
+    - OR: "Cycle <name>: no changes. No commit."
+
+## Things you must NOT do
+
+- ❌ Don't commit to main directly. Always feature branch.
+- ❌ Don't pick a cycle different from what the Automation prompt requested.
+- ❌ Don't run multiple cycles in one Background Agent fire. One Automation = one cycle.
+- ❌ Don't modify source code (`agents/*.mjs`, etc.) during a housekeeping cycle. If a cycle's output suggests source changes, log them as TODOs in the artifact.
+- ❌ Don't disable validation features even if they slow you down.

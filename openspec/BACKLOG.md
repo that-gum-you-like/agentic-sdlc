@@ -21,6 +21,7 @@ The following ideas from the 2026-03-13 curriculum review have been implemented:
 | 9 | NLP Code Analysis | `curriculum-maturity-advancement` (tasks 14.1-14.5) — partially implemented |
 | 10 | Agent Evolution Timeline | `curriculum-maturity-advancement` (tasks 7.1-7.6) |
 | — | Capability Monitoring | `agent-capability-checklist` (31 tasks) — 29/31 complete, system instrumentation + monitor + docs done (2026-03-13) |
+| 17 | Cursor Automations Worker Integration | `cursor-automations-worker-integration` (shipped 2026-05-21) — 2 `.cursor/rules/*.mdc` files + `docs/cursor-automations-playbook.md` for the 7-Automation UI setup |
 
 ---
 
@@ -105,27 +106,6 @@ Open a PR upstream to `paperclipai/paperclip`. High career-signal value — a me
 **Priority:** Low-Medium. Wait until Level 6 has run ~30 days so we have memory-quality data to validate against.
 
 **Sources:** [ace-agent/ace](https://github.com/ace-agent/ace), [ACE paper](https://arxiv.org/abs/2510.04618)
-
----
-
-### 17. Cursor Automations Worker Integration
-
-**Problem:** Phase 1 of `level-6-autonomous-activation` uses Groq Llama 3.3 70B as the autonomous worker. Quality is lower than Claude. Bryce has Cursor Pro+ via his work license, which includes Automations (scheduled cloud-hosted agent fires) and Background Agents (cloud sandboxes that can claim + execute tasks). Wiring Cursor as the primary worker tier dramatically raises the quality of autonomous output while staying $0 marginal cost (Cursor's auto mode is unlimited within Pro+).
-
-**Idea:**
-1. Write `.cursor/automations/sdlc-queue-drain.yaml` (or platform equivalent) that fires hourly and claims the next pending task from `tasks/queue/*.json` in the agentic-sdlc repo
-2. Write `.cursor/rules/sdlc-task-execution.mdc` instructing the Cursor Background Agent how to: read a task spec, execute the micro cycle (implement → test → commit), update task status, push
-3. Add a `workerTier: "cursor" | "groq"` field per task with `cursor` as default for code-writing tasks
-4. Multi-project-orchestrator marks `cursor`-tier tasks as `needs-cursor` and skips local execution; Groq handles `groq`-tier tasks (analysis, summaries)
-5. Cursor cloud sandbox commits + pushes; local cron picks up the next housekeeping cycle naturally
-
-**Complexity:** Medium-high (new integration surface; Cursor Automations format research needed).
-
-**Priority:** High — this is the "$0 marginal cost, top-quality work, follows me anywhere" architecture Bryce actually wants. Run as `cursor-automations-worker-integration` change right after Day 7 verification.
-
-**Pre-requisites:**
-- Level 6 baseline shipped (`level-6-autonomous-activation` archived)
-- Bryce confirms his Cursor Pro+ is current and not about to lapse (his work is migrating to Claude)
 
 ---
 

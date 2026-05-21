@@ -41,7 +41,7 @@ Setup copies `.cursorrules`, `.cursor/rules/*.mdc`, `.claude/skills/`, OpenSpec 
 
 | Your tool | What happens |
 |---|---|
-| **Cursor Pro+** | `cursor .` — rules load automatically. **Spawn a Background Agent for the queue-drainer loop, schedule `rem-sleep.mjs` weekly via Automations.** [Full Pro+ guide →](docs/cursor-background-agents.md) |
+| **Cursor Pro+** | `cursor .` — rules load automatically. **Set up 7 Automations to drive the autonomous loop** — see the [Cursor Automations Playbook →](docs/cursor-automations-playbook.md). Broader Pro+ patterns: [Background Agents guide →](docs/cursor-background-agents.md) |
 | **Cursor (any tier)** | `cursor .` — rules load via `.cursorrules` + `.cursor/rules/*.mdc`. Run framework scripts manually. [Cursor setup →](docs/cursor-setup.md) |
 | **Claude Code** | Just open the project — `CLAUDE.md` loads every turn. Use `/openspec-new-change` to start your first change. |
 | **Windsurf** | Just open the project — `.windsurfrules` loads automatically. |

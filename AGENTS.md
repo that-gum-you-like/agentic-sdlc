@@ -92,8 +92,9 @@ If the queue has tasks: pick the highest-priority unblocked task and run the mic
 ## Tier-specific guidance
 
 ### If user is on Cursor Pro+ (has Background Agents + Automations)
-- After Step 4, suggest the user create a Cursor Background Agent for the queue-drainer loop (see `docs/cursor-background-agents.md`)
-- Suggest scheduling weekly `rem-sleep.mjs`, daily `cost-tracker.mjs report`, daily `daily-review.mjs` via Cursor Automations
+- After Step 4, point them at `docs/cursor-automations-playbook.md` — it walks them through creating 7 recommended Automations (queue drain, daily review, weekly review, REM sleep, pattern hunt, cost tracker, alignment monitor) in cursor.com/automations
+- For ad-hoc Background Agents (not scheduled), see `docs/cursor-background-agents.md`
+- The `.cursor/rules/sdlc-task-execution.mdc` and `.cursor/rules/sdlc-housekeeping.mdc` files (auto-installed by setup.mjs) constrain the spawned Background Agents to the SDLC — they're the contract between your framework and Cursor's cloud agents
 
 ### If user is on Cursor (free or Pro, no Automations)
 - The `.cursorrules` and `.cursor/rules/*.mdc` files are still loaded — full framework rules apply
