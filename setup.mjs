@@ -27,8 +27,17 @@ const SDLC_DIR = __dirname;
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
 
+// Non-interactive mode: accept all defaults without prompting. Lets AI agents
+// (Cursor Background Agents, scripted CI, etc.) complete setup end-to-end
+// without hanging on readline prompts. Use --yes or --non-interactive.
+const NON_INTERACTIVE = process.argv.includes('--yes') || process.argv.includes('--non-interactive');
+
 function ask(question, defaultValue = '') {
   const suffix = defaultValue ? ` [${defaultValue}]` : '';
+  if (NON_INTERACTIVE) {
+    console.log(`  ${question}${suffix}: ${defaultValue}  [auto-accepted]`);
+    return Promise.resolve(defaultValue);
+  }
   return new Promise((resolve) => {
     rl.question(`  ${question}${suffix}: `, (answer) => {
       resolve(answer.trim() || defaultValue);
@@ -286,21 +295,24 @@ async function main() {
 Usage:
   node setup.mjs                          Interactive setup (creates files)
   node setup.mjs --dir <path>             Set project directory
+  node setup.mjs --yes                    Non-interactive setup (use defaults)
   node setup.mjs --dry-run                Preview what would be created (no writes)
   node setup.mjs --dry-run --dir <path>   Preview for a specific directory
   node setup.mjs --discover --dir <path>  Analyze project without changes (JSON output)
   node setup.mjs --discover --human       Human-readable summary line
 
 Flags:
-  --dir <path>    Target project directory (default: current directory)
-  --dry-run       Show what files/directories would be created, then exit
-  --discover      Non-destructive project analysis, outputs JSON report
-  --human         With --discover: add human-readable summary line
+  --dir <path>          Target project directory (default: current directory)
+  --yes                 Accept all defaults without prompting (alias: --non-interactive)
+  --dry-run             Show what files/directories would be created, then exit
+  --discover            Non-destructive project analysis, outputs JSON report
+  --human               With --discover: add human-readable summary line
 
 Examples:
   node ~/agentic-sdlc/setup.mjs --discover --dir ~/my-project
   node ~/agentic-sdlc/setup.mjs --dry-run --dir ~/my-project
-  node ~/agentic-sdlc/setup.mjs --dir ~/my-project`);
+  node ~/agentic-sdlc/setup.mjs --dir ~/my-project
+  node ~/agentic-sdlc/setup.mjs --dir ~/my-project --yes  # for AI agents`);
     rl.close();
     return;
   }
@@ -343,13 +355,17 @@ Examples:
   console.log(`  Project directory: ${projectDir}`);
   console.log('');
 
-  // 1. Gather project info
+  // 1. Gather project info — run discovery first to power smart defaults in
+  // non-interactive mode (test command, agent suggestions, etc.)
+  const discovered = discoverProject(projectDir);
+
   console.log('📋 Project Configuration');
   console.log('─'.repeat(40));
 
   const projectName = await ask('Project name', basename(projectDir));
   const appDir = await ask('App subdirectory (or "." for root)', '.');
-  const testCmd = await ask('Test command', 'npm test');
+  const defaultTestCmd = discovered.testCmd || 'npm test';
+  const testCmd = await ask('Test command', defaultTestCmd);
 
   // 2. Gather agent info
   console.log('');
@@ -359,7 +375,10 @@ Examples:
   console.log('  Example: backend,frontend,reviewer');
   console.log('');
 
-  const agentInput = await ask('Agent names (comma-separated)', '');
+  // Use the discovered suggestions as the default — gives non-interactive
+  // mode a sane starting roster instead of an empty one.
+  const defaultAgents = (discovered.suggestedAgents || ['backend', 'reviewer']).join(',');
+  const agentInput = await ask('Agent names (comma-separated)', defaultAgents);
   const agents = agentInput
     ? agentInput.split(',').map(a => a.trim().toLowerCase()).filter(Boolean)
     : [];

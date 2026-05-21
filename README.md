@@ -4,39 +4,48 @@
 
 A methodology for running multi-agent AI development teams. Plug it into your existing project to get task queues, agent memory, quality gates, and progressive automation — from "AI helps me code" to "agents ship features overnight."
 
+> **👋 If you're an AI agent reading this** — go to [AGENTS.md](AGENTS.md) instead. It's the agent-first bootstrap guide with the exact sequence you should follow.
+
 Works with any AI coding tool: Claude Code, Cursor, Windsurf, Copilot, Aider, or local agents.
 
 | Tool | How it picks up rules |
 |------|----------------------|
 | Claude Code | Reads `CLAUDE.md` automatically |
-| Cursor | Reads `.cursorrules` automatically |
+| Cursor | Reads `.cursorrules` and `.cursor/rules/*.mdc` automatically |
 | Windsurf | Reads `.windsurfrules` automatically |
-| Copilot / Aider / Others | Point them at `ONBOARDING.md` — it's the universal entry point |
+| Copilot / Aider / Others | Point them at `AGENTS.md` — the agent-first entry point |
 
 ## Get Started
 
-### 🚀 Cursor Pro+ Quickstart (10 minutes to running)
+**One path, three commands.** Pick the tier that fits, then run the same setup.
 
-If you have **Cursor Pro+** (Background Agents + Automations enabled), this is the fastest path to a working multi-agent SDLC on a new project:
+### Step 1 — Clone the framework once
 
 ```bash
 git clone https://github.com/that-gum-you-like/agentic-sdlc.git ~/agentic-sdlc
-cd ~/your-new-project
-node ~/agentic-sdlc/setup.mjs --discover --dir .   # (optional) preview what setup will do
-node ~/agentic-sdlc/setup.mjs --dir .              # bootstrap the framework into your project
-cursor .                                            # open in Cursor — rules load automatically
 ```
 
-`setup.mjs` copies `.cursorrules` + `.cursor/rules/*.mdc` into your project so Cursor enforces the SDLC immediately. Then in Cursor:
+### Step 2 — Bootstrap into your project
 
-1. **Foreground work:** the OpenSpec workflow, micro cycle, and quality gates apply to every edit you make
-2. **Background Agents:** spawn one that runs `node ~/agentic-sdlc/agents/queue-drainer.mjs run` in a loop — it works while you focus elsewhere
-3. **Automations:** schedule `rem-sleep.mjs` weekly, `cost-tracker.mjs report` daily, `daily-review.mjs` daily
+```bash
+cd ~/your-new-project
+node ~/agentic-sdlc/setup.mjs --discover --dir .   # (optional) preview
+node ~/agentic-sdlc/setup.mjs --dir .              # interactive setup
+# — or for AI agents / CI / non-TTY: —
+node ~/agentic-sdlc/setup.mjs --yes --dir .        # accept all defaults
+```
 
-Full guide: [docs/cursor-background-agents.md](docs/cursor-background-agents.md).
+Setup copies `.cursorrules`, `.cursor/rules/*.mdc`, `.claude/skills/`, OpenSpec templates, agent personas, and `CLAUDE.md` into your project. Zero npm dependencies. Nothing installed globally.
 
-### Option A: Point any AI agent at this repo
-Tell your AI agent: *"Read ONBOARDING.md in this repo and help me integrate this framework into my project."* The onboarding guide walks the agent through discovering your project, assessing your current practices, and integrating incrementally.
+### Step 3 — Open in your AI tool of choice
+
+| Your tool | What happens |
+|---|---|
+| **Cursor Pro+** | `cursor .` — rules load automatically. **Spawn a Background Agent for the queue-drainer loop, schedule `rem-sleep.mjs` weekly via Automations.** [Full Pro+ guide →](docs/cursor-background-agents.md) |
+| **Cursor (any tier)** | `cursor .` — rules load via `.cursorrules` + `.cursor/rules/*.mdc`. Run framework scripts manually. [Cursor setup →](docs/cursor-setup.md) |
+| **Claude Code** | Just open the project — `CLAUDE.md` loads every turn. Use `/openspec-new-change` to start your first change. |
+| **Windsurf** | Just open the project — `.windsurfrules` loads automatically. |
+| **Other AI agents** | Point them at [AGENTS.md](AGENTS.md). |
 
 **Required:** Node.js 18+, git. That's it. The framework has zero npm dependencies (pure Node stdlib) and installs nothing globally.
 
@@ -88,36 +97,13 @@ See [docs/azure-foundry-integration.md](docs/azure-foundry-integration.md) for t
 - `agents/adapters/llm/*.mjs` — these are the only files that make network calls to third parties (and only when you invoke them with a configured provider)
 - `agents/templates/` — string templates written into your project by `setup.mjs`; inspect anything you don't want copied
 
-### Option B: Run the setup script
-```bash
-git clone https://github.com/that-gum-you-like/agentic-sdlc.git ~/agentic-sdlc
-cd ~/your-project
-node ~/agentic-sdlc/setup.mjs
-```
-
-### Option C: Discover first, decide later
-```bash
-node ~/agentic-sdlc/setup.mjs --discover --dir ~/your-project
-```
-Outputs a JSON analysis of your project (language, framework, tests, CI) without changing any files.
-
-### Try It (5 minutes)
+### Setup variants (advanced)
 
 ```bash
-# 1. Clone
-git clone https://github.com/that-gum-you-like/agentic-sdlc.git ~/agentic-sdlc
-
-# 2. See what it would do (no changes)
-node ~/agentic-sdlc/setup.mjs --discover --dir ~/your-project
-
-# 3. Preview the files it would create
-node ~/agentic-sdlc/setup.mjs --dry-run --dir ~/your-project
-
-# 4. Check the model intelligence database
-node ~/agentic-sdlc/agents/model-manager.mjs models
-
-# 5. If you like what you see, run setup for real
-node ~/agentic-sdlc/setup.mjs --dir ~/your-project
+node ~/agentic-sdlc/setup.mjs --discover --dir <path>        # Non-destructive analysis (JSON)
+node ~/agentic-sdlc/setup.mjs --dry-run  --dir <path>        # Preview files without writing
+node ~/agentic-sdlc/setup.mjs --yes      --dir <path>        # Non-interactive (for AI agents / CI)
+node ~/agentic-sdlc/setup.mjs --help                          # Full flag reference
 ```
 
 ## What's Included
