@@ -771,6 +771,32 @@ In addition to the standard micro cycle, every task MUST include:
     }
   }
 
+  // 8c. Copy Cursor rule files (.cursorrules + .cursor/rules/*.mdc)
+  // Cursor reads these automatically. Without them, Cursor users get the framework
+  // files but none of the SDLC rules, so the integration silently fails.
+  const cursorrulesSrc = join(SDLC_DIR, '.cursorrules');
+  const cursorrulesDest = join(projectDir, '.cursorrules');
+  if (existsSync(cursorrulesSrc) && !existsSync(cursorrulesDest)) {
+    if (DRY_RUN) {
+      dryRunPlan.files.push({ path: cursorrulesDest, lines: 0, description: '.cursorrules (Cursor IDE rules)' });
+      console.log(`  [DRY RUN] Would copy .cursorrules`);
+    } else {
+      cpSync(cursorrulesSrc, cursorrulesDest);
+      console.log(`  ✅ Copied .cursorrules`);
+    }
+  }
+  const cursorRulesDirSrc = join(SDLC_DIR, '.cursor');
+  const cursorRulesDirDest = join(projectDir, '.cursor');
+  if (existsSync(cursorRulesDirSrc) && !existsSync(cursorRulesDirDest)) {
+    if (DRY_RUN) {
+      dryRunPlan.files.push({ path: cursorRulesDirDest, lines: 0, description: '.cursor/rules/*.mdc (Cursor scoped rule files)' });
+      console.log(`  [DRY RUN] Would copy .cursor/ directory`);
+    } else {
+      cpSync(cursorRulesDirSrc, cursorRulesDirDest, { recursive: true });
+      console.log(`  ✅ Copied .cursor/ rule directory`);
+    }
+  }
+
   // 9. Create review checklist (if a reviewer agent exists)
   const reviewerAgent = agents.find(a =>
     (agentRoles[a] || '').toLowerCase().includes('review')

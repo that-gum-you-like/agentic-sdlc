@@ -21,6 +21,8 @@ Two rule files are loaded automatically when you open a project that has this fr
 
 You don't need to touch these — they load automatically. The MDC files are the canonical source going forward; `.cursorrules` exists for backward compat with older Cursor versions.
 
+> **Cursor Pro+ users:** Background Agents and Automations (launched March 2026) unlock a much stronger workflow — scheduled cron-like SDLC tasks, async cloud-sandbox task execution, and an "agent works in background while you code" pattern. See [docs/cursor-background-agents.md](cursor-background-agents.md) for the full setup. The rules below apply to all Cursor tiers; Pro+ adds the scheduled automation layer on top.
+
 ## Setup
 
 ### 1. Clone the framework

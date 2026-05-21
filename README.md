@@ -15,7 +15,27 @@ Works with any AI coding tool: Claude Code, Cursor, Windsurf, Copilot, Aider, or
 
 ## Get Started
 
-### Option A: Point your AI agent at this repo
+### 🚀 Cursor Pro+ Quickstart (10 minutes to running)
+
+If you have **Cursor Pro+** (Background Agents + Automations enabled), this is the fastest path to a working multi-agent SDLC on a new project:
+
+```bash
+git clone https://github.com/that-gum-you-like/agentic-sdlc.git ~/agentic-sdlc
+cd ~/your-new-project
+node ~/agentic-sdlc/setup.mjs --discover --dir .   # (optional) preview what setup will do
+node ~/agentic-sdlc/setup.mjs --dir .              # bootstrap the framework into your project
+cursor .                                            # open in Cursor — rules load automatically
+```
+
+`setup.mjs` copies `.cursorrules` + `.cursor/rules/*.mdc` into your project so Cursor enforces the SDLC immediately. Then in Cursor:
+
+1. **Foreground work:** the OpenSpec workflow, micro cycle, and quality gates apply to every edit you make
+2. **Background Agents:** spawn one that runs `node ~/agentic-sdlc/agents/queue-drainer.mjs run` in a loop — it works while you focus elsewhere
+3. **Automations:** schedule `rem-sleep.mjs` weekly, `cost-tracker.mjs report` daily, `daily-review.mjs` daily
+
+Full guide: [docs/cursor-background-agents.md](docs/cursor-background-agents.md).
+
+### Option A: Point any AI agent at this repo
 Tell your AI agent: *"Read ONBOARDING.md in this repo and help me integrate this framework into my project."* The onboarding guide walks the agent through discovering your project, assessing your current practices, and integrating incrementally.
 
 **Required:** Node.js 18+, git. That's it. The framework has zero npm dependencies (pure Node stdlib) and installs nothing globally.

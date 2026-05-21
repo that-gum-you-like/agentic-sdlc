@@ -62,6 +62,73 @@ The following ideas from the 2026-03-13 curriculum review have been implemented:
 - **To reject an idea**: Move it to the "Rejected" section below with a reason
 - **To defer an idea**: Leave it here — backlog items have no deadline
 
+### 14. Paperclip Upgrade and Security Patch
+
+**Problem:** Local Paperclip clone at `~/paperclip` is v0.3.0 (last commit 2026-03-13, ~70 days old). Upstream is on `v2026.517.0`. Missing critical security advisory **GHSA-68qg-g8mg-6pr7** (auth-bypass on scoped routes), patched in `v2026.416.0`. Also missing multi-user auth, MCP server beta, and ~7 minor releases of features. Currently the local instance is offline (last log entry 2026-04-15).
+
+**Idea:** Upgrade to latest stable, run `pnpm paperclipai doctor --repair`, validate breaking changes (sandbox plugin now external, secrets enforcement), reconfigure adapters (codex-local currently erroring on missing `codex` CLI).
+
+**Complexity:** Medium-high (breaking changes in v2026.427.0 require validation).
+
+**Priority:** HIGH — security advisory active. **Defer until after `level-6-autonomous-activation` ships on Day 7** unless Paperclip is exposed beyond localhost.
+
+---
+
+### 15. Paperclip Prompt-Caching Contribution
+
+**Problem:** Paperclip's Claude adapter has **zero prompt caching** (verified by inspection of `~/paperclip/packages/adapters/claude-local/`). Every heartbeat re-reads instructions from disk and re-sends the full prompt uncached. For 10 agents with 2K-token instruction files on hourly heartbeats, ~20K uncached tokens/hour are burned on redundant re-sends. Anthropic cache reads cost 0.1× base price — fix would cut effective per-call cost by 85-92%.
+
+**Idea:** Implement three fixes in `~/paperclip`:
+1. Add `cache_control: { type: "ephemeral", ttl: "1h" }` to system + tool blocks in the Claude adapter
+2. Cache instructions file content by SHA256+mtime in `execute.ts`
+3. In-memory agent record cache (60s TTL) in `heartbeat.ts`
+
+Open a PR upstream to `paperclipai/paperclip`. High career-signal value — a merged upstream PR is a stronger demo than a personal framework.
+
+**Complexity:** Medium (refactor stdin→SDK structured messages required for #1; #2 and #3 are tight scoped).
+
+**Priority:** Medium-high. Run AFTER Level 6 ships (Day 7+). Coordinate with #14 upgrade.
+
+---
+
+### 16. Memory System ACE Patterns Adoption
+
+**Problem:** Our 5-layer memory consolidates via REM sleep using LLM judgment to decide what to promote/prune. Without quality counters per entry, we can't measure whether consolidation is improving or degrading memory quality. ACE (ace-agent/ace, MIT 1.1k stars, Nov 2025) demonstrates that incremental delta updates with helpful/harmful counters prevent "context collapse" — where wholesale rewrites lose accumulated knowledge.
+
+**Idea:** Port three ACE patterns into our memory system (do NOT integrate the Python code; we are zero-dep Node):
+1. **Helpful/harmful counters per memory entry** — each entry gets `{id, helpful: N, harmful: N, text}`. Each task outcome increments the relevant counters of memories the agent consulted. REM sleep prunes high-harmful, promotes high-helpful.
+2. **Reflector / Curator role split** — REM sleep becomes two passes: Reflector (mark recent outcomes against memories consulted) and Curator (apply promote/demote/dedup deltas).
+3. **Append-only delta updates** — REM sleep emits a delta log instead of rewriting `core.json` / `long-term.json` in place. Prior knowledge is always recoverable.
+
+**Complexity:** Medium.
+
+**Priority:** Low-Medium. Wait until Level 6 has run ~30 days so we have memory-quality data to validate against.
+
+**Sources:** [ace-agent/ace](https://github.com/ace-agent/ace), [ACE paper](https://arxiv.org/abs/2510.04618)
+
+---
+
+### 17. Cursor Automations Worker Integration
+
+**Problem:** Phase 1 of `level-6-autonomous-activation` uses Groq Llama 3.3 70B as the autonomous worker. Quality is lower than Claude. Bryce has Cursor Pro+ via his work license, which includes Automations (scheduled cloud-hosted agent fires) and Background Agents (cloud sandboxes that can claim + execute tasks). Wiring Cursor as the primary worker tier dramatically raises the quality of autonomous output while staying $0 marginal cost (Cursor's auto mode is unlimited within Pro+).
+
+**Idea:**
+1. Write `.cursor/automations/sdlc-queue-drain.yaml` (or platform equivalent) that fires hourly and claims the next pending task from `tasks/queue/*.json` in the agentic-sdlc repo
+2. Write `.cursor/rules/sdlc-task-execution.mdc` instructing the Cursor Background Agent how to: read a task spec, execute the micro cycle (implement → test → commit), update task status, push
+3. Add a `workerTier: "cursor" | "groq"` field per task with `cursor` as default for code-writing tasks
+4. Multi-project-orchestrator marks `cursor`-tier tasks as `needs-cursor` and skips local execution; Groq handles `groq`-tier tasks (analysis, summaries)
+5. Cursor cloud sandbox commits + pushes; local cron picks up the next housekeeping cycle naturally
+
+**Complexity:** Medium-high (new integration surface; Cursor Automations format research needed).
+
+**Priority:** High — this is the "$0 marginal cost, top-quality work, follows me anywhere" architecture Bryce actually wants. Run as `cursor-automations-worker-integration` change right after Day 7 verification.
+
+**Pre-requisites:**
+- Level 6 baseline shipped (`level-6-autonomous-activation` archived)
+- Bryce confirms his Cursor Pro+ is current and not about to lapse (his work is migrating to Claude)
+
+---
+
 ## Rejected
 
 (none yet)
