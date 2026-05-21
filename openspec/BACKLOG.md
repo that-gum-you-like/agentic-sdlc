@@ -22,6 +22,7 @@ The following ideas from the 2026-03-13 curriculum review have been implemented:
 | 10 | Agent Evolution Timeline | `curriculum-maturity-advancement` (tasks 7.1-7.6) |
 | — | Capability Monitoring | `agent-capability-checklist` (31 tasks) — 29/31 complete, system instrumentation + monitor + docs done (2026-03-13) |
 | 17 | Cursor Automations Worker Integration | `cursor-automations-worker-integration` (shipped 2026-05-21) — 2 `.cursor/rules/*.mdc` files + `docs/cursor-automations-playbook.md` for the 7-Automation UI setup |
+| 12 | Automated Rollback on Deploy Failure | `automated-deploy-rollback` (shipped 2026-05-21) — `agents/deploy-rollback.mjs` + 2 new notify.mjs triggers + deploy-pipeline.md.template stages 8-9 + `docs/rollback-pattern.md` |
 
 ---
 
@@ -34,16 +35,6 @@ The following ideas from the 2026-03-13 curriculum review have been implemented:
 **Idea:** Define a request-response protocol between agents via Matrix, with schema validation on both sides.
 
 **Complexity:** Medium.
-
----
-
-### 12. Automated Rollback on Deploy Failure
-
-**Problem:** When a deploy fails smoke tests, the rollback is manual. The framework should auto-revert and notify.
-
-**Idea:** Add rollback logic to the deploy pipeline template and notify.mjs.
-
-**Complexity:** Low-medium.
 
 ---
 

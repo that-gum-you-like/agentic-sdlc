@@ -13,9 +13,11 @@ A recommended deploy pipeline that includes browser E2E as a gate. Adapt the spe
 2. SERVE LOCAL    → Serve the build artifact locally
 3. BROWSER E2E    → Run browser E2E suite against local build  ← GATE
 4. DEPLOY         → Push build artifact to hosting platform
-5. POST-DEPLOY    → Run smoke tests against production URL
-6. BROWSER VERIFY → Screenshot production + visual confirmation ← GATE
+5. POST-DEPLOY    → Run smoke tests against production URL   ← ON FAIL → 8
+6. BROWSER VERIFY → Screenshot production + visual confirmation ← GATE / ON FAIL → 8
 7. NOTIFY         → Notify stakeholder with results + screenshots
+8. ROLLBACK       → Auto-fires from stage 5 or 6 failure    ← SAFETY NET
+9. NOTIFY ROLLBACK → Notify stakeholder of rollback + reason
 ```
 
 ---
@@ -81,6 +83,8 @@ Run a quick smoke test suite against the production URL to verify the deploy suc
 npx playwright test --project=smoke --base-url https://your-production-url.com
 ```
 
+**ON FAILURE:** Skip directly to stage 8 (Rollback). Production has broken code right now — revert first, debug second.
+
 ### 6. Browser Verification (Post-Deploy Gate)
 
 Open the production URL in a real browser, exercise every changed feature, and capture screenshots as proof.
@@ -94,6 +98,8 @@ Open the production URL in a real browser, exercise every changed feature, and c
 4. Visually inspect each screenshot — verify correct rendering, no blank areas, no errors
 5. If any issue is found: fix → rebuild → re-deploy → re-verify
 
+**ON FAILURE:** Skip directly to stage 8 (Rollback). User-visible UI is broken; revert first.
+
 ### 7. Notify
 
 Send a notification to the stakeholder with:
@@ -103,6 +109,45 @@ Send a notification to the stakeholder with:
 - Screenshots as proof of verification
 
 **Only send this notification after all gates have passed.** Never say "done" before visual verification on production.
+
+### 8. Rollback (auto-fires from stage 5 or 6 failure)
+
+When a post-deploy stage fails, invoke the framework's rollback helper:
+
+```
+node ~/agentic-sdlc/agents/deploy-rollback.mjs --reason "<stage that failed>"
+```
+
+The helper:
+1. Reads `rollbackCmd` from `agents/project.json` (project-defined — the framework can't know your hosting platform's rollback mechanism)
+2. Executes it, capturing output
+3. On success → triggers `deployRolledBack` notification
+4. On failure → triggers `deployFailed` notification with the rollback command's output
+
+If `rollbackCmd` is not configured, the helper exits 1 with a clear `deployFailed` notification reading "No rollbackCmd configured, manual revert required" — the failure is loud, never silent.
+
+**Required project.json fields:**
+
+```json
+{
+  "rollbackCmd": "bash scripts/rollback.sh",
+  "rollbackDebounce": 300
+}
+```
+
+`rollbackDebounce` (optional, default 300 seconds) suppresses notification spam if a deploy flap repeatedly fails. The rollback ALWAYS executes; only the notification is debounced.
+
+See [`docs/rollback-pattern.md`](../../docs/rollback-pattern.md) for examples per hosting platform (Vercel, Netlify, Railway, custom).
+
+### 9. Notify Rollback
+
+The rollback helper triggers `deployRolledBack` (success) or `deployFailed` (failed-rollback) automatically. Stakeholders see:
+- Which stage failed (the `--reason` flag)
+- What was rolled back to (rollback command's output)
+- Production URL (should now be the previous version)
+- A link to the full log if output exceeds 4KB
+
+**No additional manual notification needed** — the rollback helper handles it.
 
 ---
 
@@ -115,6 +160,8 @@ Send a notification to the stakeholder with:
 | Skip post-deploy verification | Production deploy can introduce issues (CDN, env vars, font paths) | Always verify on the actual production URL |
 | Notify before verifying | Stakeholder opens a broken link | Notify only after all gates pass |
 | Manual deploy commands | Skips pipeline steps (font fixups, smoke tests, etc.) | Always use the deploy script |
+| No `rollbackCmd` configured | Production stays broken for hours until a human notices | Define `rollbackCmd` in `agents/project.json`; verify it works with `--dry-run` |
+| Notify "deploy complete" while rollback in progress | Stakeholder sees conflicting messages | Stage 7 NOTIFY only fires after all gates pass; stage 9 NOTIFY ROLLBACK fires only on rollback path |
 
 ---
 

@@ -1,0 +1,8 @@
+{
+  "status": "complete",
+  "phase": "archived",
+  "created": "2026-05-21",
+  "lastUpdated": "2026-05-21",
+  "completedDate": "2026-05-21",
+  "tests": "6/6 passing (tests/deploy-rollback.test.mjs)"
+}
