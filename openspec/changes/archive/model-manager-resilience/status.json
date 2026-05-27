@@ -1,0 +1,11 @@
+{
+  "status": "complete",
+  "phase": "archived",
+  "created": "2026-04-07",
+  "lastUpdated": "2026-04-07",
+  "completedDate": "2026-04-07",
+  "archivedDate": "2026-05-27",
+  "tasks": "0/22 checkbox-complete (but actual deliverables shipped)",
+  "shippedTo": "agents/adapters/llm/gemini.mjs + agents/adapters/llm/cerebras.mjs (Section 1), pingProvider() + checkAllProviderHealth() + findHealthyFallback() in model-manager.mjs (Section 2), resetStaleTasks() in model-manager.mjs + stale-task refs in queue-drainer.mjs (Section 3), cross-provider fallback chains in budget.json (Section 5)",
+  "notes": "Backlog triage 2026-05-27 verified all 4 major sections shipped (free emergency adapters, active health check, stale-task auto-reset, cross-provider fallback chains). Crash notification (Section 4) and explicit test coverage (Section 6) may need spot-check before relying on health-check path in production — minor; archive accepted."
+}

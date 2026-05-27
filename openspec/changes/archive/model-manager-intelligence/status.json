@@ -1,0 +1,11 @@
+{
+  "status": "complete",
+  "phase": "archived",
+  "created": "2026-04-07",
+  "lastUpdated": "2026-04-07",
+  "completedDate": "2026-04-07",
+  "archivedDate": "2026-05-27",
+  "tasks": "0/25 checkbox-complete (but actual deliverables shipped)",
+  "shippedTo": "agents/model-intel.json + agents/model-intel.default.json (model intelligence database with costs/strengths/limitations), budget enforcement integrated into agents/queue-drainer.mjs (25+ budget refs), agents/model-manager.mjs grew to 12+ functions including buildCostOrder, recommend, suggest, check, models",
+  "notes": "Backlog triage 2026-05-27 verified model intelligence layer shipped (model-intel.json present, model-manager.mjs has cross-provider recommend + quality-aware routing). Archived."
+}

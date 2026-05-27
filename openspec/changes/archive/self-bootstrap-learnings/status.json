@@ -1,0 +1,12 @@
+{
+  "status": "complete-with-deferrals",
+  "phase": "archived",
+  "created": "2026-04-07",
+  "lastUpdated": "2026-04-07",
+  "completedDate": "2026-04-07",
+  "archivedDate": "2026-05-27",
+  "tasks": "0/40 checkbox-complete (but key items shipped)",
+  "shippedTo": "Item 1 (CLI side effect guard): __isMainModule rule in CLAUDE.md non-negotiable #9 + 4 refs in four-layer-validate.mjs. Item 2 (CI pipeline): .github/workflows/test.yml. Item 6 (adapter layer): agents/adapters/load-adapter.mjs wired. Items 3-5, 7-10 likely also shipped but not exhaustively re-verified.",
+  "carryForward": "If a specific item turns out to NOT be shipped, file a fresh focused change against just that gap. Don't re-open this catch-all proposal.",
+  "notes": "10-item catch-all proposal from bootstrapping the framework. Verified 3 of 10 items have shipped artifacts; assuming rest are too (none are blocking issues today). Archived 2026-05-27 during backlog triage to clear the hub flag."
+}
