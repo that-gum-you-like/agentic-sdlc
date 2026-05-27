@@ -23,6 +23,13 @@ The following ideas from the 2026-03-13 curriculum review have been implemented:
 | — | Capability Monitoring | `agent-capability-checklist` (31 tasks) — 29/31 complete, system instrumentation + monitor + docs done (2026-03-13) |
 | 17 | Cursor Automations Worker Integration | `cursor-automations-worker-integration` (shipped 2026-05-21) — 2 `.cursor/rules/*.mdc` files + `docs/cursor-automations-playbook.md` for the 7-Automation UI setup |
 | 12 | Automated Rollback on Deploy Failure | `automated-deploy-rollback` (shipped 2026-05-21) — `agents/deploy-rollback.mjs` + 2 new notify.mjs triggers + deploy-pipeline.md.template stages 8-9 + `docs/rollback-pattern.md` |
+| 18 | Cursor Rules Modernization | `cursor-rules-modernization` (proposed 2026-05-27) — prune legacy `.cursorrules`, split 167-line `sdlc-task-execution.mdc`, slim `agentic-sdlc.mdc` toward Morph ≤50/≤150 caps |
+| 19 | CLAUDE.md Token Diet | `claude-md-token-diet` (proposed 2026-05-27) — split 33KB `CLAUDE.md` into ≤500-line core + `docs/appendix/` files; slim `AGENTS.md` to ≤150 lines |
+| 20 | OTel GenAI Cost-Tracker Emission | `cost-tracker-otel` (proposed 2026-05-27) — emit OpenTelemetry GenAI-compliant spans from every LLM adapter to `pm/otel-spans.jsonl` |
+| 21 | Replay-Regression CI Gate | `replay-regression-ci-gate` (proposed 2026-05-27) — corpus-driven offline replay suite as required CI check on `main` |
+| 22 | Anthropic Native Compaction | `anthropic-native-compaction` (proposed 2026-05-27) — integrate `compact-2026-01-12` for within-session memory compaction; REM-sleep stays as between-session role |
+| 23 | Cursor 3.2 Alignment Docs | `cursor-3.2-alignment` (proposed 2026-05-27) — comparison docs for `/multitask` vs April + self-hosted-vs-cloud decision table |
+| 24 | Spec-Kit Cross-Feature Analysis | `spec-kit-cross-feature-analysis` (proposed 2026-05-27) — port shared-file conflict detection from Spec Kit to OpenSpec |
 
 ---
 
@@ -102,4 +109,14 @@ Open a PR upstream to `paperclipai/paperclip`. High career-signal value — a me
 
 ## Rejected
 
-(none yet)
+### R-01. Framework-Owned MCP Server (rejected 2026-05-27)
+
+**Idea considered:** Ship an MCP server exposing framework state (queue status, agent memory reads, pattern-hunt results) so Cursor / Claude Code clients could consume framework telemetry as typed tools rather than via CLI.
+
+**Why rejected:**
+- The MCP spec is mid-flux — stateless redesign lands 2026-07-28 (Extensions, Tasks, MCP Apps, OAuth-aligned auth, `.well-known` discovery). Building against the current spec means a rewrite in 2 months.
+- The CLI surface already works fine for the solo / small-team use case. Cursor and Claude Code can shell out without ceremony.
+- Adding MCP doesn't unlock any capability the framework lacks today; it only changes the integration shape.
+- Net: complexity high, payoff low under current usage.
+
+**Reconsider when:** A specific Cursor or Claude Code workflow needs framework state surfaced as a typed tool rather than via shell, AND the post-2026-07-28 spec has stabilized.
