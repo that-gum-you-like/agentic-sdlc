@@ -15,22 +15,22 @@
 
 ## Workstream A — Context slim
 
-- [ ] **T-101**: Audit `CLAUDE.md` sections — classify each `##` header as keep-verbatim / keep-summary / move-to-appendix
+- [x] **T-101**: Audit `CLAUDE.md` sections — classify each `##` header as keep-verbatim / keep-summary / move-to-appendix
   - Complexity: M
 
 - [ ] **T-102**: Write `agents/claude-md-split.mjs` (zero deps, reproducible)
   - Complexity: M
 
-- [ ] **T-103**: Run split script; produce new `CLAUDE.md` + `docs/appendix/*.md`
+- [x] **T-103**: Run split script; produce new `CLAUDE.md` + `docs/appendix/*.md`
   - Complexity: S
 
-- [ ] **T-104**: Verify `wc -l CLAUDE.md` ≤ 500
+- [x] **T-104**: Verify `wc -l CLAUDE.md` ≤ 500
   - Complexity: XS
 
-- [ ] **T-105**: Audit `AGENTS.md` — flag padding for deletion
+- [x] **T-105**: Audit `AGENTS.md` — flag padding for deletion
   - Complexity: S
 
-- [ ] **T-106**: Slim `AGENTS.md` to ≤150 lines
+- [x] **T-106**: Slim `AGENTS.md` to ≤150 lines
   - Complexity: S
 
 ---

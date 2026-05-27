@@ -6,6 +6,8 @@ This repo contains a universal methodology for AI-assisted software development.
 
 **This is a framework repo, not a project repo.** To use it with a project, run `node ~/agentic-sdlc/setup.mjs` in your project directory.
 
+> **Detail lives in [docs/appendix/](docs/appendix/).** This file is the canonical operating manual — always loaded, kept tight. Anything you need beyond the headlines is one click away in the appendix.
+
 ## Non-Negotiable Rules
 
 1. **Every task must include tests.** Commits without tests are blocked.
@@ -23,7 +25,7 @@ This repo contains a universal methodology for AI-assisted software development.
 Every change MUST go through: **proposal → design → specs → tasks → implement → archive**.
 
 ### Skills
-- `/openspec-new-change` — Start a new change
+- `/openspec-new-change` — Start a new change (auto-runs cross-feature conflict check)
 - `/openspec-continue-change` — Create the next artifact
 - `/openspec-apply-change` — Implement tasks
 - `/openspec-ff-change` — Fast-forward all artifacts at once
@@ -32,15 +34,12 @@ Every change MUST go through: **proposal → design → specs → tasks → impl
 - `/openspec-bulk-archive-change` — Archive multiple changes
 - `/openspec-sync-specs` — Sync delta specs to main specs
 - `/openspec-explore` — Thinking partner for investigation
+- `/openspec-cross-feature` — Pairwise file/capability conflict scan across active changes
 - `/openspec-onboard` — Guided onboarding walkthrough
 
 Every `proposal.md` MUST include a `## Value Analysis` section.
 
-### Intake & Spec Format
-- **Brain dump first:** Use `openspec/templates/braindump.md.template` to capture raw ideas before starting a change.
-- **REQ-xxx requirements:** Specs use numbered requirements (REQ-001, REQ-002...) with Statement, Acceptance Criteria, Dependencies, Complexity (S/M/L/XL), and Value (Critical/High/Medium/Low). See `framework/requirements-guide.md`.
-- **Roadmap for multi-phase work:** Use `openspec/templates/roadmap.md.template` to plan phases with demo sentences, success criteria, and handoff conditions.
-- **Parallelization:** Use `framework/parallelization-guide.md` to map dependency graphs, define interface contracts, and assign work streams.
+**Intake & spec format:** REQ-xxx numbered requirements with Statement / Acceptance / Dependencies / Complexity (S/M/L/XL) / Value. See `framework/requirements-guide.md`. Brain-dump first via `openspec/templates/braindump.md.template`. Phased work via `openspec/templates/roadmap.md.template`. Parallelization via `framework/parallelization-guide.md`.
 
 ## Roadmap Discipline
 
@@ -56,94 +55,21 @@ See `framework/agent-lifecycle.md` for the full CTO mindset, agent create/specia
 
 ## Agent System
 
-### Roster Concept
-Projects use specialist agents, each with:
-- **AGENT.md** — System prompt with identity, role, operating rules
-- **memory/** — 5-layer memory (core, long-term, medium-term, recent, compost)
-- **Domain patterns** — File patterns and keywords that route tasks
+Specialist agents, each with an `AGENT.md` (system prompt), `memory/` (5-layer), and domain patterns. 5 planning agents (requirements → priorities → roadmap → parallelization → quality alignment) feed 15 execution templates (cto, reviewer, release, backend, frontend, ai-engineer, documentarian, security, qa, integration-tester, ethics, architect, dependency-auditor, performance-sentinel, platform-maturity-sentinel) routed by file pattern.
 
-### Planning Agents (run before execution)
-Projects should include planning-phase agents that produce standardized artifacts:
+→ Full roster, planning pipeline, execution template table, doc-mode variant, task queue commands, token estimate table, worker launcher: **[docs/appendix/agent-system.md](docs/appendix/agent-system.md)**
 
-| Role | Produces | Receives From |
-|------|----------|---------------|
-| Requirements Engineer | `requirements.md` (REQ-xxx) | Brain dump |
-| Business Value Analyst | `priorities.md` (value/complexity scores) | Requirements |
-| Technical Product Manager | `roadmap.md` (phased plan) | Requirements + Priorities |
-| Parallelization Analyst | `parallelization.md` (work streams) | Roadmap |
-| Quality Alignment Monitor | Alignment reports, prompt suggestions | All agent outputs |
+## Micro Cycle (Every Task)
 
-Pipeline: `Brain dump → Requirements → Priorities → Roadmap → Parallelization → Execution agents build`
-
-### Execution Agent Templates
-
-The framework provides 15 execution agent templates in `agents/templates/execution-agents/`. During `setup.mjs`, role keywords are matched to templates which auto-configure domain patterns, capabilities, and operating rules.
-
-| Template | Domain | Pattern |
-|----------|--------|---------|
-| `cto-orchestrator` | Decompose, delegate, monitor, unblock | Replacement (different micro cycle) |
-| `code-reviewer` | Universal review checklist, verdicts | Addendum |
-| `release-manager` | Merge sequencing, deploy pipeline | Addendum |
-| `backend-developer` | Services, stores, data layer | Addendum |
-| `frontend-developer` | Screens, components, accessibility | Addendum |
-| `ai-engineer` | LLM integration, prompts, transcription | Addendum |
-| `documentarian` | API docs, guides, README | Addendum |
-| `security-engineer` | OWASP, CVE audit, auth/RLS | Addendum |
-| `qa-engineer` | E2E, smoke tests, visual regression | Addendum |
-| `integration-tester` | Contract tests, boundary validation | Addendum |
-| `ethics-advisor` | Bias, privacy, user impact | Addendum |
-| `architect` | ADRs, system design, API contracts | Addendum |
-| `dependency-auditor` | CVE scanning, license compliance (cron) | Addendum |
-| `performance-sentinel` | Benchmarks, regression detection (cron) | Addendum |
-| `platform-maturity-sentinel` | Maturity assessment, production readiness, DORA metrics | Addendum |
-| `research-agent` | Context gathering before execution | Addendum |
-
-See `docs/execution-agents.md` for full guide. Templates use YAML frontmatter for `role_keywords`, `default_patterns`, and `capabilities` — `setup.mjs` reads this automatically.
-
-### Micro Cycle (Every Task)
-1. Read task from `tasks/queue/<task-id>.json`
-2. Read memory files (core, long-term, medium-term)
+1. Read task from `tasks/queue/<task-id>.json` (if queue is used) or user request
+2. Read memory: `node ~/agentic-sdlc/agents/memory-manager.mjs recall <agent>`
 3. Implement code changes
 4. Write tests (happy path + at least one error case)
 5. Run tests
-6. IF frontend files changed (screens, navigation, components, state management): Run browser E2E against local production build using a browser automation tool (e.g., Playwright)
-7. If tests pass → commit → mark task completed
-8. If tests fail → fix → re-run (max 3 attempts, then flag blocked)
-9. Record learnings in memory
-10. Pick next task → repeat
-
-### Documentation Mode (Micro Cycle Variant)
-For tasks producing templates, documentation, or configuration (not testable code), the per-task test requirement doesn't apply. Instead: **implement batch → validate batch → commit batch**.
-
-- Apply when: tasks produce non-testable artifacts (templates, docs, config, guides)
-- Validate by: reviewing content for accuracy, checking required sections exist, verifying links/references
-- Batch size: group related doc tasks into a single commit with a single validation pass
-- Standard micro cycle still applies to all testable code tasks
-
-### Task Queue Commands
-```bash
-node ~/agentic-sdlc/agents/queue-drainer.mjs status                  # See queue
-node ~/agentic-sdlc/agents/queue-drainer.mjs run                     # Assign next task
-node ~/agentic-sdlc/agents/queue-drainer.mjs run --parallel           # Assign all independent
-node ~/agentic-sdlc/agents/queue-drainer.mjs claim <id> <agent>       # Claim a task
-node ~/agentic-sdlc/agents/queue-drainer.mjs release <id>             # Release a claimed task
-node ~/agentic-sdlc/agents/queue-drainer.mjs complete <id> passing    # Mark done
-node ~/agentic-sdlc/agents/queue-drainer.mjs archive                  # Archive completed
-node ~/agentic-sdlc/agents/queue-drainer.mjs reset <id>               # Reset stuck task
-```
-
-**Token Estimate Reference (use for `estimatedTokens` field in task JSON):**
-| Task Type | estimatedTokens | When to Use |
-|-----------|----------------|-------------|
-| simple fix | 3500 | Single-file change, config update, minor bug fix |
-| feature | 20000 | New screen, service, or component |
-| architecture | 35000 | Multi-file refactor, schema design |
-| research | 65000 | Investigation spike, design exploration |
-
-### Worker Launcher
-```bash
-node ~/agentic-sdlc/agents/worker.mjs --agent <name> --task <task-id>
-```
+6. IF frontend files changed: browser E2E against local production build (Playwright or equivalent)
+7. Tests pass → commit → mark task completed. Fail → fix → re-run (max 3 attempts, then flag blocked)
+8. Record learnings in memory
+9. Pick next task → repeat
 
 ## Testing Requirements
 
@@ -157,19 +83,14 @@ node ~/agentic-sdlc/agents/test-behavior.mjs         # Agent prompt quality
 # Browser E2E (Tier 5) — see below
 ```
 
-**Tier 5: Browser E2E**
-- **Run when:** any change to app screens, navigation, state management, or components
-- **What it checks:** real browser rendering, navigation flows, state persistence, refresh resilience
-- **Tools:** browser automation tool (e.g., Playwright, Puppeteer, or equivalent)
-- **Gate:** must pass before deploy to production
-- **How:** build the production artifact → serve locally → run browser E2E against the local build
+**Tier 5: Browser E2E** — run when any change to app screens, navigation, state management, or components. Build production artifact → serve locally → run browser E2E against the local build. Must pass before deploy.
 
 - **After any code change:** run full test suite
 - **Before every commit:** run defeat tests to catch anti-pattern regressions
 - **After editing any AGENT.md:** run behavior tests (MUST pass before committing)
 
 ### Defeat Tests
-Tests that catch known anti-patterns: `any` types, `console.log`, file size limits, missing error handling. Pattern hunt identifies recurring issues and proposes new defeat tests.
+Catch known anti-patterns: `any` types, `console.log`, file size limits, missing error handling. Pattern hunt identifies recurring issues and proposes new defeat tests.
 
 ## Safety Mechanisms
 
@@ -181,38 +102,19 @@ Tests that catch known anti-patterns: `any` types, `console.log`, file size limi
 
 ## Notification & Approval Layer
 
-Agents communicate with the human project owner through a pluggable notification channel.
+Agents communicate with the human owner via a pluggable notification channel (`openclaw`/WhatsApp, `file`/local, or `none`).
 
-### Configuration
-Set `notification` in `project.json`:
-- `provider`: `"openclaw"` (WhatsApp), `"file"` (local), or `"none"` (default)
-- `channel`: Destination (phone number for OpenClaw)
-- `triggers`: Which events auto-notify (blocker, budgetAlert, deployComplete, highSeverityFailure, dailySummary, approvalTimeout)
+Configure `notification` in `project.json` with `provider`, `channel`, and `triggers` (recognized triggers: blocker, budgetAlert, deployComplete, highSeverityFailure, dailySummary, approvalTimeout, capabilityDrift, deployFailed, deployRolledBack).
 
-### Commands
 ```bash
 node ~/agentic-sdlc/agents/notify.mjs send <message> [--media <path>]
-node ~/agentic-sdlc/agents/notify.mjs approve <message> --task <id> [--timeout <secs>] [--media <path>]
+node ~/agentic-sdlc/agents/notify.mjs approve <message> --task <id> [--timeout <secs>]
 node ~/agentic-sdlc/agents/notify.mjs check-mailbox
 node ~/agentic-sdlc/agents/notify.mjs pending
 node ~/agentic-sdlc/agents/notify.mjs resolve <id> approved|rejected [--note <text>]
-node ~/agentic-sdlc/agents/notify.mjs status
 ```
 
-### Approval Gates
-- Add `"approvalRequired": true` to task JSON to require human approval before completion
-- Approvals timeout after 1 hour → reminder → auto-approve after 2x timeout
-- Approval files stored in `pm/approvals/`
-
-### Automatic Triggers
-| Trigger | Event | Message |
-|---------|-------|---------|
-| blocker | Task stale claim detected | "Task X has stale claim" |
-| budgetAlert | Agent at 80%+ daily budget | "Agent X at Y% budget" |
-| deployComplete | Task completed with passing tests | "Task X completed" |
-| highSeverityFailure | Failure recorded in core memory | "New failure: ..." |
-| dailySummary | Daily review runs | "N completed, M blocked" |
-| approvalTimeout | Approval pending past timeout | "REMINDER: approval pending" |
+**Approval gates:** add `"approvalRequired": true` to task JSON. Timeout 1h → reminder → auto-approve after 2x timeout. Files in `pm/approvals/`.
 
 ## Permission Tiers
 
@@ -242,129 +144,48 @@ When enabled, cost-tracker monitors session hours and notify.mjs sends advisory 
 
 ## Iteration Cycles
 
-### Micro (Minutes)
-Pick → Implement → Test → Browser E2E (if frontend changed) → Commit → Next
+Micro (per task) → Daily (`daily-review.mjs`) → Weekly (`weekly-review.mjs`, `pattern-hunt.mjs`, `rem-sleep.mjs`, `test-behavior.mjs`) → Monthly (behavior audit, agent versioning, compost cleanup).
 
-### Daily
-- After every task: update task JSON, record cost
-- End of session: `node ~/agentic-sdlc/agents/cycles/daily-review.mjs`
-
-### Weekly
-- Weekly review: `node ~/agentic-sdlc/agents/cycles/weekly-review.mjs`
-- Pattern review: `node ~/agentic-sdlc/agents/pattern-hunt.mjs`
-- Memory cleanup: `node ~/agentic-sdlc/agents/rem-sleep.mjs`
-- Behavior tests: `node ~/agentic-sdlc/agents/test-behavior.mjs`
-
-### Automated via OpenClaw Cron (Optional)
-- Weekly REM sleep: `openclaw cron add --name rem-sleep-weekly --cron "0 23 * * 0" --message "Run: node ~/agentic-sdlc/agents/rem-sleep.mjs" --session isolated`
-- Daily cost report: `openclaw cron add --name cost-report-daily --cron "0 6 * * *" --message "Run: node ~/agentic-sdlc/agents/cost-tracker.mjs report" --session isolated`
-
-### Monthly
-- Behavior audit, agent versioning, compost cleanup, cost review
+→ Schedules, OpenClaw cron one-liners, cycle history conventions: **[docs/appendix/iteration-cycles.md](docs/appendix/iteration-cycles.md)**
 
 ## Memory System
 
-5-layer memory per agent:
-- **core.json** — Permanent: identity, values, failure memories
-- **long-term.json** — Patterns learned, corrections received
-- **medium-term.json** — Current sprint context
-- **recent.json** — What just happened this session
-- **compost.json** — Failed ideas, deprecated approaches
+5-layer memory per agent: `core.json` (permanent), `long-term.json` (patterns), `medium-term.json` (sprint), `recent.json` (session), `compost.json` (deprecated).
 
 ```bash
 node ~/agentic-sdlc/agents/memory-manager.mjs recall <agent>
-node ~/agentic-sdlc/agents/memory-manager.mjs search <agent> "<query>"   # Semantic search (top 5)
+node ~/agentic-sdlc/agents/memory-manager.mjs search <agent> "<query>"   # Semantic top 5
 node ~/agentic-sdlc/agents/memory-manager.mjs record <agent> <layer> <entry>
 node ~/agentic-sdlc/agents/memory-manager.mjs consolidate <agent>
 node ~/agentic-sdlc/agents/memory-manager.mjs compost <agent> <entry-id>
 ```
 
-### Semantic Memory Search (Optional)
-When `sentence-transformers` is installed (`pip install -r agents/requirements-nlp.txt`), memory search uses vector embeddings for semantic similarity. Without it, `search` falls back to full recall.
-
-```bash
-node ~/agentic-sdlc/agents/semantic-index.mjs embed <agent>              # Build index
-node ~/agentic-sdlc/agents/semantic-index.mjs search <agent> "<query>"   # Search
-node ~/agentic-sdlc/agents/semantic-index.mjs status <agent>             # Index stats
-```
+Semantic search uses local vector embeddings when `sentence-transformers` is installed (`pip install -r agents/requirements-nlp.txt`); falls back to full recall otherwise.
 
 ## Agent Evolution Protocol
 
 All AGENT.md files MUST have `<!-- version: X.X.X | date: YYYY-MM-DD -->` as the first line. Increment version when adding failure memories or changing operating rules.
 
 When editing any agent's AGENT.md:
-1. **Before:** Snapshot: `node ~/agentic-sdlc/agents/version-snapshot.mjs snapshot`
-2. **After:** Check memories: `node ~/agentic-sdlc/agents/migrate-memory.mjs --check`
-3. **Apply:** Flag stale entries for review: `node ~/agentic-sdlc/agents/migrate-memory.mjs --apply`
-4. **Validate:** Behavior tests: `node ~/agentic-sdlc/agents/test-behavior.mjs`
+1. **Before:** `node ~/agentic-sdlc/agents/version-snapshot.mjs snapshot`
+2. **After:** `node ~/agentic-sdlc/agents/migrate-memory.mjs --check`
+3. **Apply:** `node ~/agentic-sdlc/agents/migrate-memory.mjs --apply`
+4. **Validate:** `node ~/agentic-sdlc/agents/test-behavior.mjs`
 
 ## Session Protocols
 
 ### On Session Start
 1. Read CLAUDE.md (this file)
-2. Check task queue status: `node ~/agentic-sdlc/agents/queue-drainer.mjs status`
+2. Check task queue: `node ~/agentic-sdlc/agents/queue-drainer.mjs status`
 3. Check mailbox: `node ~/agentic-sdlc/agents/notify.mjs check-mailbox`
 4. Read PM dashboard: `pm/DASHBOARD.md`
 5. Pick up next unblocked tasks
 6. If using Paperclip: `source .paperclip.env`
 
-### Adapter Configuration
+### Adapters (orchestration + LLM provider)
+The framework is platform-agnostic. Configure via `project.json`. Default: `file-based` orchestration + `anthropic` LLM. Other providers: groq, openai, gemini, cerebras, ollama, azure-openai, azure-foundry-claude. Free-tier fallbacks (Groq, Gemini, Cerebras) should end every fallback chain.
 
-The framework is platform-agnostic. Orchestration and LLM providers are configured via adapters in `project.json`:
-
-```json
-{
-  "orchestration": { "adapter": "file-based" },
-  "llm": { "defaultProvider": "anthropic" }
-}
-```
-
-**Orchestration adapters** (how tasks are managed):
-- `file-based` (default) — local JSON task files, zero external dependencies
-- `paperclip` — Paperclip control plane (requires `.paperclip.env`)
-- `claude-code-native` — Claude Code Agent tool subagents
-
-**LLM provider adapters** (which models agents use):
-- `anthropic` (default) — Claude models via `ANTHROPIC_API_KEY`
-- `groq` — Groq-hosted models via `GROQ_API_KEY`
-- `openai` — OpenAI GPT models via `OPENAI_API_KEY`
-- `gemini` — Google Gemini models via `GEMINI_API_KEY` (free tier: 250 req/day, no CC)
-- `cerebras` — Cerebras Inference via `CEREBRAS_API_KEY` (free tier: 1M tokens/day, no CC)
-- `ollama` — Local models via Ollama at `http://localhost:11434`
-- `azure-openai` — GPT-4o/o-series deployed in Azure OpenAI / Foundry via `AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_API_KEY`
-- `azure-foundry-claude` — Claude deployed in Foundry (Anthropic Messages API) via `AZURE_FOUNDRY_ENDPOINT` + `AZURE_FOUNDRY_API_KEY`. Enterprise/MCA-E only.
-
-**Free emergency fallbacks:** Groq, Gemini, and Cerebras all offer free tiers with no credit card. Every agent's fallback chain should end with a free-tier model to guarantee zero downtime.
-
-Adapters live in `agents/adapters/orchestration/` and `agents/adapters/llm/`. See `docs/adapter-guide.md` for writing custom adapters.
-
-### SDLC as Source of Truth
-
-**The Agentic SDLC controls agent configuration.** Orchestration platforms (Paperclip, etc.) are execution layers. Change agent config in SDLC files, then sync to the platform.
-
-**SDLC files that define agents:**
-- `agents/budget.json` — model, provider, daily token limits, permissions, maxInstances, fallbackChain, modelPreferences
-- `agents/domains.json` — agent names, roles, domain routing patterns
-- `agents/<name>/AGENT.md` — system prompts (identity, operating rules, memory protocol)
-- `agents/project.json` — agent roster, adapter config, notification config
-
-**To change an agent's model or role:** Edit `budget.json` or `domains.json`, then sync to your orchestration platform if applicable.
-
-### Paperclip Adapter (Optional)
-
-When using the Paperclip orchestration adapter:
-- Source `.paperclip.env` to connect to the dashboard
-- Use the `/paperclip` skill for assignments, status updates, and coordination
-- Sync command: `node ~/agentic-sdlc/agents/paperclip-sync.mjs`
-- SDLC → Paperclip: model, role, instructions path. Paperclip-only: budgetMonthlyCents, heartbeat config.
-- Paperclip adds: heartbeat execution, issue tracking, approval gates, run audit trails.
-
-```bash
-node ~/agentic-sdlc/agents/paperclip-sync.mjs              # Push SDLC → Paperclip
-node ~/agentic-sdlc/agents/paperclip-sync.mjs --status      # Compare SDLC vs Paperclip
-node ~/agentic-sdlc/agents/paperclip-sync.mjs --dry-run     # Preview changes
-node ~/agentic-sdlc/agents/paperclip-sync.mjs --pull-spent  # Pull spend data from Paperclip
-```
+→ Full provider list, env vars, Paperclip sync, SDLC-as-source-of-truth: **[docs/appendix/adapters.md](docs/appendix/adapters.md)**
 
 ### On Context Getting Low
 1. Update PM dashboard with current progress
@@ -373,12 +194,12 @@ node ~/agentic-sdlc/agents/paperclip-sync.mjs --pull-spent  # Pull spend data fr
 
 ### Done Checklist (Configurable)
 
-The done checklist is configured per project in `project.json` via the `doneChecklist` array. Steps are only required if they appear in your project's checklist.
+Configured per project in `project.json` via the `doneChecklist` array.
 
-**Default for app projects:** `["openspec", "tests", "commit", "deploy", "verify", "notify"]`
-**Default for framework repos:** `["openspec", "tests", "commit", "push"]`
+**Default (apps):** `["openspec", "tests", "commit", "deploy", "verify", "notify"]`
+**Default (framework repos):** `["openspec", "tests", "commit", "push"]`
 
-"Wrote the code" is NOT "shipped the fix." Every configured step must complete before reporting done:
+"Wrote the code" is NOT "shipped the fix." Every configured step must complete:
 
 | Step | Description |
 |------|-------------|
@@ -392,253 +213,94 @@ The done checklist is configured per project in `project.json` via the `doneChec
 
 ## Instance Scaling
 
-Agents can run multiple parallel instances when configured:
-```json
-// budget.json
-{ "roy": { "maxInstances": 2, "dailyTokenLimit": 500000 } }
-```
-- Queue-drainer assigns up to `maxInstances` independent tasks with unique instance IDs (`roy-1`, `roy-2`)
-- File pattern conflict detection prevents overlapping assignments
-- All instances share the agent type's daily token budget
-- `queue-drainer.mjs status` shows scale suggestions when queue is deep
+Agents can run multiple parallel instances when configured (`maxInstances` in budget.json). Queue-drainer assigns up to `maxInstances` independent tasks with unique instance IDs (`roy-1`, `roy-2`). File pattern conflict detection prevents overlapping assignments. All instances share the agent type's daily token budget.
 
 ## Human Task Queue
 
 Bidirectional human-agent task management:
 ```bash
-node ~/agentic-sdlc/agents/queue-drainer.mjs human-status              # List pending human tasks
-node ~/agentic-sdlc/agents/queue-drainer.mjs human-complete <id>        # Mark done, auto-unblock agents
+node ~/agentic-sdlc/agents/queue-drainer.mjs human-status     # List pending human tasks
+node ~/agentic-sdlc/agents/queue-drainer.mjs human-complete <id>   # Mark done, auto-unblock
 ```
-- Agents create human task JSON files when hitting unresolvable blockers
-- `notify.mjs` sends immediate notifications on human task creation
-- `daily-review.mjs` shows "YOUR Action Items" section at dashboard top
-- Bottleneck detection alerts when human tasks are blocking agent work > 24h
+Agents create human task JSONs when blocked. `notify.mjs` notifies. `daily-review.mjs` surfaces a "YOUR Action Items" section. Bottleneck detection alerts when human tasks block agent work > 24h.
 
 ## Agent Maturation Tracking
 
-Agents mature through 6 levels: New → Corrected → Remembering → Teaching → Autonomous → Evolving
-
-- `weekly-review.mjs` computes per-agent maturation metrics (corrections, self-corrections, review severity)
-- `memory-manager.mjs` auto-advances maturation level on milestone achievements
-- `test-behavior.mjs` includes regression detection (correction rate spikes)
-- `daily-review.mjs` dashboard shows maturation level, weeks at level, and trend
+Agents mature: New → Corrected → Remembering → Teaching → Autonomous → Evolving. `weekly-review.mjs` computes per-agent metrics; `memory-manager.mjs` auto-advances on milestones; `test-behavior.mjs` detects correction-rate spikes; `daily-review.mjs` dashboard shows level + trend.
 
 ## Capability Monitoring
 
-Tracks which capabilities (memory, tests, notifications, etc.) agents actually use per task. Uses dual-layer tracking:
+Tracks which capabilities agents actually use per task (system-instrumented logs + agent self-report). Drift alerts when a required capability has zero log entries for 3+ consecutive tasks.
 
-- **System-instrumented logs (primary):** Each capability script (`memory-manager.mjs`, `cost-tracker.mjs`, `notify.mjs`, etc.) appends a JSONL line to `pm/capability-log.jsonl` as a side effect of running. Agents cannot skip or falsify these entries.
-- **Agent self-report (secondary):** Agents output a `<!-- CAPABILITY_CHECKLIST -->` JSON block at task completion with `skipReason` for unused capabilities. Provides context the system log can't infer.
-
-Drift is detected when a `required` capability has zero system-log entries for 3+ consecutive tasks without a valid `skipReason`. The monitor cross-references both sources: if an agent claims it used memory but the system log has no matching entry, that discrepancy is flagged.
-
-### Commands
 ```bash
-node ~/agentic-sdlc/agents/capability-monitor.mjs check    # Scan recent tasks for drift
-node ~/agentic-sdlc/agents/capability-monitor.mjs report   # Full per-agent usage rate table
-node ~/agentic-sdlc/agents/capability-monitor.mjs status   # Quick health check
+node ~/agentic-sdlc/agents/capability-monitor.mjs check    # Scan recent tasks
+node ~/agentic-sdlc/agents/capability-monitor.mjs report   # Per-agent usage table
 ```
 
-### Config
-Add to `project.json`:
-```json
-{
-  "capabilityMonitoring": {
-    "enabled": true,
-    "driftThreshold": 3,
-    "windowSize": 10
-  }
-}
-```
-
-Per-agent expected capabilities are defined in `agents/capabilities.json` (scaffolded by `setup.mjs`). Each agent entry has `required`, `conditional`, and `notExpected` capability lists. Using a `notExpected` capability triggers a scope creep alert.
-
-### UIX Agent Capabilities
-| Capability | Description |
-|------------|-------------|
-| `designSystemAudit` | Checks design token consistency (color, spacing, typography, border-radius, shadow) |
-| `accessibilityAudit` | Validates WCAG 2.1 AA compliance (contrast, semantic HTML, ARIA, focus, touch targets) |
-| `visualReview` | Screenshot-based visual hierarchy, responsive behavior, and interaction state evaluation |
-| `storybookGovernance` | Story coverage, state coverage, and prop sync enforcement (conditional on Storybook presence) |
-
-Enable drift notifications by adding `"capabilityDrift": true` to `notification.triggers` in `project.json`.
+→ Schema, configuration, UIX-specific capabilities, drift notifications: **[docs/appendix/capability-monitoring.md](docs/appendix/capability-monitoring.md)**
 
 ## Performance Feedback
 
-Cost-tracker computes per-agent efficiency metrics:
-- Average tokens per task (rolling 5-task window)
-- First-attempt success rate
-- Comparison to type average
-
-Worker injects these metrics into agent prompts for self-awareness.
-
-## Cycle History
-
-All automated cycle runs are recorded in `pm/cycle-history.json` with type, timestamp, success/failure, and summary stats. Both daily and weekly reviews append entries automatically.
+Cost-tracker computes per-agent efficiency: avg tokens/task (5-task window), first-attempt success rate, comparison to type average. Worker injects metrics into agent prompts for self-awareness.
 
 ## Git Conventions
 
-Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`
+Branch naming: `feature/<short-description>` or `agent/<agent-name>/<task-id>`.
 
 ## Script Reference
 
-| Script | Purpose |
-|--------|---------|
-| `agents/queue-drainer.mjs` | Task queue management + human task queue |
-| `agents/worker.mjs` | Generate agent prompts for subagent spawning |
-| `agents/seed-queue.mjs` | Initialize task queue from seed-tasks.json template |
-| `agents/review-hook.mjs` | Post-commit review hook (install/run) |
-| `agents/memory-manager.mjs` | 5-layer memory CRUD + maturation tracking |
-| `agents/rem-sleep.mjs` | Automated memory consolidation (+ similarity dedup) |
-| `agents/migrate-memory.mjs` | Memory migration on prompt upgrades |
-| `agents/version-snapshot.mjs` | Agent version snapshots |
-| `agents/cost-tracker.mjs` | Token usage, efficiency metrics, session hours |
-| `agents/test-behavior.mjs` | Agent prompt quality + maturation regression |
-| `agents/four-layer-validate.mjs` | AST anti-pattern scanning |
-| `agents/ast-analyzer.mjs` | TypeScript semantic analysis |
-| `agents/pattern-hunt.mjs` | Review pattern mining (+ semantic clustering) |
-| `agents/cycles/daily-review.mjs` | Daily summary + dashboard + bottleneck detection |
-| `agents/cycles/weekly-review.mjs` | Weekly review + REM sleep + maturation metrics |
-| `agents/matrix-client/matrix-cli.mjs` | Matrix communication CLI (+ schema validation) |
-| `agents/notify.mjs` | Notification, approval, wellness checks |
-| `agents/mailbox-sync.mjs` | Sync inbound WhatsApp messages to mailbox |
-| `agents/semantic-index.mjs` | Vector embedding index for semantic memory search |
-| `agents/embed.py` | Local embedding generation (sentence-transformers) |
-| `agents/schema-validator.mjs` | JSON Schema validation for inter-agent data contracts |
-| `agents/capability-monitor.mjs` | Capability drift detection, usage reports, health checks |
-| `agents/alignment-monitor.mjs` | Unified quality/alignment check, prompt suggestions, self-improving checklist |
-| `agents/model-manager.mjs` | Token budget monitoring, predictive swaps, cross-provider recommendations, model intelligence, quality-aware routing |
-| `agents/model-intel.json` | Model intelligence database: costs, strengths, limitations for all providers |
-| `agents/maturity-assess.mjs` | Platform maturity assessment: 8-dimension scoring, DORA metrics, production readiness |
-| `agents/adapters/load-adapter.mjs` | Dynamic adapter loader for orchestration and LLM providers |
-| `agents/paperclip-sync.mjs` | Push SDLC agent config (model, role, instructions) → Paperclip |
-| `agents/garden-roadmap.mjs` | Archive completed roadmap items, keep roadmap focused |
-| `agents/autonomous-launcher.sh` | Headless Claude Code launcher for autonomous operation |
-| `agents/voice-intake.sh` | Terminal-based voice input with multiple modes |
-| `agents/voice-intake-toggle.sh` | Headless voice-to-clipboard (bind to hotkey) |
-| `agents/voice-config.json` | Voice input configuration (model, language, max duration) |
-| `docs/comparison.md` | Framework comparison (vs LangGraph, Autogen, CrewAI, etc.) |
-| `docs/cursor-setup.md` | Cursor IDE setup guide (OpenAI, OpenSpec without skills) |
-| `docs/troubleshooting.md` | Common issues and recovery patterns |
-| `docs/voice-intake.md` | Voice input setup and usage guide |
+40+ framework scripts — full table in **[docs/appendix/script-reference.md](docs/appendix/script-reference.md)**.
 
-## Plans Directory Convention
+## Plans Directory + Autonomous Operation
 
-Projects use a `plans/` directory for persistent planning artifacts:
+Projects use `plans/` for persistent planning artifacts (`requirements.md`, `priorities.md`, `roadmap.md`, `parallelization.md`, `devlog.md`, `completed/`). `setup.mjs` scaffolds it.
 
-```
-plans/
-├── requirements.md          # REQ-xxx numbered requirements
-├── priorities.md            # Value/complexity scores, priority matrix
-├── roadmap.md               # Phased delivery plan (active work only)
-├── parallelization.md       # Dependency graphs, work streams, contracts
-├── devlog.md                # Append-only narrative progress journal
-├── [feature]-plan.md        # Complex feature plans (linked from roadmap)
-└── completed/
-    └── roadmap-archive.md   # Completed roadmap items with dates
-```
+Headless autonomous mode via `bash ~/agentic-sdlc/agents/autonomous-launcher.sh --agent <name>` — checks roadmap/queue, claims work, runs micro cycle, updates devlog, auto-commits.
 
-`setup.mjs` creates `plans/` and `plans/completed/` automatically.
-
-### Dev Log Convention
-Agents append entries to `plans/devlog.md` after completing tasks:
-```markdown
-### 2026-03-13 — Roy — T-042
-- Implemented user auth endpoints
-- Added 12 unit tests (all passing)
-- Fixed edge case: empty email validation
-```
-
-### Roadmap Gardening
-Periodically archive completed roadmap items to keep the active roadmap focused:
-```bash
-node ~/agentic-sdlc/agents/garden-roadmap.mjs              # Execute
-node ~/agentic-sdlc/agents/garden-roadmap.mjs --dry-run     # Preview
-node ~/agentic-sdlc/agents/garden-roadmap.mjs --status       # Stats
-```
-
-## Autonomous Operation
-
-Launch agents headlessly for autonomous work:
-```bash
-bash ~/agentic-sdlc/agents/autonomous-launcher.sh --agent roy        # Specific agent
-bash ~/agentic-sdlc/agents/autonomous-launcher.sh --task T-042       # Specific task
-bash ~/agentic-sdlc/agents/autonomous-launcher.sh --dry-run          # Preview prompt
-```
-
-The launcher checks the roadmap/queue, claims work, executes the micro cycle, updates the dev log, and auto-commits. See `framework/prompt-playbook.md` for scheduling patterns.
+→ Dev log conventions, roadmap gardening, autonomous-launcher flags: **[docs/appendix/plans-and-autonomous.md](docs/appendix/plans-and-autonomous.md)**
 
 ## Quality Alignment Monitor
 
-Unified process alignment checker that orchestrates all quality tools:
+`alignment-monitor.mjs` orchestrates all quality tools (capability drift, behavior, roadmap, queue, planning compliance). Outputs an alignment score (0-100) + drift alerts + prompt-adjustment suggestions. The checklist grows over time.
+
 ```bash
 node ~/agentic-sdlc/agents/alignment-monitor.mjs              # Full check + report
-node ~/agentic-sdlc/agents/alignment-monitor.mjs --dry-run     # Preview
-node ~/agentic-sdlc/agents/alignment-monitor.mjs --report       # Show last report
-node ~/agentic-sdlc/agents/alignment-monitor.mjs --checklist    # Show self-improving checklist
+node ~/agentic-sdlc/agents/alignment-monitor.mjs --checklist  # Show self-improving checklist
 ```
-
-Checks: capability drift, prompt quality (behavior tests), roadmap health, task queue, planning artifact compliance (REQ-xxx format, phase structure, demo sentences). Outputs alignment score (0-100), drift alerts, and specific prompt adjustment suggestions. The checklist grows over time as new anti-patterns are detected.
-
-See `agents/templates/planning-agents/quality-alignment.md` for the full agent template.
 
 ## Agent Routing
 
-See `framework/agent-routing.md` for the complete "when to use which agent" reference. Quick summary:
-
-| Phase | Agents |
-|-------|--------|
-| Planning | Requirements Engineer → Value Analyst → Product Manager → Parallelization Analyst |
-| Implementation | Backend Dev, Frontend Dev, AI Pipeline (routed by domain patterns) |
-| Quality | Code Reviewer, UI/UX Designer, `four-layer-validate.mjs`, `test-behavior.mjs` |
-| Release | Release Manager, deploy pipeline |
+See `framework/agent-routing.md` for the complete "when to use which agent" reference. Pipeline: planning agents → implementation agents (backend/frontend/ai routed by file pattern) → quality (review + four-layer-validate + test-behavior) → release.
 
 ## Prompt Playbook
 
-See `framework/prompt-playbook.md` for ready-to-use prompts covering: planning, execution, roadmap management, review, autonomous operation, deployment, and delegation.
+See `framework/prompt-playbook.md` for ready-to-use prompts (planning, execution, roadmap, review, autonomous, deployment, delegation).
 
 ## Voice Input
 
-Two voice input options:
-
-**In Claude Code** — use the built-in `/voice` command. Hold spacebar to talk, release to send.
-
-**Anywhere else** — `voice-intake-toggle.sh` is a hotkey-driven voice-to-clipboard tool. Bind it to F6 (or any key), press to record, press again to stop. Transcription via Groq Whisper lands on your clipboard — paste into any app with Ctrl+V.
-
-```bash
-bash ~/agentic-sdlc/agents/voice-intake-toggle.sh          # Toggle recording (bind to hotkey)
-bash ~/agentic-sdlc/agents/voice-intake-toggle.sh check     # Verify dependencies
-bash ~/agentic-sdlc/agents/voice-intake-toggle.sh setup     # Interactive setup guide
-```
-
-Config: `agents/voice-config.json`. Requires `$GROQ_API_KEY`. See `docs/voice-intake.md` for full setup.
+In Claude Code: `/voice` built-in (hold spacebar, release to send). Anywhere else: `voice-intake-toggle.sh` is a hotkey-driven voice-to-clipboard (Groq Whisper). See `docs/voice-intake.md` for setup.
 
 ## Getting Started
 
-### New Project Setup
-```bash
-node ~/agentic-sdlc/setup.mjs
-```
-
-This interactive script creates all necessary directories, config files, agent templates, and skills in your project.
-
-### Existing Project
-If your project already has an `agents/project.json`, all scripts will find it automatically when run from the project directory:
-```bash
-cd ~/your-project
-node ~/agentic-sdlc/agents/queue-drainer.mjs status
-```
+New project: `node ~/agentic-sdlc/setup.mjs` (interactive). Existing project with `agents/project.json`: framework scripts auto-detect from CWD. AI agents bootstrapping: use `--yes` flag to skip prompts.
 
 ## Daily Updates
 
-This repo auto-updates daily at 04:00 via OpenClaw cron:
-```bash
-openclaw cron list  # See scheduled jobs
-```
+This repo auto-updates daily at 04:00 via OpenClaw cron: `openclaw cron list` to see scheduled jobs.
 
 ## Maturity Model
 
-See `framework/maturity-model.md` for the 7-level maturity pyramid:
-1. Foundation → 2. Automation → 3. Scale → 4. Quality → 5. Evolution → 6. Continuous Improvement → 7. Mastery
+7-level pyramid (Foundation → Automation → Scale → Quality → Evolution → Continuous Improvement → Mastery). Each level builds on the previous — no skipping. Full detail in `framework/maturity-model.md`.
 
-Each level builds on the previous — no skipping.
+---
+
+## Appendix index
+
+The slim sections above point into these on-demand files:
+
+- `docs/appendix/agent-system.md` — Full agent roster, templates, task queue commands
+- `docs/appendix/iteration-cycles.md` — Daily/weekly/monthly cycles, cron schedules
+- `docs/appendix/capability-monitoring.md` — Schema, config, drift alerts
+- `docs/appendix/script-reference.md` — Complete script catalog (40+ scripts)
+- `docs/appendix/plans-and-autonomous.md` — Plans dir + autonomous launcher detail
+- `docs/appendix/adapters.md` — LLM providers, Paperclip integration, SDLC-as-source-of-truth
