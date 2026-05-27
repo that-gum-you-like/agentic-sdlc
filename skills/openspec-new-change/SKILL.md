@@ -55,7 +55,21 @@ Start a new change using the experimental artifact-driven approach.
    ```
    This outputs the template and context for creating the first artifact.
 
-6. **STOP and wait for user direction**
+6. **Run the cross-feature conflict check** (auto-gate)
+
+   Immediately after the change directory is created, scan the active OpenSpec corpus for files this change might conflict with:
+
+   ```bash
+   node ~/agentic-sdlc/agents/cross-feature-analyze.mjs --stdout | head -40
+   ```
+
+   - If high-severity flags involve the new change name → surface them to the user with a one-line "watch out, X also touches these files."
+   - If no flags involve the new change → say so briefly ("Cross-feature check: no conflicts with active changes.").
+   - **Opt-out**: skip this step entirely if `OPENSPEC_SKIP_CROSS_FEATURE=true` is set in the environment.
+
+   The analyzer is non-blocking — never refuse to create the change based on its output. It's a heads-up, not a gate.
+
+7. **STOP and wait for user direction**
 
 **Output**
 

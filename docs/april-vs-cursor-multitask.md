@@ -1,6 +1,6 @@
 # April vs Cursor `/multitask`
 
-**Source date**: 2026-05-27. Cursor's capabilities evolve fast — verify against Cursor's current docs before relying on this for production decisions.
+**Source date**: 2026-05-27. Cursor 3.2 `/multitask` is GA — shipped 2026-04-24, confirmed via [Cursor's official changelog](https://cursor.com/changelog) and [official subagents docs](https://cursor.com/docs/subagents).
 
 ## TL;DR
 
@@ -14,7 +14,7 @@
 
 ## What each one is
 
-**Cursor `/multitask`** (introduced in Cursor 3.2, April 2026) — a Cursor IDE slash command that breaks a single user goal into parallel subagent tasks. The subagents work inside Cursor's session, return results to the user. Designed for the "I want to refactor 5 files at once" pattern.
+**Cursor `/multitask`** (Cursor 3.2, shipped GA 2026-04-24) — a slash command in the Agents Window that breaks a single request into chunks and dispatches them to parallel subagents instead of running them serially. Already-queued messages can be promoted into multitask mode mid-flight. Pair with multi-root workspaces and improved worktrees (same release) for cross-repo or isolated-branch parallel work.
 
 **Framework April** (Parallelization Analyst, `agents/templates/planning-agents/parallelization-analyst.md`) — a planning-phase agent that reads a roadmap, builds a dependency graph, and outputs `parallelization.md` defining work streams. Downstream execution agents then claim work from the streams (typically via the queue-drainer). Tool-agnostic — works whether the agents are Cursor, Claude Code, Aider, or a mix.
 

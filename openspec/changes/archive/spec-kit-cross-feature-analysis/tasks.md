@@ -35,10 +35,10 @@
   - Complexity: S
   - Spec: REQ-005
 
-- [ ] **T-106** (optional): Wire `openspec-new-change` to run analyzer post-proposal
+- [x] **T-106** (optional): Wire `openspec-new-change` to run analyzer post-proposal
   - Complexity: S
   - Spec: REQ-006 (optional)
-  - **Status**: Intentionally deferred. Skill + npm script + docs all support manual invocation; auto-gating from `openspec-new-change` adds friction with unclear payoff today. Revisit if backlog hygiene drift recurs.
+  - **Status (closed 2026-05-27)**: Implemented after Bryce flagged backlog hygiene as recurring concern. `skills/openspec-new-change/SKILL.md` Step 6 now runs `node ~/agentic-sdlc/agents/cross-feature-analyze.mjs --stdout` after the change directory is created and surfaces high-severity flags. Non-blocking by design. Opt-out via `OPENSPEC_SKIP_CROSS_FEATURE=true`.
 
 ---
 

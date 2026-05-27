@@ -1,0 +1,8 @@
+{
+  "status": "proposed",
+  "phase": "design",
+  "created": "2026-05-27",
+  "lastUpdated": "2026-05-27",
+  "supersedes": ["onboarding-maturity", "claude-md-token-diet"],
+  "notes": "Merged from two prior proposals that targeted the same root cause from different angles. Onboarding clarity and CLAUDE.md token-tax are the same job: make the framework approachable + cheap on every request. Both predecessors archived 2026-05-27 with 'superseded' status; their proposals/designs preserved for historical context."
+}

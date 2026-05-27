@@ -1,0 +1,10 @@
+{
+  "status": "superseded",
+  "phase": "archived",
+  "created": "2026-04-08",
+  "lastUpdated": "2026-04-08",
+  "archivedDate": "2026-05-27",
+  "supersededBy": "onboarding-and-context-diet",
+  "tasks": "0/22 (work folded into successor)",
+  "notes": "Superseded 2026-05-27. Onboarding clarity and CLAUDE.md token-tax are the same job; merged into `onboarding-and-context-diet`. All P0-P2 items from the original proposal carry forward in the merged tasks.md (workstream B)."
+}

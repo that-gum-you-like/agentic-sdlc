@@ -1,0 +1,10 @@
+{
+  "status": "superseded",
+  "phase": "archived",
+  "created": "2026-05-27",
+  "lastUpdated": "2026-05-27",
+  "archivedDate": "2026-05-27",
+  "supersededBy": "onboarding-and-context-diet",
+  "tasks": "0/10 (work folded into successor as workstream A)",
+  "notes": "Superseded 2026-05-27 (same day as creation). CLAUDE.md split and AGENTS.md slim merged into `onboarding-and-context-diet` workstream A — the surrounding onboarding work belongs in the same change, not two adjacent ones."
+}

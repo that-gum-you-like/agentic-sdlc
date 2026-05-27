@@ -15,10 +15,10 @@
 
 ## Implementation Tasks
 
-- [ ] **T-101**: Verify Cursor 3.2 `/multitask` is GA (vs. beta/staged rollout) at implementation time; note version in doc
+- [x] **T-101**: Verify Cursor 3.2 `/multitask` is GA (vs. beta/staged rollout) at implementation time; note version in doc
   - Complexity: XS
   - Spec: REQ-001
-  - **Status**: Partially done — the doc cites "Cursor 3.2 (April 2026, per InfoQ)" and includes an explicit "verify against Cursor's current docs before relying on this for production decisions" header at the top. Live GA-status verification deferred — needed only when a user is about to depend on the doc operationally.
+  - **Status (closed 2026-05-27)**: GA confirmed via Cursor's official changelog (https://cursor.com/changelog) and subagents docs (https://cursor.com/docs/subagents). Shipped 2026-04-24. `docs/april-vs-cursor-multitask.md` header updated to assert GA directly rather than hedge.
 
 - [x] **T-102**: Write `docs/april-vs-cursor-multitask.md` (TL;DR table + sections per design)
   - Complexity: M
