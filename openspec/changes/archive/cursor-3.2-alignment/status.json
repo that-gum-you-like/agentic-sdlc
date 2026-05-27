@@ -1,0 +1,9 @@
+{
+  "status": "complete",
+  "phase": "archived",
+  "created": "2026-05-27",
+  "lastUpdated": "2026-05-27",
+  "completedDate": "2026-05-27",
+  "tests": "n/a (docs-only change)",
+  "notes": "Wrote docs/april-vs-cursor-multitask.md (TL;DR table + when-each-wins + combine-them pattern). Extended docs/cursor-background-agents.md with a deployment-modes table (Cursor cloud vs self-hosted vs framework queue-drainer; privacy column leftmost per Bryce's privacy-first rule). Added pointer entries to .cursor/rules/sdlc-housekeeping.mdc (now 127 lines, under cap). Cross-linked from agents/templates/planning-agents/parallelization-analyst.md (April's actual file — proposal had wrong path 'planning/april/AGENT.md'; corrected at implementation time)."
+}

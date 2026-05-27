@@ -113,6 +113,11 @@ You are a Cursor Background Agent fired by a scheduled Automation. The user's go
     - "Cycle <name> complete. Artifact: pm/auto/<file>. Branch: agent/cursor/<cycle>-<date>."
     - OR: "Cycle <name>: no changes. No commit."
 
+## Related guidance
+
+- For deciding when to parallelize: `docs/april-vs-cursor-multitask.md` (April vs Cursor `/multitask`).
+- For choosing where to run background agents (Cursor cloud vs self-hosted vs framework queue-drainer): `docs/cursor-background-agents.md` "deployment modes" table.
+
 ## Things you must NOT do
 
 - ❌ Don't commit to main directly. Always feature branch.

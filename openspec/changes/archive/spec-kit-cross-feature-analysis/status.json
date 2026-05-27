@@ -1,0 +1,9 @@
+{
+  "status": "complete",
+  "phase": "archived",
+  "created": "2026-05-27",
+  "lastUpdated": "2026-05-27",
+  "completedDate": "2026-05-27",
+  "tests": "7/7 passing (tests/cross-feature-analyze.test.mjs)",
+  "notes": "Shipped agents/cross-feature-analyze.mjs (zero deps), tests/cross-feature-analyze.test.mjs, skills/openspec-cross-feature/SKILL.md, docs/cross-feature-analysis.md, and an npm run cross-feature script. Initial run against the live 28-change corpus flagged 81 pairs (54 high, 0 medium, 27 low) — confirms backlog has real merge-contention hot spots. Optional proposal-time auto-gate (REQ-006) deferred — analyzer can be invoked manually via the skill or npm script."
+}

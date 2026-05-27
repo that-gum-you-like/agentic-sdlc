@@ -85,6 +85,20 @@ Cursor Automations can fire framework scripts on a schedule. Recommended starter
 
 In the Cursor Automation editor, create each as a "Scheduled" trigger pointing at the command. The Pro+ tier covers all of these without burning your $20/mo API credit pool (housekeeping scripts make no LLM calls).
 
+## Where to run background agents: deployment modes
+
+Cursor's background-agent infrastructure has evolved across 2026. As of May 2026, three modes are available to a Cursor Pro+ user. Match the mode to your privacy and ops posture:
+
+| Mode | Data leaves your network? | Setup complexity | Cost | When to choose |
+|---|---|---|---|---|
+| **Cursor cloud (default)** | YES — code, prompts, and intermediate artifacts traverse Cursor's infrastructure | Low — point-and-click in Background Agents panel | $$ (Cursor Pro+ credit pool) | Quick start; low-sensitivity codebases; when you don't need to control where the work runs |
+| **Cursor self-hosted cloud agents** (Mar 2026 release) | NO — agents run on infrastructure you control; only orchestration metadata reaches Cursor | Med-High — requires container infra (Kubernetes or equivalent), Cursor self-hosted setup, network plumbing | $$$ (your infra + Cursor seat license; consult Cursor enterprise sales) | Privacy-first orgs, regulated industries, when corporate policy forbids third-party code custody |
+| **Framework queue-drainer (local)** | NO — runs as a Node script on your machine | Low — `node ~/agentic-sdlc/agents/queue-drainer.mjs run` | $ (only your LLM API tokens) | Solo dev, full local control, no IDE dependency, integrates with the framework's full memory/cost/cycle infrastructure |
+
+Privacy-first decision rule (Bryce's stance, applies to this framework's default posture): prefer self-hosted or local for anything touching user data, third-party customer data, or compliance-controlled artifacts. The framework's default `notify.mjs` notifications go to OpenClaw (local) for the same reason.
+
+For long-horizon autonomous work or anything spanning multiple sessions, the framework queue-drainer is the most flexible — it accumulates memory, tracks cost, and runs the housekeeping cycles. Cursor cloud agents are best for interactive bursts inside an editing session.
+
 ## Safety notes
 
 - Background agents respect `agents/budget.json` daily token limits. If an agent hits 80% of its budget, conservation mode activates.

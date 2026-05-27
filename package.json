@@ -8,9 +8,10 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node tests/adapter-and-model-manager.test.mjs",
+    "test": "node tests/adapter-and-model-manager.test.mjs && node --test tests/cross-feature-analyze.test.mjs && node --test tests/deploy-rollback.test.mjs",
     "test:behavior": "node agents/test-behavior.mjs --framework",
-    "test:all": "node tests/adapter-and-model-manager.test.mjs && node agents/test-behavior.mjs --framework",
+    "test:all": "npm test && node agents/test-behavior.mjs --framework",
+    "cross-feature": "node agents/cross-feature-analyze.mjs",
     "validate": "node agents/four-layer-validate.mjs --files 'agents/*.mjs'",
     "assess": "node agents/maturity-assess.mjs",
     "models": "node agents/model-manager.mjs models",

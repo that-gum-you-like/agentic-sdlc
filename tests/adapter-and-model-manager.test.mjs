@@ -562,9 +562,14 @@ test('ONBOARDING.md exists and has 5-phase protocol', () => {
   assert(content.includes('Phase 5: Validate'), 'Should have Phase 5: Validate');
 });
 
-test('.cursorrules exists and references ONBOARDING.md', () => {
-  const content = readFileSync(resolve(SDLC_ROOT, '.cursorrules'), 'utf8');
-  assert(content.includes('ONBOARDING.md'), 'Should reference ONBOARDING.md');
+test('.cursor/rules/agentic-sdlc.mdc exists and references ONBOARDING.md', () => {
+  // Note: legacy .cursorrules was removed in cursor-rules-modernization (2026-05-27).
+  // Cursor now reads .cursor/rules/*.mdc instead. .windsurfrules still references
+  // ONBOARDING.md for Windsurf users.
+  const cursorRule = readFileSync(resolve(SDLC_ROOT, '.cursor/rules/agentic-sdlc.mdc'), 'utf8');
+  assert(cursorRule.includes('ONBOARDING.md'), 'agentic-sdlc.mdc should reference ONBOARDING.md');
+  const windsurfRule = readFileSync(resolve(SDLC_ROOT, '.windsurfrules'), 'utf8');
+  assert(windsurfRule.includes('ONBOARDING.md'), '.windsurfrules should reference ONBOARDING.md');
 });
 
 test('all 6 level guides exist', () => {

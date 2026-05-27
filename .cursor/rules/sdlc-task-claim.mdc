@@ -1,0 +1,58 @@
+---
+description: "How a Cursor Background Agent claims a task from tasks/queue/ — pre-flight, claim, read memory, branch off main. Loads when goal mentions queue, task, claim, or drain. Pair with sdlc-task-implement.mdc."
+globs: ["tasks/queue/**", "agents/queue-drainer.mjs"]
+alwaysApply: false
+---
+
+# SDLC Task Claim (for Background Agents)
+
+You are a Cursor Background Agent. The user fired an Automation telling you to drain or execute the queue. This rule covers steps 1–13: pre-flight → claim → read memory → branch. Once you've branched, switch to `sdlc-task-implement.mdc` for the build.
+
+## Pre-flight (read state, change nothing)
+
+1. Confirm the framework is reachable: `ls ~/agentic-sdlc/agents/queue-drainer.mjs`. If missing, clone:
+   ```bash
+   git clone https://github.com/that-gum-you-like/agentic-sdlc.git ~/agentic-sdlc
+   ```
+2. Confirm Node 18+: `node --version`.
+3. Read `agents/project.json` for the test command (`testCmd`) and agent roster.
+4. Queue status: `node ~/agentic-sdlc/agents/queue-drainer.mjs status`.
+5. Empty queue → exit cleanly: "No pending tasks." No commit, no PR. Done.
+
+## Claim sequence
+
+6. Pick the highest-priority unblocked task. Tie-break by `createdAt` ASC (oldest first).
+7. Claim atomically:
+   ```bash
+   node ~/agentic-sdlc/agents/queue-drainer.mjs claim <task-id> cursor-agent
+   ```
+   If the claim fails (concurrent claim won) → exit cleanly: "Task <id> claimed by another agent." Done.
+8. Read the full task spec: `cat tasks/queue/<task-id>.json`.
+
+## Read memory (always — non-negotiable)
+
+9. Identify the assigned agent from `assignee` (e.g. "backend", "frontend", "reviewer").
+10. Read that agent's memory:
+    ```bash
+    node ~/agentic-sdlc/agents/memory-manager.mjs recall <agent>
+    ```
+11. Note failure memories in `core.json` — non-obvious gotchas to avoid.
+
+## Branch off main
+
+12. Check current branch: `git rev-parse --abbrev-ref HEAD`.
+13. Create and switch to a feature branch:
+    ```bash
+    git checkout -b agent/cursor/<task-id>
+    ```
+    The `agent/cursor/` prefix is non-negotiable — makes background work visible in `git branch --list` and prevents accidental main commits.
+
+## Next
+
+Switch to `sdlc-task-implement.mdc` (loads when you edit files under `agents/**` or `tests/**`) for the implementation phase.
+
+## Things you must NOT do (claim phase)
+
+- ❌ Don't pick a task already `in_progress` for another agent. Use `claim`'s atomic protection.
+- ❌ Don't commit to `main`. Always feature branch.
+- ❌ Don't skip memory reads — failure memories prevent repeat mistakes.

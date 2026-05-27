@@ -23,13 +23,13 @@ The following ideas from the 2026-03-13 curriculum review have been implemented:
 | — | Capability Monitoring | `agent-capability-checklist` (31 tasks) — 29/31 complete, system instrumentation + monitor + docs done (2026-03-13) |
 | 17 | Cursor Automations Worker Integration | `cursor-automations-worker-integration` (shipped 2026-05-21) — 2 `.cursor/rules/*.mdc` files + `docs/cursor-automations-playbook.md` for the 7-Automation UI setup |
 | 12 | Automated Rollback on Deploy Failure | `automated-deploy-rollback` (shipped 2026-05-21) — `agents/deploy-rollback.mjs` + 2 new notify.mjs triggers + deploy-pipeline.md.template stages 8-9 + `docs/rollback-pattern.md` |
-| 18 | Cursor Rules Modernization | `cursor-rules-modernization` (proposed 2026-05-27) — prune legacy `.cursorrules`, split 167-line `sdlc-task-execution.mdc`, slim `agentic-sdlc.mdc` toward Morph ≤50/≤150 caps |
+| 18 | Cursor Rules Modernization | `cursor-rules-modernization` (shipped 2026-05-27) — pruned `.cursorrules`, split `sdlc-task-execution.mdc` into `sdlc-task-claim.mdc` + `sdlc-task-implement.mdc`, slimmed `agentic-sdlc.mdc` to 47 lines (under Morph 50-line always-apply cap), new `sdlc-testing.mdc`. All 7 rules within caps. |
 | 19 | CLAUDE.md Token Diet | `claude-md-token-diet` (proposed 2026-05-27) — split 33KB `CLAUDE.md` into ≤500-line core + `docs/appendix/` files; slim `AGENTS.md` to ≤150 lines |
 | 20 | OTel GenAI Cost-Tracker Emission | `cost-tracker-otel` (proposed 2026-05-27) — emit OpenTelemetry GenAI-compliant spans from every LLM adapter to `pm/otel-spans.jsonl` |
 | 21 | Replay-Regression CI Gate | `replay-regression-ci-gate` (proposed 2026-05-27) — corpus-driven offline replay suite as required CI check on `main` |
 | 22 | Anthropic Native Compaction | `anthropic-native-compaction` (proposed 2026-05-27) — integrate `compact-2026-01-12` for within-session memory compaction; REM-sleep stays as between-session role |
-| 23 | Cursor 3.2 Alignment Docs | `cursor-3.2-alignment` (proposed 2026-05-27) — comparison docs for `/multitask` vs April + self-hosted-vs-cloud decision table |
-| 24 | Spec-Kit Cross-Feature Analysis | `spec-kit-cross-feature-analysis` (proposed 2026-05-27) — port shared-file conflict detection from Spec Kit to OpenSpec |
+| 23 | Cursor 3.2 Alignment Docs | `cursor-3.2-alignment` (shipped 2026-05-27) — wrote `docs/april-vs-cursor-multitask.md`, extended `docs/cursor-background-agents.md` with deployment-modes table (Cursor cloud vs self-hosted vs framework queue-drainer), added pointers in `sdlc-housekeeping.mdc`, cross-linked from `parallelization-analyst.md` |
+| 24 | Spec-Kit Cross-Feature Analysis | `spec-kit-cross-feature-analysis` (shipped 2026-05-27) — `agents/cross-feature-analyze.mjs` + 7/7 passing tests + `skills/openspec-cross-feature` + `docs/cross-feature-analysis.md` + `npm run cross-feature`. Initial run flagged 54 high-severity backlog pairs. |
 
 ---
 

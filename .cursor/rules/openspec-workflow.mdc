@@ -87,6 +87,20 @@ Triggers: "explore", "think about", "investigate".
 2. Read relevant code, consider options.
 3. Can create OpenSpec artifacts if exploration leads to a change.
 
+## Trigger quick reference
+
+| User says | Action |
+|---|---|
+| "start a new change" / "openspec new" | `openspec new change "<kebab-name>"` → `openspec instructions <first-artifact>` |
+| "continue" / "next artifact" | `openspec list --json` → `openspec status --change "<name>" --json` → draft next artifact |
+| "fast forward" / "ff" | Loop all ready artifacts in dependency order |
+| "implement" / "apply" | Read proposal + design + specs + tasks, then follow the micro cycle per task |
+| "verify" / "check" | Grep codebase for each REQ-xxx; report CRITICAL / WARNING / SUGGESTION |
+| "archive" / "done" | `mv openspec/changes/<name> openspec/changes/archive/YYYY-MM-DD-<name>` |
+| "explore" / "investigate" | Thinking-partner mode; no implementation |
+
+Ask the user before jumping from one artifact to the next — don't speed-run the whole workflow unless they explicitly say "ff".
+
 ## Required sections in every artifact
 
 - **proposal.md** MUST include a `## Value Analysis` section.

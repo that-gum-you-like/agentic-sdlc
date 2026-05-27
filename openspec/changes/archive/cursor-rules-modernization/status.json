@@ -1,0 +1,9 @@
+{
+  "status": "complete",
+  "phase": "archived",
+  "created": "2026-05-27",
+  "lastUpdated": "2026-05-27",
+  "completedDate": "2026-05-27",
+  "tests": "47/47 passing (tests/adapter-and-model-manager.test.mjs — updated .cursorrules→agentic-sdlc.mdc assertion)",
+  "notes": "Split sdlc-task-execution.mdc into sdlc-task-claim.mdc + sdlc-task-implement.mdc. New sdlc-testing.mdc absorbs testing tiers from agentic-sdlc.mdc. agentic-sdlc.mdc slimmed from 87 to 47 lines (under 50-line always-apply cap). .cursorrules removed; .windsurfrules retained with a header explaining the Windsurf-specific role. All 7 cursor rule files within Morph caps (50 always-apply / 150 glob)."
+}

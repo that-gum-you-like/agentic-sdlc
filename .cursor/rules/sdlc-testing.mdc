@@ -1,0 +1,69 @@
+---
+description: "Testing tiers (unit, integration, defeat, four-layer, behavior, browser E2E) and when to run each. Loads when editing tests or test-adjacent files."
+globs: ["**/*.test.mjs", "**/*.test.ts", "**/*.test.tsx", "**/*.test.js", "tests/**", "agents/test-behavior.mjs", "agents/four-layer-validate.mjs"]
+alwaysApply: false
+---
+
+# Testing Tiers
+
+The framework defines five test tiers. Run the right tier for the change you made.
+
+## Tier 1: Unit
+
+```bash
+<project.testCmd>     # configured in agents/project.json
+```
+
+Run after any code change. Required before commit.
+
+## Tier 2: Integration (service ↔ store, contract tests)
+
+```bash
+<project.integrationCmd>   # or project-specific equivalent
+```
+
+Run when touching service/store boundaries or shared contracts.
+
+## Tier 3: Defeat (anti-pattern scans)
+
+```bash
+<project.defeatCmd>
+```
+
+Run before every commit. Catches `any` types, `console.log`, file-size overruns, missing error handling. `pattern-hunt.mjs` proposes new defeat tests over time.
+
+## Tier 4: Four-layer validate (AST scans)
+
+```bash
+node ~/agentic-sdlc/agents/four-layer-validate.mjs
+```
+
+Layer 5 enforces `__isMainModule` CLI guards on scripts that export functions. Required gate before commit on agent-script edits.
+
+## Behavior tests (agent prompt quality)
+
+```bash
+node ~/agentic-sdlc/agents/test-behavior.mjs
+```
+
+**MUST pass before committing any `AGENT.md` change.** Includes maturation regression detection.
+
+## Tier 5: Browser E2E
+
+- **Run when:** any change to screens, navigation, state management, or components.
+- **What it checks:** real browser rendering, navigation flows, state persistence, refresh resilience.
+- **Tools:** Playwright, Puppeteer, or equivalent.
+- **Gate:** must pass before deploy to production.
+- **How:** build the production artifact → serve locally → run browser E2E against the local build.
+
+## Sequencing
+
+1. Tier 1 + Tier 4 → before every commit.
+2. Tier 3 → before every commit if defeat suite configured.
+3. Tier 2 → when crossing service boundaries.
+4. Tier 5 → when frontend changed; required before deploy.
+5. Behavior tests → required after any `AGENT.md` edit.
+
+## Anti-fabrication
+
+Never claim a test passed that you did not actually run. If you can't run a tier locally, say so explicitly — don't paste hypothetical output.
