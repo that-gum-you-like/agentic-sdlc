@@ -90,6 +90,48 @@ Open a PR upstream to `paperclipai/paperclip`. High career-signal value — a me
 
 ---
 
+### 25. Optional spaCy Layer 2.5 NLP Analyzer (carried forward from curriculum-maturity-advancement)
+
+**Problem:** The four-layer-validate scanner doesn't catch property-name near-misses (e.g. `user.fullName` vs `user.full_name`) that pass type checks but fail at runtime. The `curriculum-maturity-advancement` change scoped tasks 14.1-14.5 for a spaCy-based optional Layer 2.5.
+
+**Idea:** Ship `agents/nlp-analyze.py` (spaCy, local-only) + `agents/nlp-analyzer.mjs` Node wrapper + integration into `four-layer-validate.mjs` as optional Layer 2.5 (graceful skip if spaCy missing). Per zero-dep stance, must be opt-in.
+
+**Complexity:** Medium.
+
+**Priority:** Low — opt-in optional layer, no urgency without a triggering bug.
+
+**Carried forward from:** `openspec/changes/archive/curriculum-maturity-advancement/` (archived 2026-05-27, 80/87 tasks complete).
+
+---
+
+### 26. agent-capability-checklist test coverage (carried forward)
+
+**Problem:** `agents/capability-monitor.mjs` (16KB, shipped 2026-04-07) lacks dedicated unit tests. Tasks 7.1 and 7.2 of `agent-capability-checklist` were deferred at archive.
+
+**Idea:** Write `agents/__tests__/capability-checklist.test.mjs` covering schema validation, config loading, drift-detection algorithm, scope-creep detection, and checklist parsing from mock agent output. Run the regression suite.
+
+**Complexity:** Small.
+
+**Priority:** Medium — capability monitoring is a meta-quality guardrail and protecting it with tests is worthwhile but not urgent.
+
+**Carried forward from:** `openspec/changes/archive/agent-capability-checklist/` (archived 2026-05-27, 34/36 tasks complete).
+
+---
+
+### 27. voice-intake finishing touches (carried forward)
+
+**Problem:** Voice intake is functional and in daily use, but 4 admin/docs polish tasks were left undone.
+
+**Idea:** (a) Make `setup.mjs` scaffold `voice-config.json` during project setup as optional section; (b) Add voice input to `framework/maturity-model.md` as optional Level 6 capability; (c) Add a voice-intake row to BACKLOG.md "Promoted to Changes" table; (d) Run a manual end-to-end test (record → transcribe → type into terminal).
+
+**Complexity:** Small (each task <30 min).
+
+**Priority:** Low — quality-of-life polish, not blocking anything.
+
+**Carried forward from:** `openspec/changes/archive/voice-intake/` (archived 2026-05-27, 27/31 tasks complete).
+
+---
+
 ### 16. Memory System ACE Patterns Adoption
 
 **Problem:** Our 5-layer memory consolidates via REM sleep using LLM judgment to decide what to promote/prune. Without quality counters per entry, we can't measure whether consolidation is improving or degrading memory quality. ACE (ace-agent/ace, MIT 1.1k stars, Nov 2025) demonstrates that incremental delta updates with helpful/harmful counters prevent "context collapse" — where wholesale rewrites lose accumulated knowledge.

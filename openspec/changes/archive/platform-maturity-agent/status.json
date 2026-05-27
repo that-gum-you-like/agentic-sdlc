@@ -1,0 +1,11 @@
+{
+  "status": "complete",
+  "phase": "archived",
+  "created": "2026-04-08",
+  "lastUpdated": "2026-04-08",
+  "completedDate": "2026-04-08",
+  "archivedDate": "2026-05-27",
+  "tasks": "n/a (proposal-only artifact; shipped without tasks.md)",
+  "shippedTo": "agents/templates/execution-agents/platform-maturity-sentinel.md + agents/maturity-assess.mjs (8-dimension scoring, DORA metrics, production readiness)",
+  "notes": "No prior status.json; only proposal.md existed. Backlog triage 2026-05-27 verified the shipped template + assessment script both exist (referenced in CLAUDE.md Script Reference) and archived."
+}

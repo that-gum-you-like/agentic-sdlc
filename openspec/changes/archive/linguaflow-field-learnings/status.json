@@ -1,0 +1,11 @@
+{
+  "status": "complete",
+  "phase": "archived",
+  "created": "2026-04-07",
+  "lastUpdated": "2026-04-07",
+  "completedDate": "2026-04-07",
+  "archivedDate": "2026-05-27",
+  "tasks": "49/49 complete",
+  "shippedTo": "agents/adapters/ (llm/, orchestration/, load-adapter.mjs) — adapter layer decouples framework from specific platforms (Paperclip, OpenAI, Anthropic, Groq, etc.) per the proposal",
+  "notes": "Despite the name, this is SDLC framework work — extracting LinguaFlow's operational learnings INTO the generic framework. Archived 2026-05-27 during backlog triage — 100% complete, last touched 2026-04-07."
+}

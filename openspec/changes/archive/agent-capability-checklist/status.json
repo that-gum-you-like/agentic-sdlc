@@ -1,0 +1,16 @@
+{
+  "status": "complete-with-deferrals",
+  "phase": "archived",
+  "created": "2026-03-13",
+  "lastUpdated": "2026-03-13",
+  "completedDate": "2026-03-13",
+  "archivedDate": "2026-05-27",
+  "tasks": "34/36 complete (94%)",
+  "shippedTo": "agents/capability-monitor.mjs (16KB, last touched 2026-04-07), agents/templates/capabilities.json, plus integration into notify.mjs (capabilityDrift trigger)",
+  "deferred": [
+    "7.1: Write full test suite at agents/__tests__/capability-checklist.test.mjs (schema validation, drift detection, scope creep, checklist parsing from mock agent output)",
+    "7.2: Run regression suite to confirm no breakage"
+  ],
+  "carryForward": "BACKLOG.md entry #26 — agent-capability-checklist test coverage",
+  "notes": "Capability monitoring is shipped and operational; what remains is test coverage. Archived 2026-05-27 during backlog triage."
+}

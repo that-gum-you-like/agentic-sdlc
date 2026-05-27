@@ -1,0 +1,18 @@
+{
+  "status": "complete-with-deferrals",
+  "phase": "archived",
+  "created": "2026-03-13",
+  "lastUpdated": "2026-03-13",
+  "completedDate": "2026-03-13",
+  "archivedDate": "2026-05-27",
+  "tasks": "27/31 complete (87%)",
+  "shippedTo": "agents/voice-intake.sh, agents/voice-intake-toggle.sh, agents/voice-config.json, docs/voice-intake.md",
+  "deferred": [
+    "4.3: Have setup.mjs scaffold voice-config.json during project setup (optional section)",
+    "6.3: Add voice input to framework/maturity-model.md as optional Level 6 capability",
+    "6.4: Add voice-intake row to BACKLOG.md 'Promoted to Changes' table",
+    "7.6: Manual e2e test — record → transcribe → type into terminal"
+  ],
+  "carryForward": "BACKLOG.md entry #27 — voice-intake finishing touches",
+  "notes": "Voice intake works (Bryce uses it; this session even fixed a Wayland clipboard regression in it). Remaining tasks are admin/docs polish, not functional gaps. Archived 2026-05-27 during backlog triage."
+}

@@ -1,0 +1,16 @@
+{
+  "status": "complete-with-deferrals",
+  "phase": "archived",
+  "created": "2026-03-13",
+  "lastUpdated": "2026-03-13",
+  "completedDate": "2026-03-13",
+  "archivedDate": "2026-05-27",
+  "tasks": "80/87 complete (92%)",
+  "deferred": [
+    "14.1-14.5: NLP-based semantic code analysis via spaCy (Layer 2.5 of four-layer-validate) — optional graceful-skip layer; deferred per zero-dep stance.",
+    "16.3: Document Layer 2.5 in framework/validation-patterns.md",
+    "16.7: Re-run full behavior test suite as final acceptance"
+  ],
+  "carryForward": "BACKLOG.md entry #25 — Optional spaCy Layer 2.5 NLP analyzer",
+  "notes": "Closed all 6 major thematic blocks (feedback loops, human-agent collab, scaling, structured contracts, framework comparison, evolution tracking). Only the optional Python/spaCy NLP layer remains; per zero-dep framework stance, this is properly deferred rather than rushed. Archived 2026-05-27 during backlog triage."
+}

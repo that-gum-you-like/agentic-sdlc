@@ -1,0 +1,11 @@
+{
+  "status": "complete",
+  "phase": "archived",
+  "created": "2026-03-13",
+  "lastUpdated": "2026-03-13",
+  "completedDate": "2026-03-13",
+  "archivedDate": "2026-05-27",
+  "tasks": "11/11 complete",
+  "shippedTo": "agents/templates/uix-core.json.template",
+  "notes": "UI/UX execution agent template. Archived 2026-05-27 during backlog triage — 100% complete, last touched 2026-03-13."
+}
