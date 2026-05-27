@@ -18,7 +18,8 @@
 set -euo pipefail
 
 # Ensure system tools are found first (Homebrew sox can't reach PipeWire)
-export PATH="/usr/bin:/bin:/usr/local/bin:${PATH}"
+# Also ensure Homebrew is on PATH (desktop keybindings get minimal environment)
+export PATH="/usr/bin:/bin:/usr/local/bin:/home/linuxbrew/.linuxbrew/bin:${PATH}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${SCRIPT_DIR}/voice-config.json"
@@ -292,8 +293,11 @@ transcribe_and_copy() {
     return 1
   fi
 
-  # Copy to clipboard
-  if has_cmd xclip; then
+  # Copy to clipboard (prefer Wayland-native on Wayland sessions)
+  local session_type="${XDG_SESSION_TYPE:-x11}"
+  if [[ "$session_type" == "wayland" ]] && has_cmd wl-copy; then
+    echo -n "$text" | wl-copy
+  elif has_cmd xclip; then
     echo -n "$text" | xclip -selection clipboard
   elif has_cmd xsel; then
     echo -n "$text" | xsel --clipboard --input
