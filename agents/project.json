@@ -3,7 +3,7 @@
   "projectDir": "/home/bryce/agentic-sdlc",
   "appDir": ".",
   "testCmd": "node tests/adapter-and-model-manager.test.mjs",
-  "agents": ["sdlc-developer", "sdlc-reviewer", "sdlc-documentarian"],
+  "agents": ["sdlc-developer", "jony-aive", "sdlc-reviewer", "sdlc-documentarian"],
   "notification": {
     "provider": "none",
     "channel": "",

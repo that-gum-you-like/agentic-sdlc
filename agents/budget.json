@@ -16,6 +16,20 @@
         "architecture": "claude-opus-4-6"
       }
     },
+    "jony-aive": {
+      "model": "claude-opus-4-6",
+      "provider": "anthropic",
+      "dailyTokens": 300000,
+      "permissions": "full-edit",
+      "maxInstances": 1,
+      "fallbackChain": ["claude-opus-4-6", "claude-sonnet-4-6", "gemini-2.5-flash", "llama-3.3-70b-versatile"],
+      "activeModel": null,
+      "modelPreferences": {
+        "design critique": "claude-opus-4-6",
+        "design decision": "claude-opus-4-6",
+        "roadmap": "claude-opus-4-6"
+      }
+    },
     "sdlc-reviewer": {
       "model": "claude-sonnet-4-6",
       "provider": "anthropic",

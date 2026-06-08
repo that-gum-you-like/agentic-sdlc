@@ -4,6 +4,17 @@
     "role": "Framework Developer",
     "patterns": ["agents/*.mjs", "agents/adapters/", "agents/cycles/", "agents/templates/", "setup.mjs", "tests/"]
   },
+  "jony-aive": {
+    "name": "Jony AIve",
+    "role": "Product Design Lead",
+    "patterns": [
+      "design", "product design", "design critique", "design review",
+      "design brief", "design language", "design decision",
+      "roadmap", "essence", "simplify", "rethink", "redesign",
+      "product thinking", "ux direction", "experience design",
+      "pm/design", "docs/design"
+    ]
+  },
   "sdlc-reviewer": {
     "name": "SDLC Reviewer",
     "role": "Code Reviewer",
