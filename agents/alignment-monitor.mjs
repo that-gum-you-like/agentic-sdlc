@@ -150,8 +150,9 @@ console.log('  4/5 Task queue...');
 const queueResult = runTool(`node ${resolve(__dirname, 'queue-drainer.mjs')} status`);
 findings.toolResults.queueHealth = queueResult;
 
-// Check for stale claims
-if (queueResult.output && /stale|stuck|blocked/i.test(queueResult.output)) {
+// Check for stale claims. Word boundaries so "Ready (unblocked): N" in the
+// queue-drainer status does NOT false-positive on the substring "blocked".
+if (queueResult.output && /\bstale\b|\bstuck\b|\bblocked\b/i.test(queueResult.output)) {
   findings.driftAlerts.push('Stale or blocked tasks detected in queue');
   findings.score -= 3;
 }

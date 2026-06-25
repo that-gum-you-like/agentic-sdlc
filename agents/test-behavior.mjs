@@ -63,6 +63,30 @@ function readChecklist() {
   return '';
 }
 
+// Resolve a framework persona (LinguaFlow's IT-Crowd names) to THIS project's
+// actual agent — by persona name if present, else by the generic role name —
+// so behavior tests are portable across projects that don't use the personas.
+// Returns null when the project has no agent for that role (the check is skipped,
+// not failed). Backward-compatible: when roy/moss/jen/douglas exist, returns them.
+const PERSONA_CANDIDATES = {
+  roy: ['roy', 'backend'],
+  moss: ['moss', 'ai', 'ai-engineer'],
+  jen: ['jen', 'frontend'],
+  richmond: ['richmond', 'reviewer'],
+  douglas: ['douglas', 'documentarian', 'docs'],
+};
+function resolveAgent(persona) {
+  for (const cand of (PERSONA_CANDIDATES[persona] || [persona])) {
+    if (AGENTS.includes(cand) || existsSync(resolve(AGENTS_DIR, cand, 'AGENT.md'))) return cand;
+  }
+  return null;
+}
+function checkAgentContent(persona, description, predicate) {
+  const a = resolveAgent(persona);
+  if (!a) { console.log(`  ⏭️  ${description} (no ${persona}-role agent in this project — skipped)`); return; }
+  check(description, predicate(readAgentMd(a)));
+}
+
 // Tests
 console.log('🧪 Agent Behavior Tests');
 if (frameworkOnly) console.log('  Mode: --framework (framework tests only)');
@@ -75,25 +99,22 @@ console.log('═'.repeat(50));
 
 if (!frameworkOnly) {
 
-// Roy-specific checks
-console.log('\n📋 Roy (Backend):');
-const royMd = readAgentMd('roy');
-check('AGENT.md mentions { data, error } pattern', /\{\s*data.*error\s*\}|data,\s*error/.test(royMd));
-check('AGENT.md mentions small file limits', /\b150\s*lines|small files|exceeds.*150/i.test(royMd));
-check('AGENT.md mentions memory read instructions', /memory|recall|read.*memory/i.test(royMd));
+// Backend-role checks (persona: roy)
+console.log('\n📋 Backend-role agent (roy):');
+checkAgentContent('roy', 'AGENT.md mentions { data, error } pattern', md => /\{\s*data.*error\s*\}|data,\s*error/.test(md));
+checkAgentContent('roy', 'AGENT.md mentions small file limits', md => /\b150\s*lines|small files|exceeds.*150/i.test(md));
+checkAgentContent('roy', 'AGENT.md mentions memory read instructions', md => /memory|recall|read.*memory/i.test(md));
 
-// Moss-specific checks
-console.log('\n📋 Moss (AI Pipeline):');
-const mossMd = readAgentMd('moss');
-check('AGENT.md mentions token limits or context window', /token|context.*window|limit/i.test(mossMd));
-check('AGENT.md mentions memory read instructions', /memory|recall|read.*memory/i.test(mossMd));
+// AI-role checks (persona: moss)
+console.log('\n📋 AI-role agent (moss):');
+checkAgentContent('moss', 'AGENT.md mentions token limits or context window', md => /token|context.*window|limit/i.test(md));
+checkAgentContent('moss', 'AGENT.md mentions memory read instructions', md => /memory|recall|read.*memory/i.test(md));
 
-// Jen-specific checks
-console.log('\n📋 Jen (Frontend):');
-const jenMd = readAgentMd('jen');
-check('AGENT.md mentions loading/error states', /loading.*state|error.*state|loading.*error/i.test(jenMd));
-check('AGENT.md mentions accessibility', /accessibility|a11y|accessible/i.test(jenMd));
-check('AGENT.md mentions memory read instructions', /memory|recall|read.*memory/i.test(jenMd));
+// Frontend-role checks (persona: jen)
+console.log('\n📋 Frontend-role agent (jen):');
+checkAgentContent('jen', 'AGENT.md mentions loading/error states', md => /loading.*state|error.*state|loading.*error/i.test(md));
+checkAgentContent('jen', 'AGENT.md mentions accessibility', md => /accessibility|a11y|accessible/i.test(md));
+checkAgentContent('jen', 'AGENT.md mentions memory read instructions', md => /memory|recall|read.*memory/i.test(md));
 
 // All agents: version headers
 console.log('\n📋 All Agents — Version Headers:');
@@ -119,7 +140,9 @@ for (const agent of AGENTS) {
 // Handoff template: agents that submit to #reviews must reference handoff-template.md
 console.log('\n📋 Handoff Template Reference:');
 const REVIEW_SUBMITTERS = ['roy', 'moss', 'jen', 'douglas'];
-for (const agent of REVIEW_SUBMITTERS) {
+for (const persona of REVIEW_SUBMITTERS) {
+  const agent = resolveAgent(persona);
+  if (!agent) { console.log(`  ⏭️  ${persona} references handoff-template.md (no ${persona}-role agent here — skipped)`); continue; }
   const md = readAgentMd(agent);
   const mentionsReviews = /#reviews/i.test(md);
   const mentionsHandoffTemplate = /handoff-template\.md/i.test(md);

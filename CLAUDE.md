@@ -41,6 +41,8 @@ Every `proposal.md` MUST include a `## Value Analysis` section.
 
 **Intake & spec format:** REQ-xxx numbered requirements with Statement / Acceptance / Dependencies / Complexity (S/M/L/XL) / Value. See `framework/requirements-guide.md`. Brain-dump first via `openspec/templates/braindump.md.template`. Phased work via `openspec/templates/roadmap.md.template`. Parallelization via `framework/parallelization-guide.md`.
 
+**Planning pipeline:** Brain dump → Requirements → Priorities → Roadmap → Parallelization. Each stage produces a persistent artifact in the `plans/` directory (`plans/requirements.md`, `plans/priorities.md`, `plans/roadmap.md`, `plans/parallelization.md`).
+
 ## Roadmap Discipline
 
 The biggest threat to your roadmap isn't bad planning — it's scope creep.
@@ -55,7 +57,7 @@ See `framework/agent-lifecycle.md` for the full CTO mindset, agent create/specia
 
 ## Agent System
 
-Specialist agents, each with an `AGENT.md` (system prompt), `memory/` (5-layer), and domain patterns. 5 planning agents (requirements → priorities → roadmap → parallelization → quality alignment) feed 15 execution templates (cto, reviewer, release, backend, frontend, ai-engineer, documentarian, security, qa, integration-tester, ethics, architect, dependency-auditor, performance-sentinel, platform-maturity-sentinel) routed by file pattern.
+Specialist agents, each with an `AGENT.md` (system prompt), `memory/` (5-layer), and domain patterns. 5 planning agents (requirements → priorities → roadmap → parallelization → quality alignment) feed 15 **Execution Agent Templates** (cto, reviewer, release, backend, frontend, ai-engineer, documentarian, security, qa, integration-tester, ethics, architect, dependency-auditor, performance-sentinel, platform-maturity-sentinel) — in `agents/templates/execution-agents/` — routed by file pattern. Per-agent model tier + fallback chains are resolved by `model-manager.mjs` from `budget.json` (`node ~/agentic-sdlc/agents/model-manager.mjs models`).
 
 → Full roster, planning pipeline, execution template table, doc-mode variant, task queue commands, token estimate table, worker launcher: **[docs/appendix/agent-system.md](docs/appendix/agent-system.md)**
 
@@ -183,7 +185,7 @@ When editing any agent's AGENT.md:
 6. If using Paperclip: `source .paperclip.env`
 
 ### Adapters (orchestration + LLM provider)
-The framework is platform-agnostic. Configure via `project.json`. Default: `file-based` orchestration + `anthropic` LLM. Other providers: groq, openai, gemini, cerebras, ollama, azure-openai, azure-foundry-claude. Free-tier fallbacks (Groq, Gemini, Cerebras) should end every fallback chain.
+**Adapter Configuration:** the framework is platform-agnostic. Configure via `project.json`. Default: `file-based` orchestration + `anthropic` LLM. Other providers: groq, openai, gemini, cerebras, ollama, azure-openai, azure-foundry-claude. Free-tier fallbacks (Groq, Gemini, Cerebras) should end every fallback chain.
 
 → Full provider list, env vars, Paperclip sync, SDLC-as-source-of-truth: **[docs/appendix/adapters.md](docs/appendix/adapters.md)**
 
