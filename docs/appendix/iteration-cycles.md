@@ -20,6 +20,26 @@ Pick → Implement → Test → Browser E2E (if frontend changed) → Commit →
 - Memory cleanup: `node ~/agentic-sdlc/agents/rem-sleep.mjs`
 - Behavior tests: `node ~/agentic-sdlc/agents/test-behavior.mjs`
 
+## Activate the whole schedule (systemd user timers)
+
+The fastest way to make every cycle below run autonomously — for as long as the
+machine is online, with runs missed during downtime caught up on next boot — is
+`scheduler-install.mjs`. It reads `agents/cron-schedule.json` (or the shipped
+template), skips jobs whose required agent/adapter isn't present, translates each
+cron expression to a systemd `OnCalendar`, and installs a `Persistent=true` timer
+per job under `~/.config/systemd/user/` (namespaced `sdlc-sched-*`).
+
+```bash
+node ~/agentic-sdlc/agents/scheduler-install.mjs list              # Preview (incl. skips)
+node ~/agentic-sdlc/agents/scheduler-install.mjs install           # Install + enable
+node ~/agentic-sdlc/agents/scheduler-install.mjs status            # systemctl --user list-timers
+node ~/agentic-sdlc/agents/scheduler-install.mjs uninstall         # Remove all sdlc-sched-* units
+```
+
+Requires the systemd **user** manager and `loginctl enable-linger $USER` (so
+timers fire without an active login session). This is the local, privacy-first
+alternative to the OpenClaw-cron one-liners below — use whichever you prefer.
+
 ## Automated via OpenClaw Cron (Optional)
 
 - Weekly REM sleep: `openclaw cron add --name rem-sleep-weekly --cron "0 23 * * 0" --message "Run: node ~/agentic-sdlc/agents/rem-sleep.mjs" --session isolated`
