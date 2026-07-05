@@ -59,11 +59,23 @@ function pythonAvailable() {
 }
 
 function callEmbed(texts) {
+  // Pass the payload over stdin (embed.py reads sys.stdin), NOT as a shell
+  // argument. The old `echo '<json>' | python` form overflowed ARG_MAX
+  // (spawnSync E2BIG) on any real corpus and mis-escaped single quotes.
   const input = JSON.stringify(texts);
-  const result = execSync(`echo '${input.replace(/'/g, "\\'")}' | ${getPythonPath()} "${EMBED_SCRIPT}"`, {
+  const result = execSync(`${getPythonPath()} "${EMBED_SCRIPT}"`, {
+    input,
     encoding: 'utf8',
-    timeout: 120000,
+    timeout: 300000,
     maxBuffer: 50 * 1024 * 1024,
+    // Use the locally-cached model only — no HF Hub network calls. Faster,
+    // deterministic, and privacy-first (no outbound requests, no telemetry).
+    env: {
+      ...process.env,
+      HF_HUB_OFFLINE: '1',
+      TRANSFORMERS_OFFLINE: '1',
+      HF_HUB_DISABLE_TELEMETRY: '1',
+    },
   });
   return JSON.parse(result.trim());
 }
@@ -141,6 +153,9 @@ function termFrequencies(text) {
  * @param {boolean} [opts.dryRun] - Compute counts without writing to disk.
  * @returns {{documents: number, chunks: number, mode: 'embedding'|'lexical', indexPath: string}}
  */
+// Exported for regression testing (E2BIG on large payloads via stdin).
+export { callEmbed, pythonAvailable };
+
 export function runIndexer(opts = {}) {
   const config = loadConfig();
   const projectDir = config.projectDir;
@@ -170,7 +185,7 @@ export function runIndexer(opts = {}) {
   }
 
   const useEmbeddings = pythonAvailable();
-  const mode = useEmbeddings ? 'embedding' : 'lexical';
+  let mode = useEmbeddings ? 'embedding' : 'lexical';
 
   const result = { documents: files.length, chunks: records.length, mode, indexPath };
 
@@ -178,12 +193,26 @@ export function runIndexer(opts = {}) {
     return result;
   }
 
+  const buildLexical = () =>
+    records.map(r => ({ file: r.file, chunkText: r.chunkText, termFreq: termFrequencies(r.chunkText) }));
+
+  const embed = opts.embedFn || callEmbed;
+
   let entries;
   if (useEmbeddings && records.length > 0) {
-    const vectors = callEmbed(records.map(r => r.chunkText));
-    entries = records.map((r, i) => ({ file: r.file, chunkText: r.chunkText, vector: vectors[i] }));
+    try {
+      const vectors = embed(records.map(r => r.chunkText));
+      entries = records.map((r, i) => ({ file: r.file, chunkText: r.chunkText, vector: vectors[i] }));
+    } catch (err) {
+      // Never hard-fail a scheduled run: if embedding times out or errors,
+      // degrade to the deterministic lexical index (REQ-004 graceful fallback).
+      mode = 'lexical';
+      result.mode = 'lexical';
+      result.embeddingError = (err && err.message) ? err.message.split('\n')[0] : String(err);
+      entries = buildLexical();
+    }
   } else {
-    entries = records.map(r => ({ file: r.file, chunkText: r.chunkText, termFreq: termFrequencies(r.chunkText) }));
+    entries = buildLexical();
   }
 
   const dir = dirname(indexPath);

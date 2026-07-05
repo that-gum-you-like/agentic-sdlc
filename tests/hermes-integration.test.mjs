@@ -9,7 +9,7 @@
  * Run: node tests/hermes-integration.test.mjs
  */
 
-import { existsSync, statSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { existsSync, statSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync, spawnSync } from 'child_process';
@@ -94,6 +94,30 @@ async function main() {
     assert(typeof r.chunks === 'number', 'chunks not a number');
     assert(['embedding', 'lexical'].includes(r.mode), `bad mode: ${r.mode}`);
     assert(typeof r.indexPath === 'string', 'missing indexPath');
+  });
+
+  // --- rag-indexer embed path (regression: E2BIG fix uses stdin, not shell arg) ---
+  // The embed function is injected so we exercise the real batching/index-write
+  // path deterministically without a slow CPU model. The production callEmbed now
+  // streams the payload over stdin (embed.py), so large corpora no longer overflow
+  // ARG_MAX — that shell-arg construction is gone entirely.
+  await test('runIndexer writes an embedding index via the batched embed path', () => {
+    const captured = [];
+    const embedFn = (texts) => { captured.push(texts.length); return texts.map(() => [0.1, 0.2, 0.3]); };
+    const r = runIndexer({ embedFn });
+    assert(r.mode === 'embedding', `expected embedding mode, got ${r.mode}`);
+    assert(captured.length === 1 && captured[0] === r.chunks, 'embed must receive all chunks in one batched call');
+    const idx = JSON.parse(readFileSync(r.indexPath, 'utf8'));
+    assert(idx.mode === 'embedding' && Array.isArray(idx.entries[0].vector), 'index must persist vectors');
+  });
+
+  // --- rag-indexer graceful degradation (scheduled job must never hard-fail) ---
+  await test('runIndexer degrades to lexical when embedding throws (no crash)', () => {
+    const r = runIndexer({ embedFn: () => { throw new Error('spawnSync /bin/sh ETIMEDOUT'); } });
+    assert(r.mode === 'lexical', `expected lexical fallback, got ${r.mode}`);
+    assert(typeof r.embeddingError === 'string' && /ETIMEDOUT/.test(r.embeddingError), 'must record the embedding error');
+    const idx = JSON.parse(readFileSync(r.indexPath, 'utf8'));
+    assert(idx.mode === 'lexical' && idx.entries[0].termFreq && typeof idx.entries[0].termFreq === 'object', 'fallback index must use lexical termFreq');
   });
 
   // --- telegram-notify (no-op when unconfigured) ---

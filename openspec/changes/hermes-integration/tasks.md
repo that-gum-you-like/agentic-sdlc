@@ -81,6 +81,11 @@
 - [x] **T-511**: Test: `telegram` provider dispatch + graceful no-op when unconfigured (`tests/hermes-integration.test.mjs`, 7/7 green)
   - Complexity: S · Spec: REQ-010
 
+### Workstream B — hardening (post-review, 2026-07-05)
+
+- [x] **T-207**: Fix `rag-indexer.mjs` `callEmbed` E2BIG — smoke-testing on the real corpus (244 chunks) showed the old `echo '<json>' | python` form overflowed `MAX_ARG_STRLEN` (spawnSync E2BIG) and mis-escaped quotes. Now streams the payload over stdin (embed.py reads `sys.stdin`). Added offline embedding env (`HF_HUB_OFFLINE`/`TRANSFORMERS_OFFLINE`/`HF_HUB_DISABLE_TELEMETRY` — privacy-first, no HF Hub network) and a graceful lexical fallback so a scheduled run never hard-fails (REQ-004). Injectable `opts.embedFn` enables deterministic regression tests for both the embed and fallback paths.
+  - Complexity: M · Spec: REQ-003, REQ-004
+
 ### Verification
 
 - [x] **T-401**: `npm test` green (incl. new suite)
