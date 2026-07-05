@@ -43,7 +43,8 @@ Setup copies `.cursorrules`, `.cursor/rules/*.mdc`, `.claude/skills/`, OpenSpec 
 |---|---|
 | **Cursor Pro+** | `cursor .` — rules load automatically. **Set up 7 Automations to drive the autonomous loop** — see the [Cursor Automations Playbook →](docs/cursor-automations-playbook.md). Broader Pro+ patterns: [Background Agents guide →](docs/cursor-background-agents.md) |
 | **Cursor (any tier)** | `cursor .` — rules load via `.cursorrules` + `.cursor/rules/*.mdc`. Run framework scripts manually. [Cursor setup →](docs/cursor-setup.md) |
-| **Claude Code** | Just open the project — `CLAUDE.md` loads every turn. Use `/openspec-new-change` to start your first change. |
+| **Claude Code** | Just open the project — `CLAUDE.md` loads every turn. Use `/openspec-new-change` to start your first change. New here? Read the [Claude Code Quickstart →](docs/claude-quickstart.md). |
+| **Hermes** | `hermes chat` in the project. Advanced skills are mirrored as repo templates — see the [Hermes ↔ Backlog Bridge →](docs/hermes-backlog-bridge.md). |
 | **Windsurf** | Just open the project — `.windsurfrules` loads automatically. |
 | **Other AI agents** | Point them at [AGENTS.md](AGENTS.md). |
 

@@ -31,6 +31,7 @@ The following ideas from the 2026-03-13 curriculum review have been implemented:
 | 22 | Anthropic Native Compaction | `anthropic-native-compaction` (proposed 2026-05-27) — integrate `compact-2026-01-12` for within-session memory compaction; REM-sleep stays as between-session role |
 | 23 | Cursor 3.2 Alignment Docs | `cursor-3.2-alignment` (shipped 2026-05-27) — wrote `docs/april-vs-cursor-multitask.md`, extended `docs/cursor-background-agents.md` with deployment-modes table (Cursor cloud vs self-hosted vs framework queue-drainer), added pointers in `sdlc-housekeeping.mdc`, cross-linked from `parallelization-analyst.md` |
 | 24 | Spec-Kit Cross-Feature Analysis | `spec-kit-cross-feature-analysis` (shipped 2026-05-27) — `agents/cross-feature-analyze.mjs` + 7/7 passing tests + `skills/openspec-cross-feature` + `docs/cross-feature-analysis.md` + `npm run cross-feature`. Initial run flagged 54 high-severity backlog pairs. |
+| 25 | Hermes ↔ Repo ↔ Claude Integration | `hermes-integration` (proposed 2026-07-04) — ports 6 Hermes skills to `agents/templates/execution-agents/*.md`, adds 5 cron scripts (`red-team-tester`, `rag-indexer`, `health-check`, `telegram-notify`, `document-sync`) + `tests/hermes-integration.test.mjs`, and writes `docs/claude-quickstart.md` + `docs/hermes-backlog-bridge.md`. Corrects the old fork/PAT hand-off guide. |
 
 ---
 

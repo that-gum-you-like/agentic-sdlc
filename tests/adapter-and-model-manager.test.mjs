@@ -279,10 +279,11 @@ Some content here.`;
   assert(!match[2].includes('role_keywords'), 'Content should not contain frontmatter');
 });
 
-test('all 15 execution templates have valid frontmatter', () => {
+test('all execution templates have valid frontmatter', () => {
   const execDir = resolve(SDLC_ROOT, 'agents/templates/execution-agents');
   const files = readdirSync(execDir).filter(f => f.endsWith('.md'));
-  assertEqual(files.length, 16, `Expected 16 templates, got ${files.length}`);
+  // 16 base templates + 6 ported from Hermes skills (hermes-integration change)
+  assertEqual(files.length, 22, `Expected 22 templates, got ${files.length}`);
 
   for (const file of files) {
     const content = readFileSync(resolve(execDir, file), 'utf8');
