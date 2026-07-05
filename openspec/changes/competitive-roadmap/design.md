@@ -27,7 +27,8 @@ This is a **program-level** change: it establishes the sequencing, the acceptanc
 ### Sequencing (leverage order)
 
 ```
-Phase 0  Hardening      H1 gates-bite → H2 CI-runs-all → H4 latent-bug sweep → H5 no-OpenAI default catalog
+Phase 0  Hardening      H1 gates-enforce → H2 CI-runs-all → H4 latent-bug sweep → H5 no-OpenAI default catalog
+                         (critical path shown; H3/H6/H7/H8 run in parallel within Phase 0 — H6 early so the matrix exists)
 Phase 1  Runtime floor  P1 Sandbox adapter → P3 OTel tracing adapter → P4 Exact cost accounting
 Phase 2  Safety+Measure P5 Guardrails/least-privilege  ‖  P2 Eval/benchmark harness
 Phase 3  Advantage      P6 Replay parallel attempts → P9 Self-improvement flywheel → P7 MCP server + A2A cards
@@ -46,14 +47,14 @@ Rationale: the drain can only be trusted once the gates *enforce* (Phase 0), so 
 
 ### Internal hardening track (make our own claims true)
 
-- **H1 — Gates that bite:** `review-hook.mjs` must be able to `fail` (block a commit), not only warn; `pattern-hunt.mjs` generic path must emit a real scanner or none (never an always-passing test); `alignment-monitor` score must derive from real signals, not magic numbers.
+- **H1 — Gates that enforce:** the enforcing check must move to a surface that can actually gate — a **pre-commit/pre-push hook or a required CI check** — because `review-hook.mjs` is a **post-commit** hook (its exit code can't block the commit it runs after) and only warns today; `pattern-hunt.mjs` generic path must emit a real scanner or none (never an always-passing test); `alignment-monitor` score must derive from real signals, not magic numbers; `schema-validator` must fail closed.
 - **H2 — CI runs everything:** wire the ~22 `agents/__tests__` + `tests/` files + `four-layer-validate` + `test-behavior` into `.github/workflows` and `npm test`.
 - **H3 — Exact accounting groundwork:** replace `chars/4` estimateTokens with provider-reported usage (adapters already return `tokensUsed`); compute `$` in cost-tracker.
 - **H4 — Latent-bug sweep:** `autonomous-launcher.sh` EXIT_CODE captures `tee` not the agent; `daily-review.mjs` dead `fs`/`path` blocks; `logCapabilityUsage(object)` misuse in `garden-roadmap`/`alignment-monitor`; add `__isMainModule` guards to `ast-analyzer`/`version-snapshot`/`migrate-memory`/`rem-sleep`/`garden-roadmap`/`alignment-monitor`.
-- **H5 — No-OpenAI default catalog:** rebuild `model-intel.default.json` around the OpenRouter/qwen/deepseek affordable ladder; drop the Anthropic/OpenAI-centric shipped default that contradicts the budget. Consider gating the `openai`/`azure-openai` adapters behind an explicit opt-in.
+- **H5 — No-OpenAI default catalog:** rebuild `model-intel.default.json` around the OpenRouter/qwen/deepseek affordable ladder; remove the 6 OpenAI (and gate the 4 Anthropic) entries the shipped default carries, and stop `model-manager.research()` fetching `openai.com`. **Fold in the in-flight `openrouter-provider` change** (already removes `gpt-4o-mini` from `budget.json` + builds the ladder) — H5 covers only what it leaves undone. Gate the `openai`/`azure-openai` adapters behind explicit opt-in.
 - **H6 — Doc/drift reconciliation:** unify the 6-level (`docs/levels/`) vs 7-level (`framework/maturity-model.md`) ladders; update `validation-patterns.md` to 5 layers; add a single competitive matrix to `docs/comparison.md`.
 - **H7 — De-couple hardcoded project bindings:** `seed-queue-from-openspec.mjs` (LinguaFlow agent names) and `paperclip-sync.mjs` (stale model IDs) should read config, not literals.
-- **H8 — Test coverage:** cover `capability-monitor.mjs` (shipped untested) and the new modules.
+- **H8 — Test coverage:** every new module ships CI-wired tests; extend `capability-monitor.mjs` coverage only for genuinely-uncovered paths (it already has `agents/__tests__/capability-monitor.test.mjs`).
 
 ### Task seeding for the drain
 

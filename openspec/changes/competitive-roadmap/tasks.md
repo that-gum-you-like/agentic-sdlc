@@ -14,7 +14,7 @@ This is a **program**. Each capability below spawns its **own child OpenSpec cha
 - [ ] **H5** No-OpenAI default catalog; gate openai/azure adapters  · REQ-H5 · S
 - [ ] **H6** Reconcile maturity 6-vs-7 + validation 4-vs-5 + add comparison matrix  · REQ-H6 · S
 - [ ] **H7** De-couple hardcoded LinguaFlow/model bindings  · REQ-H7 · S
-- [ ] **H8** Cover `capability-monitor.mjs`  · REQ-H8 · S
+- [ ] **H8** CI-wired tests for every new module; extend `capability-monitor.mjs` only for uncovered paths (it is already tested)  · REQ-H8 · S
 - [ ] **H3** Exact-accounting groundwork (feeds P4)  · REQ-H3 · S/M
 
 ## Phase 1 — Runtime foundation (parity floor)
@@ -41,10 +41,11 @@ This is a **program**. Each capability below spawns its **own child OpenSpec cha
 ## Program verification
 - [ ] Each child change validates in the house style (proposal + Value Analysis + design + specs + tasks + status)
 - [ ] Each shipped module: pluggable, self-hostable, **no OpenAI**, tested-in-CI, `__isMainModule`-guarded, `comparison.md` matrix row updated
-- [ ] The competitive matrix in `docs/comparison.md` moves 🟡/❌ rows (8–13, 16–21, 25) to ✅ as modules land
+- [ ] H6 builds a **numbered** capability matrix in `docs/comparison.md` (with ✅/🟡/❌ cells) FIRST; then each module flips its named row to ✅ as it lands
 - [ ] Flywheel (P9) shows agent quality as a measured graph — the differentiator proof
 
 ## Notes
 - Full prioritized detail + rationale + sources: `openspec/BACKLOG.md` § **Competitive Roadmap 2026**.
 - Sequencing rule: parity floor (P1/P3/P4) + hardening before advantage plays (P6 needs P1; P9 needs P2+H1).
-- Existing in-flight changes to fold in, not duplicate: `cost-tracker-otel` (→P3), `anthropic-native-compaction`, `replay-regression-gate` (→P2/P6).
+- Existing in-flight changes to **fold in, not duplicate**: `openrouter-provider` (→H5, already ships the affordable ladder + removes `gpt-4o-mini`), `cost-tracker-otel` (→P3/P4, already specs `gen_ai.usage.cost.usd`), `replay-regression-ci-gate` (→P2/P6, offline replay runner). `anthropic-native-compaction` is **independent** (within-session context compaction) — not part of this roadmap.
+- "The drain" = the `autonomous-drain` change (an isolated local-backend **Hermes** instance on the affordable ladder). Same runtime, two names.

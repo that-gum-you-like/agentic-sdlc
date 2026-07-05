@@ -201,14 +201,14 @@ Legend: **Parity** = market table-stake we lack · **Advantage** = durable diffe
 
 ## Phase 0 — Internal hardening (make our claims true; do first)
 Fixes from the internal audit. These make the quality gates *bite* so the autonomous drain's PRs are trustworthy.
-- **H1 — Gates that enforce** (M): `review-hook` can `fail` not just warn; `pattern-hunt` generic path stops emitting always-passing tests (`pattern-hunt.mjs:776` TODO); `alignment-monitor` score from real signals not magic numbers; `schema-validator` fails closed without Ajv.
-- **H2 — CI runs the whole suite** (S): today CI runs only 2 of ~22 test files; wire `agents/__tests__/*` + `tests/*` + four-layer + test-behavior into `.github/workflows` + `npm test`.
+- **H1 — Gates that enforce** (M): the enforcing check moves to a surface that can gate — a **pre-commit/pre-push hook or required CI check** — because `review-hook.mjs` is a **post-commit** hook (can't block the commit it follows) and only warns today; `pattern-hunt` generic path stops emitting always-passing tests (`pattern-hunt.mjs:776` TODO); `alignment-monitor` score from real signals not magic numbers; `schema-validator` fails closed without Ajv.
+- **H2 — CI runs the whole suite** (S): today CI runs only **1 of ~23 unit-test files** (`adapter-and-model-manager`) plus the `test-behavior` runner; wire `agents/__tests__/*` + `tests/*` + four-layer + test-behavior into `.github/workflows` + `npm test`.
 - **H3 — Exact-accounting groundwork** (S/M): realized provider tokens replace `chars/4`; feeds P4.
 - **H4 — Latent-bug sweep** (M): `autonomous-launcher.sh` EXIT_CODE captures `tee` not the agent; `daily-review.mjs` dead `fs`/`path` blocks (silent ReferenceError); `logCapabilityUsage(object)` misuse; add `__isMainModule` guards (ast-analyzer, version-snapshot, migrate-memory, rem-sleep, garden-roadmap, alignment-monitor); `semantic-index` stdin fix + real cosine fallback.
-- **H5 — No-OpenAI default catalog** (S): rebuild `model-intel.default.json` around the OpenRouter/qwen/deepseek ladder; gate `openai`/`azure-openai` adapters behind opt-in (they contradict the no-OpenAI policy).
+- **H5 — No-OpenAI default catalog** (S): `model-intel.default.json` carries 6 OpenAI + 4 Anthropic entries that violate the no-OpenAI default — remove/gate them and align to the OpenRouter/qwen/deepseek ladder; stop `model-manager.research()` fetching `openai.com`; gate `openai`/`azure-openai` adapters behind opt-in. **Fold in the `openrouter-provider` change** (already removed `gpt-4o-mini` from `budget.json`) — H5 covers only the remainder.
 - **H6 — Doc/model drift** (S): unify 6-level (`docs/levels/`) vs 7-level (`framework/maturity-model.md`) ladders; `validation-patterns.md` → 5 layers; add one competitive matrix to `docs/comparison.md`.
 - **H7 — De-couple hardcoded bindings** (S): `seed-queue-from-openspec.mjs` (LinguaFlow agent names) + `paperclip-sync.mjs` (stale model IDs) read config.
-- **H8 — Cover the untested** (S): `capability-monitor.mjs` shipped without tests.
+- **H8 — CI-wired tests** (S): every new module ships tests wired into CI (per H2); extend `capability-monitor.mjs` coverage only for genuinely-uncovered paths — it already has `agents/__tests__/capability-monitor.test.mjs`.
 
 ## Phase 1 — Runtime foundation (parity floor)
 - **P1 — Sandbox-Execution Adapter** (Parity, M): pluggable `{create,exec,writeFiles,snapshot,fork,destroy}`; `local-worktree` default + self-host microVM (microsandbox/libkrun). *#1 gap — every serious autonomous product isolates runs; also unblocks P6.* Sources: E2B/Firecracker, Daytona, Modal, Claude Code sandbox (open-sourced 2025-10).
@@ -221,7 +221,7 @@ Fixes from the internal audit. These make the quality gates *bite* so the autono
 
 ## Phase 3 — Advantage plays
 - **P6 — Deterministic-Replay Parallel Attempts** (Advantage, L/XL): fork the sandbox (P1) to run N candidate fixes; the mandatory test-gate keeps the winner (Morph-Infinibranch-style, <250ms VM fork). *Fuses our unique test-gate with a technique almost nobody productizes.*
-- **P9 — Self-Improvement Flywheel** (Advantage, L): eval regressions (P2) → real defeat tests (needs H1) → maturity transitions on **measured** deltas; agent-quality-over-time as a graph. **The single most defensible move — no competitor can prove their agents improve.**
+- **P9 — Self-Improvement Flywheel** (Advantage, L): eval regressions (P2) → real defeat tests (needs H1) → maturity transitions on **measured** deltas; agent-quality-over-time as a graph. **The single most defensible move — a closed measured-improvement loop we're not aware of any competitor shipping** (directional; see Confidence).
 - **P7 — MCP Server + A2A Agent Cards** (Parity→Advantage, M): expose our queue/agents over MCP; publish A2A agent cards at `/.well-known/agent-card.json` (Linux-Foundation A2A v1.0). *Ends the "requires Claude Code; not portable" limitation.* (Heed R-01: target the stabilized post-2026 MCP spec.)
 
 ## Phase 4 — Workflow depth
@@ -233,4 +233,4 @@ Fixes from the internal audit. These make the quality gates *bite* so the autono
 `H1→H2→H4→H5` (trustworthy gates) → `P1→P3→P4` (safety+truth floor) → `P5 ‖ P2` → `P6→P9→P7` (advantage) → `P8→P10→P11`. Parity floor + hardening before advantage plays (P6 needs P1; P9 needs P2+H1). Each module = its own child OpenSpec change → seeds `tasks/queue/` → the autonomous drain works it into a review PR.
 
 ## Confidence
-Well-corroborated: sandbox/eval/observability/interop/spec-tool mechanics + the SWE-bench-Verified deprecation + MCP/A2A Linux-Foundation consolidation + OWASP Agentic Top 10. Directional (vendor/third-party, postdates records): specific mid-2026 leaderboard numbers and newest model names. Full sourced analysis retained in the change's research provenance.
+Well-corroborated: sandbox/eval/observability/interop/spec-tool mechanics + the SWE-bench-Verified deprecation + MCP/A2A Linux-Foundation consolidation + OWASP Agentic Top 10 as a body of work. **Directional** (vendor/third-party, single-source, or postdates reliable records — treat as indicative, not fact): specific mid-2026 leaderboard numbers and newest model names; exact dates/vendor behaviors ("Claude Code sandbox open-sourced 2025-10", "OWASP Agentic Top 10 launched 2025-12", "OpenAI stopped reporting SWE-bench Verified", "Morph Infinibranch <250ms VM fork"); and the **competitive-uniqueness claim for P9** (that no competitor closes the measured-improvement loop) — we're unaware of one, but that's not a verified negative. Full sourced analysis retained in the change's research provenance.
