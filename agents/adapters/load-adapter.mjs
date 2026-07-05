@@ -23,6 +23,7 @@ const ORCHESTRATION_ADAPTERS = {
 
 const LLM_ADAPTERS = {
   'anthropic': join(__dirname, 'llm', 'anthropic.mjs'),
+  'openrouter': join(__dirname, 'llm', 'openrouter.mjs'),
   'groq': join(__dirname, 'llm', 'groq.mjs'),
   'ollama': join(__dirname, 'llm', 'ollama.mjs'),
   'openai': join(__dirname, 'llm', 'openai.mjs'),

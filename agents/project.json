@@ -28,7 +28,7 @@
     "adapter": "file-based"
   },
   "llm": {
-    "defaultProvider": "anthropic"
+    "defaultProvider": "openrouter"
   },
   "doneChecklist": ["openspec", "tests", "commit", "push"]
 }
