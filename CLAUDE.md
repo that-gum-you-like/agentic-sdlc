@@ -57,7 +57,7 @@ See `framework/agent-lifecycle.md` for the full CTO mindset, agent create/specia
 
 ## Agent System
 
-Specialist agents, each with an `AGENT.md` (system prompt), `memory/` (5-layer), and domain patterns. 5 planning agents (requirements → priorities → roadmap → parallelization → quality alignment) feed 15 **Execution Agent Templates** (cto, reviewer, release, backend, frontend, ai-engineer, documentarian, security, qa, integration-tester, ethics, architect, dependency-auditor, performance-sentinel, platform-maturity-sentinel) — in `agents/templates/execution-agents/` — routed by file pattern. Per-agent model tier + fallback chains are resolved by `model-manager.mjs` from `budget.json` (`node ~/agentic-sdlc/agents/model-manager.mjs models`).
+Specialist agents, each with an `AGENT.md` (system prompt), `memory/` (5-layer), and domain patterns. 5 planning agents (requirements → priorities → roadmap → parallelization → quality alignment) feed 21 **Execution Agent Templates** (cto, reviewer, release, backend, frontend, ai-engineer, documentarian, security, qa, integration-tester, ethics, architect, dependency-auditor, performance-sentinel, platform-maturity-sentinel, constitutional-ai-engineer, context-engineering-master, memory-architect, twelve-factor-agent, rag-specialist, token-embedding-analyzer) — in `agents/templates/execution-agents/` — routed by file pattern. Per-agent model tier + fallback chains are resolved by `model-manager.mjs` from `budget.json` (`node ~/agentic-sdlc/agents/model-manager.mjs models`).
 
 → Full roster, planning pipeline, execution template table, doc-mode variant, task queue commands, token estimate table, worker launcher: **[docs/appendix/agent-system.md](docs/appendix/agent-system.md)**
 
@@ -104,7 +104,7 @@ Catch known anti-patterns: `any` types, `console.log`, file size limits, missing
 
 ## Notification & Approval Layer
 
-Agents communicate with the human owner via a pluggable notification channel (`openclaw`/WhatsApp, `file`/local, or `none`).
+Agents communicate with the human owner via a pluggable notification channel (`openclaw`/WhatsApp, `telegram` (Bot API, opt-in), `file`/local, or `none`).
 
 Configure `notification` in `project.json` with `provider`, `channel`, and `triggers` (recognized triggers: blocker, budgetAlert, deployComplete, highSeverityFailure, dailySummary, approvalTimeout, capabilityDrift, deployFailed, deployRolledBack).
 

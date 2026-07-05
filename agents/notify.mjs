@@ -54,6 +54,24 @@ function sendViaOpenclaw(message, mediaPath) {
   }
 }
 
+function sendViaTelegram(message) {
+  // Mirrors sendViaOpenclaw: shell out to the already-tested telegram-notify.mjs
+  // CLI so sendNotification() stays synchronous (returns boolean). The Telegram
+  // sender itself resolves credentials from env/config and no-ops when unconfigured.
+  const script = resolve(__dirname, 'telegram-notify.mjs');
+  const cmd = `node "${script}" send "${message.replace(/"/g, '\\"')}"`;
+  try {
+    execSync(cmd, { stdio: 'pipe', timeout: 30000 });
+    console.log(`📤 Sent via Telegram`);
+    return true;
+  } catch (err) {
+    // telegram-notify.mjs exits 1 on unconfigured/failed send; surface the reason.
+    const reason = (err.stderr?.toString() || err.message || '').trim();
+    console.error(`❌ Telegram send failed: ${reason}`);
+    return false;
+  }
+}
+
 function sendViaFile(message, mediaPath) {
   const mailboxPath = NOTIF.mailboxPath;
   const dir = dirname(mailboxPath);
@@ -79,6 +97,8 @@ function sendNotification(message, mediaPath) {
   switch (NOTIF.provider) {
     case 'openclaw':
       return sendViaOpenclaw(message, mediaPath);
+    case 'telegram':
+      return sendViaTelegram(message);
     case 'file':
       return sendViaFile(message, mediaPath);
     case 'none':
@@ -427,6 +447,18 @@ function cmdStatus() {
       } catch {
         console.log(`\n  ❌ OpenClaw CLI not found in PATH`);
         process.exit(1);
+      }
+      break;
+    }
+    case 'telegram': {
+      const tg = (config.notification && config.notification.telegram) || {};
+      const botToken = process.env.TELEGRAM_BOT_TOKEN || tg.botToken || '';
+      const chatId = process.env.TELEGRAM_CHAT_ID || tg.chatId || '';
+      if (botToken && chatId) {
+        console.log(`\n  ✅ Telegram: configured (bot token + chat id present)`);
+      } else {
+        const missing = [!botToken && 'TELEGRAM_BOT_TOKEN', !chatId && 'TELEGRAM_CHAT_ID'].filter(Boolean).join(', ');
+        console.log(`\n  ⚠️  Telegram: not configured — set ${missing} (env or notification.telegram in project.json). Sends will no-op.`);
       }
       break;
     }

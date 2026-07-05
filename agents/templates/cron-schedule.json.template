@@ -66,6 +66,34 @@
       "description": "Periodic performance benchmark — check bundle size, API latency, test duration against baselines",
       "session": "isolated",
       "agentRequired": "performance-sentinel"
+    },
+    {
+      "name": "health-check-daily",
+      "cron": "0 6 * * *",
+      "script": "node ~/agentic-sdlc/agents/health-check.mjs --notify",
+      "description": "Autonomous health check — queue depth, per-agent budget headroom, disk free, cron liveness; notify on non-ok",
+      "session": "isolated"
+    },
+    {
+      "name": "red-team-weekly",
+      "cron": "0 22 * * 0",
+      "script": "node ~/agentic-sdlc/agents/red-team-tester.mjs --notify",
+      "description": "Weekly adversarial scan of agent outputs / prompts for injection, exfiltration, tool-abuse, jailbreak markers; notify on high severity",
+      "session": "isolated"
+    },
+    {
+      "name": "rag-index-weekly",
+      "cron": "30 23 * * 0",
+      "script": "node ~/agentic-sdlc/agents/rag-indexer.mjs",
+      "description": "Weekly rebuild of the local semantic index over docs/openspec/memory (local embeddings, lexical fallback)",
+      "session": "isolated"
+    },
+    {
+      "name": "doc-sync-daily",
+      "cron": "15 6 * * *",
+      "script": "node ~/agentic-sdlc/agents/document-sync.mjs",
+      "description": "Daily content-hash + version knowledge docs; mark changed docs for re-indexing by rag-indexer",
+      "session": "isolated"
     }
   ]
 }

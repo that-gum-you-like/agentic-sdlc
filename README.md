@@ -114,7 +114,7 @@ node ~/agentic-sdlc/setup.mjs --help                          # Full flag refere
 - **Quality improves automatically** — defeat tests catch known anti-patterns, shrinking allowlists ensure technical debt only goes down
 - **Every change is governed** — OpenSpec workflow (proposal → design → specs → tasks → implement) prevents cowboy coding
 - **Works with your AI tool** — 6 LLM providers (Anthropic, OpenAI, Groq, Gemini, Cerebras, Ollama), adapters for Claude Code, Cursor, Windsurf, and any other agent
-- **20 agent templates** — 15 execution roles (backend, frontend, reviewer, QA, architect, etc.) + 5 planning agents, each with battle-tested operating rules
+- **26 agent templates** — 21 execution roles (backend, frontend, reviewer, QA, architect, constitutional-AI, RAG, memory-architect, etc.) + 5 planning agents, each with battle-tested operating rules
 - **Self-healing** — health checks detect provider outages, auto-swap to healthy providers, reset stuck tasks, alert you via notification
 - **Adopt incrementally** — start with a rules file (Level 1), add as you need. No big-bang migration
 

@@ -9,8 +9,12 @@
  * Run: node tests/hermes-integration.test.mjs
  */
 
-import { existsSync, statSync } from 'fs';
-import { resolve } from 'path';
+import { existsSync, statSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { execFileSync, spawnSync } from 'child_process';
+
+const __repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 // Ensure telegram is treated as unconfigured regardless of the host env.
 delete process.env.TELEGRAM_BOT_TOKEN;
@@ -97,6 +101,40 @@ async function main() {
     const r = await sendTelegram('test message', { config: { notification: {} } });
     assert(r && r.sent === false, 'expected sent:false when unconfigured');
     assert(typeof r.reason === 'string' && /configur/i.test(r.reason), `expected a "not configured" reason, got: ${r.reason}`);
+  });
+
+  // --- notify.mjs telegram provider registration (REQ-010) ---
+  // Points load-config at a temp project with provider:telegram (unconfigured).
+  // The dispatch must reach the telegram sender and no-op cleanly — no network,
+  // no hang, no crash — proving the provider is wired into notify.mjs's switch.
+  await test('notify.mjs registers telegram provider (dispatch + graceful no-op)', () => {
+    const tmp = resolve(__repoRoot, 'pm', 'tmp-telegram-provider-test');
+    mkdirSync(resolve(tmp, 'agents'), { recursive: true });
+    writeFileSync(
+      resolve(tmp, 'agents', 'project.json'),
+      JSON.stringify({ projectName: 'tg-test', notification: { provider: 'telegram' } }),
+    );
+    const env = { ...process.env, SDLC_PROJECT_DIR: tmp };
+    delete env.TELEGRAM_BOT_TOKEN;
+    delete env.TELEGRAM_CHAT_ID;
+    try {
+      const notify = resolve(__repoRoot, 'agents', 'notify.mjs');
+
+      // status must recognize telegram and report it as unconfigured (not crash).
+      const status = execFileSync('node', [notify, 'status'], { env, encoding: 'utf8', timeout: 20000 });
+      assert(/Provider: telegram/.test(status), 'status did not report telegram provider');
+      assert(/Telegram: not configured/i.test(status), 'status did not flag telegram as unconfigured');
+
+      // send must dispatch to the telegram sender and no-op (unconfigured) without hanging.
+      // The "Telegram send failed" message originates only in notify.mjs's sendViaTelegram
+      // catch — seeing it proves the switch routed to the telegram provider.
+      const send = spawnSync('node', [notify, 'send', 'hermes-integration test'], { env, encoding: 'utf8', timeout: 20000 });
+      assert(send.status !== null, 'notify send timed out (telegram dispatch hung on network)');
+      const sendOut = `${send.stdout || ''}${send.stderr || ''}`;
+      assert(/Telegram/i.test(sendOut), `send did not route through the telegram provider; got: ${sendOut}`);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
   });
 
   // --- document-sync (dry-run writes nothing) ---

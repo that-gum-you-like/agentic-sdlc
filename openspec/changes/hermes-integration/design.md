@@ -98,3 +98,20 @@ Each returns a plain object from its exported `run()` so tests can assert withou
 - **`docs/hermes-backlog-bridge.md`** — the coordination model: which capabilities live as Hermes skills vs repo templates, how the backlog/queue is the shared work ledger, and the hand-off pattern between Hermes, Claude Code, and the autonomous launcher.
 
 `README.md` and `openspec/BACKLOG.md` get one-line pointers to the new docs and templates.
+
+---
+
+## Addendum (2026-07-05): Integration completeness
+
+A completeness review found that Workstreams A–C created the artifacts and pointed the two *new* Hermes docs at them, but did not register them in the framework's **canonical registries** — so per the framework's own rules the templates were unroutable and the scripts undiscoverable, contradicting this change's own Value Analysis claim that "agent-routing and the execution-template table now match what actually exists." Two items originally listed under Non-Goals are therefore promoted into scope. Workstream D (see `tasks.md`, spec `registry-integration.md`) closes them.
+
+**Non-Goals updated:**
+- ~~"Not wiring Telegram as a `notify.mjs` channel — that's later."~~ → **In scope.** Telegram becomes a first-class `notification.provider`. Integration mirrors `sendViaOpenclaw`: a synchronous `sendViaTelegram()` shells out to the already-tested `telegram-notify.mjs` CLI, preserving `sendNotification()`'s synchronous boolean contract (no async ripple through its ~9 call sites).
+- ~~"Templates/scripts present on disk is sufficient."~~ → **In scope.** Every roster/routing/script/schedule registry that enumerates these artifacts is updated, with counts kept consistent.
+
+**Still a Non-Goal:** standing up a live scheduler daemon. Cron cadence is expressed the same way the rest of the repo expresses it — OpenClaw cron one-liners in `iteration-cycles.md` plus entries in `cron-schedule.json.template`. Registration ≠ activation; the operator still opts in by adding the cron job.
+
+**Registry surface (the integration checklist):**
+- Templates → `CLAUDE.md`, `docs/appendix/agent-system.md`, `docs/execution-agents.md`, `framework/agent-routing.md`, `README.md`
+- Scripts → `docs/appendix/script-reference.md`, `docs/appendix/iteration-cycles.md`, `agents/templates/cron-schedule.json.template`
+- Telegram channel → `agents/notify.mjs` (switch + status), `CLAUDE.md` §Notification
