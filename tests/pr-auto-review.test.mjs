@@ -181,6 +181,9 @@ test('all review-side git mutation happens in the dedicated clone, never the mai
   assert(!/\['-C', repoDir, 'checkout'/.test(source), 'must not switch branches in the main tree');
   assert(!/\['-C', repoDir, 'worktree'/.test(source), 'hard-gate worktrees must come from the clone, not the main repo');
   assert(!/\['-C', repoDir, 'fetch'/.test(source), 'must not fetch into the main repo (FETCH_HEAD races)');
+  // The clone refresh must FORCE the checkout — leftover dirty state from an
+  // interrupted run must never brick the refresh (drain-clone regression, 2026-07-06).
+  assert(/'checkout', '-q', '-f', '-B', 'main', 'origin\/main'/.test(source), 'review-clone refresh must use checkout -f');
 });
 
 test('hard gate builds its worktree from the review clone', () => {

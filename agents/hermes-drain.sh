@@ -73,7 +73,9 @@ if [ ! -d "$DRAIN_CLONE/.git" ]; then
   git clone --quiet "$remote_url" "$DRAIN_CLONE" || { log "clone failed"; exit 1; }
 fi
 git -C "$DRAIN_CLONE" fetch origin --quiet 2>/dev/null || true
-git -C "$DRAIN_CLONE" checkout -q -B main origin/main 2>/dev/null || { log "clone checkout failed"; exit 1; }
+# -f: the previous worker legitimately leaves the clone dirty (queue claim/
+# complete edits on its drain branch); the refresh must always win.
+git -C "$DRAIN_CLONE" checkout -q -f -B main origin/main 2>/dev/null || { log "clone checkout failed"; exit 1; }
 git -C "$DRAIN_CLONE" reset --hard origin/main --quiet 2>/dev/null || true
 git -C "$DRAIN_CLONE" clean -fdq 2>/dev/null || true
 

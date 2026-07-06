@@ -278,7 +278,9 @@ function ensureReviewClone(repoDir, log) {
   }
   run('git', ['-C', REVIEW_CLONE, 'fetch', '--quiet', 'origin'], { timeout: 120_000 });
   // The clone is fully owned by this job — a hard reset is always safe here.
-  run('git', ['-C', REVIEW_CLONE, 'checkout', '-q', '-B', 'main', 'origin/main'], { timeout: 60_000 });
+  // -f: never let leftover dirty state (e.g. an interrupted completion) block
+  // the refresh — the same failure mode hit the drain clone (2026-07-06).
+  run('git', ['-C', REVIEW_CLONE, 'checkout', '-q', '-f', '-B', 'main', 'origin/main'], { timeout: 60_000 });
   run('git', ['-C', REVIEW_CLONE, 'reset', '--hard', '-q', 'origin/main'], { timeout: 60_000 });
   run('git', ['-C', REVIEW_CLONE, 'clean', '-fdq'], { timeout: 60_000 });
   return REVIEW_CLONE;
