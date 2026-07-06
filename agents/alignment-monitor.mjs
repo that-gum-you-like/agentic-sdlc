@@ -110,7 +110,16 @@ export function runAlignmentCheck({ dryRun = false } = {}) {
     promptSuggestions: [],
     checklistUpdates: [],
     toolResults: {},
+    // Score derives from REAL signals: the ratio of failed checks to total
+    // checks actually executed this run (REQ-H1) — no hand-tuned decrements.
+    checksTotal: 0,
+    checksFailed: 0,
     score: 100,
+  };
+
+  const addCheck = (ok) => {
+    findings.checksTotal += 1;
+    if (!ok) findings.checksFailed += 1;
   };
 
   // 1. Capability drift check
@@ -121,8 +130,11 @@ export function runAlignmentCheck({ dryRun = false } = {}) {
     const driftLines = driftResult.output.split('\n').filter(l => /drift|creep|alert/i.test(l));
     for (const line of driftLines) {
       findings.driftAlerts.push(line.trim());
-      findings.score -= 5;
+      addCheck(false);
     }
+    if (driftLines.length === 0) addCheck(false); // tool failed outright
+  } else {
+    addCheck(true);
   }
 
   // 2. Behavior tests (prompt quality)
@@ -131,6 +143,9 @@ export function runAlignmentCheck({ dryRun = false } = {}) {
   findings.toolResults.behaviorTests = behaviorResult;
   const failedBehavior = (behaviorResult.output.match(/❌/g) || []).length;
   const passedBehavior = (behaviorResult.output.match(/✅/g) || []).length;
+  // Every behavior assertion is a real, countable check.
+  findings.checksTotal += passedBehavior + failedBehavior;
+  findings.checksFailed += failedBehavior;
   if (failedBehavior > 0) {
     // Extract failed check descriptions
     const failedLines = behaviorResult.output.split('\n').filter(l => l.includes('❌'));
@@ -138,7 +153,6 @@ export function runAlignmentCheck({ dryRun = false } = {}) {
       const desc = line.replace(/.*❌\s*/, '').trim();
       findings.driftAlerts.push(`Behavior test failed: ${desc}`);
     }
-    findings.score -= failedBehavior * 2;
   }
 
   // 3. Roadmap health
@@ -153,9 +167,10 @@ export function runAlignmentCheck({ dryRun = false } = {}) {
 
   // Check for stale claims. Word boundaries so "Ready (unblocked): N" in the
   // queue-drainer status does NOT false-positive on the substring "blocked".
-  if (queueResult.output && /\bstale\b|\bstuck\b|\bblocked\b/i.test(queueResult.output)) {
+  const queueStale = !!(queueResult.output && /\bstale\b|\bstuck\b|\bblocked\b/i.test(queueResult.output));
+  addCheck(!queueStale);
+  if (queueStale) {
     findings.driftAlerts.push('Stale or blocked tasks detected in queue');
-    findings.score -= 3;
   }
 
   // 5. Check planning artifacts exist and comply
@@ -173,9 +188,9 @@ export function runAlignmentCheck({ dryRun = false } = {}) {
       if (file === 'requirements.md') {
         // Check REQ-xxx format
         const reqCount = (content.match(/###\s*REQ-\d{3}/g) || []).length;
+        addCheck(!(reqCount === 0 && content.length > 100));
         if (reqCount === 0 && content.length > 100) {
           findings.driftAlerts.push('plans/requirements.md exists but has no REQ-xxx numbered requirements');
-          findings.score -= 5;
           findings.promptSuggestions.push({
             target: 'Requirements Engineer',
             issue: 'Requirements not in REQ-xxx format',
@@ -185,9 +200,9 @@ export function runAlignmentCheck({ dryRun = false } = {}) {
 
         // Check for acceptance criteria
         const acCount = (content.match(/Acceptance Criteria:/gi) || []).length;
+        if (reqCount > 0) addCheck(acCount >= reqCount);
         if (reqCount > 0 && acCount < reqCount) {
           findings.driftAlerts.push(`${reqCount - acCount} requirements missing Acceptance Criteria`);
-          findings.score -= 3;
         }
       }
 
@@ -195,17 +210,17 @@ export function runAlignmentCheck({ dryRun = false } = {}) {
         // Check for phase structure
         const hasPhases = /##\s*Phase\s*\d/i.test(content);
         const hasDemoSentence = /Demo Sentence/i.test(content);
+        addCheck(hasPhases);
         if (!hasPhases) {
           findings.driftAlerts.push('plans/roadmap.md has no phase structure');
-          findings.score -= 5;
         }
+        if (hasPhases) addCheck(hasDemoSentence);
         if (!hasDemoSentence && hasPhases) {
           findings.promptSuggestions.push({
             target: 'Technical Product Manager',
             issue: 'Roadmap phases missing demo sentences',
             suggestion: 'Add "Demo Sentence: Users can [specific capability]" to each phase',
           });
-          findings.score -= 2;
         }
       }
     }
@@ -222,16 +237,20 @@ export function runAlignmentCheck({ dryRun = false } = {}) {
       if (existsSync(checkPath)) {
         const content = readFileSync(checkPath, 'utf8');
         const regex = new RegExp(item.checkPattern, item.checkFlags || 'i');
-        if (regex.test(content)) {
+        const caught = regex.test(content);
+        addCheck(!caught);
+        if (caught) {
           item.catchCount = (item.catchCount || 0) + 1;
           findings.driftAlerts.push(`Checklist item caught: ${item.description}`);
-          findings.score -= 2;
         }
       }
     }
   }
 
-  // Clamp score
+  // Score = share of executed checks that passed (real signal, not magic numbers)
+  findings.score = findings.checksTotal > 0
+    ? Math.round(100 * (1 - findings.checksFailed / findings.checksTotal))
+    : 100;
   findings.score = Math.max(0, Math.min(100, findings.score));
 
   // -------------------------------------------------------------------------
@@ -239,7 +258,7 @@ export function runAlignmentCheck({ dryRun = false } = {}) {
   // -------------------------------------------------------------------------
 
   let report = `# Alignment Report — ${today()}\n\n`;
-  report += `## Overall Score: ${findings.score}/100\n\n`;
+  report += `## Overall Score: ${findings.score}/100 (${findings.checksTotal - findings.checksFailed}/${findings.checksTotal} checks passed)\n\n`;
 
   if (findings.driftAlerts.length > 0) {
     report += `## Drift Alerts (${findings.driftAlerts.length})\n\n`;

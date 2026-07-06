@@ -1,11 +1,21 @@
 #!/usr/bin/env node
 /**
- * Git post-commit hook that triggers the reviewer agent to review commits.
+ * Git review hooks — the senior-review gate.
+ *
+ * Two surfaces (REQ-H1: the gate must be able to BLOCK, not just warn):
+ *   pre-commit  — reviews the STAGED diff and EXITS NONZERO on any blocking
+ *                 violation, so the commit is actually prevented. This is the
+ *                 enforcing surface (a post-commit hook's exit code cannot
+ *                 block the commit it runs after).
+ *   post-commit — advisory review of the landed commit against the growing
+ *                 senior-dev checklist (record + teach, never block).
  *
  * Usage:
- *   node review-hook.mjs install     # Symlink this script as .git/hooks/post-commit
- *   node review-hook.mjs run         # Manually trigger review on the latest commit
+ *   node review-hook.mjs install             # Install BOTH hooks (pre + post commit)
+ *   node review-hook.mjs install --pre-only  # Install only the enforcing pre-commit gate
+ *   node review-hook.mjs run                 # Advisory review of the latest commit
  *   node review-hook.mjs run --commit <sha>  # Review a specific commit
+ *   node review-hook.mjs check-staged        # Enforcing review of the staged diff (exit 1 = block)
  *
  * The reviewer agent is identified by looking for an agent with the "reviewer"
  * role in the project's agents/budget.json, or by the --reviewer flag.
@@ -13,13 +23,23 @@
 
 import { execSync } from 'child_process';
 import { readFileSync, existsSync, symlinkSync, unlinkSync, chmodSync } from 'fs';
-import { resolve, dirname, join, relative } from 'path';
+import { resolve, dirname, join, relative, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { loadConfig } from './load-config.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Checklist item ids that BLOCK a commit in the pre-commit gate. Deterministic,
+// high-confidence checks only — everything else stays advisory so the gate
+// never blocks on style judgment calls.
+const BLOCKING_IDS = new Set([
+  'no-secrets',
+  'no-secrets-or-credentials-committed',
+  'error-handling',
+  'error-cases-handled-(no-silent-failures)',
+]);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -60,6 +80,20 @@ function findReviewerAgent(config) {
   return null;
 }
 
+// Deterministic default checks. These always run in the pre-commit gate —
+// even when a project ships a custom markdown checklist (whose parsed items
+// carry no machine pattern) — so the gate can never silently lose its teeth.
+const DEFAULT_CHECKLIST = [
+  { id: 'tests', label: 'Tests included or updated', pattern: /\.(test|spec)\.(ts|tsx|js|jsx|mjs)$/i },
+  { id: 'small-files', label: 'No file exceeds 300 lines', pattern: null },
+  { id: 'no-console', label: 'No console.log left in production code', pattern: /console\.log/i },
+  { id: 'no-any', label: 'No untyped any usage', pattern: /:\s*any\b/ },
+  { id: 'atomic-commit', label: 'Commit is focused on one concern', pattern: null },
+  { id: 'no-secrets', label: 'No secrets or credentials committed', pattern: /(password|secret|api_key|token)\s*[:=]\s*['"][^'"]+/i },
+  { id: 'docs-updated', label: 'Relevant documentation updated', pattern: null },
+  { id: 'error-handling', label: 'Error cases handled (no silent failures)', pattern: /catch\s*\(\s*\)\s*\{?\s*\}/ },
+];
+
 function loadChecklist(config, reviewerName) {
   // Try agent-specific checklist first
   const agentChecklist = resolve(config.agentsDir, reviewerName, 'checklist.md');
@@ -73,17 +107,7 @@ function loadChecklist(config, reviewerName) {
     return parseChecklist(readFileSync(templateChecklist, 'utf8'));
   }
 
-  // Default checklist
-  return [
-    { id: 'tests', label: 'Tests included or updated', pattern: /\.(test|spec)\.(ts|tsx|js|jsx|mjs)$/i },
-    { id: 'small-files', label: 'No file exceeds 300 lines', pattern: null },
-    { id: 'no-console', label: 'No console.log left in production code', pattern: /console\.log/i },
-    { id: 'no-any', label: 'No untyped any usage', pattern: /:\s*any\b/ },
-    { id: 'atomic-commit', label: 'Commit is focused on one concern', pattern: null },
-    { id: 'no-secrets', label: 'No secrets or credentials committed', pattern: /(password|secret|api_key|token)\s*[:=]\s*['"][^'"]+/i },
-    { id: 'docs-updated', label: 'Relevant documentation updated', pattern: null },
-    { id: 'error-handling', label: 'Error cases handled (no silent failures)', pattern: /catch\s*\(\s*\)\s*\{?\s*\}/ },
-  ];
+  return DEFAULT_CHECKLIST;
 }
 
 function parseChecklist(markdownContent) {
@@ -208,25 +232,103 @@ function reviewCommit(config, reviewerName, commitSha) {
 }
 
 // ---------------------------------------------------------------------------
+// Enforcing pre-commit review (staged diff, exit 1 = commit blocked)
+// ---------------------------------------------------------------------------
+
+/**
+ * Review the staged diff. Blocking checklist items (BLOCKING_IDS) that match
+ * on ADDED lines fail the review; everything else is advisory.
+ * @returns {'pass'|'warn'|'fail'}
+ */
+function reviewStaged(config, reviewerName) {
+  try { logCapabilityUsage('checklistReview', reviewerName, process.env.TASK_ID || 'unknown', 'review-hook.mjs', 'check-staged'); } catch {}
+
+  const diff = git('diff --cached');
+  if (!diff.trim()) {
+    console.log('  (no staged changes — nothing to review)');
+    return 'pass';
+  }
+  const stagedFiles = git('diff --cached --name-only').split('\n').filter(Boolean);
+  // Scan only ADDED lines so pre-existing code never blocks a commit.
+  const addedLines = diff.split('\n')
+    .filter(l => l.startsWith('+') && !l.startsWith('+++'))
+    .join('\n');
+
+  // Deterministic defaults always run; custom checklist pattern items add on.
+  const custom = loadChecklist(config, reviewerName).filter(
+    i => i.pattern && !DEFAULT_CHECKLIST.some(d => d.id === i.id)
+  );
+  const checklist = [...DEFAULT_CHECKLIST, ...custom];
+
+  console.log(`\n========================================`);
+  console.log(`  Pre-commit gate (staged diff)`);
+  console.log(`  Files staged: ${stagedFiles.length}`);
+  console.log(`  Reviewer: ${reviewerName}`);
+  console.log(`========================================\n`);
+
+  let hasFailures = false;
+  let hasWarnings = false;
+
+  for (const item of checklist) {
+    if (!item.pattern) continue; // pre-commit gate runs deterministic pattern checks only
+    if (item.id === 'tests') continue; // presence check (a match means tests were ADDED — not a violation)
+
+    const matches = addedLines.match(new RegExp(item.pattern.source, item.pattern.flags + 'g'));
+    if (!matches || matches.length === 0) {
+      console.log(`  [PASS] ${item.label}`);
+      continue;
+    }
+
+    if (BLOCKING_IDS.has(item.id)) {
+      hasFailures = true;
+      console.log(`  [FAIL] ${item.label} — ${matches.length} occurrence(s) in staged changes`);
+    } else {
+      hasWarnings = true;
+      console.log(`  [WARN] ${item.label} — ${matches.length} occurrence(s) in staged changes`);
+    }
+  }
+
+  console.log('');
+  if (hasFailures) {
+    console.log('  VERDICT: FAIL — commit BLOCKED. Fix the failures above (or unstage them).');
+    console.log('  To bypass in a genuine emergency: git commit --no-verify (this is logged by review).\n');
+    return 'fail';
+  }
+  if (hasWarnings) {
+    console.log('  VERDICT: WARN — commit allowed; review the warnings above.\n');
+    return 'warn';
+  }
+  console.log('  VERDICT: PASS — staged changes clear the gate.\n');
+  return 'pass';
+}
+
+// ---------------------------------------------------------------------------
 // Subcommands
 // ---------------------------------------------------------------------------
 
-function install() {
+function installHook(hookName) {
   const gitDir = git('rev-parse --git-dir');
   const hookDir = resolve(gitDir, 'hooks');
-  const hookPath = resolve(hookDir, 'post-commit');
+  const hookPath = resolve(hookDir, hookName);
 
   // Remove existing hook/symlink if present
   if (existsSync(hookPath)) {
     unlinkSync(hookPath);
-    console.log(`Removed existing post-commit hook at ${hookPath}`);
+    console.log(`Removed existing ${hookName} hook at ${hookPath}`);
   }
 
   symlinkSync(__filename, hookPath);
   chmodSync(hookPath, '755');
-  console.log(`Installed post-commit hook:`);
+  console.log(`Installed ${hookName} hook:`);
   console.log(`  ${hookPath} -> ${__filename}`);
-  console.log(`\nThe reviewer agent will now review every commit automatically.`);
+}
+
+function install() {
+  const preOnly = process.argv.includes('--pre-only');
+  installHook('pre-commit');
+  if (!preOnly) installHook('post-commit');
+  console.log(`\nThe pre-commit gate now BLOCKS commits with blocking violations` +
+    (preOnly ? '.' : `;\nthe reviewer agent reviews every landed commit (advisory).`));
 }
 
 function run() {
@@ -253,11 +355,21 @@ function run() {
   process.exit(verdict === 'fail' ? 1 : 0);
 }
 
+function checkStaged() {
+  const config = loadConfig();
+  const reviewerName = findReviewerAgent(config) || 'reviewer';
+  const verdict = reviewStaged(config, reviewerName);
+  process.exit(verdict === 'fail' ? 1 : 0);
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
 const subcommand = process.argv[2];
+// When git invokes us as a hook, argv[1] is the hook path — dispatch on its
+// basename so one script serves both surfaces.
+const invokedAs = basename(process.argv[1] || '');
 
 switch (subcommand) {
   case 'install':
@@ -266,9 +378,14 @@ switch (subcommand) {
   case 'run':
     run();
     break;
+  case 'check-staged':
+    checkStaged();
+    break;
   default:
-    // When invoked as a git hook, there's no subcommand — just run
-    if (process.argv.length <= 2 || !['install', 'run'].includes(subcommand)) {
+    if (invokedAs === 'pre-commit') {
+      checkStaged(); // enforcing: nonzero exit blocks the commit
+    } else {
+      // post-commit hook (or bare invocation): advisory review of HEAD
       run();
     }
     break;

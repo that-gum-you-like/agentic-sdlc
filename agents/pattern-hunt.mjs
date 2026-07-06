@@ -736,74 +736,13 @@ describe('Anti-pattern: no magic numbers or hardcoded string constants', () => {
 `;
   }
 
-  // Generic fallback template for unknown categories
-  const constName = category.replace(/-/g, '_').toUpperCase() + '_ALLOWLIST';
-  const suiteName = `Anti-pattern: ${label}`;
-  const testName = `no NEW instances of "${label}" in src/`;
-
-  return `
-// ---------------------------------------------------------------------------
-// Auto-generated defeat test — ${label}
-// ---------------------------------------------------------------------------
-
-/**
- * Files that already contain violations of: ${label}.
- * Do NOT add new entries. Fix the violation instead.
- */
-const ${constName} = new Set<string>([
-  // Add pre-existing violations here when first running this test
-]);
-
-describe('${suiteName}', () => {
-  const srcDir = path.join(ROOT, 'src');
-
-  const tsTsxFiles = collectFiles(srcDir, (f) => {
-    if (isTestFile(f)) return false;
-    return f.endsWith('.ts') || f.endsWith('.tsx');
-  });
-
-  test('source tree contains TypeScript files to scan', () => {
-    expect(tsTsxFiles.length).toBeGreaterThan(0);
-  });
-
-  test('${testName}', () => {
-    const newViolations: string[] = [];
-
-    for (const filePath of tsTsxFiles) {
-      const relPath = rel(filePath);
-      if (${constName}.has(relPath)) continue;
-
-      // TODO: Add pattern-specific detection logic here.
-      // This is a generated scaffold — fill in the violation check.
-      const fileLines = lines(filePath);
-      void fileLines; // suppress unused warning until logic is added
-    }
-
-    expect(newViolations).toEqual(
-      [],
-      \`New violations of "${label}" found:\\n\` +
-        newViolations.map((v) => \`  • \${v}\`).join('\\n'),
-    );
-  });
-
-  test('allowlist does not contain phantom entries', () => {
-    const phantoms: string[] = [];
-    for (const relPath of ${constName}) {
-      if (!fs.existsSync(path.join(ROOT, relPath))) {
-        phantoms.push(relPath);
-      }
-    }
-    if (phantoms.length > 0) {
-      console.warn(
-        \`allowlist cleanup: these files no longer exist and can be removed from ${constName}:\\n\` +
-          phantoms.map((p) => \`  • \${p}\`).join('\\n'),
-      );
-    }
-  });
-});
-`;
+  // Unknown category: there is NO built-in detector. Never emit a scaffold
+  // whose assertion trivially passes (the old TODO template asserted an
+  // always-empty newViolations array). Returning null makes the caller record
+  // a needs-detector action instead — a human (or a follow-up change) writes
+  // the real detection logic, and only then does a test land. (REQ-H1)
+  return null;
 }
-
 /**
  * Checks whether a test already exists in the anti-patterns file for the
  * given category by searching for the category's expected describe() string.
@@ -860,6 +799,16 @@ function generateDefeatTests(recurringPatterns, dryRun = false) {
     }
 
     const block = generateTestBlock(pattern);
+    if (block === null) {
+      // No built-in detector for this category — surface it instead of
+      // generating an always-passing scaffold (REQ-H1).
+      details.push({
+        pattern: pattern.category,
+        action: 'needs-detector',
+        reason: 'no built-in detector for this category — write the detection logic, then add the defeat test',
+      });
+      continue;
+    }
     newBlocks.push({ pattern, block });
     details.push({
       pattern: pattern.category,

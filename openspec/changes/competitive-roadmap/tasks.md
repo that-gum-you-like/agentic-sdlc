@@ -8,7 +8,7 @@ This is a **program**. Each capability below spawns its **own child OpenSpec cha
 ---
 
 ## Phase 0 — Internal hardening (do first; makes the drain trustworthy)
-- [ ] **H1** Gates that enforce — review-hook can fail; pattern-hunt no always-pass; alignment real signals; schema-validator fail-closed  · Spec REQ-H1 · M
+- [x] **H1** Gates that enforce — review-hook can fail; pattern-hunt no always-pass; alignment real signals; schema-validator fail-closed  · Spec REQ-H1 · M
 - [x] **H2** CI runs the whole suite (`__tests__` + `tests/` + four-layer + test-behavior)  · REQ-H2 · S
 - [x] **H4** Latent-bug sweep (launcher exit code, daily-review dead code, logCapabilityUsage signature, `__isMainModule` guards, semantic-index stdin+cosine)  · REQ-H4 · M
 - [ ] **H5** No-OpenAI default catalog; gate openai/azure adapters  · REQ-H5 · S
