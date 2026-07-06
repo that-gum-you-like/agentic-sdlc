@@ -122,7 +122,9 @@ echo ""
 cd "$PROJECT_DIR"
 claude -p "$PROMPT" --dangerously-skip-permissions 2>&1 | tee -a "plans/devlog-$(date +%Y-%m-%d).log"
 
-EXIT_CODE=$?
+# NOTE: $? after a pipeline reports the LAST command's status (tee — ~always 0).
+# PIPESTATUS[0] is the agent's real exit code.
+EXIT_CODE=${PIPESTATUS[0]}
 
 # Post-run: auto-commit if dirty
 if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then

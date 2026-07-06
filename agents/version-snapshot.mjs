@@ -83,23 +83,29 @@ function restore(date) {
   console.log(`\n✅ Restored all agents from snapshot ${date}`);
 }
 
-// CLI
-const [,, cmd, ...args] = process.argv;
+export { snapshot, list, restore };
 
-switch (cmd) {
-  case 'snapshot':
-    snapshot();
-    break;
-  case 'list':
-    list();
-    break;
-  case 'restore':
-    if (!args[0]) { console.error('Usage: version-snapshot.mjs restore <date>'); break; }
-    restore(args[0]);
-    break;
-  default:
-    console.log(`Usage:
+// CLI
+const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
+
+if (__isMainModule) {
+  const [,, cmd, ...args] = process.argv;
+
+  switch (cmd) {
+    case 'snapshot':
+      snapshot();
+      break;
+    case 'list':
+      list();
+      break;
+    case 'restore':
+      if (!args[0]) { console.error('Usage: version-snapshot.mjs restore <date>'); break; }
+      restore(args[0]);
+      break;
+    default:
+      console.log(`Usage:
   version-snapshot.mjs snapshot       # Save current AGENT.md files
   version-snapshot.mjs list           # List all snapshots
   version-snapshot.mjs restore <date> # Restore from a snapshot`);
+  }
 }

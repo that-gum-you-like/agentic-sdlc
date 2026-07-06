@@ -74,22 +74,37 @@ function loadMemory(agent, layer) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
+// Locally-cached model only — no HF Hub network calls (privacy-first).
+const OFFLINE_ENV = {
+  HF_HUB_OFFLINE: '1',
+  TRANSFORMERS_OFFLINE: '1',
+  HF_HUB_DISABLE_TELEMETRY: '1',
+};
+
 function callEmbed(texts) {
+  // Pass the payload over stdin (embed.py reads sys.stdin), NOT as a shell
+  // argument. The old `echo '<json>' | python` form overflowed ARG_MAX
+  // (spawnSync E2BIG) on any real corpus and mis-escaped single quotes.
   const input = JSON.stringify(texts);
-  const result = execSync(`echo '${input.replace(/'/g, "\\'")}' | ${getPythonPath()} "${EMBED_SCRIPT}"`, {
+  const result = execSync(`${getPythonPath()} "${EMBED_SCRIPT}"`, {
+    input,
     encoding: 'utf8',
     timeout: 120000,
     maxBuffer: 50 * 1024 * 1024,
+    env: { ...process.env, ...OFFLINE_ENV },
   });
   return JSON.parse(result.trim());
 }
 
 function callSearch(query, corpus) {
+  // Same stdin-based invocation as callEmbed (E2BIG-safe, quote-safe).
   const input = JSON.stringify({ query, corpus });
-  const result = execSync(`echo '${input.replace(/'/g, "\\'")}' | python3 "${EMBED_SCRIPT}" --search`, {
+  const result = execSync(`${getPythonPath()} "${EMBED_SCRIPT}" --search`, {
+    input,
     encoding: 'utf8',
     timeout: 60000,
     maxBuffer: 50 * 1024 * 1024,
+    env: { ...process.env, ...OFFLINE_ENV },
   });
   return JSON.parse(result.trim());
 }
@@ -102,6 +117,61 @@ function cosineSimilarity(a, b) {
     magB += b[i] * b[i];
   }
   return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+}
+
+// --- Lexical fallback (no Python required) ---
+// When sentence-transformers is unavailable we cannot embed the query, so we
+// rank by cosine similarity over term-frequency vectors of the raw text.
+// Deterministic, dependency-free, and strictly better than "return null".
+
+const STOPWORDS = new Set([
+  'the', 'and', 'for', 'that', 'this', 'with', 'from', 'was', 'were', 'are',
+  'has', 'have', 'had', 'not', 'but', 'its', 'his', 'her', 'she', 'him',
+  'they', 'them', 'then', 'than', 'when', 'what', 'which', 'who', 'how',
+  'all', 'any', 'can', 'could', 'should', 'would', 'will', 'may', 'might',
+  'into', 'out', 'about', 'over', 'under', 'again', 'once', 'here', 'there',
+  'because', 'while', 'where', 'after', 'before', 'between', 'both', 'each',
+]);
+
+export function termFrequencies(text) {
+  const terms = String(text || '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(t => t.length > 2 && !STOPWORDS.has(t));
+  const freq = {};
+  for (const term of terms) {
+    freq[term] = (freq[term] || 0) + 1;
+  }
+  return freq;
+}
+
+function tfCosine(freqA, freqB) {
+  let dot = 0, magA = 0, magB = 0;
+  for (const [term, count] of Object.entries(freqA)) {
+    magA += count * count;
+    if (freqB[term]) dot += count * freqB[term];
+  }
+  for (const count of Object.values(freqB)) {
+    magB += count * count;
+  }
+  if (magA === 0 || magB === 0) return 0;
+  return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+}
+
+/**
+ * Rank entries against a query by lexical (term-frequency) cosine similarity.
+ * @param {string} query
+ * @param {Array<{id: string, content: string}>} entries
+ * @param {number} topK
+ * @returns {Array<{id: string, content: string, score: number}>} best-first, zero-score entries dropped
+ */
+export function lexicalRank(query, entries, topK = 5) {
+  const queryFreq = termFrequencies(query);
+  return entries
+    .map(e => ({ ...e, score: tfCosine(queryFreq, termFrequencies(e.content)) }))
+    .filter(e => e.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK);
 }
 
 // --- Core Functions ---
@@ -218,11 +288,21 @@ function search(agent, query, topK = 5) {
     }));
   }
 
-  // JS fallback: use stored embeddings + compute query embedding
-  // This path works if embeddings exist but Python is unavailable at search time
-  console.warn('⚠️  Python unavailable for search — using JS cosine fallback');
-  // Without Python, can't embed the query. Return null for full recall fallback.
-  return null;
+  // JS fallback: Python is unavailable so we cannot embed the query.
+  // Rank stored entries by lexical (term-frequency) cosine instead —
+  // deterministic and dependency-free.
+  console.warn('⚠️  Python unavailable for search — using lexical cosine fallback');
+  const candidates = entryIds.map(id => ({
+    id,
+    ...vectors.entries[id],
+    vector: undefined, // Don't include raw vector in results
+  }));
+  const ranked = lexicalRank(query, candidates, topK);
+  if (ranked.length === 0) {
+    console.warn('No lexical matches — falling back to full recall');
+    return null; // Caller should fall back to full recall
+  }
+  return ranked;
 }
 
 /**
