@@ -431,6 +431,37 @@ async function runLayer2(targetFiles) {
 }
 
 // ---------------------------------------------------------------------------
+// Layer 2.5: NLP — Semantic identifier near-miss detection (optional)
+// ---------------------------------------------------------------------------
+// Runs between Critique and Code (nlp-code-analysis spec). Uses spaCy word
+// vectors when installed (local, CPU-only); a deterministic lexical fallback
+// otherwise. Advisory: findings are warnings, never a hard fail.
+
+async function runLayer2_5_NLP(targetFiles) {
+  const layerName = 'NLP Near-Miss (Layer 2.5)';
+  try {
+    const { findNearMisses, spacyAvailable } = await import('./nlp-analyzer.mjs');
+    const sourceFiles = targetFiles.filter(f => /\.(mjs|js|ts|tsx|jsx)$/.test(f) && fs.existsSync(f));
+    if (sourceFiles.length === 0) {
+      return { name: layerName, status: 'pass', details: ['No source files to analyze'] };
+    }
+    const engine = spacyAvailable() ? 'spaCy (local)' : 'lexical fallback (spaCy not available)';
+    const inputs = sourceFiles.map(file => ({ file: rel(file), source: fs.readFileSync(file, 'utf8') }));
+    const findings = findNearMisses(inputs);
+    if (findings.length === 0) {
+      return { name: layerName, status: 'pass', details: [`Scanned ${sourceFiles.length} file(s) via ${engine} — no near-miss identifiers`] };
+    }
+    return {
+      name: layerName,
+      status: 'warn',
+      details: findings.map(f => `${f.file}: \`${f.accessed}\` — did you mean \`${f.suggestion}\`? (edit distance: ${f.editDistance}, similarity: ${f.similarity})`),
+    };
+  } catch (e) {
+    return { name: layerName, status: 'pass', details: [`skipped (${e.message})`] };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Layer 3: Code — Defeat Test Patterns + AST Analysis
 // ---------------------------------------------------------------------------
 
@@ -758,15 +789,16 @@ async function main() {
 
   const targetFiles = await resolveTargetFiles();
 
-  const [layer1, layer2, layer3, layer4, layer5] = await Promise.all([
+  const [layer1, layer2, layer2_5, layer3, layer4, layer5] = await Promise.all([
     runLayer1(targetFiles),
     runLayer2(targetFiles),
+    runLayer2_5_NLP(targetFiles),
     runLayer3(targetFiles),
     runLayer4(targetFiles),
     runLayer5_CLIGuards(),
   ]);
 
-  const layers = [layer1, layer2, layer3, layer4, layer5];
+  const layers = [layer1, layer2, layer2_5, layer3, layer4, layer5];
   const passed = layers.every((l) => l.status === 'pass' || l.status === 'warn');
 
   const report = { passed, layers };
