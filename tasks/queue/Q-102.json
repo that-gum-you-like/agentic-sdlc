@@ -1,0 +1,21 @@
+{
+  "id": "Q-102",
+  "phase": 1,
+  "title": "Senior-review checklist auto-growth from pattern-hunt (curriculum Ph5 'checklist that GROWS')",
+  "description": "The curriculum requires the senior-dev review checklist to GROW automatically as new anti-patterns are confirmed; today defeat tests grow automatically but the checklist FILE only grows manually (docs/curriculum-conformance.md Phase 5, 'Senior-dev checklist that GROWS' = Partial). Extend agents/pattern-hunt.mjs: when a recurring pattern is confirmed (the same code path that emits/updates a defeat detector), also append a corresponding one-line checklist item to the project's checklist file (the file scaffolded from agents/templates/checklist.md.template) under a clearly marked '## Auto-added by pattern-hunt' section. Requirements: idempotent (never append a duplicate item — match on a stable pattern id), append-only (never rewrite or reorder existing human-written items), no-op with a log line when the project has no checklist file. Add unit tests for the append/idempotency/no-op behaviors in agents/__tests__/. Update docs/curriculum-conformance.md Phase 5 row from Partial to Solid with the new owner.",
+  "assignee": "sdlc-developer",
+  "priority": "MEDIUM",
+  "estimatedTokens": 24000,
+  "files": [
+    "agents/pattern-hunt.mjs",
+    "agents/__tests__/",
+    "docs/curriculum-conformance.md"
+  ],
+  "blockedBy": [],
+  "status": "pending",
+  "created": "2026-07-06T13:30:00Z",
+  "tags": [
+    "curriculum-ph5",
+    "improvement-loop"
+  ]
+}

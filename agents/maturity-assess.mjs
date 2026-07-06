@@ -102,7 +102,7 @@ function assessSDLC() {
   if (hasTaskQueue && hasAgents) { score += 1; evidence.push('Task queue + agent config present'); }
   if (hasDomains) { score += 0.5; evidence.push('Domain routing configured'); }
 
-  // Level 4: Quality gates
+  // Level 4 (Autonomous): quality gates
   const hasDefeatTests = fileExists('agents/four-layer-validate.mjs') || runCmd('grep -rl "defeat" agents/ 2>/dev/null')?.length > 0;
   if (hasDefeatTests) { score += 0.5; evidence.push('Defeat tests / validation pipeline present'); }
 

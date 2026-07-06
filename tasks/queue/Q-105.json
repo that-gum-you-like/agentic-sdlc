@@ -1,0 +1,23 @@
+{
+  "id": "Q-105",
+  "phase": 1,
+  "title": "replay-regression harness: deterministic corpus replay (openspec change replay-regression-ci-gate, T-101..T-104 subset)",
+  "description": "Implement the DETERMINISTIC subset of openspec/changes/replay-regression-ci-gate (read its proposal.md/design.md/specs first; update tasks.md checkboxes + status.json as you go): (T-101) tests/replay-corpus/SCHEMA.md defining the corpus JSON schema — each corpus file captures one past agent interaction: {id, description, input, expected: {mustContain: [...], mustNotContain: [...], mustMatch: [regex...]}, metadata}; (T-102) seed the corpus with 3-5 traces derived from REAL prompts the framework builds deterministically (e.g. worker.mjs prompt assembly, pr-auto-review buildReviewPrompt, drain prompt rendering) — capture by calling the exported builder functions with fixed inputs, NOT by calling any LLM; (T-103) tests/replay.test.mjs harness that loads every corpus file, re-runs the same builder/code path, and asserts the deterministic expectations — the harness must FAIL (not skip) if the corpus directory is empty or a file violates SCHEMA.md; (T-104) add npm run test:replay and include the harness in npm test. EXPLICITLY OUT OF SCOPE: T-105 (.github/workflows edit — guardrail surface, human-only), embedding/LLM-judge comparators (deterministic gates stay deterministic), any live LLM call. Zero npm deps, node:test style.",
+  "assignee": "sdlc-developer",
+  "priority": "MEDIUM",
+  "estimatedTokens": 30000,
+  "files": [
+    "tests/replay-corpus/",
+    "tests/replay.test.mjs",
+    "package.json",
+    "openspec/changes/replay-regression-ci-gate/"
+  ],
+  "blockedBy": [],
+  "status": "pending",
+  "created": "2026-07-06T13:30:00Z",
+  "tags": [
+    "curriculum-ph7",
+    "regression",
+    "openspec"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "Q-103",
+  "phase": 1,
+  "title": "BACKLOG.md hygiene: reconcile shipped/stale entries with reality",
+  "description": "openspec/BACKLOG.md has drifted from what actually shipped. Reconcile it (doc-only change): (1) Item #25 'Optional spaCy Layer 2.5 NLP Analyzer' SHIPPED 2026-07-06 via PR #24 (agents/nlp-analyzer.mjs + agents/nlp-analyze.py + four-layer Layer 2.5 with zero-dep fallback) — move it to the 'Promoted to Changes' section (or mark IMPLEMENTED like the 'Automated Hermes drain cron' entry) with the PR reference. (2) Verify item #26 (capability-monitor tests) and cross-reference queue task Q-101 as in-flight. (3) Add the voice-intake row to the 'Promoted to Changes' table if still missing (backlog #27 item c). (4) Do NOT touch the 'Competitive Roadmap 2026' section beyond leaving it as historical record, and do NOT promote/reactivate any Rejected item. Keep diffs minimal and factual; cite PR numbers.",
+  "assignee": "sdlc-documentarian",
+  "priority": "MEDIUM",
+  "estimatedTokens": 10000,
+  "files": [
+    "openspec/BACKLOG.md"
+  ],
+  "blockedBy": [],
+  "status": "pending",
+  "created": "2026-07-06T13:30:00Z",
+  "tags": [
+    "docs",
+    "hygiene"
+  ]
+}

@@ -128,7 +128,7 @@ Adopt incrementally — each level builds on the previous:
 | 1 | Assisted | CLAUDE.md with project rules | [Level 1](docs/levels/level-1-assisted.md) |
 | 2 | Automated | Micro cycle: implement → test → commit | [Level 2](docs/levels/level-2-automated.md) |
 | 3 | Orchestrated | Task queue, multiple agents, domain routing | [Level 3](docs/levels/level-3-orchestrated.md) |
-| 4 | Quality | Defeat tests, code reviewer, browser E2E | [Level 4](docs/levels/level-4-quality.md) |
+| 4 | Autonomous | Defeat tests, code reviewer, browser E2E | [Level 4](docs/levels/level-4-autonomous.md) |
 | 5 | Evolving | Agent memory, failure tracking, model manager | [Level 5](docs/levels/level-5-evolution.md) |
 | 6 | Self-Improving | Pattern detection, behavior tests, drift monitoring | [Level 6](docs/levels/level-6-self-improving.md) |
 

@@ -31,8 +31,9 @@ A universal methodology for AI-assisted software development. This model applies
 - Parallel execution of independent tasks.
 - Coordinated merging and conflict resolution.
 
-### Level 4: Quality
+### Level 4: Autonomous
 
+- Agents work unattended because automated gates block bad work.
 - Automated code review with growing checklists.
 - Defeat tests catch known anti-patterns.
 - Browser E2E testing for frontend changes.
@@ -62,7 +63,7 @@ Each level builds on the previous. No skipping.
 ```
 6. SELF-IMPROVING   — Pattern detection, behavior tests, drift monitoring
 5. EVOLVING         — Agent memory, failure tracking, model manager
-4. QUALITY          — Defeat tests, code reviewer, browser E2E
+4. AUTONOMOUS       — Defeat tests, code reviewer, browser E2E
 3. ORCHESTRATED     — Task queue, multiple agents, domain routing
 2. AUTOMATED        — Micro cycle: implement → test → commit
 1. ASSISTED         — CLAUDE.md with project rules
@@ -71,7 +72,7 @@ Each level builds on the previous. No skipping.
 
 Each pass through the pyramid makes the system more robust. You will revisit earlier levels as the system grows — this is expected.
 
-> **This file is the canonical maturity model** (7 levels, numbered 0–6: Manual → Assisted → Automated → Orchestrated → Quality → Evolving → Self-Improving). Per-level implementation playbooks live in `docs/levels/` for Levels 1–6 (Level 0 — Manual — is the starting point and needs no playbook). Any other document that names the levels defers to this file.
+> **This file is the canonical maturity model** (7 levels, numbered 0–6: Manual → Assisted → Automated → Orchestrated → Autonomous → Evolving → Self-Improving — exactly the Multiverse School curriculum ladder). Per-level implementation playbooks live in `docs/levels/` for Levels 1–6 (Level 0 — Manual — is the starting point and needs no playbook). Any other document that names the levels defers to this file.
 
 ---
 
@@ -97,7 +98,7 @@ Use this checklist when starting any project. Work through the levels sequential
 - [ ] Agent communication channel (Matrix, Slack, or equivalent)
 - [ ] PM Dashboard for human oversight
 
-### Level 4 (Quality)
+### Level 4 (Autonomous)
 
 - [ ] Senior developer review checklist
 - [ ] Post-commit review hook
