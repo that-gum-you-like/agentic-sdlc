@@ -13,7 +13,7 @@ This repo contains a universal methodology for AI-assisted software development.
 1. **Every task must include tests.** Commits without tests are blocked.
 2. **Agents follow the micro cycle:** Pick task → Implement → Write tests → Run tests → Commit if passing → Next.
 3. **Agents read memory before starting** and write memory after completing.
-4. **Review agent reviews every commit** via post-commit hook. The checklist grows over time.
+4. **The review gate enforces.** An installed **pre-commit** hook (`node agents/review-hook.mjs install`) BLOCKS commits containing blocking violations (secrets, silent error swallowing); the reviewer agent then reviews every landed commit via post-commit hook (advisory — a post-commit hook cannot block the commit it runs after). The checklist grows over time.
 5. **Small files, small commits.** Services < 150 lines, screens < 200 lines. One logical change per commit.
 6. **Serialize dependent work. Parallelize independent work.** One agent doing 5 related things beats 5 agents conflicting.
 7. **Anti-patterns get named specifically.** Not "it's bad" — "it's not modular" / "it's not testable" / "silent fallback to zero."

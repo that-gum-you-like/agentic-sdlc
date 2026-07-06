@@ -2,7 +2,7 @@
   "id": "H-007",
   "phase": 0,
   "title": "Make quality gates enforce, not just warn (REQ-H1)",
-  "description": "review-hook.mjs installs as a POST-commit hook whose exit code cannot block a commit, and only ever warns. Move the enforcing check to a mechanism that CAN gate: a pre-commit/pre-push hook and/or a required CI check (ties to H-001). Do not claim a post-commit hook blocks a commit. pattern-hunt.mjs generic path (~L776 TODO) must emit a REAL detector or no test — never an always-passing one. alignment-monitor.mjs score from real signals, not magic numbers. schema-validator.mjs must fail CLOSED when Ajv is absent (currently returns valid:true). Spec: REQ-H1.",
+  "description": "review-hook.mjs installs as a POST-commit hook whose exit code cannot block a commit, and only ever warns. Move the enforcing check to a mechanism that CAN gate: a pre-commit/pre-push hook and/or a required CI check (ties to H-001). Do not claim a post-commit hook blocks a commit. pattern-hunt.mjs generic path (~L776 TODO) must emit a REAL detector or no test \u2014 never an always-passing one. alignment-monitor.mjs score from real signals, not magic numbers. schema-validator.mjs must fail CLOSED when Ajv is absent (currently returns valid:true). Spec: REQ-H1.",
   "assignee": "sdlc-developer",
   "priority": "HIGH",
   "estimatedTokens": 26000,
@@ -15,11 +15,12 @@
   "blockedBy": [
     "H-001"
   ],
-  "status": "pending",
-  "test_status": null,
+  "status": "completed",
+  "test_status": "passing",
   "created": "2026-07-06T00:20:00Z",
   "tags": [
     "hardening",
     "competitive-roadmap"
-  ]
+  ],
+  "completed_at": "2026-07-06T06:40:00Z"
 }

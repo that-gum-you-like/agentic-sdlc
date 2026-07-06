@@ -171,18 +171,21 @@ describe('Schema Validator', () => {
     }
   });
 
-  it('validateSync returns valid:true with warning before any async call', () => {
-    // After clearCaches() _ajv is null, so validateSync cannot compile
+  it('validateSync produces a real verdict before any async call (fail-closed, REQ-H1)', () => {
+    // After clearCaches() _ajv is null. The built-in fallback validator still
+    // validates synchronously — validation NEVER skips (fail-closed).
     clearCaches();
-    const result = validateSync('task-claim', {
+    const good = validateSync('task-claim', {
       taskId:          'T-sync',
       agentName:       'denholm',
       claimedAt:       new Date().toISOString(),
       estimatedTokens: 100,
     });
-    assert.equal(result.valid, true);
-    assert.ok('warning' in result, 'validateSync should return a warning when _ajv is null');
-    assert.match(result.warning, /ajv/i);
+    assert.equal(good.valid, true);
+
+    const bad = validateSync('task-claim', { taskId: 'T-sync' }); // missing required fields
+    assert.equal(bad.valid, false, 'invalid data must fail even without Ajv');
+    assert.ok(bad.errors.length > 0);
   });
 });
 
