@@ -2,11 +2,11 @@
 
 ## Overview
 
-The framework provides 15 execution agent templates in `agents/templates/execution-agents/`. These are starter operating rules for specialist agents -- not full AGENT.md files (with one exception).
+The framework provides 21 execution agent templates in `agents/templates/execution-agents/`. These are starter operating rules for specialist agents -- not full AGENT.md files (with one exception).
 
 Templates follow two patterns:
 
-- **Addendum** (14 of 15): Content is appended to the base `AGENT.md.template` during setup. The base template provides identity, memory protocol, micro cycle, and shared rules. The addendum adds domain-specific operating rules, quality patterns, and failure patterns.
+- **Addendum** (20 of 21): Content is appended to the base `AGENT.md.template` during setup. The base template provides identity, memory protocol, micro cycle, and shared rules. The addendum adds domain-specific operating rules, quality patterns, and failure patterns.
 - **Replacement** (CTO only): Replaces the base `AGENT.md.template` entirely. The CTO orchestrator has a fundamentally different operating model -- it decomposes and delegates rather than implementing, so the standard micro cycle does not apply.
 
 During `setup.mjs`, templates are auto-detected by matching role keywords you enter against each template's YAML frontmatter.
@@ -32,6 +32,12 @@ During `setup.mjs`, templates are auto-detected by matching role keywords you en
 | `release-manager` | release, deploy, devops | Merge sequencing, changelog, deploy pipeline gates | Never bypass deploy pipeline; serialize merges on shared files; smoke test after deploy |
 | `research-agent` | research, context, investigation, spike | Context gathering, codebase exploration, prior art | Runs before execution agents; produces context documents; reduces hallucination |
 | `security-engineer` | security, infosec, appsec | OWASP, CVE audit, auth/RLS, incident response | OWASP top 10 on every PR; flag hardcoded secrets; validate all user input at boundaries |
+| `constitutional-ai-engineer` | constitution, self-critique, alignment, red-team, safety | Constitutional-AI self-critique loops, alignment review, prompt-injection/red-team scans | Every agent output critiqued against the constitution; default to refuse on ambiguity; no alignment-bypass phrasing |
+| `context-engineering-master` | context, prompt, window, compaction, token-budget | Context-window budgeting, prompt compaction, retrieval-vs-recall tradeoffs | Keep the always-loaded context tight; measure token cost of every added block; compaction must be reversible |
+| `memory-architect` | memory, retention, consolidation, recall, compost | 5-layer memory design, consolidation/REM policy, recall quality | Consolidate before growth; every failure becomes a core memory; compost — never delete — deprecated entries |
+| `twelve-factor-agent` | twelve-factor, stateless, config, deploy, portability | Stateless config, env parity, portable deploy, zero-dep discipline | Config from env, not code; no host-specific state; graceful degradation when optional deps absent |
+| `rag-specialist` | rag, retrieval, embedding, rerank, chunk, vector | Chunking, embedding, retrieval + rerank pipelines, local-first index | Local embeddings only (no external egress); lexical fallback when no model; measure retrieval precision |
+| `token-embedding-analyzer` | token, embedding, tokenizer, vector, dimensionality | Tokenizer analysis, embedding/vector diagnostics, dimensionality tradeoffs | Report cost per token/dimension; validate vectors before indexing; no silent truncation |
 
 ---
 
@@ -76,9 +82,9 @@ Start with the web application roster, then add:
 | performance-sentinel | Benchmark tracking, regression detection (runs on cron) |
 | qa-engineer | Browser E2E, visual regression, smoke test gates |
 
-### Full Team (all 15)
+### Full Team (all 21)
 
-Use all templates. Appropriate for large projects with broad requirements. Includes the CTO orchestrator to coordinate work across all specialists, the architect for system design governance, the ethics-advisor for responsible development review, and the integration-tester for cross-service contract validation.
+Use all templates. Appropriate for large projects with broad requirements. Includes the CTO orchestrator to coordinate work across all specialists, the architect for system design governance, the ethics-advisor for responsible development review, the integration-tester for cross-service contract validation, and the Hermes-ported specialists (constitutional-ai-engineer, context-engineering-master, memory-architect, twelve-factor-agent, rag-specialist, token-embedding-analyzer) for AI-agent quality, memory, and retrieval work.
 
 ---
 

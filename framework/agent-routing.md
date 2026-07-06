@@ -39,6 +39,12 @@ These agents are assigned work from the task queue during normal execution cycle
 | Ethical review, bias detection, privacy audit | **Ethics Advisor** | Ethical review, bias detection, privacy compliance audit |
 | System design, ADRs, API contract design | **Architect** | System design decisions, ADRs, API contract definitions |
 | Context gathering before execution tasks | **Research Agent** | Investigation spikes, gather context for other agents |
+| Constitution/alignment review, red-team, prompt-injection audit of agent outputs | **Constitutional AI Engineer** | Self-critique loops, alignment review, red-team scan |
+| Context-window budgeting, prompt/compaction, token-budget tuning | **Context Engineering Master** | Trim/compact context, measure token cost, tune retrieval-vs-recall |
+| Memory design — retention, consolidation, recall quality, compost policy | **Memory Architect** | Design 5-layer memory, consolidation/REM policy, recall tuning |
+| Statelessness/config/portability/deploy-hygiene review | **Twelve-Factor Agent** | Env-parity + portability audit, zero-dep discipline |
+| RAG pipeline — chunking, embedding, retrieval + rerank, local index | **RAG Specialist** | Build/evaluate local-first retrieval pipeline |
+| Tokenizer/embedding/vector diagnostics, dimensionality tradeoffs | **Token Embedding Analyzer** | Analyze tokens/embeddings, validate vectors, cost per dimension |
 
 ### Cron-Based Agents
 

@@ -27,7 +27,7 @@ Pipeline: `Brain dump → Requirements → Priorities → Roadmap → Paralleliz
 
 ## Execution Agent Templates
 
-The framework provides 15 execution agent templates in `agents/templates/execution-agents/`. During `setup.mjs`, role keywords are matched to templates which auto-configure domain patterns, capabilities, and operating rules.
+The framework provides 21 execution agent templates in `agents/templates/execution-agents/`. During `setup.mjs`, role keywords are matched to templates which auto-configure domain patterns, capabilities, and operating rules.
 
 | Template | Domain | Pattern |
 |----------|--------|---------|
@@ -47,6 +47,12 @@ The framework provides 15 execution agent templates in `agents/templates/executi
 | `performance-sentinel` | Benchmarks, regression detection (cron) | Addendum |
 | `platform-maturity-sentinel` | Maturity assessment, production readiness, DORA metrics | Addendum |
 | `research-agent` | Context gathering before execution | Addendum |
+| `constitutional-ai-engineer` | Constitution/self-critique, alignment, red-team, safety | Addendum |
+| `context-engineering-master` | Context windows, prompt/compaction, token budget | Addendum |
+| `memory-architect` | Memory retention, consolidation, recall, compost | Addendum |
+| `twelve-factor-agent` | Stateless config, portability, deploy hygiene | Addendum |
+| `rag-specialist` | Retrieval, embedding, rerank, chunking | Addendum |
+| `token-embedding-analyzer` | Tokenizers, embeddings, vector dimensionality | Addendum |
 
 See `docs/execution-agents.md` for full guide. Templates use YAML frontmatter for `role_keywords`, `default_patterns`, and `capabilities` — `setup.mjs` reads this automatically.
 

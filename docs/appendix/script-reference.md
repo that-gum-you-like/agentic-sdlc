@@ -42,6 +42,11 @@
 | `agents/cross-feature-analyze.mjs` | OpenSpec backlog conflict analyzer |
 | `agents/deploy-rollback.mjs` | Project-defined deploy rollback helper |
 | `agents/claude-md-split.mjs` | Reproducible CLAUDE.md split (this file's structure) |
+| `agents/health-check.mjs` | Autonomous health check — queue depth, per-agent budget headroom, disk free, cron liveness → `ok/degraded/down` report; `--notify` on non-ok |
+| `agents/red-team-tester.mjs` | Adversarial scan of agent outputs / AGENT.md prompts for prompt-injection, exfiltration, tool-abuse, jailbreak markers → report in `pm/red-team-reports/`; `--notify` on high severity |
+| `agents/rag-indexer.mjs` | Build a local semantic index of `docs/`, `openspec/`, agent `memory/` — local embeddings when available, deterministic lexical fallback otherwise (zero npm deps) |
+| `agents/document-sync.mjs` | Content-hash + version knowledge docs (`pm/doc-versions.json`); mark changed docs for re-indexing by `rag-indexer.mjs` |
+| `agents/telegram-notify.mjs` | Telegram Bot API notification sender (stdlib `https`, opt-in, no-op unconfigured); registered as the `telegram` provider in `notify.mjs` |
 | `docs/comparison.md` | Framework comparison (vs LangGraph, Autogen, CrewAI, etc.) |
 | `docs/cursor-setup.md` | Cursor IDE setup guide (OpenAI, OpenSpec without skills) |
 | `docs/troubleshooting.md` | Common issues and recovery patterns |
