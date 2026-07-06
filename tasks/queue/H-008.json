@@ -2,7 +2,7 @@
   "id": "H-008",
   "phase": 0,
   "title": "CI-wired tests for new modules; extend capability-monitor coverage (REQ-H8)",
-  "description": "Ensure every roadmap module ships tests wired into CI (per H-001). Extend agents/__tests__/capability-monitor.test.mjs ONLY for genuinely-uncovered paths (file-I/O / report emission) — it is already tested; do not treat it as untested. Spec: REQ-H8.",
+  "description": "Ensure every roadmap module ships tests wired into CI (per H-001). Extend agents/__tests__/capability-monitor.test.mjs ONLY for genuinely-uncovered paths (file-I/O / report emission) \u2014 it is already tested; do not treat it as untested. Spec: REQ-H8.",
   "assignee": "sdlc-developer",
   "priority": "LOW",
   "estimatedTokens": 12000,
@@ -13,11 +13,12 @@
   "blockedBy": [
     "H-001"
   ],
-  "status": "pending",
-  "test_status": null,
+  "status": "completed",
+  "test_status": "passing",
   "created": "2026-07-06T00:20:00Z",
   "tags": [
     "hardening",
     "competitive-roadmap"
-  ]
+  ],
+  "completed_at": "2026-07-06T07:00:00Z"
 }
