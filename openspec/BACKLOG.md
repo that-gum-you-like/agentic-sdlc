@@ -177,3 +177,15 @@ Open a PR upstream to `paperclipai/paperclip`. High career-signal value — a me
 - The local systemd-timer install (`scheduler-install.mjs`) already satisfies "runs while my computer is online" with missed-run catch-up.
 
 **Reconsider when:** Bryce wants cycles to run while the local machine is off, or wants a shared cloud dashboard/state — then pick an architecture above (likely (b): Cloudflare Cron Trigger → durable queue → local drainer, preserving privacy-first local compute).
+
+---
+
+## Automated Hermes drain cron — DEFERRED (needs a decision)
+
+**Idea:** A `hermes cron create` job that periodically drains the SDLC task queue autonomously using the affordable OpenRouter ladder (claim one unblocked task → micro cycle → tests → commit on a branch → mark complete).
+
+**Why deferred:**
+- **Sandbox persistence.** Hermes' `terminal.backend: docker` runs commands in a container (`/root/agentic-sdlc-enhanced`), not directly on `~/agentic-sdlc`. Need to confirm whether the drained work persists to the host repo (bind-mount / `--workdir`) or is lost. Options: set `terminal.backend: local`, bind-mount the repo, or have the drain push a branch to GitHub so work escapes the container.
+- **Autonomy risk.** Unsupervised commits by the cheapest models warrant safety rails (branch-only, no push/merge, tests-must-pass, one-task-per-run, OpenSpec-first) and a human review gate before enabling.
+
+**Reconsider when:** Bryce wants unattended draining. First validate one manual `hermes` drain end-to-end (does the commit land on the host?), then automate with the rails above. Until then, draining is manual (`hermes` from `~/agentic-sdlc`), which already uses the affordable ladder.

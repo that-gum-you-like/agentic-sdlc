@@ -98,10 +98,11 @@ test('listOrchestrationAdapters returns 3 adapters', () => {
   assert(adapters.includes('claude-code-native'), 'Should include claude-code-native');
 });
 
-test('listLlmAdapters returns 8 adapters', () => {
+test('listLlmAdapters returns 9 adapters', () => {
   const adapters = listLlmAdapters();
-  assertEqual(adapters.length, 8, `Expected 8 LLM adapters, got ${adapters.length}`);
+  assertEqual(adapters.length, 9, `Expected 9 LLM adapters, got ${adapters.length}`);
   assert(adapters.includes('anthropic'), 'Should include anthropic');
+  assert(adapters.includes('openrouter'), 'Should include openrouter');
   assert(adapters.includes('groq'), 'Should include groq');
   assert(adapters.includes('ollama'), 'Should include ollama');
   assert(adapters.includes('openai'), 'Should include openai');
@@ -109,6 +110,35 @@ test('listLlmAdapters returns 8 adapters', () => {
   assert(adapters.includes('cerebras'), 'Should include cerebras');
   assert(adapters.includes('azure-openai'), 'Should include azure-openai');
   assert(adapters.includes('azure-foundry-claude'), 'Should include azure-foundry-claude');
+});
+
+test('openrouter adapter implements the LLM interface + affordable catalog', async () => {
+  const or = await loadLlmAdapter({ llm: { defaultProvider: 'openrouter' } });
+  for (const fn of ['complete', 'estimateTokens', 'checkAvailability', 'getModelInfo', 'listModels']) {
+    assert(typeof or[fn] === 'function', `openrouter must export ${fn}`);
+  }
+  const models = or.listModels();
+  assert(models.includes('qwen/qwen3-coder:free'), 'catalog must include the free primary coder');
+  assert(models.includes('deepseek/deepseek-v4-flash'), 'catalog must include deepseek-v4-flash');
+  // Privacy-first: no OpenAI models in the curated catalog.
+  assert(!models.some(m => /^openai\//.test(m) || /gpt-/.test(m)), 'catalog must not contain OpenAI models');
+  const free = or.getModelInfo('qwen/qwen3-coder:free');
+  assertEqual(free.costPer1kInput, 0, 'free model input cost must be 0');
+  assert(free.contextWindow > 500000, 'qwen3-coder should report a large context window');
+});
+
+test('openrouter checkAvailability reflects OPENROUTER_API_KEY', async () => {
+  const or = await loadLlmAdapter({ llm: { defaultProvider: 'openrouter' } });
+  const saved = process.env.OPENROUTER_API_KEY;
+  try {
+    delete process.env.OPENROUTER_API_KEY;
+    assertEqual((await or.checkAvailability('qwen/qwen3-coder:free')).available, false, 'unavailable without key');
+    process.env.OPENROUTER_API_KEY = 'test-key';
+    assertEqual((await or.checkAvailability('qwen/qwen3-coder:free')).available, true, 'available with key');
+  } finally {
+    if (saved === undefined) delete process.env.OPENROUTER_API_KEY;
+    else process.env.OPENROUTER_API_KEY = saved;
+  }
 });
 
 // ============================================================================

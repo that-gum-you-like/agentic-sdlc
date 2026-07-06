@@ -1,52 +1,52 @@
 {
   "conservationMode": false,
-  "emergencyFallbackModel": "llama-3.3-70b-versatile",
+  "emergencyFallbackModel": "qwen/qwen3-coder:free",
   "agents": {
     "sdlc-developer": {
-      "model": "claude-opus-4-6",
-      "provider": "anthropic",
+      "model": "qwen/qwen3-coder:free",
+      "provider": "openrouter",
       "dailyTokens": 500000,
       "permissions": "full-edit",
       "maxInstances": 1,
-      "fallbackChain": ["claude-opus-4-6", "claude-sonnet-4-6", "gpt-4o-mini", "llama-3.3-70b-versatile"],
+      "fallbackChain": ["qwen/qwen3-coder:free", "qwen/qwen3-coder-30b-a3b-instruct", "deepseek/deepseek-v4-flash", "deepseek/deepseek-chat-v3.1", "qwen/qwen3-coder"],
       "activeModel": null,
       "modelPreferences": {
-        "simple fix": "claude-sonnet-4-6",
-        "feature": "claude-opus-4-6",
-        "architecture": "claude-opus-4-6"
+        "simple fix": "qwen/qwen3-coder-30b-a3b-instruct",
+        "feature": "qwen/qwen3-coder:free",
+        "architecture": "qwen/qwen3-coder"
       }
     },
     "jony-aive": {
-      "model": "claude-opus-4-6",
-      "provider": "anthropic",
+      "model": "qwen/qwen3-next-80b-a3b-instruct:free",
+      "provider": "openrouter",
       "dailyTokens": 300000,
       "permissions": "full-edit",
       "maxInstances": 1,
-      "fallbackChain": ["claude-opus-4-6", "claude-sonnet-4-6", "gemini-2.5-flash", "llama-3.3-70b-versatile"],
+      "fallbackChain": ["qwen/qwen3-next-80b-a3b-instruct:free", "deepseek/deepseek-v4-flash", "deepseek/deepseek-chat-v3.1"],
       "activeModel": null,
       "modelPreferences": {
-        "design critique": "claude-opus-4-6",
-        "design decision": "claude-opus-4-6",
-        "roadmap": "claude-opus-4-6"
+        "design critique": "deepseek/deepseek-chat-v3.1",
+        "design decision": "qwen/qwen3-next-80b-a3b-instruct:free",
+        "roadmap": "qwen/qwen3-next-80b-a3b-instruct:free"
       }
     },
     "sdlc-reviewer": {
-      "model": "claude-sonnet-4-6",
-      "provider": "anthropic",
+      "model": "meta-llama/llama-3.3-70b-instruct:free",
+      "provider": "openrouter",
       "dailyTokens": 200000,
       "permissions": "read-only",
       "maxInstances": 1,
-      "fallbackChain": ["claude-sonnet-4-6", "claude-haiku-4-5", "gpt-4o-mini", "llama-3.3-70b-versatile"],
+      "fallbackChain": ["meta-llama/llama-3.3-70b-instruct:free", "qwen/qwen3-30b-a3b-instruct-2507", "deepseek/deepseek-v4-flash"],
       "activeModel": null,
       "modelPreferences": {}
     },
     "sdlc-documentarian": {
-      "model": "claude-sonnet-4-6",
-      "provider": "anthropic",
+      "model": "qwen/qwen3-next-80b-a3b-instruct:free",
+      "provider": "openrouter",
       "dailyTokens": 200000,
       "permissions": "full-edit",
       "maxInstances": 1,
-      "fallbackChain": ["claude-sonnet-4-6", "claude-haiku-4-5", "gemini-2.5-flash", "llama-3.3-70b-versatile"],
+      "fallbackChain": ["qwen/qwen3-next-80b-a3b-instruct:free", "qwen/qwen3-30b-a3b-instruct-2507", "deepseek/deepseek-v4-flash"],
       "activeModel": null,
       "modelPreferences": {}
     }
