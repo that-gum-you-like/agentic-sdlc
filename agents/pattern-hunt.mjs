@@ -827,6 +827,94 @@ function generateDefeatTests(recurringPatterns, dryRun = false) {
   return details;
 }
 
+// ---------------------------------------------------------------------------
+// Teach: recurring patterns become agent memory (Find → Defeat → TEACH)
+// ---------------------------------------------------------------------------
+
+/** Resolve the agent responsible for a review's commit via git authorship. */
+function resolveCommitAgent(commitHash) {
+  if (!commitHash || commitHash === 'unknown') return null;
+  try {
+    const author = execSync(`git log -1 --pretty=%an ${commitHash}`, {
+      encoding: 'utf8', cwd: PROJECT_DIR, stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim().toLowerCase();
+    // Match a configured agent by slug or first name (e.g. "Roy Trenneman" → roy)
+    for (const agent of config.agents) {
+      const a = agent.toLowerCase();
+      if (author === a || author.split(/\s+/)[0] === a || author.includes(a)) return agent;
+    }
+  } catch { /* unknown commit — fall through */ }
+  return null;
+}
+
+function reviewerAgent() {
+  for (const agent of config.agents) {
+    if (existsSync(resolve(AGENTS_DIR, agent, 'reviews'))) return agent;
+  }
+  return config.agents?.[0] || null;
+}
+
+/**
+ * The TEACH step of the improvement loop: each recurring pattern is recorded
+ * into the LONG-TERM memory of the agent(s) whose commits produced it
+ * (reviewer agent when authorship can't be attributed), so the lesson feeds
+ * future self-correction instead of staying in a report.
+ *
+ * Idempotent: a pattern already taught to an agent (same category, source
+ * pattern-hunt) is not re-recorded on subsequent runs.
+ */
+function teachAgents(recurringPatterns, dryRun = false) {
+  const details = [];
+
+  for (const pattern of recurringPatterns) {
+    // Attribute via the commits behind this pattern's occurrences.
+    const responsible = new Set();
+    for (const occ of pattern.occurrences || []) {
+      const agent = resolveCommitAgent(occ.commitHash);
+      if (agent) responsible.add(agent);
+    }
+    if (responsible.size === 0) {
+      const fallback = reviewerAgent();
+      if (fallback) responsible.add(fallback);
+    }
+
+    for (const agent of responsible) {
+      const memPath = resolve(AGENTS_DIR, agent, 'memory', 'long-term.json');
+      let memory = { entries: [] };
+      if (existsSync(memPath)) {
+        try { memory = JSON.parse(readFileSync(memPath, 'utf8')); } catch { memory = { entries: [] }; }
+      }
+      memory.entries = memory.entries || [];
+
+      const alreadyTaught = memory.entries.some(
+        e => e.source === 'pattern-hunt' && e.pattern === pattern.category
+      );
+      if (alreadyTaught) {
+        details.push({ agent, pattern: pattern.category, action: 'already-taught' });
+        continue;
+      }
+
+      const entry = {
+        id: `PH-${pattern.category}-${Date.now()}`,
+        content: `Recurring anti-pattern (${pattern.count}x in reviews): ${pattern.label}. ` +
+          `Check for this before every commit — a defeat test ${pattern.defeatTestProposal?.testFile ? `guards it in ${pattern.defeatTestProposal.testFile}` : 'is proposed'}.`,
+        date: new Date().toISOString().split('T')[0],
+        source: 'pattern-hunt',
+        pattern: pattern.category,
+        severity: pattern.worstSeverity,
+      };
+
+      if (!dryRun) {
+        memory.entries.push(entry);
+        writeFileSync(memPath, JSON.stringify(memory, null, 2));
+        try { logCapabilityUsage('memoryRecord', agent, 'pattern-hunt-teach', 'pattern-hunt.mjs', 'teach'); } catch { /* advisory */ }
+      }
+      details.push({ agent, pattern: pattern.category, action: dryRun ? 'would-teach' : 'taught' });
+    }
+  }
+  return details;
+}
+
 /**
  * Writes the pattern-hunt-output.json summary file to the project's agents dir.
  */
@@ -997,6 +1085,11 @@ async function main() {
 
   // Auto-generate defeat tests for recurring patterns not yet covered
   const generationDetails = generateDefeatTests(recurringPatterns, dryRun);
+
+  // TEACH: record each recurring pattern into the responsible agents' memory
+  // (Find → Defeat → Teach — the improvement loop's closing step).
+  const teachDetails = teachAgents(recurringPatterns, dryRun);
+
   const { outputPath, testsGenerated, testsSkipped } = writeOutputJson(
     recurringPatterns,
     generationDetails,
@@ -1036,6 +1129,12 @@ async function main() {
       testsSkipped,
       outputFile: outputPath,
       details: generationDetails,
+    },
+    teaching: {
+      dryRun,
+      taught: teachDetails.filter(d => d.action === 'taught').length,
+      alreadyTaught: teachDetails.filter(d => d.action === 'already-taught').length,
+      details: teachDetails,
     },
   };
 
