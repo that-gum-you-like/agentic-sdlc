@@ -1,4 +1,4 @@
-# Level 6: Pattern Detection and Self-Correction
+# Level 6: Self-Improving — Pattern Detection and Self-Correction
 
 **Prerequisites:** Level 5 complete (memory system and model-manager active).
 

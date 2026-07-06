@@ -71,6 +71,8 @@ Each level builds on the previous. No skipping.
 
 Each pass through the pyramid makes the system more robust. You will revisit earlier levels as the system grows — this is expected.
 
+> **This file is the canonical maturity model** (7 levels, numbered 0–6: Manual → Assisted → Automated → Orchestrated → Quality → Evolving → Self-Improving). Per-level implementation playbooks live in `docs/levels/` for Levels 1–6 (Level 0 — Manual — is the starting point and needs no playbook). Any other document that names the levels defers to this file.
+
 ---
 
 ## New Project Setup Checklist

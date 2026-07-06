@@ -2,7 +2,7 @@
   "id": "H-003",
   "phase": 0,
   "title": "Reconcile maturity-level + validation-layer doc drift (REQ-H6)",
-  "description": "Unify the three disagreeing maturity ladders to ONE canonical model: framework/maturity-model.md (7 levels 0-6, Manual..Self-Improving), docs/levels/ (6 files 1-6), CLAUDE.md (7 named Foundation..Mastery). Update framework/validation-patterns.md intro from four-layer to FIVE layers (adds Browser Verification). Add a single NUMBERED capability matrix to docs/comparison.md (include Cursor/Devin/Spec-Kit/OpenHands, ✅/🟡/❌ cells). Spec: REQ-H6.",
+  "description": "Unify the three disagreeing maturity ladders to ONE canonical model: framework/maturity-model.md (7 levels 0-6, Manual..Self-Improving), docs/levels/ (6 files 1-6), CLAUDE.md (7 named Foundation..Mastery). Update framework/validation-patterns.md intro from four-layer to FIVE layers (adds Browser Verification). Add a single NUMBERED capability matrix to docs/comparison.md (include Cursor/Devin/Spec-Kit/OpenHands, \u2705/\ud83d\udfe1/\u274c cells). Spec: REQ-H6.",
   "assignee": "sdlc-developer",
   "priority": "HIGH",
   "estimatedTokens": 22000,
@@ -13,11 +13,12 @@
     "CLAUDE.md"
   ],
   "blockedBy": [],
-  "status": "pending",
-  "test_status": null,
+  "status": "completed",
+  "test_status": "passing",
   "created": "2026-07-06T00:20:00Z",
   "tags": [
     "hardening",
     "competitive-roadmap"
-  ]
+  ],
+  "completed_at": "2026-07-06T04:00:00Z"
 }

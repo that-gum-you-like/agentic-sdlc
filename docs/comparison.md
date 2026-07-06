@@ -101,8 +101,38 @@ The five-layer memory system is what makes agents improve over weeks rather than
 
 ### Maturity Tracking: Measuring Agent Growth
 
-The framework tracks agent maturity across seven levels (Foundation through Mastery) and defines concrete signals for each transition. This is not a subjective assessment — it is based on measurable indicators: corrections per week declining, self-corrections increasing, review severity shifting from basic issues to architectural concerns. This makes agent improvement visible and gives teams a common vocabulary for discussing where their agents are in the growth curve.
+The framework tracks maturity on two axes: the system-level pyramid (Levels 0–6, Manual through Self-Improving — see `framework/maturity-model.md`) and per-agent maturation (New → Corrected → Remembering → Teaching → Autonomous → Evolving), with concrete signals for each transition. This is not a subjective assessment — it is based on measurable indicators: corrections per week declining, self-corrections increasing, review severity shifting from basic issues to architectural concerns. This makes agent improvement visible and gives teams a common vocabulary for discussing where their agents are in the growth curve.
 
 ### 5-Layer Validation: Catching Failures at Every Stage
 
 The five validation layers (Research, Critique, Code, Statistics, Browser Verification) are designed so that each layer catches failure modes the previous layers miss. Layer 1 catches hallucinated citations and misapplied patterns before implementation begins. Layer 5 catches rendering bugs and navigation failures that pass all code-level tests. No other framework in this comparison has a structured multi-layer validation model built in.
+
+---
+
+## Numbered Capability Matrix
+
+This matrix is the canonical scoreboard for the competitive roadmap (`openspec/changes/competitive-roadmap/`). Specs and module changes reference rows **by number** ("closes matrix row N"); as each roadmap module lands, its cell in the **Agentic SDLC** column is flipped and the row note updated. Cells: ✅ = shipped/first-class · 🟡 = partial/adapter-level/manual · ❌ = absent.
+
+Comparison targets: [Cursor](https://cursor.com) (AI IDE + background agents), [Devin](https://devin.ai) (autonomous SaaS engineer), [GitHub Spec Kit](https://github.com/github/spec-kit) (spec-driven development toolkit), [OpenHands](https://github.com/All-Hands-AI/OpenHands) (OSS autonomous agent platform).
+
+| # | Capability | Agentic SDLC | Cursor | Devin | Spec Kit | OpenHands | Roadmap |
+|---|-----------|--------------|--------|-------|----------|-----------|---------|
+| 1 | Spec-driven change lifecycle (proposal → design → specs → tasks, mandatory value analysis) | ✅ | ❌ | ❌ | ✅ | ❌ | — (moat) |
+| 2 | Layered per-agent memory with scheduled consolidation | ✅ | 🟡 rules/memories | 🟡 knowledge base | ❌ | 🟡 microagents | — (moat) |
+| 3 | Per-agent budget governance + circuit breaker + conservation mode | ✅ | ❌ | 🟡 ACU quota | ❌ | 🟡 budget cap | — (moat) |
+| 4 | Multi-agent orchestration with declarative domain routing + file-based queue | ✅ | 🟡 background agents | 🟡 MultiDevin | ❌ | 🟡 delegation | — (moat) |
+| 5 | Self-improvement loop (pattern hunt → defeat tests → behavior tests) | 🟡 advisory today | ❌ | ❌ | ❌ | ❌ | H1 + P9 make it enforcing + measured |
+| 6 | Browser E2E as a first-class validation tier | ✅ | ❌ | ✅ | ❌ | ✅ | — |
+| 7 | Sandboxed / isolated execution (microVM or container) | ❌ worktree only | 🟡 | ✅ cloud VM | ❌ | ✅ Docker | **P1** sandbox adapter |
+| 8 | Exact cost/token accounting (provider-reported, $-denominated) | 🟡 estimates | 🟡 usage dashboard | 🟡 ACU | ❌ | 🟡 | **H3 + P4** |
+| 9 | OpenTelemetry tracing (gen_ai semconv) / pluggable observability | ❌ | ❌ | ❌ | ❌ | 🟡 | **P3** telemetry adapter |
+| 10 | Objective eval/benchmark harness (SWE-bench-class + internal regression set) | ❌ | ❌ | 🟡 internal | ❌ | ✅ public harness | **P2** eval harness |
+| 11 | Runtime guardrails / least-privilege tool control (OWASP Agentic Top 10) | 🟡 permission tiers | 🟡 | 🟡 | ❌ | 🟡 | **P5** guardrail layer |
+| 12 | MCP server + A2A agent cards (external orchestrators can drive it) | ❌ | ✅ MCP client | 🟡 | ❌ | ✅ MCP | **P7** interop |
+| 13 | PR-native workflow + autonomous PR review | 🟡 pr-auto-review | 🟡 Bugbot | ✅ | ❌ | ✅ resolver | **P8** |
+| 14 | Codebase RAG + auto-generated wiki | 🟡 rag-indexer | ✅ indexing | ✅ DeepWiki | ❌ | 🟡 | **P10** |
+| 15 | Deterministic-replay parallel attempts (fork N, keep best) | ❌ | 🟡 parallel agents | 🟡 | ❌ | ❌ | **P6** (needs P1) |
+| 16 | Spec registry + machine-enforced constitution | 🟡 CLAUDE.md rules | 🟡 rules | 🟡 knowledge | ✅ constitution | 🟡 microagents | **P11** |
+| 17 | Fully self-hostable, privacy-first, no-OpenAI default | ✅ | ❌ SaaS | ❌ SaaS | 🟡 model-agnostic CLI | ✅ | — (moat) |
+
+**Reading the matrix:** rows 1–4 and 17 are the methodology moat (unique or near-unique); rows 5–16 are the competitive roadmap — parity floor first (7, 8, 9), then safety and measurement (10, 11), then advantage plays (12–16). Row assessments for external tools are best-effort as of July 2026; correct any cell with a source rather than arguing adjectives.

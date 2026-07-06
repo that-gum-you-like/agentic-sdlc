@@ -1,18 +1,19 @@
 # Validation Patterns
 
-Validation in an agentic SDLC is not a single gate — it is a layered system that catches different failure modes at different stages. This document covers the four-layer validation architecture, behavior testing, defeat tests, and agent TDD.
+Validation in an agentic SDLC is not a single gate — it is a layered system that catches different failure modes at different stages. This document covers the five-layer validation architecture, behavior testing, defeat tests, and agent TDD.
 
 ---
 
-## The Four-Layer Validation Architecture
+## The Five-Layer Validation Architecture
 
-Each layer catches failures the previous layers miss.
+Each layer catches failures the previous layers miss. (The scanner script is named `four-layer-validate.mjs` for historical compatibility; it enforces all five layers.)
 
 ```
 Layer 1: Research
 Layer 2: Critique
 Layer 3: Code
 Layer 4: Statistics
+Layer 5: Browser Verification
 ```
 
 ### Layer 1: Research
