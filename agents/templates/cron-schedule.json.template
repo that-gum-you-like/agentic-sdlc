@@ -94,6 +94,13 @@
       "script": "node ~/agentic-sdlc/agents/document-sync.mjs",
       "description": "Daily content-hash + version knowledge docs; mark changed docs for re-indexing by rag-indexer",
       "session": "isolated"
+    },
+    {
+      "name": "autonomous-drain",
+      "cron": "*/15 * * * *",
+      "script": "~/agentic-sdlc/agents/hermes-drain.sh",
+      "description": "Autonomous backlog drain via isolated local-backend Hermes (OpenRouter affordable models). No-op unless the repo is idle on main with a clean tree AND a task is ready; then runs one task → branch → tests → PR for human review. Never touches main.",
+      "session": "isolated"
     }
   ]
 }

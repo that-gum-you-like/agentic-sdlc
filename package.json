@@ -8,7 +8,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node tests/adapter-and-model-manager.test.mjs && node --test tests/cross-feature-analyze.test.mjs && node --test tests/deploy-rollback.test.mjs && node tests/hermes-integration.test.mjs && node tests/scheduler-install.test.mjs",
+    "test": "node tests/adapter-and-model-manager.test.mjs && node --test tests/cross-feature-analyze.test.mjs && node --test tests/deploy-rollback.test.mjs && node tests/hermes-integration.test.mjs && node tests/scheduler-install.test.mjs && node tests/hermes-drain.test.mjs",
     "test:behavior": "node agents/test-behavior.mjs --framework",
     "test:all": "npm test && node agents/test-behavior.mjs --framework",
     "cross-feature": "node agents/cross-feature-analyze.mjs",
