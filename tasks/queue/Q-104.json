@@ -11,10 +11,14 @@
     "framework/maturity-model.md"
   ],
   "blockedBy": [],
-  "status": "pending",
+  "status": "completed",
   "created": "2026-07-06T13:30:00Z",
   "tags": [
     "polish",
     "backlog-27"
-  ]
+  ],
+  "_file": "Q-104.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-07-06T14:47:34.415Z"
 }
