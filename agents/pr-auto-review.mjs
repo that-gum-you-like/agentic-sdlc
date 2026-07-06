@@ -171,6 +171,20 @@ async function llmReview({ task, title, body, diff }) {
   } catch (err) {
     return { verdict: null, reasons: [`adapter load failed: ${err.message}`] };
   }
+  // Screen EXTERNAL PR text for prompt-injection BEFORE the reviewer model
+  // sees it (curriculum Ph5): a drain agent (or outside contributor) must not
+  // be able to steer its own review via the PR title/body.
+  try {
+    const { screenExternalInput } = await import('./red-team-tester.mjs');
+    const t = screenExternalInput(title, { source: 'pr-title' });
+    const b = screenExternalInput(body, { source: 'pr-body' });
+    title = t.sanitized;
+    body = b.sanitized;
+    if (!t.safe || !b.safe) {
+      const labels = [...t.findings, ...b.findings].filter(f => f.severity === 'high').map(f => f.label);
+      return { verdict: 'reject', reasons: [`prompt-injection pattern in PR text (${[...new Set(labels)].join(', ')}) — screened and rejected`] };
+    }
+  } catch { /* screening unavailable must not approve anything by accident — continue with raw text */ }
   try {
     const res = await adapter.complete(buildReviewPrompt({ task, title, body, diff }), {
       model: REVIEW_MODEL,

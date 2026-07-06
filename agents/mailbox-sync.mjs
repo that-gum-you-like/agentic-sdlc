@@ -14,6 +14,7 @@ import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 import { loadConfig } from './load-config.mjs';
+import { screenExternalInput } from './red-team-tester.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -121,7 +122,11 @@ function writeToMailbox(messages) {
 
   for (const msg of messages) {
     const ts = new Date(msg.timestamp).toISOString();
-    const entry = `\n**[${ts}] Human →** ${msg.text}\n`;
+    // Screen EXTERNAL text for prompt-injection before it enters the mailbox
+    // agents read from (curriculum Ph5: filter external input first).
+    const screened = screenExternalInput(msg.text, { source: 'whatsapp-mailbox' });
+    const flag = screened.safe ? '' : ' ⚠️ [injection-screened]';
+    const entry = `\n**[${ts}] Human →**${flag} ${screened.sanitized}\n`;
     appendFileSync(mailboxPath, entry);
   }
 }
