@@ -123,12 +123,34 @@ function toExecStart(script, { nodeBin, home }) {
     .replace(/~\//g, `${home}/`);
 }
 
+/**
+ * Resolve extra PATH directories units need beyond node's own bin dir.
+ * Scheduled jobs shell out to `gh` and `hermes`, which often live outside the
+ * default systemd user PATH (observed: timer-run drains died rc=127 because
+ * `hermes` sits in ~/.local/bin and `gh` in the brew prefix). Resolved at
+ * install time from the installer's environment.
+ */
+export function extraPathDirs({ home, whichFn } = {}) {
+  const h = home || homedir();
+  const dirs = [];
+  const which = whichFn || ((bin) => {
+    try { return execFileSync('which', [bin], { encoding: 'utf8' }).trim(); } catch { return ''; }
+  });
+  for (const bin of ['gh', 'hermes']) {
+    const p = which(bin);
+    if (p) dirs.push(dirname(p));
+  }
+  dirs.push(join(h, '.local', 'bin'));
+  return [...new Set(dirs)];
+}
+
 /** Render the .service + .timer unit pair for one job. */
-export function buildUnits(job, { repoDir, nodeBin, home }) {
+export function buildUnits(job, { repoDir, nodeBin, home, pathDirs }) {
   const name = `${UNIT_PREFIX}${job.name}`;
   const onCalendar = cronToOnCalendar(job.cron);
   const execStart = toExecStart(job.script, { nodeBin, home });
   const nodeDir = dirname(nodeBin);
+  const path = [...new Set([nodeDir, ...(pathDirs || []), '/usr/local/bin', '/usr/bin', '/bin'])].join(':');
 
   const service = `[Unit]
 Description=Agentic SDLC — ${job.description || job.name}
@@ -137,7 +159,7 @@ After=network-online.target
 [Service]
 Type=oneshot
 WorkingDirectory=${repoDir}
-Environment=PATH=${nodeDir}:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=${path}
 Environment=SDLC_PROJECT_DIR=${repoDir}
 ExecStart=${execStart}
 `;
@@ -205,10 +227,11 @@ function cmdInstall(dryRun) {
   const { kept, repoDir } = planInstall();
   const nodeBin = process.execPath;
   const home = homedir();
+  const pathDirs = extraPathDirs({ home });
 
   if (dryRun) {
     for (const job of kept) {
-      const u = buildUnits(job, { repoDir, nodeBin, home });
+      const u = buildUnits(job, { repoDir, nodeBin, home, pathDirs });
       console.log(`# ${u.timerName}\n${u.timer}\n# ${u.serviceName}\n${u.service}\n${'─'.repeat(50)}`);
     }
     console.log(`(dry-run) ${kept.length} timer(s) would be installed to ${UNIT_DIR}`);
@@ -218,7 +241,7 @@ function cmdInstall(dryRun) {
   if (!existsSync(UNIT_DIR)) mkdirSync(UNIT_DIR, { recursive: true });
   const installed = [];
   for (const job of kept) {
-    const u = buildUnits(job, { repoDir, nodeBin, home });
+    const u = buildUnits(job, { repoDir, nodeBin, home, pathDirs });
     writeFileSync(join(UNIT_DIR, u.serviceName), u.service);
     writeFileSync(join(UNIT_DIR, u.timerName), u.timer);
     installed.push(u);
