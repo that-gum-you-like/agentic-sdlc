@@ -285,3 +285,18 @@ node agents/model-manager.mjs reset      # Clear all active model overrides
 - Flags changes stuck in proposal/design >14 days
 - Flags shipped changes not archived >7 days
 - Output appears in daily review and dashboard
+
+## 15. Assume-Compromise Posture
+
+**Purpose:** Design every autonomous surface as if an agent (or the model behind it) is already compromised — by prompt injection, a poisoned dependency, or plain model error. Least privilege limits the blast radius; gates catch the attempt.
+
+**Principles:**
+
+- **No deploy keys on the box.** Autonomous agents never hold production deploy credentials. Deploys go through the pipeline (release agent + `deploy` permission tier + approval gate); the drain and review jobs run with repo-scoped tokens only.
+- **Scoped tokens, short leashes.** Each integration gets the narrowest token that works (repo-scoped `gh`, per-provider API keys in env — never in files agents edit). `.env` files and `secrets/` paths are hard-reject territory for the PR pipeline and the pre-commit gate.
+- **Approval gate on merge for the guardrail surface.** Anything touching the drain script, review pipeline, CI workflows, budgets, or scheduler is FLAGGED — never auto-merged — so a compromised agent cannot weaken its own gates (`pr-auto-review` FLAG_PATHS).
+- **External input is hostile until screened.** Mailbox messages, PR text, and issue content pass through the injection screen (`red-team-tester.screenExternalInput`) before any agent consumes them.
+- **Isolation over trust.** Autonomous jobs mutate dedicated clones (`~/.sdlc-drain-clone`, `~/.sdlc-review-clone`), never the operator's working tree; a runaway job cannot corrupt in-progress human work.
+- **Everything enforced is deterministic.** The blocking gates (pre-commit, clean-worktree tests, scope scan, schema validation) are code, not model judgment — an LLM cannot be sweet-talked past them.
+
+**Verification:** `tests/pr-auto-review.test.mjs` pins the reject/flag surface and the clone isolation; `agents/__tests__/gates-enforce.test.mjs` proves a real commit is blocked; `agents/__tests__/injection-screening.test.mjs` covers the external-input screen.
