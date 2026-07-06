@@ -1,52 +1,52 @@
 {
   "conservationMode": false,
-  "emergencyFallbackModel": "qwen/qwen3-coder:free",
+  "emergencyFallbackModel": "deepseek/deepseek-v4-flash",
   "agents": {
     "sdlc-developer": {
-      "model": "qwen/qwen3-coder:free",
+      "model": "qwen/qwen3-coder",
       "provider": "openrouter",
       "dailyTokens": 500000,
       "permissions": "full-edit",
       "maxInstances": 1,
-      "fallbackChain": ["qwen/qwen3-coder:free", "qwen/qwen3-coder-30b-a3b-instruct", "deepseek/deepseek-v4-flash", "deepseek/deepseek-chat-v3.1", "qwen/qwen3-coder"],
+      "fallbackChain": ["qwen/qwen3-coder", "qwen/qwen3-coder-30b-a3b-instruct", "deepseek/deepseek-v4-flash", "deepseek/deepseek-chat-v3.1", "qwen/qwen3-coder:free"],
       "activeModel": null,
       "modelPreferences": {
-        "simple fix": "qwen/qwen3-coder-30b-a3b-instruct",
-        "feature": "qwen/qwen3-coder:free",
-        "architecture": "qwen/qwen3-coder"
+        "simple fix": "qwen/qwen3-coder:free",
+        "feature": "qwen/qwen3-coder",
+        "architecture": "deepseek/deepseek-chat-v3.1"
       }
     },
     "jony-aive": {
-      "model": "qwen/qwen3-next-80b-a3b-instruct:free",
+      "model": "deepseek/deepseek-chat-v3.1",
       "provider": "openrouter",
       "dailyTokens": 300000,
       "permissions": "full-edit",
       "maxInstances": 1,
-      "fallbackChain": ["qwen/qwen3-next-80b-a3b-instruct:free", "deepseek/deepseek-v4-flash", "deepseek/deepseek-chat-v3.1"],
+      "fallbackChain": ["deepseek/deepseek-chat-v3.1", "deepseek/deepseek-v4-flash", "qwen/qwen3-next-80b-a3b-instruct:free"],
       "activeModel": null,
       "modelPreferences": {
         "design critique": "deepseek/deepseek-chat-v3.1",
-        "design decision": "qwen/qwen3-next-80b-a3b-instruct:free",
-        "roadmap": "qwen/qwen3-next-80b-a3b-instruct:free"
+        "design decision": "deepseek/deepseek-chat-v3.1",
+        "roadmap": "deepseek/deepseek-v4-flash"
       }
     },
     "sdlc-reviewer": {
-      "model": "meta-llama/llama-3.3-70b-instruct:free",
+      "model": "deepseek/deepseek-chat-v3.1",
       "provider": "openrouter",
       "dailyTokens": 200000,
       "permissions": "read-only",
       "maxInstances": 1,
-      "fallbackChain": ["meta-llama/llama-3.3-70b-instruct:free", "qwen/qwen3-30b-a3b-instruct-2507", "deepseek/deepseek-v4-flash"],
+      "fallbackChain": ["deepseek/deepseek-chat-v3.1", "deepseek/deepseek-v4-flash", "meta-llama/llama-3.3-70b-instruct:free"],
       "activeModel": null,
       "modelPreferences": {}
     },
     "sdlc-documentarian": {
-      "model": "qwen/qwen3-next-80b-a3b-instruct:free",
+      "model": "deepseek/deepseek-v4-flash",
       "provider": "openrouter",
       "dailyTokens": 200000,
       "permissions": "full-edit",
       "maxInstances": 1,
-      "fallbackChain": ["qwen/qwen3-next-80b-a3b-instruct:free", "qwen/qwen3-30b-a3b-instruct-2507", "deepseek/deepseek-v4-flash"],
+      "fallbackChain": ["deepseek/deepseek-v4-flash", "deepseek/deepseek-chat-v3.1", "qwen/qwen3-next-80b-a3b-instruct:free"],
       "activeModel": null,
       "modelPreferences": {}
     }
