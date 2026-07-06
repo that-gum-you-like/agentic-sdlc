@@ -32,6 +32,9 @@ The following ideas from the 2026-03-13 curriculum review have been implemented:
 | 23 | Cursor 3.2 Alignment Docs | `cursor-3.2-alignment` (shipped 2026-05-27) — wrote `docs/april-vs-cursor-multitask.md`, extended `docs/cursor-background-agents.md` with deployment-modes table (Cursor cloud vs self-hosted vs framework queue-drainer), added pointers in `sdlc-housekeeping.mdc`, cross-linked from `parallelization-analyst.md` |
 | 24 | Spec-Kit Cross-Feature Analysis | `spec-kit-cross-feature-analysis` (shipped 2026-05-27) — `agents/cross-feature-analyze.mjs` + 7/7 passing tests + `skills/openspec-cross-feature` + `docs/cross-feature-analysis.md` + `npm run cross-feature`. Initial run flagged 54 high-severity backlog pairs. |
 | 25 | Hermes ↔ Repo ↔ Claude Integration | `hermes-integration` (proposed 2026-07-04) — ports 6 Hermes skills to `agents/templates/execution-agents/*.md`, adds 5 cron scripts (`red-team-tester`, `rag-indexer`, `health-check`, `telegram-notify`, `document-sync`) + `tests/hermes-integration.test.mjs`, and writes `docs/claude-quickstart.md` + `docs/hermes-backlog-bridge.md`. Corrects the old fork/PAT hand-off guide. |
+| — | spaCy NLP Analyzer (backlog #25) | `nlp-code-analysis` (shipped 2026-07-06, PR #24) — optional Layer 2.5 semantic near-miss detector; `agents/nlp-analyze.py` + `agents/nlp-analyzer.mjs` with zero-dep deterministic fallback |
+| — | capability-monitor test coverage (backlog #26) | Q-101 (completed) — `agents/__tests__/capability-checklist.test.mjs` covering schema validation, drift-detection, and scope-creep detection, wired into `npm test` |
+| — | voice-intake finishing touches (backlog #27 item c) | Carried forward from `voice-intake` archive — row added to promoted table; (a) setup.mjs scaffold, (b) maturity-model update, (d) manual E2E test still outstanding |
 
 ---
 
@@ -92,31 +95,15 @@ Open a PR upstream to `paperclipai/paperclip`. High career-signal value — a me
 
 ---
 
-### 25. Optional spaCy Layer 2.5 NLP Analyzer (carried forward from curriculum-maturity-advancement)
+### 25. Optional spaCy Layer 2.5 NLP Analyzer (carried forward from curriculum-maturity-advancement) — ✅ SHIPPED (2026-07-06, PR #24)
 
-**Problem:** The four-layer-validate scanner doesn't catch property-name near-misses (e.g. `user.fullName` vs `user.full_name`) that pass type checks but fail at runtime. The `curriculum-maturity-advancement` change scoped tasks 14.1-14.5 for a spaCy-based optional Layer 2.5.
-
-**Idea:** Ship `agents/nlp-analyze.py` (spaCy, local-only) + `agents/nlp-analyzer.mjs` Node wrapper + integration into `four-layer-validate.mjs` as optional Layer 2.5 (graceful skip if spaCy missing). Per zero-dep stance, must be opt-in.
-
-**Complexity:** Medium.
-
-**Priority:** Low — opt-in optional layer, no urgency without a triggering bug.
-
-**Carried forward from:** `openspec/changes/archive/curriculum-maturity-advancement/` (archived 2026-05-27, 80/87 tasks complete).
+Implemented via PR #24: `agents/nlp-analyze.py` + `agents/nlp-analyzer.mjs` (zero-dep deterministic fallback) + `four-layer-validate.mjs` Layer 2.5 integration. 12 new tests. See Promoted to Changes table above. Remaining ideas section is retained for historical record only.
 
 ---
 
-### 26. agent-capability-checklist test coverage (carried forward)
+### 26. agent-capability-checklist test coverage (carried forward) — ✅ COMPLETED (Q-101)
 
-**Problem:** `agents/capability-monitor.mjs` (16KB, shipped 2026-04-07) lacks dedicated unit tests. Tasks 7.1 and 7.2 of `agent-capability-checklist` were deferred at archive.
-
-**Idea:** Write `agents/__tests__/capability-checklist.test.mjs` covering schema validation, config loading, drift-detection algorithm, scope-creep detection, and checklist parsing from mock agent output. Run the regression suite.
-
-**Complexity:** Small.
-
-**Priority:** Medium — capability monitoring is a meta-quality guardrail and protecting it with tests is worthwhile but not urgent.
-
-**Carried forward from:** `openspec/changes/archive/agent-capability-checklist/` (archived 2026-05-27, 34/36 tasks complete).
+Completed via queue task Q-101: `agents/__tests__/capability-checklist.test.mjs` covers schema validation, config loading, drift-detection algorithm (required capability with zero log entries for 3+ consecutive tasks fires an alert), scope-creep detection, and checklist parsing from mock agent output. All tests wired into `npm test` and passing.
 
 ---
 
@@ -124,11 +111,11 @@ Open a PR upstream to `paperclipai/paperclip`. High career-signal value — a me
 
 **Problem:** Voice intake is functional and in daily use, but 4 admin/docs polish tasks were left undone.
 
-**Idea:** (a) Make `setup.mjs` scaffold `voice-config.json` during project setup as optional section; (b) Add voice input to `framework/maturity-model.md` as optional Level 6 capability; (c) Add a voice-intake row to BACKLOG.md "Promoted to Changes" table; (d) Run a manual end-to-end test (record → transcribe → type into terminal).
-
-**Complexity:** Small (each task <30 min).
-
-**Priority:** Low — quality-of-life polish, not blocking anything.
+**Status:**
+- ✅ **(c)** Voice-intake row added to "Promoted to Changes" table (this PR, Q-103)
+- ⏳ **(a)** Make `setup.mjs` scaffold `voice-config.json` during project setup as optional section — still outstanding
+- ⏳ **(b)** Add voice input to `framework/maturity-model.md` as optional Level 6 capability — still outstanding
+- ⏳ **(d)** Run a manual end-to-end test (record → transcribe → type into terminal) — still outstanding
 
 **Carried forward from:** `openspec/changes/archive/voice-intake/` (archived 2026-05-27, 27/31 tasks complete).
 
