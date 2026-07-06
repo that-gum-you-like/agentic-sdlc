@@ -81,6 +81,16 @@
     "level": 0,
     "weekStarted": "",
     "milestonesHit": [],
-    "metrics": {}
+    "metrics": {
+      "2026-W27": {
+        "correctionsReceived": 0,
+        "selfCorrections": 0,
+        "reviewSeverity": {
+          "critical": 0,
+          "major": 0,
+          "minor": 0
+        }
+      }
+    }
   }
 }
