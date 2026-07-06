@@ -39,7 +39,9 @@ console.log('Capturing replay corpus traces...\n');
   const task = {
     id: 'Q-999',
     title: 'fix: handle edge case in worker prompt assembly',
-    description: 'Fixes a crash when task.description is undefined',
+    // NB: must not say "undefined" — this text lands in the prompt output and
+    // the trace's own mustNotContain: ["undefined"] would then fail.
+    description: 'Fixes a crash when task.description is missing',
     priority: 'MEDIUM',
     status: 'pending',
   };
@@ -135,11 +137,12 @@ console.log('Capturing replay corpus traces...\n');
 
   writeCorpus({
     id: 'scanner-safe-paths',
-    description: 'scanScope with normal, safe file paths — no rejects, no flags',
+    description: 'scanScope with normal, safe file paths — must return ok:true with no rejects or flags',
     input: { paths },
     expected: {
-      mustContain: [],
-      mustNotContain: [],
+      // Derived from the actual computed result: {ok:true,rejects:[],flags:[]}
+      mustContain: ['true', 'rejects', 'flags'],
+      mustNotContain: ['.env'],
       mustMatch: [],
     },
     metadata: {
@@ -167,10 +170,11 @@ console.log('Capturing replay corpus traces...\n');
 
   writeCorpus({
     id: 'scanner-reject-env',
-    description: 'scanScope with a .env file path — must produce a reject',
+    description: 'scanScope with a .env file path — must produce at least one reject',
     input: { paths },
     expected: {
-      mustContain: [],
+      // The reject entry names the offending path.
+      mustContain: ['.env.production'],
       mustNotContain: [],
       mustMatch: [],
     },
@@ -196,9 +200,9 @@ console.log('Capturing replay corpus traces...\n');
     description: 'taskIdFromBranch extracts the task id from a valid agent/drain/ branch name',
     input: { branch },
     expected: {
-      mustContain: [],
-      mustNotContain: [],
-      mustMatch: [],
+      mustContain: ['Q-105'],
+      mustNotContain: ['main'],
+      mustMatch: ['Q-\\d+'],
     },
     metadata: {
       builderFunction: 'taskIdFromBranch',

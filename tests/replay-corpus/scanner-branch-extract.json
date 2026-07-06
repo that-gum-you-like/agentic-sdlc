@@ -5,13 +5,19 @@
     "branch": "agent/drain/Q-105"
   },
   "expected": {
-    "mustContain": ["Q-105"],
-    "mustNotContain": ["main"],
-    "mustMatch": ["Q-\\d+"]
+    "mustContain": [
+      "Q-105"
+    ],
+    "mustNotContain": [
+      "main"
+    ],
+    "mustMatch": [
+      "Q-\\d+"
+    ]
   },
   "metadata": {
     "builderFunction": "taskIdFromBranch",
     "module": "agents/pr-auto-review.mjs",
-    "capturedAt": "2026-07-06T14:03:55.892Z"
+    "capturedAt": "2026-07-06T14:25:23.118Z"
   }
 }

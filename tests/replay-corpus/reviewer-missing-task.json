@@ -23,6 +23,6 @@
   "metadata": {
     "builderFunction": "buildReviewPrompt",
     "module": "agents/pr-auto-review.mjs",
-    "capturedAt": "2026-07-06T14:03:55.892Z"
+    "capturedAt": "2026-07-06T14:25:23.118Z"
   }
 }
