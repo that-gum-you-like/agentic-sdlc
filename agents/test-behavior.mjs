@@ -5,12 +5,19 @@
  * Checks that AGENT.md files and core memories contain required instructions
  * for known scenarios. Catches prompt regressions when agent prompts are modified.
  *
+ * Also maintains per-agent BEHAVIOR BASELINES (deterministic metrics computed
+ * from AGENT.md + core memory) and detects DRIFT: after a prompt change, any
+ * metric moving more than 20% from its recorded baseline raises an alert —
+ * the curriculum's "behavior testing + baselines + drift detection" loop.
+ *
  * Usage:
- *   node agents/test-behavior.mjs            # Run all checks (exit 1 on failure)
- *   node agents/test-behavior.mjs --dry-run  # Report results without failing
+ *   node agents/test-behavior.mjs             # Run all checks (exit 1 on failure)
+ *   node agents/test-behavior.mjs --dry-run   # Report results without failing
+ *   node agents/test-behavior.mjs --baseline  # Record current per-agent metrics as the baseline
+ *   node agents/test-behavior.mjs --drift     # Compare current metrics vs baseline (exit 1 on >20% drift)
  */
 
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -61,6 +68,111 @@ function readChecklist() {
     if (existsSync(path)) return readFileSync(path, 'utf8');
   }
   return '';
+}
+
+// ---------------------------------------------------------------------------
+// Behavior baselines + drift detection (curriculum Phase 7)
+// ---------------------------------------------------------------------------
+//
+// Deterministic per-agent metrics from AGENT.md + core.json. No LLM involved —
+// these are the countable signals whose movement flags a behavioral shift when
+// a prompt is edited. Threshold: >20% relative change vs the recorded baseline.
+
+const BASELINES_PATH = resolve(config.projectDir, 'pm', 'behavior-baselines.json');
+const DRIFT_THRESHOLD = 0.20;
+
+// Words signalling discipline vs overconfidence — counted per 100 lines.
+const CAUTION_RE = /\b(never|must not|mustn't|do not|don't|always|required|forbidden|block(?:ed|s)?|verify|before committing)\b/gi;
+const OPTIMISM_RE = /\b(easy|easily|simply|just|obviously|quick(?:ly)?|trivial(?:ly)?|straightforward)\b/gi;
+
+function computeAgentMetrics(agent) {
+  const md = readAgentMd(agent);
+  const core = readCoreJson(agent);
+  const lines = md ? md.split('\n').length : 0;
+  const per100 = (n) => lines > 0 ? Math.round((n / lines) * 100 * 100) / 100 : 0;
+  const versionMatch = md.match(/<!--\s*version:\s*([\d.]+)/);
+  return {
+    prompt_lines: lines,
+    rule_count: (md.match(/^\s*[-*]\s+/gm) || []).length,
+    caution_score: per100((md.match(CAUTION_RE) || []).length),
+    optimism_score: per100((md.match(OPTIMISM_RE) || []).length),
+    failure_memory_count: core.failures?.length || 0,
+    _version: versionMatch ? versionMatch[1] : 'unversioned', // metadata, not drift-checked
+  };
+}
+
+function loadBaselines() {
+  if (!existsSync(BASELINES_PATH)) return null;
+  try { return JSON.parse(readFileSync(BASELINES_PATH, 'utf8')); } catch { return null; }
+}
+
+function recordBaselines() {
+  const baselines = { recordedAt: new Date().toISOString(), threshold: DRIFT_THRESHOLD, agents: {} };
+  for (const agent of AGENTS) {
+    if (!readAgentMd(agent)) continue;
+    baselines.agents[agent] = computeAgentMetrics(agent);
+  }
+  mkdirSync(dirname(BASELINES_PATH), { recursive: true });
+  writeFileSync(BASELINES_PATH, JSON.stringify(baselines, null, 2) + '\n');
+  console.log(`📏 Behavior baselines recorded for ${Object.keys(baselines.agents).length} agent(s) → ${BASELINES_PATH}`);
+  return baselines;
+}
+
+/**
+ * Compare current metrics vs baseline. A metric drifts when it moves more
+ * than DRIFT_THRESHOLD relative to baseline (or appears/disappears outright).
+ * @returns {Array<{agent, metric, baseline, current, changePct}>}
+ */
+function detectBehaviorDrift(baselines) {
+  const alerts = [];
+  for (const [agent, base] of Object.entries(baselines.agents || {})) {
+    if (!readAgentMd(agent)) continue; // agent removed — versioning handles that
+    const cur = computeAgentMetrics(agent);
+    for (const [metric, baseVal] of Object.entries(base)) {
+      if (metric.startsWith('_')) continue; // metadata
+      const curVal = cur[metric] ?? 0;
+      let drifted = false;
+      let changePct = 0;
+      if (baseVal > 0) {
+        changePct = Math.round(((curVal - baseVal) / baseVal) * 1000) / 10;
+        drifted = Math.abs(curVal - baseVal) / baseVal > DRIFT_THRESHOLD;
+      } else if (curVal > 0) {
+        changePct = 100;
+        drifted = curVal >= 3; // metric appeared from zero — alert on a real amount, not noise
+      }
+      if (drifted) alerts.push({ agent, metric, baseline: baseVal, current: curVal, changePct });
+    }
+  }
+  return alerts;
+}
+
+function runDriftCheck() {
+  const baselines = loadBaselines();
+  if (!baselines) {
+    console.log('📏 No behavior baseline recorded yet — run: node agents/test-behavior.mjs --baseline');
+    return { alerts: [], hadBaseline: false };
+  }
+  const alerts = detectBehaviorDrift(baselines);
+  if (alerts.length === 0) {
+    console.log(`📏 Behavior drift: none (all agent metrics within ±${DRIFT_THRESHOLD * 100}% of the ${baselines.recordedAt} baseline)`);
+  } else {
+    console.log(`\n⚠️  BEHAVIOR DRIFT — ${alerts.length} metric(s) moved >${DRIFT_THRESHOLD * 100}% since the ${baselines.recordedAt} baseline:`);
+    for (const a of alerts) {
+      console.log(`  ${a.agent}.${a.metric}: ${a.baseline} → ${a.current} (${a.changePct > 0 ? '+' : ''}${a.changePct}%)`);
+    }
+    console.log('  If intentional (prompt evolution), re-record: node agents/test-behavior.mjs --baseline');
+  }
+  return { alerts, hadBaseline: true };
+}
+
+// --- Baseline/drift CLI modes run INSTEAD of the check suite ---
+if (process.argv.includes('--baseline')) {
+  recordBaselines();
+  process.exit(0);
+}
+if (process.argv.includes('--drift')) {
+  const { alerts } = runDriftCheck();
+  process.exit(alerts.length > 0 && !dryRun ? 1 : 0);
 }
 
 // Resolve a framework persona (LinguaFlow's IT-Crowd names) to THIS project's
@@ -405,6 +517,24 @@ check('CLAUDE.md documents adapter configuration', /Adapter Configuration/i.test
 check('CLAUDE.md documents model-manager', /model-manager/i.test(claudeMd));
 
 } // end !projectOnly (framework tests, continued)
+
+// ---------------------------------------------------------------------------
+// Behavior drift vs recorded baseline (project mode; curriculum Phase 7)
+// ---------------------------------------------------------------------------
+
+if (!frameworkOnly) {
+  console.log('\n📋 Behavior Baselines & Drift:');
+  const baselines = loadBaselines();
+  if (!baselines) {
+    console.log('  ⏭️  no baseline recorded yet (record one: node agents/test-behavior.mjs --baseline)');
+  } else {
+    const driftAlerts = detectBehaviorDrift(baselines);
+    check(`no agent metric drifted >${DRIFT_THRESHOLD * 100}% vs the ${baselines.recordedAt} baseline`, driftAlerts.length === 0);
+    for (const a of driftAlerts) {
+      console.log(`     ↳ ${a.agent}.${a.metric}: ${a.baseline} → ${a.current} (${a.changePct > 0 ? '+' : ''}${a.changePct}%)`);
+    }
+  }
+}
 
 // Summary — print FIRST so the result is visible without scrolling
 const summaryLine = `Results: ${passed} passed, ${failed} failed`;

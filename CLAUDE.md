@@ -173,6 +173,7 @@ When editing any agent's AGENT.md:
 2. **After:** `node ~/agentic-sdlc/agents/migrate-memory.mjs --check`
 3. **Apply:** `node ~/agentic-sdlc/agents/migrate-memory.mjs --apply`
 4. **Validate:** `node ~/agentic-sdlc/agents/test-behavior.mjs`
+5. **Drift:** `node ~/agentic-sdlc/agents/test-behavior.mjs --drift` — any metric >20% off its baseline is flagged; if the change is intentional, re-record with `--baseline`
 
 ## Session Protocols
 
