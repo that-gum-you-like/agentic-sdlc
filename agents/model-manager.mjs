@@ -714,16 +714,25 @@ function suggest(taskType) {
   }
 
   // Score models: quality × cost-efficiency
-  const candidates = Object.entries(intel.models || {})
+  const score = ([id, m]) => {
+    const qualityScore = m.strengths?.[taskType] || 1;
+    const costPerM = m.costPer1MInput || 0.01; // avoid div by zero
+    // Value = quality^2 / cost (favor quality, penalize cost)
+    const value = (qualityScore * qualityScore) / costPerM;
+    return { id, ...m, qualityScore, value };
+  };
+  let candidates = Object.entries(intel.models || {})
     .filter(([, m]) => configuredProviders.has(m.provider))
-    .map(([id, m]) => {
-      const qualityScore = m.strengths?.[taskType] || 1;
-      const costPerM = m.costPer1MInput || 0.01; // avoid div by zero
-      // Value = quality^2 / cost (favor quality, penalize cost)
-      const value = (qualityScore * qualityScore) / costPerM;
-      return { id, ...m, qualityScore, value };
-    })
+    .map(score)
     .sort((a, b) => b.value - a.value);
+
+  // If the configured providers have no catalog entries (e.g. a fresh clone
+  // whose budget.json points at a provider the default catalog lacks), fall
+  // back to the whole catalog rather than returning nothing.
+  if (candidates.length === 0) {
+    console.log(`  (no catalog entries for configured providers — considering all models)`);
+    candidates = Object.entries(intel.models || {}).map(score).sort((a, b) => b.value - a.value);
+  }
 
   console.log(`\nBest models for "${taskType}" tasks (configured providers: ${[...configuredProviders].join(', ')}):`);
   console.log('─'.repeat(70));

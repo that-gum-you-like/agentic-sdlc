@@ -1,7 +1,7 @@
 {
   "_meta": {
     "description": "Default model intelligence catalog shipped with the framework. Runtime cache lives in model-intel.json (gitignored) and falls back to this file if missing.",
-    "lastUpdated": "2026-04-23",
+    "lastUpdated": "2026-07-05",
     "version": 1
   },
   "models": {
@@ -398,6 +398,200 @@
         "Emergency fallback with decent context window"
       ],
       "pricingUrl": "https://www.cerebras.ai/pricing"
+    },
+    "qwen/qwen3-coder:free": {
+      "provider": "openrouter",
+      "displayName": "Qwen3 Coder (free)",
+      "costPer1MInput": 0,
+      "costPer1MOutput": 0,
+      "contextWindow": 1048576,
+      "maxOutput": 65536,
+      "latencyTier": "medium",
+      "strengths": {
+        "coding": 5,
+        "review": 4,
+        "documentation": 4,
+        "architecture": 4,
+        "research": 3
+      },
+      "limitations": [
+        "Free tier \u2014 rate-limited (requests/day)",
+        "Falls back to paid rungs when throttled"
+      ],
+      "bestFor": [
+        "Primary autonomous coding drain",
+        "Large-context multi-file work"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
+    },
+    "qwen/qwen3-coder": {
+      "provider": "openrouter",
+      "displayName": "Qwen3 Coder 480B",
+      "costPer1MInput": 0.22,
+      "costPer1MOutput": 1.8,
+      "contextWindow": 1048576,
+      "maxOutput": 65536,
+      "latencyTier": "medium",
+      "strengths": {
+        "coding": 5,
+        "review": 4,
+        "documentation": 4,
+        "architecture": 4,
+        "research": 4
+      },
+      "limitations": [
+        "Priciest rung of the affordable ladder"
+      ],
+      "bestFor": [
+        "Hard coding tasks after free/cheap rungs are exhausted"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
+    },
+    "qwen/qwen3-coder-30b-a3b-instruct": {
+      "provider": "openrouter",
+      "displayName": "Qwen3 Coder 30B A3B",
+      "costPer1MInput": 0.07,
+      "costPer1MOutput": 0.19,
+      "contextWindow": 131072,
+      "maxOutput": 32768,
+      "latencyTier": "fast",
+      "strengths": {
+        "coding": 4,
+        "review": 4,
+        "documentation": 4,
+        "architecture": 3,
+        "research": 3
+      },
+      "limitations": [
+        "Smaller model \u2014 weaker on architecture"
+      ],
+      "bestFor": [
+        "Cheap paid coding fallback",
+        "Simple fixes"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
+    },
+    "qwen/qwen3-next-80b-a3b-instruct:free": {
+      "provider": "openrouter",
+      "displayName": "Qwen3 Next 80B A3B (free)",
+      "costPer1MInput": 0,
+      "costPer1MOutput": 0,
+      "contextWindow": 262144,
+      "maxOutput": 32768,
+      "latencyTier": "medium",
+      "strengths": {
+        "coding": 4,
+        "review": 4,
+        "documentation": 5,
+        "architecture": 4,
+        "research": 4
+      },
+      "limitations": [
+        "Free tier \u2014 rate-limited"
+      ],
+      "bestFor": [
+        "Design/product reasoning",
+        "Documentation",
+        "General non-coding work"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
+    },
+    "qwen/qwen3-30b-a3b-instruct-2507": {
+      "provider": "openrouter",
+      "displayName": "Qwen3 30B A3B Instruct",
+      "costPer1MInput": 0.05,
+      "costPer1MOutput": 0.19,
+      "contextWindow": 131072,
+      "maxOutput": 32768,
+      "latencyTier": "fast",
+      "strengths": {
+        "coding": 3,
+        "review": 4,
+        "documentation": 4,
+        "architecture": 3,
+        "research": 3
+      },
+      "limitations": [
+        "General model, not coding-specialized"
+      ],
+      "bestFor": [
+        "Cheap review/docs fallback"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
+    },
+    "meta-llama/llama-3.3-70b-instruct:free": {
+      "provider": "openrouter",
+      "displayName": "Llama 3.3 70B Instruct (free)",
+      "costPer1MInput": 0,
+      "costPer1MOutput": 0,
+      "contextWindow": 131072,
+      "maxOutput": 16384,
+      "latencyTier": "medium",
+      "strengths": {
+        "coding": 3,
+        "review": 4,
+        "documentation": 4,
+        "architecture": 3,
+        "research": 4
+      },
+      "limitations": [
+        "Free tier \u2014 rate-limited",
+        "Not coding-specialized"
+      ],
+      "bestFor": [
+        "Review",
+        "General reasoning",
+        "Documentation"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
+    },
+    "deepseek/deepseek-v4-flash": {
+      "provider": "openrouter",
+      "displayName": "DeepSeek V4 Flash",
+      "costPer1MInput": 0.09,
+      "costPer1MOutput": 0.18,
+      "contextWindow": 1048576,
+      "maxOutput": 32768,
+      "latencyTier": "fast",
+      "strengths": {
+        "coding": 4,
+        "review": 4,
+        "documentation": 4,
+        "architecture": 4,
+        "research": 4
+      },
+      "limitations": [
+        "Paid \u2014 cheapest fast large-context rung"
+      ],
+      "bestFor": [
+        "Fast cheap coding fallback",
+        "Large-context tasks"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
+    },
+    "deepseek/deepseek-chat-v3.1": {
+      "provider": "openrouter",
+      "displayName": "DeepSeek Chat V3.1",
+      "costPer1MInput": 0.21,
+      "costPer1MOutput": 0.79,
+      "contextWindow": 163840,
+      "maxOutput": 32768,
+      "latencyTier": "medium",
+      "strengths": {
+        "coding": 4,
+        "review": 5,
+        "documentation": 4,
+        "architecture": 4,
+        "research": 5
+      },
+      "limitations": [
+        "Higher output cost than the flash rung"
+      ],
+      "bestFor": [
+        "Strong reasoning/review after cheaper rungs",
+        "Design critique"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
     }
   },
   "providerHealth": {
@@ -426,6 +620,12 @@
       "error": null
     },
     "groq": {
+      "status": "not-configured",
+      "lastChecked": null,
+      "consecutiveFailures": 0,
+      "error": null
+    },
+    "openrouter": {
       "status": "not-configured",
       "lastChecked": null,
       "consecutiveFailures": 0,
