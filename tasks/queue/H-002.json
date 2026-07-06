@@ -1,0 +1,21 @@
+{
+  "id": "H-002",
+  "phase": 0,
+  "title": "Remove OpenAI from the default model catalog (REQ-H5)",
+  "description": "agents/model-intel.default.json ships 6 OpenAI + 4 Anthropic entries that violate the no-OpenAI default. Remove the OpenAI entries and align the default around the OpenRouter/qwen/deepseek affordable ladder used in agents/budget.json. Also stop agents/model-manager.mjs research() from fetching openai.com pricing. Spec: REQ-H5. Do NOT reintroduce any OpenAI dependency.",
+  "assignee": "sdlc-developer",
+  "priority": "HIGH",
+  "estimatedTokens": 16000,
+  "files": [
+    "agents/model-intel.default.json",
+    "agents/model-manager.mjs"
+  ],
+  "blockedBy": [],
+  "status": "pending",
+  "test_status": null,
+  "created": "2026-07-06T00:20:00Z",
+  "tags": [
+    "hardening",
+    "competitive-roadmap"
+  ]
+}

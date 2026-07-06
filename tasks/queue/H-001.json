@@ -1,0 +1,21 @@
+{
+  "id": "H-001",
+  "phase": 0,
+  "title": "Wire the full test suite into CI + npm test (REQ-H2)",
+  "description": "Extend .github/workflows/test.yml AND the npm `test` script to run ALL tests/*.test.mjs plus ALL agents/__tests__/*.test.mjs, plus `node agents/four-layer-validate.mjs` and `node agents/test-behavior.mjs --framework`. Today CI runs only adapter-and-model-manager + test-behavior (~1 of 23 test files). Spec: openspec/changes/competitive-roadmap/specs/internal-hardening.md REQ-H2. Keep zero npm deps.",
+  "assignee": "sdlc-developer",
+  "priority": "HIGH",
+  "estimatedTokens": 18000,
+  "files": [
+    ".github/workflows/test.yml",
+    "package.json"
+  ],
+  "blockedBy": [],
+  "status": "pending",
+  "test_status": null,
+  "created": "2026-07-06T00:20:00Z",
+  "tags": [
+    "hardening",
+    "competitive-roadmap"
+  ]
+}

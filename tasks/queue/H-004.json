@@ -1,0 +1,24 @@
+{
+  "id": "H-004",
+  "phase": 0,
+  "title": "Latent-bug sweep (REQ-H4)",
+  "description": "Fix verified defects (split into small commits if needed): (1) autonomous-launcher.sh ~L123-125 EXIT_CODE=$? captures tee not the agent after a pipe. (2) agents/cycles/daily-review.mjs OpenSpec-Hygiene/Model-Health blocks (~L322-349) use fs./path. namespaces but only named members are imported -> ReferenceError; fix the imports. (3) logCapabilityUsage called with an object in garden-roadmap.mjs + alignment-monitor.mjs -> use the positional signature. (4) add __isMainModule guards to ast-analyzer, version-snapshot, migrate-memory, rem-sleep, garden-roadmap, alignment-monitor. (5) semantic-index.mjs: pass payload via stdin (E2BIG-safe, like the shipped rag-indexer fix) + implement the real JS cosine fallback (currently return null). Spec: REQ-H4. Add/keep tests passing.",
+  "assignee": "sdlc-developer",
+  "priority": "MEDIUM",
+  "estimatedTokens": 30000,
+  "files": [
+    "agents/autonomous-launcher.sh",
+    "agents/cycles/daily-review.mjs",
+    "agents/garden-roadmap.mjs",
+    "agents/alignment-monitor.mjs",
+    "agents/semantic-index.mjs"
+  ],
+  "blockedBy": [],
+  "status": "pending",
+  "test_status": null,
+  "created": "2026-07-06T00:20:00Z",
+  "tags": [
+    "hardening",
+    "competitive-roadmap"
+  ]
+}

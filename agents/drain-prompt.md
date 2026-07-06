@@ -5,7 +5,7 @@ You are the **autonomous drain worker** for the agentic-sdlc repository at `/hom
 2. Work on small, focused diffs. Services < 150 lines, one logical change.
 
 ## Procedure
-1. **Pick one task.** Run `node agents/queue-drainer.mjs status`. If there are **no ready/unblocked tasks, STOP immediately** and output `DRAIN: nothing to do`. Otherwise choose the single highest-priority unblocked task and note its id.
+1. **Pick one task — and don't double-work.** Run `node agents/queue-drainer.mjs status` to see ready/unblocked tasks. Then list tasks that already have an open drain PR: `gh pr list --search 'head:agent/drain/' --state open --json headRefName`. Choose the **single highest-priority unblocked task whose `agent/drain/<task-id>` branch/PR does NOT already exist** (a task's queue status stays `pending` on `main` until its PR merges, so you must skip ones already in flight). If every ready task already has an open drain PR, or there are none, **STOP immediately** and output `DRAIN: nothing to do`. Note the chosen task id.
 2. **Claim it:** `node agents/queue-drainer.mjs claim <task-id> hermes-drain` (or mark it in-progress).
 3. **Branch from main — never work on main.** Run: `git fetch origin --quiet` then `git checkout -b agent/drain/<task-id> origin/main`. If that branch already exists, append a short timestamp.
 4. **Implement** the task per its spec and CLAUDE.md. If the task requires an OpenSpec change that doesn't exist yet, create the artifacts first (proposal → design → specs → tasks) under `openspec/changes/<name>/`.
