@@ -429,15 +429,15 @@ console.log('\n📋 Model manager intelligence:');
 // default catalog at agents/model-intel.default.json.
 const INTEL_DEFAULT_PATH = resolve(SDLC_ROOT, 'agents/model-intel.default.json');
 
-test('model-intel.default.json exists and has models from all 4 providers', () => {
+test('model-intel.default.json exists and has models from non-OpenAI providers', () => {
   assert(existsSync(INTEL_DEFAULT_PATH), 'model-intel.default.json should exist');
   const intel = JSON.parse(readFileSync(INTEL_DEFAULT_PATH, 'utf8'));
   assert(intel.models, 'Should have models object');
 
   const providers = new Set(Object.values(intel.models).map(m => m.provider));
   assert(providers.has('anthropic'), 'Should have anthropic models');
-  assert(providers.has('openai'), 'Should have openai models');
   assert(providers.has('groq'), 'Should have groq models');
+  assert(!providers.has('openai'), 'Should NOT have openai models (no-OpenAI default)');
 });
 
 test('all models in model-intel.default.json have required fields', () => {

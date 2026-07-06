@@ -395,8 +395,9 @@ export async function runAutoReview({ dryRun = false } = {}) {
   const log = (msg) => console.log(`[pr-auto-review] ${msg}`);
   const record = (obj) => appendFileSync(logFile, JSON.stringify(obj) + '\n');
 
-  // Single-flight lock (atomic mkdir; stale after 2h) — same pattern as the drain.
-  const lockDir = join(logDir, '.pr-auto-review.lock.d');
+  // SHARED atomic mutex (atomic mkdir; stale after 2h) — mutually exclusive with
+  // the drain (same path), so only one autonomous git-mutating job runs at a time.
+  const lockDir = join(logDir, '.sdlc-autonomous.lock.d');
   try {
     mkdirSync(lockDir);
   } catch {

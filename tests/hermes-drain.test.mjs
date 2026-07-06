@@ -37,11 +37,10 @@ test('drain script exists and is executable', () => {
 
 test('drain script carries the core safety guards', () => {
   const s = readFileSync(script, 'utf8');
-  assert(/branch.*!=.*"main"|!= "main"/.test(s), 'must refuse to run unless on main');
-  assert(/git status --porcelain/.test(s), 'must require a clean tree');
+  assert(/worktree add/.test(s) && /WORKTREE/.test(s), 'must isolate work in a DISPOSABLE git worktree (never the main working tree)');
   assert(/Ready \\?\(unblocked\\?\)/.test(s), 'must cost-gate on ready-task count');
   assert(/head:agent\/drain\//.test(s) && /MAX_OPEN_DRAIN_PRS/.test(s), 'must cap unreviewed drain PRs');
-  assert(/mkdir "\$LOCKDIR"/.test(s) && /\.hermes-drain\.lock/.test(s), 'must use an ATOMIC (mkdir) single-flight lock, not a racy [ -f ] test');
+  assert(/mkdir "\$LOCKDIR"/.test(s) && /\.sdlc-autonomous\.lock/.test(s), 'must use the SHARED atomic (mkdir) mutex (mutually exclusive with pr-auto-review)');
   assert(/pgrep -f 'timeout 3600 hermes'/.test(s), 'must have a pgrep backstop against a live concurrent worker');
   assert(/HERMES_HOME="\$DRAIN_HOME"/.test(s) && /TERMINAL_ENV=local/.test(s), 'must use the isolated local-backend profile');
 });
@@ -55,27 +54,42 @@ test('drain prompt encodes the hard constraints (PR-gate, never main, one task)'
   assert(/rm -rf/.test(p), 'must explicitly forbid destructive commands');
 });
 
-test('running on a non-main branch is a safe no-op (no LLM call)', () => {
-  // HERMETIC: point SDLC_REPO at a throwaway git repo sitting on a feature
-  // branch. The script must skip immediately with exit 0 and never reach the
-  // Hermes invocation. Never run the script against the real repo from tests:
-  // if the host repo happens to be idle on main with ready tasks, the script
-  // would launch an actual LLM drain worker (this bit us once — a CI-style
-  // worktree run spawned a live worker against the host repo).
+test('cost gate makes it a safe no-op with no ready tasks (no LLM call)', () => {
+  // HERMETIC: point SDLC_REPO at a throwaway git repo with no queue-drainer.
+  // The cost gate must resolve zero ready tasks and skip with exit 0, never
+  // reaching the Hermes invocation. Never run the script against the real repo
+  // from tests — it could launch a live LLM drain worker.
   const tmp = mkdtempSync(join(tmpdir(), 'drain-noop-'));
   try {
     const git = (...args) => execFileSync('git', args, { cwd: tmp, encoding: 'utf8' });
     git('init', '-q', '-b', 'main');
     git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init');
-    git('checkout', '-q', '-b', 'feature/not-main');
     const out = execFileSync('bash', [script], {
       cwd: tmp,
       encoding: 'utf8',
       timeout: 30000,
       env: { ...process.env, SDLC_REPO: tmp },
     });
-    assert(/not main|skip/i.test(out), `expected a skip message, got: ${out}`);
+    assert(/skip/i.test(out), `expected a skip message, got: ${out}`);
     assert(!/invoking Hermes/.test(out), 'must not invoke Hermes when guards fail');
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('the shared mutex makes it a safe no-op when held (drain XOR auto-review)', () => {
+  // Pre-create the shared lock dir; the script must detect it and skip.
+  const tmp = mkdtempSync(join(tmpdir(), 'drain-lock-'));
+  try {
+    const git = (...args) => execFileSync('git', args, { cwd: tmp, encoding: 'utf8' });
+    git('init', '-q', '-b', 'main');
+    git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init');
+    execFileSync('mkdir', ['-p', join(tmp, 'pm', '.sdlc-autonomous.lock.d')]);
+    const out = execFileSync('bash', [script], {
+      cwd: tmp, encoding: 'utf8', timeout: 30000, env: { ...process.env, SDLC_REPO: tmp },
+    });
+    assert(/mutex held|skip/i.test(out), `expected a mutex-held skip, got: ${out}`);
+    assert(!/invoking Hermes/.test(out), 'must not invoke Hermes when the mutex is held');
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
