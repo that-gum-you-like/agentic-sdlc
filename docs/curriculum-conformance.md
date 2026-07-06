@@ -1,6 +1,8 @@
 # Curriculum Conformance — Multiverse School "Agentic SDLC"
 
-**Date**: 2026-07-06 · **Status**: living document — update as gaps close.
+**Date**: 2026-07-06 · **Status**: ✅ **All Level-6 gaps closed** (PRs #20–#28). Maturity `maturity-assess.mjs` = 4.3/5.0 (Leading). Living document — update as new gaps surface.
+
+> **Level-6 (Self-Improving) reached (2026-07-06):** the nine remaining gaps are merged — behavior baselines+drift (#21), external-input injection screening (#22), error-dedup (#23), semantic near-miss analyzer / Layer 2.5 (#24), silent-fallback scan (#25), Playwright user-test runner (#28), improvement-loop TEACH wiring (#26), monthly-cycle completeness (#27), assume-compromise posture (#27). All integrated into existing components (four-layer, test-behavior, pattern-hunt, red-team-tester, cycles) and running on the **Hermes + OpenRouter** affordable stack — no Claude API, no OpenAI; deterministic gates stay deterministic.
 
 The authoritative definition of "complete/mature" for this framework is the
 Multiverse School Agentic SDLC curriculum (the material this framework was
