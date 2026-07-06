@@ -103,6 +103,13 @@
       "session": "isolated"
     },
     {
+      "name": "kanban-sync",
+      "cron": "*/15 * * * *",
+      "script": "node ~/agentic-sdlc/agents/kanban-bridge.mjs sync && node ~/agentic-sdlc/agents/agent-registry.mjs",
+      "description": "Sync the SDLC task queue into the Hermes kanban board and refresh the agent registry, so the command-center dashboard shows live backlog + agent state. Idempotent.",
+      "session": "isolated"
+    },
+    {
       "name": "pr-auto-review",
       "cron": "7,27,47 * * * *",
       "script": "node ~/agentic-sdlc/agents/pr-auto-review.mjs",
