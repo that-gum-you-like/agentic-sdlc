@@ -292,7 +292,7 @@ This repo auto-updates daily at 04:00 via OpenClaw cron: `openclaw cron list` to
 
 ## Maturity Model
 
-7-level pyramid (Foundation → Automation → Scale → Quality → Evolution → Continuous Improvement → Mastery). Each level builds on the previous — no skipping. Full detail in `framework/maturity-model.md`.
+7-level pyramid, Levels 0–6 (Manual → Assisted → Automated → Orchestrated → Quality → Evolving → Self-Improving). Each level builds on the previous — no skipping. Canonical model in `framework/maturity-model.md`; per-level playbooks (Levels 1–6) in `docs/levels/`.
 
 ---
 

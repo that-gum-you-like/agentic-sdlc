@@ -1,4 +1,4 @@
-# Level 4: Automated Quality Gates
+# Level 4: Quality — Automated Quality Gates
 
 **Prerequisites:** Level 3 complete (task queue draining, agents executing micro cycles).
 
@@ -12,7 +12,7 @@
 
 ### 1. Configure Defeat Tests
 
-Run the four-layer validation scanner:
+Run the five-layer validation scanner (script name `four-layer-validate.mjs` kept for compatibility):
 
 ```bash
 node ~/agentic-sdlc/agents/four-layer-validate.mjs

@@ -1,4 +1,4 @@
-# Level 5: Memory, Failures, and Model Management
+# Level 5: Evolving — Memory, Failures, and Model Management
 
 **Prerequisites:** Level 4 complete (defeat tests and code reviewer active).
 
