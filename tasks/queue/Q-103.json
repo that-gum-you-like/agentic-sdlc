@@ -10,10 +10,14 @@
     "openspec/BACKLOG.md"
   ],
   "blockedBy": [],
-  "status": "pending",
+  "status": "completed",
   "created": "2026-07-06T13:30:00Z",
   "tags": [
     "docs",
     "hygiene"
-  ]
+  ],
+  "_file": "Q-103.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-07-06T14:17:10.102Z"
 }
