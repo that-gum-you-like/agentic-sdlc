@@ -36,15 +36,7 @@ function loadBudget() {
   return JSON.parse(readFileSync(BUDGET_PATH, 'utf8'));
 }
 
-function record(agent, taskId, inputTokens, outputTokens) {
-  try { logCapabilityUsage('costTracking', agent, taskId, 'cost-tracker.mjs', 'record'); } catch {}
-
-  const parsedInput = parseInt(inputTokens, 10);
-  const parsedOutput = parseInt(outputTokens, 10);
-  if (isNaN(parsedInput) || isNaN(parsedOutput) || parsedInput < 0 || parsedOutput < 0) {
-    console.error(`❌ Invalid token counts: input="${inputTokens}" output="${outputTokens}" — must be non-negative integers`);
-    return;
-  }
+function writeEntry(agent, taskId, inputTokens, outputTokens, { model, source } = {}) {
   const budget = loadBudget();
   const knownAgents = budget?.agents ? Object.keys(budget.agents) : [];
   if (knownAgents.length > 0 && !knownAgents.includes(agent)) {
@@ -54,15 +46,59 @@ function record(agent, taskId, inputTokens, outputTokens) {
   const entry = {
     agent,
     taskId,
-    inputTokens: parsedInput,
-    outputTokens: parsedOutput,
-    totalTokens: parsedInput + parsedOutput,
+    inputTokens,
+    outputTokens,
+    totalTokens: inputTokens + outputTokens,
     timestamp: new Date().toISOString(),
-    model: budget?.agents?.[agent]?.model || 'sonnet',
+    model: model || budget?.agents?.[agent]?.model || 'unknown',
+    // 'provider-reported' = realized usage from the LLM API response;
+    // 'manual' = CLI-entered (may be an estimate).
+    source: source || 'manual',
   };
   log.push(entry);
   saveLog(log);
-  console.log(`📊 Recorded: ${agent} | ${taskId} | ${entry.totalTokens} tokens (${entry.model})`);
+  console.log(`📊 Recorded: ${agent} | ${taskId} | ${entry.totalTokens} tokens (${entry.model}, ${entry.source})`);
+  return entry;
+}
+
+function record(agent, taskId, inputTokens, outputTokens) {
+  try { logCapabilityUsage('costTracking', agent, taskId, 'cost-tracker.mjs', 'record'); } catch {}
+
+  const parsedInput = parseInt(inputTokens, 10);
+  const parsedOutput = parseInt(outputTokens, 10);
+  if (isNaN(parsedInput) || isNaN(parsedOutput) || parsedInput < 0 || parsedOutput < 0) {
+    console.error(`❌ Invalid token counts: input="${inputTokens}" output="${outputTokens}" — must be non-negative integers`);
+    return;
+  }
+  return writeEntry(agent, taskId, parsedInput, parsedOutput, { source: 'manual' });
+}
+
+/**
+ * Record realized, provider-REPORTED token usage from an LLM adapter response.
+ *
+ * Every framework adapter's complete() returns { inputTokens, outputTokens,
+ * model, ... } taken from the provider's usage block — call this with that
+ * response so the ledger carries exact counts instead of chars/4 estimates.
+ * (Dollar math and rollups are the P4 module — this is capture only.)
+ *
+ * @param {string} agent    - Agent name the call was made on behalf of
+ * @param {string} taskId   - Task ID (or a stable label like "pr-42")
+ * @param {object} response - Adapter response with inputTokens/outputTokens/model
+ * @returns {object|null} the ledger entry, or null if the provider reported nothing
+ */
+export function recordRealizedUsage(agent, taskId, response) {
+  try { logCapabilityUsage('costTracking', agent, taskId, 'cost-tracker.mjs', 'record-realized'); } catch {}
+
+  const input = Number.isInteger(response?.inputTokens) && response.inputTokens >= 0 ? response.inputTokens : 0;
+  const output = Number.isInteger(response?.outputTokens) && response.outputTokens >= 0 ? response.outputTokens : 0;
+  if (input === 0 && output === 0) {
+    // Provider reported no usage — do not pollute the ledger with zeros.
+    return null;
+  }
+  return writeEntry(agent, taskId, input, output, {
+    model: response?.model,
+    source: 'provider-reported',
+  });
 }
 
 /**

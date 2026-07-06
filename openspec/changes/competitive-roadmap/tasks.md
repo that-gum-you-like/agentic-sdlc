@@ -15,7 +15,7 @@ This is a **program**. Each capability below spawns its **own child OpenSpec cha
 - [x] **H6** Reconcile maturity 6-vs-7 + validation 4-vs-5 + add comparison matrix  · REQ-H6 · S
 - [x] **H7** De-couple hardcoded LinguaFlow/model bindings  · REQ-H7 · S
 - [ ] **H8** CI-wired tests for every new module; extend `capability-monitor.mjs` only for uncovered paths (it is already tested)  · REQ-H8 · S
-- [ ] **H3** Exact-accounting groundwork (feeds P4)  · REQ-H3 · S/M
+- [x] **H3** Exact-accounting groundwork (feeds P4)  · REQ-H3 · S/M
 
 ## Phase 1 — Runtime foundation (parity floor)
 - [ ] **P1** Sandbox-Execution Adapter (`local-worktree` default + self-host microVM)  · REQ-P1 · M
