@@ -16,7 +16,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, append
 import { resolve, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 
 import { loadConfig } from './load-config.mjs';
 import { screenExternalInput } from './red-team-tester.mjs';
@@ -645,8 +645,71 @@ export function runWellnessCheck() {
 // Recognized trigger types:
 //   blocker, budgetAlert, deployComplete, highSeverityFailure,
 //   dailySummary, approvalTimeout, capabilityDrift
+// ---------------------------------------------------------------------------
+// Error deduplication by signature hash (curriculum Phase 5)
+// ---------------------------------------------------------------------------
+//
+// The same failure recurring should not re-notify (or send an agent
+// re-investigating) every time. Error text is normalized (volatile parts —
+// numbers, hashes, paths, timestamps — stripped), hashed, and counted in
+// pm/error-signatures.json. Repeats inside the suppression window are
+// suppressed; the ledger keeps the count for review.
+
+const ERROR_SIG_PATH = resolve(config.projectDir, 'pm', 'error-signatures.json');
+const ERROR_SUPPRESS_WINDOW_MS = 24 * 60 * 60 * 1000; // same error re-notifies at most daily
+const FAILURE_TRIGGERS = new Set(['highSeverityFailure', 'deployFailed', 'deployRolledBack']);
+
+/** Stable signature for an error message: volatile details stripped, then hashed. */
+export function errorSignature(text) {
+  const normalized = String(text ?? '')
+    .toLowerCase()
+    .replace(/\b0x[0-9a-f]+\b/g, '<hex>')
+    .replace(/\b[0-9a-f]{7,40}\b/g, '<hash>')
+    .replace(/(\/[\w.-]+)+/g, '<path>')
+    .replace(/\d{4}-\d{2}-\d{2}[t ][\d:.]+z?/g, '<ts>')
+    .replace(/\d+/g, '<n>')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return createHash('sha256').update(normalized).digest('hex').slice(0, 12);
+}
+
+function loadErrorLedger() {
+  try { return JSON.parse(readFileSync(ERROR_SIG_PATH, 'utf8')); } catch { return {}; }
+}
+
+/**
+ * Record an error occurrence and decide whether it should be surfaced.
+ * @returns {{ sig: string, count: number, suppressed: boolean }}
+ */
+export function recordErrorOccurrence(text) {
+  const sig = errorSignature(text);
+  const ledger = loadErrorLedger();
+  const now = Date.now();
+  const entry = ledger[sig] || { firstSeen: new Date(now).toISOString(), count: 0, sample: String(text ?? '').slice(0, 200) };
+  const lastSeenMs = entry.lastSeen ? new Date(entry.lastSeen).getTime() : 0;
+  const suppressed = entry.count > 0 && (now - lastSeenMs) < ERROR_SUPPRESS_WINDOW_MS;
+  entry.count += 1;
+  entry.lastSeen = new Date(now).toISOString();
+  ledger[sig] = entry;
+  try {
+    mkdirSync(dirname(ERROR_SIG_PATH), { recursive: true });
+    writeFileSync(ERROR_SIG_PATH, JSON.stringify(ledger, null, 2) + '\n');
+  } catch { /* ledger write failure must not block notification */ }
+  return { sig, count: entry.count, suppressed };
+}
+
 export function triggerNotification(triggerName, message, mediaPath) {
   if (!NOTIF.triggers[triggerName]) return false;
+  // Failure-class triggers dedupe by error signature: the identical failure
+  // re-notifies at most once per suppression window.
+  if (FAILURE_TRIGGERS.has(triggerName)) {
+    const { sig, count, suppressed } = recordErrorOccurrence(message);
+    if (suppressed) {
+      console.log(`🔇 duplicate ${triggerName} suppressed (sig ${sig}, seen ${count}x) — see pm/error-signatures.json`);
+      return false;
+    }
+    if (count > 1) message = `${message}\n(recurring: ${count}x, sig ${sig})`;
+  }
   return sendNotification(message, mediaPath);
 }
 
