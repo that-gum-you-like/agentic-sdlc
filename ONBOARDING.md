@@ -93,7 +93,7 @@ Map what you discovered to the framework's maturity levels:
 | 1 | Assisted | AI helps write code (Copilot, Claude, Cursor in use) but human does everything else |
 | 2 | Automated | AI writes code AND runs tests, but single-agent (one conversation) |
 | 3 | Orchestrated | Multiple agents or task-based workflow, but no persistent memory |
-| 4 | Quality | Automated code review, defeat tests, E2E testing in place |
+| 4 | Autonomous | Automated code review, defeat tests, E2E testing in place |
 | 5 | Evolving | Agents have memory, learn from failures, track maturation |
 | 6 | Self-Improving | Pattern detection, behavior testing, capability monitoring |
 
@@ -120,7 +120,7 @@ Present the options based on their current level. DO NOT push everything — let
 - Add defeat tests (anti-pattern detection)
 - Add a code reviewer agent
 - Add browser E2E for frontend
-- See `docs/levels/level-4-quality.md`.
+- See `docs/levels/level-4-autonomous.md`.
 
 **If at Level 4** (quality gates in place):
 - Add 5-layer memory system per agent

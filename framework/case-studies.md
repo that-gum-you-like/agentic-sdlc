@@ -150,7 +150,7 @@ The framework had a structural blind spot: it treated "testing" as synonymous wi
 **Defeat pattern:**
 
 - **Layer 5 (Browser Verification):** Added as a new validation layer. Tests the system from the user's perspective in a real browser against the built artifact.
-- **Maturity model:** Browser E2E added to Level 4 (Quality) checklist. User journey coverage added to Level 5 (Evolution).
+- **Maturity model:** Browser E2E added to Level 4 (Autonomous) checklist. User journey coverage added to Level 5 (Evolution).
 - **Micro cycle:** Conditional browser E2E step added after unit tests for frontend changes.
 - **Deploy gate:** Browser E2E must pass before production deploy.
 - **Done checklist:** Post-deploy browser verification with screenshot proof required before reporting done.

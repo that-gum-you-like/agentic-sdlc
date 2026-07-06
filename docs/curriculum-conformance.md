@@ -14,9 +14,11 @@ curriculum capability to its implementing file(s) and an honest status:
 - **Missing** — not implemented (extend an existing owner; never build a parallel system)
 
 Maturity ladder: Levels 0–6 (`framework/maturity-model.md` is canonical).
-> Naming note: the curriculum relay names L4 "Autonomous"; the repo's canonical
-> model names L4 "Quality" (its content: defeat tests, reviewer, browser E2E).
-> Flagged for Bryce's confirmation before any rename — content is aligned either way.
+> Naming note — RESOLVED 2026-07-06 (change `curriculum-l4-naming`): per Bryce's
+> directive the repo now names L4 "Autonomous", exactly matching the curriculum
+> ladder (Manual → Assisted → Automated → Orchestrated → Autonomous → Evolving →
+> Self-Improving). Content unchanged: the quality gates ARE what make L4
+> autonomy safe.
 
 ---
 

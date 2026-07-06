@@ -1,4 +1,4 @@
-# Level 4: Quality — Automated Quality Gates
+# Level 4: Autonomous — Automated Quality Gates
 
 **Prerequisites:** Level 3 complete (task queue draining, agents executing micro cycles).
 

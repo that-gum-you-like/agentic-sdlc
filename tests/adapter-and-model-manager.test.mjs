@@ -606,7 +606,7 @@ test('.cursor/rules/agentic-sdlc.mdc exists and references ONBOARDING.md', () =>
 test('all 6 level guides exist', () => {
   const levels = [
     'level-1-assisted.md', 'level-2-automated.md', 'level-3-orchestrated.md',
-    'level-4-quality.md', 'level-5-evolution.md', 'level-6-self-improving.md',
+    'level-4-autonomous.md', 'level-5-evolution.md', 'level-6-self-improving.md',
   ];
   for (const level of levels) {
     assert(existsSync(resolve(SDLC_ROOT, 'docs/levels', level)), `${level} should exist`);

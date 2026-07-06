@@ -89,4 +89,4 @@ guardrails.
 ## Next Level
 
 When you want automated quality gates — anti-pattern detection, mandatory
-code review, and statistical validation — see [Level 4: Automated Quality Gates](level-4-quality.md).
+code review, and statistical validation — see [Level 4: Autonomous — Automated Quality Gates](level-4-autonomous.md).
