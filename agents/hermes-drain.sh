@@ -53,10 +53,14 @@ ready="${ready:-0}"
 if [ "$ready" -eq 0 ]; then log "no ready tasks — skip (no LLM call)"; exit 0; fi
 
 # --- back-pressure: don't pile up unreviewed drain PRs ---
+# EXCEPTION: pending FIX-* tasks (self-healing repairs of rejected PRs) bypass
+# the cap — fix work REDUCES the unreviewed pile the cap protects against.
 open_prs="$(gh pr list --search 'head:agent/drain/' --state open --json number -q 'length' 2>/dev/null || echo 0)"
-if [ "${open_prs:-0}" -ge "$MAX_OPEN_DRAIN_PRS" ]; then
+pending_fixes="$(node -e 'const fs=require("fs");let n=0;try{for(const f of fs.readdirSync("tasks/queue")){if(/^FIX-.*\.json$/.test(f)){try{if(JSON.parse(fs.readFileSync("tasks/queue/"+f,"utf8")).status==="pending")n++;}catch{}}}}catch{}console.log(n)' 2>/dev/null || echo 0)"
+if [ "${open_prs:-0}" -ge "$MAX_OPEN_DRAIN_PRS" ] && [ "${pending_fixes:-0}" -eq 0 ]; then
   log "$open_prs drain PR(s) awaiting review (cap $MAX_OPEN_DRAIN_PRS) — skip"; exit 0
 fi
+[ "${pending_fixes:-0}" -gt 0 ] && log "$pending_fixes pending FIX task(s) — cap bypass allowed"
 
 if [ ! -f "$DRAIN_HOME/config.yaml" ]; then log "drain profile missing: $DRAIN_HOME"; exit 1; fi
 
