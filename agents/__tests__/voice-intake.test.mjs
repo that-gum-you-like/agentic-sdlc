@@ -246,3 +246,46 @@ describe('Groq API response parsing', () => {
     assert.equal(parsed.error.message, 'Invalid API key');
   });
 });
+
+describe('setup.mjs --yes voice-config scaffolding (non-interactive)', () => {
+  const SDLC_DIR = resolve(__dirname, '..', '..');
+  const SETUP_SCRIPT = resolve(SDLC_DIR, 'setup.mjs');
+
+  it('skips voice-config.json by default in non-interactive mode', () => {
+    const tmpDir = resolve(os.tmpdir(), `setup-voice-noninteractive-${Date.now()}`);
+    mkdirSync(tmpDir, { recursive: true });
+
+    const output = execSync(
+      `node "${SETUP_SCRIPT}" --yes --dry-run --dir "${tmpDir}" 2>&1`,
+      { encoding: 'utf8' }
+    );
+
+    // Non-interactive defaults to 'n' for voice config, so it should be skipped
+    assert.ok(output.includes('Voice configuration skipped'));
+
+    // Dry-run plan should NOT include a "Would create" or "Would copy" line for voice-config.json
+    const dryRunLines = output.split('\n').filter(l => l.includes('[DRY RUN]'));
+    const voiceConfigDryRun = dryRunLines.filter(l => l.includes('voice-config.json'));
+    assert.equal(voiceConfigDryRun.length, 0,
+      `Expected no dry-run lines for voice-config.json, got: ${voiceConfigDryRun.join(', ')}`);
+
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('does not produce errors running non-interactive setup', () => {
+    const tmpDir = resolve(os.tmpdir(), `setup-voice-noerr-${Date.now()}`);
+    mkdirSync(tmpDir, { recursive: true });
+
+    // Should exit cleanly without errors
+    const output = execSync(
+      `node "${SETUP_SCRIPT}" --yes --dry-run --dir "${tmpDir}" 2>&1`,
+      { encoding: 'utf8' }
+    );
+
+    assert.ok(!output.includes('Error'));
+    assert.ok(!output.includes('error'));
+    assert.ok(output.includes('DRY RUN SUMMARY') || output.includes('Setup complete'));
+
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+});
