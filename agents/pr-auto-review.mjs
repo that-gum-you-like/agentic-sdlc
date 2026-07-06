@@ -15,8 +15,10 @@
  *                   task + a safety checklist; strict-JSON approve/reject.
  *                   Errors/garbage count as NOT approved, never as approval.
  *   4. ACT        — all pass → `gh pr merge --squash --delete-branch`, then the
- *                   queue task is marked complete on a clean idle main (a
- *                   reconcile pass at run start self-heals missed ones).
+ *                   queue task is marked complete IN A DEDICATED CLONE
+ *                   (~/.sdlc-review-clone) and pushed — the main working tree
+ *                   is NEVER mutated by this job (a reconcile pass at run
+ *                   start self-heals missed ones).
  *                   Soft fail → one review comment per head SHA; PR stays open.
  *
  * ≤ MAX_AUTO_MERGES (default 3) merges per run. Single-flight mkdir lock.
@@ -208,12 +210,12 @@ function ghJson(args) {
 // HARD GATE — clean-worktree test run. No pass, no merge.
 // ---------------------------------------------------------------------------
 
-function hardGate(repoDir, headRef) {
+function hardGate(cloneDir, headRef) {
   const wt = mkdtempSync(join(tmpdir(), 'pr-review-'));
   const result = { passed: false, step: null, tail: '' };
   try {
-    run('git', ['-C', repoDir, 'fetch', 'origin', headRef], { timeout: 120_000 });
-    run('git', ['-C', repoDir, 'worktree', 'add', '--detach', wt, 'FETCH_HEAD'], { timeout: 120_000 });
+    run('git', ['-C', cloneDir, 'fetch', 'origin', headRef], { timeout: 120_000 });
+    run('git', ['-C', cloneDir, 'worktree', 'add', '--detach', wt, 'FETCH_HEAD'], { timeout: 120_000 });
     for (const [step, cmd, args, timeout] of [
       ['npm test', 'npm', ['test'], 900_000],
       ['four-layer-validate', 'node', ['agents/four-layer-validate.mjs'], 300_000],
@@ -234,30 +236,52 @@ function hardGate(repoDir, headRef) {
     result.tail = String(err.message || err).slice(-1500);
     return result;
   } finally {
-    try { run('git', ['-C', repoDir, 'worktree', 'remove', '--force', wt], { timeout: 60_000 }); } catch { /* best effort */ }
+    try { run('git', ['-C', cloneDir, 'worktree', 'remove', '--force', wt], { timeout: 60_000 }); } catch { /* best effort */ }
     try { rmSync(wt, { recursive: true, force: true }); } catch { /* best effort */ }
-    try { run('git', ['-C', repoDir, 'worktree', 'prune'], { timeout: 60_000 }); } catch { /* best effort */ }
+    try { run('git', ['-C', cloneDir, 'worktree', 'prune'], { timeout: 60_000 }); } catch { /* best effort */ }
   }
 }
 
 // ---------------------------------------------------------------------------
-// Queue completion + reconcile
+// Dedicated review clone (TOTAL isolation from the main working tree)
+// ---------------------------------------------------------------------------
+//
+// The old completeTaskOnMain pulled/committed/pushed IN the main checkout —
+// that raced human/CTO sessions working in the same tree (the exact collision
+// behind the runaway incident). All review-side git mutation now happens in a
+// persistent dedicated clone (same pattern as the drain's ~/.sdlc-drain-clone),
+// so the main working tree and its .git are NEVER mutated by this job.
+
+export const REVIEW_CLONE = process.env.SDLC_REVIEW_CLONE
+  || join(homedir(), '.sdlc-review-clone');
+
+/** Provision (once) and hard-refresh the dedicated review clone onto origin/main. */
+function ensureReviewClone(repoDir, log) {
+  const remoteUrl = run('git', ['-C', repoDir, 'remote', 'get-url', 'origin']).trim();
+  if (!existsSync(join(REVIEW_CLONE, '.git'))) {
+    log(`creating dedicated review clone at ${REVIEW_CLONE} (one-time)…`);
+    run('git', ['clone', '--quiet', remoteUrl, REVIEW_CLONE], { timeout: 300_000 });
+  }
+  run('git', ['-C', REVIEW_CLONE, 'fetch', '--quiet', 'origin'], { timeout: 120_000 });
+  // The clone is fully owned by this job — a hard reset is always safe here.
+  run('git', ['-C', REVIEW_CLONE, 'checkout', '-q', '-B', 'main', 'origin/main'], { timeout: 60_000 });
+  run('git', ['-C', REVIEW_CLONE, 'reset', '--hard', '-q', 'origin/main'], { timeout: 60_000 });
+  run('git', ['-C', REVIEW_CLONE, 'clean', '-fdq'], { timeout: 60_000 });
+  return REVIEW_CLONE;
+}
+
+// ---------------------------------------------------------------------------
+// Queue completion + reconcile (in the clone — never the main tree)
 // ---------------------------------------------------------------------------
 
-function completeTaskOnMain(repoDir, taskId, log) {
-  const branch = run('git', ['-C', repoDir, 'branch', '--show-current']).trim();
-  const dirty = run('git', ['-C', repoDir, 'status', '--porcelain']).trim();
-  if (branch !== 'main' || dirty) {
-    log(`defer task-complete for ${taskId}: repo busy (branch=${branch}, dirty=${Boolean(dirty)})`);
-    return false;
-  }
-  run('git', ['-C', repoDir, 'pull', '--ff-only'], { timeout: 120_000 });
-  const taskFile = join(repoDir, 'tasks', 'queue', `${taskId}.json`);
+function completeTaskInClone(repoDir, taskId, log) {
+  const clone = ensureReviewClone(repoDir, log);
+  const taskFile = join(clone, 'tasks', 'queue', `${taskId}.json`);
   if (!existsSync(taskFile)) return true; // nothing to do
   const task = JSON.parse(readFileSync(taskFile, 'utf8'));
   if (task.status === 'completed') return true;
   try {
-    run('node', [join(repoDir, 'agents', 'queue-drainer.mjs'), 'complete', taskId, 'passing'], { cwd: repoDir, timeout: 120_000 });
+    run('node', [join(clone, 'agents', 'queue-drainer.mjs'), 'complete', taskId, 'passing'], { cwd: clone, timeout: 120_000 });
   } catch {
     // queue-drainer may refuse (e.g. never claimed); mark directly — the PR merged.
     task.status = 'completed';
@@ -265,14 +289,16 @@ function completeTaskOnMain(repoDir, taskId, log) {
     task.completedAt = new Date().toISOString();
     writeFileSync(taskFile, JSON.stringify(task, null, 2) + '\n');
   }
-  if (!run('git', ['-C', repoDir, 'status', '--porcelain']).trim()) return true;
-  run('git', ['-C', repoDir, 'add', 'tasks/']);
-  run('git', ['-C', repoDir, 'commit', '-m', `chore(queue): mark ${taskId} completed (drain PR merged by pr-auto-review)`]);
-  run('git', ['-C', repoDir, 'push', 'origin', 'main'], { timeout: 120_000 });
+  if (!run('git', ['-C', clone, 'status', '--porcelain']).trim()) return true;
+  run('git', ['-C', clone, 'add', 'tasks/']);
+  run('git', ['-C', clone, 'commit', '-q', '-m', `chore(queue): mark ${taskId} completed (drain PR merged by pr-auto-review)`]);
+  // If origin/main advanced since the refresh, the push is rejected (non-ff)
+  // — never force. reconcileMerged retries on the next run.
+  run('git', ['-C', clone, 'push', 'origin', 'main'], { timeout: 120_000 });
   return true;
 }
 
-function reconcileMerged(repoDir, log) {
+function reconcileMerged(repoDir, cloneDir, log) {
   let merged;
   try {
     merged = ghJson(['pr', 'list', '--search', 'head:agent/drain/', '--state', 'merged', '--limit', '20', '--json', 'headRefName']);
@@ -280,12 +306,12 @@ function reconcileMerged(repoDir, log) {
   for (const pr of merged) {
     const taskId = taskIdFromBranch(pr.headRefName);
     if (!taskId) continue;
-    const taskFile = join(repoDir, 'tasks', 'queue', `${taskId}.json`);
+    const taskFile = join(cloneDir, 'tasks', 'queue', `${taskId}.json`);
     if (!existsSync(taskFile)) continue;
     const task = JSON.parse(readFileSync(taskFile, 'utf8'));
     if (task.status === 'completed') continue;
     log(`reconcile: ${taskId} merged but still ${task.status} — completing`);
-    try { completeTaskOnMain(repoDir, taskId, log); } catch (err) { log(`reconcile ${taskId} failed: ${err.message}`); }
+    try { completeTaskInClone(repoDir, taskId, log); } catch (err) { log(`reconcile ${taskId} failed: ${err.message}`); }
   }
 }
 
@@ -332,9 +358,11 @@ async function reviewPr(pr, ctx) {
     return record;
   }
 
-  // 2) HARD GATE — clean-worktree tests. No pass, no merge.
-  log(`PR #${pr.number} ${pr.headRefName}: running hard gate (clean worktree)…`);
-  const gate = hardGate(repoDir, pr.headRefName);
+  // 2) HARD GATE — clean-worktree tests. No pass, no merge. The worktree is
+  // created from the dedicated review CLONE so the main repo's .git is never
+  // touched (no fetch, no worktree metadata, no FETCH_HEAD races).
+  log(`PR #${pr.number} ${pr.headRefName}: running hard gate (clean worktree from review clone)…`);
+  const gate = hardGate(ctx.cloneDir, pr.headRefName);
   if (!gate.passed) {
     record.action = 'gate-failed';
     record.detail = gate.step;
@@ -356,9 +384,9 @@ async function reviewPr(pr, ctx) {
     return record;
   }
 
-  // 4) LLM review.
+  // 4) LLM review. (Task context comes from the freshly-refreshed clone.)
   const taskId = taskIdFromBranch(pr.headRefName);
-  const taskFile = taskId ? join(repoDir, 'tasks', 'queue', `${taskId}.json`) : null;
+  const taskFile = taskId ? join(ctx.cloneDir, 'tasks', 'queue', `${taskId}.json`) : null;
   const task = taskFile && existsSync(taskFile) ? JSON.parse(readFileSync(taskFile, 'utf8')) : null;
   let diff = '';
   try { diff = gh(['pr', 'diff', String(pr.number)], { maxBuffer: 16 * 1024 * 1024 }); } catch { /* reviewed without diff = soft fail below */ }
@@ -383,7 +411,7 @@ async function reviewPr(pr, ctx) {
   }
   gh(['pr', 'merge', String(pr.number), '--squash', '--delete-branch'], { timeout: 180_000 });
   if (taskId) {
-    try { completeTaskOnMain(repoDir, taskId, log); } catch (err) { log(`task-complete ${taskId} failed (reconcile will retry): ${err.message}`); }
+    try { completeTaskInClone(repoDir, taskId, log); } catch (err) { log(`task-complete ${taskId} failed (reconcile will retry): ${err.message}`); }
   }
   return record;
 }
@@ -404,19 +432,32 @@ export async function runAutoReview({ dryRun = false } = {}) {
   // SHARED atomic mutex (atomic mkdir; stale after 2h) — mutually exclusive with
   // the drain (same path), so only one autonomous git-mutating job runs at a time.
   const lockDir = join(logDir, '.sdlc-autonomous.lock.d');
+  const holderFile = join(lockDir, 'holder');
+  const readHolder = () => { try { return readFileSync(holderFile, 'utf8').trim(); } catch { return '(unknown)'; } };
   try {
     mkdirSync(lockDir);
   } catch {
     let age = Infinity;
     try { age = Date.now() - statSync(lockDir).mtimeMs; } catch { /* treat as stale */ }
-    if (age < 2 * 60 * 60 * 1000) { log('another run holds the lock — skip'); return []; }
+    if (age < 2 * 60 * 60 * 1000) { log(`another run holds the lock (${readHolder()}) — skip`); return []; }
     rmSync(lockDir, { recursive: true, force: true });
     try { mkdirSync(lockDir); } catch { log('lost the lock race — skip'); return []; }
   }
+  try { writeFileSync(holderFile, `pr-auto-review ${process.pid} ${new Date().toISOString()}\n`); } catch { /* metadata only */ }
 
   const results = [];
   try {
-    reconcileMerged(repoDir, log);
+    // Provision/refresh the dedicated clone ONCE per run — every git-mutating
+    // and repo-reading step below uses it; the main tree is never touched.
+    let cloneDir;
+    try {
+      cloneDir = ensureReviewClone(repoDir, log);
+    } catch (err) {
+      log(`review clone unavailable — aborting run: ${err.message}`);
+      return results;
+    }
+
+    reconcileMerged(repoDir, cloneDir, log);
 
     let prs;
     try {
@@ -434,7 +475,7 @@ export async function runAutoReview({ dryRun = false } = {}) {
       if (merges >= MAX_AUTO_MERGES) { log(`merge rate limit (${MAX_AUTO_MERGES}) reached — deferring the rest`); break; }
       let res;
       try {
-        res = await reviewPr(pr, { repoDir, log, dryRun });
+        res = await reviewPr(pr, { repoDir, cloneDir, log, dryRun });
       } catch (err) {
         res = { ts: new Date().toISOString(), pr: pr.number, branch: pr.headRefName, action: 'error', detail: err.message };
       }
