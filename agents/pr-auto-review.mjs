@@ -194,7 +194,7 @@ async function llmReview({ task, title, body, diff }) {
     // Capture realized provider-reported usage in the cost ledger (REQ-H3).
     try {
       const { recordRealizedUsage } = await import('./cost-tracker.mjs');
-      recordRealizedUsage(REVIEW_AGENT, task || 'pr-review', res);
+      recordRealizedUsage(REVIEW_AGENT, task?.id || 'pr-review', res);
     } catch { /* ledger capture must never break a review */ }
     const parsed = parseVerdict(res.text);
     if (!parsed) return { verdict: null, reasons: ['unparseable LLM response (treated as not approved)'] };
