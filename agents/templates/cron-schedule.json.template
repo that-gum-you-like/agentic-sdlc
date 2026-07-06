@@ -25,8 +25,8 @@
     {
       "name": "monthly-behavior-audit",
       "cron": "0 6 1 * *",
-      "script": "node ~/agentic-sdlc/agents/test-behavior.mjs",
-      "description": "Full behavior audit, agent versioning check, compost cleanup",
+      "script": "node ~/agentic-sdlc/agents/cycles/monthly-review.mjs",
+      "description": "Monthly cycle: behavior audit + drift, agent version snapshot, memory-migration check, compost cleanup, cost review",
       "session": "isolated"
     },
     {
@@ -55,7 +55,7 @@
       "name": "dependency-audit",
       "cron": "0 8 * * *",
       "script": "node ~/agentic-sdlc/agents/queue-drainer.mjs run --agent dependency-auditor",
-      "description": "Daily dependency audit — scan for CVEs, license violations, version drift, deprecated packages",
+      "description": "Daily dependency audit \u2014 scan for CVEs, license violations, version drift, deprecated packages",
       "session": "isolated",
       "agentRequired": "dependency-auditor"
     },
@@ -63,7 +63,7 @@
       "name": "performance-check",
       "cron": "0 */4 * * *",
       "script": "node ~/agentic-sdlc/agents/queue-drainer.mjs run --agent performance-sentinel",
-      "description": "Periodic performance benchmark — check bundle size, API latency, test duration against baselines",
+      "description": "Periodic performance benchmark \u2014 check bundle size, API latency, test duration against baselines",
       "session": "isolated",
       "agentRequired": "performance-sentinel"
     },
@@ -71,7 +71,7 @@
       "name": "health-check-daily",
       "cron": "0 6 * * *",
       "script": "node ~/agentic-sdlc/agents/health-check.mjs --notify",
-      "description": "Autonomous health check — queue depth, per-agent budget headroom, disk free, cron liveness; notify on non-ok",
+      "description": "Autonomous health check \u2014 queue depth, per-agent budget headroom, disk free, cron liveness; notify on non-ok",
       "session": "isolated"
     },
     {
@@ -99,7 +99,7 @@
       "name": "autonomous-drain",
       "cron": "*/15 * * * *",
       "script": "~/agentic-sdlc/agents/hermes-drain.sh",
-      "description": "Autonomous backlog drain via isolated local-backend Hermes (OpenRouter affordable models). No-op unless the repo is idle on main with a clean tree AND a task is ready; then runs one task → branch → tests → PR for human review. Never touches main.",
+      "description": "Autonomous backlog drain via isolated local-backend Hermes (OpenRouter affordable models). No-op unless the repo is idle on main with a clean tree AND a task is ready; then runs one task \u2192 branch \u2192 tests \u2192 PR for human review. Never touches main.",
       "session": "isolated"
     },
     {
