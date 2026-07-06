@@ -40,7 +40,8 @@ test('drain script carries the core safety guards', () => {
   assert(/git status --porcelain/.test(s), 'must require a clean tree');
   assert(/Ready \\?\(unblocked\\?\)/.test(s), 'must cost-gate on ready-task count');
   assert(/head:agent\/drain\//.test(s) && /MAX_OPEN_DRAIN_PRS/.test(s), 'must cap unreviewed drain PRs');
-  assert(/\.hermes-drain\.lock/.test(s), 'must use a single-flight lock');
+  assert(/mkdir "\$LOCKDIR"/.test(s) && /\.hermes-drain\.lock/.test(s), 'must use an ATOMIC (mkdir) single-flight lock, not a racy [ -f ] test');
+  assert(/pgrep -f 'timeout 3600 hermes'/.test(s), 'must have a pgrep backstop against a live concurrent worker');
   assert(/HERMES_HOME="\$DRAIN_HOME"/.test(s) && /TERMINAL_ENV=local/.test(s), 'must use the isolated local-backend profile');
 });
 
