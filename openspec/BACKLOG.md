@@ -180,12 +180,57 @@ Open a PR upstream to `paperclipai/paperclip`. High career-signal value — a me
 
 ---
 
-## Automated Hermes drain cron — DEFERRED (needs a decision)
+## Automated Hermes drain cron — ✅ IMPLEMENTED (2026-07-05)
 
-**Idea:** A `hermes cron create` job that periodically drains the SDLC task queue autonomously using the affordable OpenRouter ladder (claim one unblocked task → micro cycle → tests → commit on a branch → mark complete).
+Shipped via OpenSpec change `autonomous-drain`. Sandbox-persistence solved with an **isolated local-backend Hermes profile** (`~/.hermes-drain`) that operates on the real host repo while the main assistant stays docker-sandboxed. `agents/hermes-drain.sh` (guards: main-only, clean-tree, cost-gate, PR-cap, single-flight lock) + `agents/drain-prompt.md` (one task/run, branch-only, tests-must-pass, **PR-review gate**, never touches main, no destructive commands) + `sdlc-sched-autonomous-drain` systemd timer (every 15 min). Autonomy bounded by the PR gate; a no-op until the queue has ready work.
 
-**Why deferred:**
-- **Sandbox persistence.** Hermes' `terminal.backend: docker` runs commands in a container (`/root/agentic-sdlc-enhanced`), not directly on `~/agentic-sdlc`. Need to confirm whether the drained work persists to the host repo (bind-mount / `--workdir`) or is lost. Options: set `terminal.backend: local`, bind-mount the repo, or have the drain push a branch to GitHub so work escapes the container.
-- **Autonomy risk.** Unsupervised commits by the cheapest models warrant safety rails (branch-only, no push/merge, tests-must-pass, one-task-per-run, OpenSpec-first) and a human review gate before enabling.
+---
 
-**Reconsider when:** Bryce wants unattended draining. First validate one manual `hermes` drain end-to-end (does the commit land on the host?), then automate with the rails above. Until then, draining is manual (`hermes` from `~/agentic-sdlc`), which already uses the affordable ladder.
+# Competitive Roadmap 2026
+
+Derived from two evidence-based audits (July 2026): an internal capability inventory and an external competitive analysis (autonomous SWE agents, multi-agent frameworks, coding harnesses, spec-driven tools, agent infra). Structured as OpenSpec change **`competitive-roadmap`** (proposal + design + 5 specs + phased tasks). **Positioning:** we lead on methodology/governance, trail on runtime/infrastructure. Strategy: keep the moat, adopt runtime table-stakes as pluggable **self-hostable, no-OpenAI** adapters, then **fuse** them (benchmark ⇄ pattern-hunt ⇄ maturity) into advantages nobody else has.
+
+Legend: **Parity** = market table-stake we lack · **Advantage** = durable differentiator · complexity S/M/L/XL.
+
+## Where we already lead (protect these)
+- **OpenSpec change→archive lifecycle** with mandatory Value Analysis (deeper than Spec Kit / Kiro on change management).
+- **5-layer memory + REM-sleep consolidation** (best-in-class vs CrewAI 3-tier / Vertex Memory Bank).
+- **Per-agent budget + circuit-breaker + cross-provider free-tier fallback** (most tools only *observe* cost).
+- **Tier-5 browser-E2E multi-layer validation** (research→critique→code→statistics→browser).
+- **pattern-hunt + monotonic defeat tests + 7-level maturity** — self-improvement *primitives* no competitor has (but see H1: make them enforce).
+
+## Phase 0 — Internal hardening (make our claims true; do first)
+Fixes from the internal audit. These make the quality gates *bite* so the autonomous drain's PRs are trustworthy.
+- **H1 — Gates that enforce** (M): the enforcing check moves to a surface that can gate — a **pre-commit/pre-push hook or required CI check** — because `review-hook.mjs` is a **post-commit** hook (can't block the commit it follows) and only warns today; `pattern-hunt` generic path stops emitting always-passing tests (`pattern-hunt.mjs:776` TODO); `alignment-monitor` score from real signals not magic numbers; `schema-validator` fails closed without Ajv.
+- **H2 — CI runs the whole suite** (S): today CI runs only **1 of ~23 unit-test files** (`adapter-and-model-manager`) plus the `test-behavior` runner; wire `agents/__tests__/*` + `tests/*` + four-layer + test-behavior into `.github/workflows` + `npm test`.
+- **H3 — Exact-accounting groundwork** (S/M): realized provider tokens replace `chars/4`; feeds P4.
+- **H4 — Latent-bug sweep** (M): `autonomous-launcher.sh` EXIT_CODE captures `tee` not the agent; `daily-review.mjs` dead `fs`/`path` blocks (silent ReferenceError); `logCapabilityUsage(object)` misuse; add `__isMainModule` guards (ast-analyzer, version-snapshot, migrate-memory, rem-sleep, garden-roadmap, alignment-monitor); `semantic-index` stdin fix + real cosine fallback.
+- **H5 — No-OpenAI default catalog** (S): `model-intel.default.json` carries 6 OpenAI + 4 Anthropic entries that violate the no-OpenAI default — remove/gate them and align to the OpenRouter/qwen/deepseek ladder; stop `model-manager.research()` fetching `openai.com`; gate `openai`/`azure-openai` adapters behind opt-in. **Fold in the `openrouter-provider` change** (already removed `gpt-4o-mini` from `budget.json`) — H5 covers only the remainder.
+- **H6 — Doc/model drift** (S): unify 6-level (`docs/levels/`) vs 7-level (`framework/maturity-model.md`) ladders; `validation-patterns.md` → 5 layers; add one competitive matrix to `docs/comparison.md`.
+- **H7 — De-couple hardcoded bindings** (S): `seed-queue-from-openspec.mjs` (LinguaFlow agent names) + `paperclip-sync.mjs` (stale model IDs) read config.
+- **H8 — CI-wired tests** (S): every new module ships tests wired into CI (per H2); extend `capability-monitor.mjs` coverage only for genuinely-uncovered paths — it already has `agents/__tests__/capability-monitor.test.mjs`.
+
+## Phase 1 — Runtime foundation (parity floor)
+- **P1 — Sandbox-Execution Adapter** (Parity, M): pluggable `{create,exec,writeFiles,snapshot,fork,destroy}`; `local-worktree` default + self-host microVM (microsandbox/libkrun). *#1 gap — every serious autonomous product isolates runs; also unblocks P6.* Sources: E2B/Firecracker, Daytona, Modal, Claude Code sandbox (open-sourced 2025-10).
+- **P3 — OpenTelemetry Tracing Adapter** (Parity, M): `gen_ai.*` semconv spans → file (default) / self-host **Langfuse (MIT)**. Merge with in-flight `cost-tracker-otel`. *Observability is table-stakes; we have file logs only.*
+- **P4 — Exact Cost/Token Accounting** (Parity, S/M): provider-reported usage + `$` from `model-intel.json`; turns our self-admitted "approximate budget" into a strength (our circuit-breaker is a real differentiator only on exact numbers).
+
+## Phase 2 — Safety & measurement
+- **P5 — Guardrails & Least-Privilege Layer** (Parity, M/L): pre-tool-call injection scan (Llama Guard / dual-LLM / CaMeL capability control — all self-hostable), MCP-tool allowlist, mapped to the **OWASP Agentic Top 10** (ASI01 Goal Hijack … ASI06 Memory Poisoning … ASI10 Rogue Agents, launched 2025-12). *Mission-critical given headless autonomy + privacy-first.*
+- **P2 — Eval & Benchmark Harness** (Parity→Advantage, L): runner for **SWE-bench Pro / Lite / Terminal-Bench** (SWE-bench Verified is **deprecated/saturated** — OpenAI stopped reporting it) + an internal regression set; runs through P1, records cost (P4) + trace (P3). *We have no objective quality measure; this becomes a moat when wired to P9.*
+
+## Phase 3 — Advantage plays
+- **P6 — Deterministic-Replay Parallel Attempts** (Advantage, L/XL): fork the sandbox (P1) to run N candidate fixes; the mandatory test-gate keeps the winner (Morph-Infinibranch-style, <250ms VM fork). *Fuses our unique test-gate with a technique almost nobody productizes.*
+- **P9 — Self-Improvement Flywheel** (Advantage, L): eval regressions (P2) → real defeat tests (needs H1) → maturity transitions on **measured** deltas; agent-quality-over-time as a graph. **The single most defensible move — a closed measured-improvement loop we're not aware of any competitor shipping** (directional; see Confidence).
+- **P7 — MCP Server + A2A Agent Cards** (Parity→Advantage, M): expose our queue/agents over MCP; publish A2A agent cards at `/.well-known/agent-card.json` (Linux-Foundation A2A v1.0). *Ends the "requires Claude Code; not portable" limitation.* (Heed R-01: target the stabilized post-2026 MCP spec.)
+
+## Phase 4 — Workflow depth
+- **P8 — PR-Native Workflow + Autonomous PR Review** (Parity, M): issue→branch→draft-PR per task (generalize the `autonomous-drain` flow); reviewer agent posts inline PR comments (BugBot-style) gated on CI (needs H2). *Teams expect the PR as the unit of agent work.*
+- **P10 — Codebase RAG + Auto-Wiki** (Parity, L): extend `rag-indexer` to index **code** (local embeddings, privacy-first) + a cited architecture wiki (Devin Search/Wiki analog). *Our RAG is over memory, not the codebase.*
+- **P11 — Spec Registry + Enforced Constitution** (Advantage, M): a checked `constitution.md` of non-negotiables (Spec Kit / Kiro-steering analog) + a local dependency-spec registry (Tessl analog) to curb hallucinated APIs. *Extends our strongest surface past the peers.*
+
+## Sequencing
+`H1→H2→H4→H5` (trustworthy gates) → `P1→P3→P4` (safety+truth floor) → `P5 ‖ P2` → `P6→P9→P7` (advantage) → `P8→P10→P11`. Parity floor + hardening before advantage plays (P6 needs P1; P9 needs P2+H1). Each module = its own child OpenSpec change → seeds `tasks/queue/` → the autonomous drain works it into a review PR.
+
+## Confidence
+Well-corroborated: sandbox/eval/observability/interop/spec-tool mechanics + the SWE-bench-Verified deprecation + MCP/A2A Linux-Foundation consolidation + OWASP Agentic Top 10 as a body of work. **Directional** (vendor/third-party, single-source, or postdates reliable records — treat as indicative, not fact): specific mid-2026 leaderboard numbers and newest model names; exact dates/vendor behaviors ("Claude Code sandbox open-sourced 2025-10", "OWASP Agentic Top 10 launched 2025-12", "OpenAI stopped reporting SWE-bench Verified", "Morph Infinibranch <250ms VM fork"); and the **competitive-uniqueness claim for P9** (that no competitor closes the measured-improvement loop) — we're unaware of one, but that's not a verified negative. Full sourced analysis retained in the change's research provenance.
