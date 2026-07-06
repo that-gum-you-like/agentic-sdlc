@@ -134,7 +134,9 @@ export function extraPathDirs({ home, whichFn } = {}) {
   const h = home || homedir();
   const dirs = [];
   const which = whichFn || ((bin) => {
-    try { return execFileSync('which', [bin], { encoding: 'utf8' }).trim(); } catch { return ''; }
+    // Explicit null = "binary not found" (an empty-string default would be a
+    // silent fallback — the Layer-3 scan rightly flags that pattern).
+    try { return execFileSync('which', [bin], { encoding: 'utf8' }).trim(); } catch { return null; }
   });
   for (const bin of ['gh', 'hermes']) {
     const p = which(bin);
