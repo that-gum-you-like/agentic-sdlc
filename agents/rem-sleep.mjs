@@ -36,8 +36,10 @@ const AGENTS_DIR = config.agentsDir;
 const RECENT_AGE_DAYS = 7;
 const MEDIUM_AGE_DAYS = 30;
 
-const dryRun = process.argv.includes('--dry-run');
-const useSimilarity = process.argv.includes('--similarity');
+// Run options — set by runRemSleep() (or the CLI); module-level so the
+// helpers below can honor dry-run without threading a parameter everywhere.
+let dryRun = false;
+let useSimilarity = false;
 
 function getMemoryPath(agent, layer) {
   return resolve(AGENTS_DIR, agent, 'memory', `${layer}.json`);
@@ -195,14 +197,38 @@ async function consolidateAgent(agent) {
   return changes;
 }
 
-// Main
-console.log(`🌙 REM Sleep Consolidation ${dryRun ? '(DRY RUN)' : ''}`);
-console.log('═'.repeat(50));
+/**
+ * Run REM-sleep consolidation for all agents.
+ * @param {object} [opts]
+ * @param {boolean} [opts.dryRun]        - Show what would change without writing.
+ * @param {boolean} [opts.useSimilarity] - Also dedup near-duplicates via semantic-index.
+ * @returns {Promise<number>} total changes
+ */
+export async function runRemSleep(opts = {}) {
+  dryRun = !!opts.dryRun;
+  useSimilarity = !!opts.useSimilarity;
 
-let totalChanges = 0;
-for (const agent of AGENTS) {
-  totalChanges += await consolidateAgent(agent);
+  console.log(`🌙 REM Sleep Consolidation ${dryRun ? '(DRY RUN)' : ''}`);
+  console.log('═'.repeat(50));
+
+  let totalChanges = 0;
+  for (const agent of AGENTS) {
+    totalChanges += await consolidateAgent(agent);
+  }
+
+  console.log(`\n${'═'.repeat(50)}`);
+  console.log(`Total changes: ${totalChanges}${dryRun ? ' (would be made)' : ''}`);
+  return totalChanges;
 }
 
-console.log(`\n${'═'.repeat(50)}`);
-console.log(`Total changes: ${totalChanges}${dryRun ? ' (would be made)' : ''}`);
+export { consolidateAgent, daysSince };
+
+// --- CLI ---
+const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
+
+if (__isMainModule) {
+  await runRemSleep({
+    dryRun: process.argv.includes('--dry-run'),
+    useSimilarity: process.argv.includes('--similarity'),
+  });
+}

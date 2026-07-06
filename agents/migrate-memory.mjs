@@ -23,8 +23,6 @@ const AGENTS_DIR = config.agentsDir;
 const VERSIONS_DIR = resolve(AGENTS_DIR, 'versions');
 const LAYERS = ['long-term', 'medium-term', 'recent'];
 
-const applyMode = process.argv.includes('--apply');
-
 function parseVersionHeader(content) {
   const match = content.match(/<!--\s*version:\s*([\d.]+)\s*\|\s*date:\s*([\d-]+)\s*-->/);
   return match ? { version: match[1], date: match[2] } : null;
@@ -122,38 +120,54 @@ function extractRules(content) {
   return rules;
 }
 
-// Main
-console.log(`🧠 Memory Migration ${applyMode ? '(APPLY MODE)' : '(CHECK MODE — no changes)'}`);
-console.log('═'.repeat(50));
+/**
+ * Run the migration check across all agents.
+ * @param {boolean} applyMode - When true, flag matching memory entries for review.
+ * @returns {number} total flags found
+ */
+export function runMigration(applyMode = false) {
+  console.log(`🧠 Memory Migration ${applyMode ? '(APPLY MODE)' : '(CHECK MODE — no changes)'}`);
+  console.log('═'.repeat(50));
 
-let totalFlags = 0;
+  let totalFlags = 0;
 
-for (const agent of AGENTS) {
-  console.log(`\n📋 ${agent}:`);
-  const flags = checkAgent(agent);
+  for (const agent of AGENTS) {
+    console.log(`\n📋 ${agent}:`);
+    const flags = checkAgent(agent);
 
-  if (flags.length > 0) {
-    console.log(`    ⚠️  ${flags.length} memory entries reference removed rules:`);
-    for (const flag of flags) {
-      console.log(`      [${flag.layer}/${flag.entryId}] "${flag.content?.substring(0, 60)}..."`);
+    if (flags.length > 0) {
+      console.log(`    ⚠️  ${flags.length} memory entries reference removed rules:`);
+      for (const flag of flags) {
+        console.log(`      [${flag.layer}/${flag.entryId}] "${flag.content?.substring(0, 60)}..."`);
 
-      if (applyMode) {
-        const memory = loadMemory(flag.agent, flag.layer);
-        const entry = memory.entries?.find(e => e.id === flag.entryId);
-        if (entry) {
-          entry.migrated_from = `auto-migration-${new Date().toISOString().split('T')[0]}`;
-          entry.content = `[REVIEW] ${entry.content}`;
-          saveMemory(flag.agent, flag.layer, memory);
-          console.log(`        → Flagged for review`);
+        if (applyMode) {
+          const memory = loadMemory(flag.agent, flag.layer);
+          const entry = memory.entries?.find(e => e.id === flag.entryId);
+          if (entry) {
+            entry.migrated_from = `auto-migration-${new Date().toISOString().split('T')[0]}`;
+            entry.content = `[REVIEW] ${entry.content}`;
+            saveMemory(flag.agent, flag.layer, memory);
+            console.log(`        → Flagged for review`);
+          }
         }
       }
+      totalFlags += flags.length;
     }
-    totalFlags += flags.length;
   }
+
+  console.log(`\n${'═'.repeat(50)}`);
+  console.log(`Total flags: ${totalFlags}`);
+  if (!applyMode && totalFlags > 0) {
+    console.log('Run with --apply to flag entries for review.');
+  }
+  return totalFlags;
 }
 
-console.log(`\n${'═'.repeat(50)}`);
-console.log(`Total flags: ${totalFlags}`);
-if (!applyMode && totalFlags > 0) {
-  console.log('Run with --apply to flag entries for review.');
+export { checkAgent, extractRules, parseVersionHeader };
+
+// --- CLI ---
+const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
+
+if (__isMainModule) {
+  runMigration(process.argv.includes('--apply'));
 }

@@ -25,6 +25,16 @@ const __dirname = path.dirname(__filename);
 const _config = loadConfig();
 const projectRoot = _config.projectDir;
 
+// Guard the CLI entry point: importing this module must never run the
+// analysis (it loads the target app's TypeScript compiler and walks its
+// whole source tree — a heavy, environment-dependent side effect).
+const __isMainModule = process.argv[1] && path.resolve(process.argv[1]) === __filename;
+
+if (__isMainModule) {
+  main();
+}
+
+function main() {
 // ---------------------------------------------------------------------------
 // CLI args
 // ---------------------------------------------------------------------------
@@ -523,3 +533,4 @@ if (jsonMode) {
   console.log(`  Dead code functions        : ${summary.deadCode.count}`);
   console.log('');
 }
+} // end main

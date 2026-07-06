@@ -19,17 +19,14 @@ import { fileURLToPath } from 'url';
 import { loadConfig } from './load-config.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const config = loadConfig();
 const projectDir = config.projectDir;
 
 const ROADMAP_PATH = resolve(projectDir, 'plans', 'roadmap.md');
 const ARCHIVE_DIR = resolve(projectDir, 'plans', 'completed');
 const ARCHIVE_PATH = resolve(ARCHIVE_DIR, 'roadmap-archive.md');
-
-const args = process.argv.slice(2);
-const dryRun = args.includes('--dry-run');
-const statusOnly = args.includes('--status');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -54,104 +51,120 @@ function today() {
 // Main
 // ---------------------------------------------------------------------------
 
-if (!existsSync(ROADMAP_PATH)) {
-  console.log('📋 No plans/roadmap.md found. Nothing to garden.');
-  process.exit(0);
-}
-
-const roadmapContent = readFileSync(ROADMAP_PATH, 'utf8');
-const lines = roadmapContent.split('\n');
-
-const completedLines = [];
-const activeLines = [];
-let completedCount = 0;
-let activeCount = 0;
-
-for (const line of lines) {
-  const isChecked = /^\s*-\s*\[x\]/i.test(line);
-  const isUnchecked = /^\s*-\s*\[\s\]/.test(line);
-
-  if (isChecked) {
-    // Add completion date if not already present
-    const hasDate = /\(\d{4}-\d{2}-\d{2}\)/.test(line) || /Completed\s+\d{4}-\d{2}-\d{2}/.test(line);
-    const archiveLine = hasDate ? line : `${line} (Completed ${today()})`;
-    completedLines.push(archiveLine);
-    completedCount++;
-  } else {
-    activeLines.push(line);
-    if (isUnchecked) activeCount++;
+/**
+ * Garden the roadmap: archive checked-off items, keep active roadmap focused.
+ * @param {object} [opts]
+ * @param {boolean} [opts.dryRun]     - Preview changes without writing.
+ * @param {boolean} [opts.statusOnly] - Print stats only.
+ * @returns {{archived: number, active: number}} counts
+ */
+export function gardenRoadmap({ dryRun = false, statusOnly = false } = {}) {
+  if (!existsSync(ROADMAP_PATH)) {
+    console.log('📋 No plans/roadmap.md found. Nothing to garden.');
+    return { archived: 0, active: 0 };
   }
-}
 
-// Status mode
-if (statusOnly) {
-  console.log('📊 Roadmap Status:');
-  console.log(`   Active items:    ${activeCount}`);
-  console.log(`   Completed items: ${completedCount}`);
-  console.log(`   Total lines:     ${lines.length}`);
-  if (completedCount > 0) {
-    console.log(`\n   Run without --status to archive ${completedCount} completed items.`);
-  } else {
-    console.log('\n   ✅ Roadmap is clean — no completed items to archive.');
+  const roadmapContent = readFileSync(ROADMAP_PATH, 'utf8');
+  const lines = roadmapContent.split('\n');
+
+  const completedLines = [];
+  const activeLines = [];
+  let completedCount = 0;
+  let activeCount = 0;
+
+  for (const line of lines) {
+    const isChecked = /^\s*-\s*\[x\]/i.test(line);
+    const isUnchecked = /^\s*-\s*\[\s\]/.test(line);
+
+    if (isChecked) {
+      // Add completion date if not already present
+      const hasDate = /\(\d{4}-\d{2}-\d{2}\)/.test(line) || /Completed\s+\d{4}-\d{2}-\d{2}/.test(line);
+      const archiveLine = hasDate ? line : `${line} (Completed ${today()})`;
+      completedLines.push(archiveLine);
+      completedCount++;
+    } else {
+      activeLines.push(line);
+      if (isUnchecked) activeCount++;
+    }
   }
-  process.exit(0);
-}
 
-if (completedCount === 0) {
-  console.log('✅ Roadmap is clean — no completed items to archive.');
-  process.exit(0);
-}
+  // Status mode
+  if (statusOnly) {
+    console.log('📊 Roadmap Status:');
+    console.log(`   Active items:    ${activeCount}`);
+    console.log(`   Completed items: ${completedCount}`);
+    console.log(`   Total lines:     ${lines.length}`);
+    if (completedCount > 0) {
+      console.log(`\n   Run without --status to archive ${completedCount} completed items.`);
+    } else {
+      console.log('\n   ✅ Roadmap is clean — no completed items to archive.');
+    }
+    return { archived: 0, active: activeCount };
+  }
 
-console.log(`🌿 Gardening roadmap: ${completedCount} completed items found.`);
+  if (completedCount === 0) {
+    console.log('✅ Roadmap is clean — no completed items to archive.');
+    return { archived: 0, active: activeCount };
+  }
 
-if (dryRun) {
-  console.log('\n--- Items to archive ---');
+  console.log(`🌿 Gardening roadmap: ${completedCount} completed items found.`);
+
+  if (dryRun) {
+    console.log('\n--- Items to archive ---');
+    for (const line of completedLines) {
+      console.log(`  ${line.trim()}`);
+    }
+    console.log(`\n--- Active roadmap would have ${activeCount} items ---`);
+    console.log('(Dry run — no changes made)');
+    return { archived: 0, active: activeCount };
+  }
+
+  // Archive completed items
+  ensureDir(ARCHIVE_DIR);
+  let archiveContent = readFileOrEmpty(ARCHIVE_PATH);
+  if (!archiveContent) {
+    archiveContent = `# Roadmap Archive\n\nCompleted items moved from plans/roadmap.md.\n\n`;
+  }
+
+  archiveContent += `\n## Archived ${today()}\n\n`;
   for (const line of completedLines) {
-    console.log(`  ${line.trim()}`);
+    archiveContent += `${line.trim()}\n`;
   }
-  console.log(`\n--- Active roadmap would have ${activeCount} items ---`);
-  console.log('(Dry run — no changes made)');
-  process.exit(0);
-}
 
-// Archive completed items
-ensureDir(ARCHIVE_DIR);
-let archiveContent = readFileOrEmpty(ARCHIVE_PATH);
-if (!archiveContent) {
-  archiveContent = `# Roadmap Archive\n\nCompleted items moved from plans/roadmap.md.\n\n`;
-}
+  writeFileSync(ARCHIVE_PATH, archiveContent);
+  console.log(`  📦 Archived ${completedCount} items to plans/completed/roadmap-archive.md`);
 
-archiveContent += `\n## Archived ${today()}\n\n`;
-for (const line of completedLines) {
-  archiveContent += `${line.trim()}\n`;
-}
-
-writeFileSync(ARCHIVE_PATH, archiveContent);
-console.log(`  📦 Archived ${completedCount} items to plans/completed/roadmap-archive.md`);
-
-// Update active roadmap (remove empty sections left behind)
-let cleanedLines = activeLines;
-// Remove consecutive blank lines (more than 2)
-const finalLines = [];
-let blankCount = 0;
-for (const line of cleanedLines) {
-  if (line.trim() === '') {
-    blankCount++;
-    if (blankCount <= 2) finalLines.push(line);
-  } else {
-    blankCount = 0;
-    finalLines.push(line);
+  // Update active roadmap (remove empty sections left behind)
+  // Remove consecutive blank lines (more than 2)
+  const finalLines = [];
+  let blankCount = 0;
+  for (const line of activeLines) {
+    if (line.trim() === '') {
+      blankCount++;
+      if (blankCount <= 2) finalLines.push(line);
+    } else {
+      blankCount = 0;
+      finalLines.push(line);
+    }
   }
+
+  writeFileSync(ROADMAP_PATH, finalLines.join('\n'));
+  console.log(`  📋 Updated plans/roadmap.md (${activeCount} active items remain)`);
+
+  // Positional signature: (capability, agent, taskId, script, command)
+  logCapabilityUsage('roadmapGardening', 'system', 'garden', 'garden-roadmap.mjs', 'garden');
+
+  console.log('\n✅ Roadmap gardened.');
+  return { archived: completedCount, active: activeCount };
 }
 
-writeFileSync(ROADMAP_PATH, finalLines.join('\n'));
-console.log(`  📋 Updated plans/roadmap.md (${activeCount} active items remain)`);
+// --- CLI ---
+const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
 
-logCapabilityUsage({
-  capability: 'roadmapGardening',
-  agent: 'system',
-  taskId: 'garden',
-  details: { archived: completedCount, remaining: activeCount }
-});
-
-console.log('\n✅ Roadmap gardened.');
+if (__isMainModule) {
+  const args = process.argv.slice(2);
+  gardenRoadmap({
+    dryRun: args.includes('--dry-run'),
+    statusOnly: args.includes('--status'),
+  });
+}
