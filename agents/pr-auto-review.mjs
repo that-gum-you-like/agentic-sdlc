@@ -297,7 +297,12 @@ function completeTaskInClone(repoDir, taskId, log) {
   const task = JSON.parse(readFileSync(taskFile, 'utf8'));
   if (task.status === 'completed') return true;
   try {
-    run('node', [join(clone, 'agents', 'queue-drainer.mjs'), 'complete', taskId, 'passing'], { cwd: clone, timeout: 120_000 });
+    // SDLC_PROJECT_DIR must point at the CLONE: under systemd it is exported
+    // pointing at the main repo, and load-config.mjs prefers it over CWD —
+    // without this override the completion would be written into the MAIN
+    // working tree (single-writer violation observed live 2026-07-06).
+    run('node', [join(clone, 'agents', 'queue-drainer.mjs'), 'complete', taskId, 'passing'],
+      { cwd: clone, timeout: 120_000, env: { ...process.env, SDLC_PROJECT_DIR: clone } });
   } catch {
     // queue-drainer may refuse (e.g. never claimed); mark directly — the PR merged.
     task.status = 'completed';

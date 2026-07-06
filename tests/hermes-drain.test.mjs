@@ -44,6 +44,7 @@ test('drain script carries the core safety guards', () => {
   assert(/pgrep -f 'timeout 3600 hermes'/.test(s), 'must have a pgrep backstop against a live concurrent worker');
   assert(/HERMES_HOME="\$DRAIN_HOME"/.test(s) && /TERMINAL_ENV=local/.test(s), 'must use the isolated local-backend profile');
   assert(/checkout -q -f -B main origin\/main/.test(s), 'clone refresh must FORCE checkout — the previous worker legitimately leaves the clone dirty (regression: 2026-07-06 "clone checkout failed")');
+  assert(/SDLC_PROJECT_DIR="\$DRAIN_CLONE"/.test(s), 'worker invocation must pin SDLC_PROJECT_DIR to the clone — the systemd unit exports it pointing at the main repo, which made workers dirty the MAIN tree (regression: 2026-07-06)');
 });
 
 test('drain prompt encodes the hard constraints (PR-gate, never main, one task)', () => {

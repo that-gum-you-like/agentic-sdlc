@@ -184,6 +184,10 @@ test('all review-side git mutation happens in the dedicated clone, never the mai
   // The clone refresh must FORCE the checkout — leftover dirty state from an
   // interrupted run must never brick the refresh (drain-clone regression, 2026-07-06).
   assert(/'checkout', '-q', '-f', '-B', 'main', 'origin\/main'/.test(source), 'review-clone refresh must use checkout -f');
+  // Queue completion runs queue-drainer in a subprocess; SDLC_PROJECT_DIR must
+  // be re-pointed at the clone or load-config prefers the inherited (main-repo)
+  // value and the completion dirties the MAIN tree (regression: 2026-07-06).
+  assert(/SDLC_PROJECT_DIR: clone/.test(source), 'completeTaskInClone must pin SDLC_PROJECT_DIR to the clone');
 });
 
 test('hard gate builds its worktree from the review clone', () => {

@@ -83,7 +83,12 @@ git -C "$DRAIN_CLONE" clean -fdq 2>/dev/null || true
 ts="$(date +%Y%m%d-%H%M%S)"
 logfile="$LOGDIR/drain-$ts.log"
 log "$ready ready task(s) — invoking Hermes drain worker in clone (log: $logfile)"
+# SDLC_PROJECT_DIR is pinned to the CLONE: the systemd unit exports it pointing
+# at the main repo, and load-config.mjs prefers it over CWD — without this
+# override the worker's queue-drainer claim/complete calls DIRTY THE MAIN TREE
+# (observed live 2026-07-06: timer-fired workers wrote task state into main).
 ( cd "$DRAIN_CLONE" && HERMES_HOME="$DRAIN_HOME" TERMINAL_ENV=local TERMINAL_CWD="$DRAIN_CLONE" \
+  SDLC_PROJECT_DIR="$DRAIN_CLONE" \
   timeout 3600 hermes -z "$(cat "$PROMPT_FILE")" --cli --yolo ) > "$logfile" 2>&1
 rc=$?
 tail -3 "$logfile" 2>/dev/null | sed 's/^/[hermes-drain]   /'
