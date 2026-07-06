@@ -47,6 +47,7 @@
 | `agents/rag-indexer.mjs` | Build a local semantic index of `docs/`, `openspec/`, agent `memory/` — local embeddings when available, deterministic lexical fallback otherwise (zero npm deps) |
 | `agents/document-sync.mjs` | Content-hash + version knowledge docs (`pm/doc-versions.json`); mark changed docs for re-indexing by `rag-indexer.mjs` |
 | `agents/telegram-notify.mjs` | Telegram Bot API notification sender (stdlib `https`, opt-in, no-op unconfigured); registered as the `telegram` provider in `notify.mjs` |
+| `agents/scheduler-install.mjs` | Activate the schedule as live **systemd user timers** (`sdlc-sched-*`) — `list` / `install [--dry-run]` / `status` / `uninstall`; cron→OnCalendar, agent/adapter-gated, `Persistent=true` catch-up |
 | `docs/comparison.md` | Framework comparison (vs LangGraph, Autogen, CrewAI, etc.) |
 | `docs/cursor-setup.md` | Cursor IDE setup guide (OpenAI, OpenSpec without skills) |
 | `docs/troubleshooting.md` | Common issues and recovery patterns |

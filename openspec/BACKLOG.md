@@ -164,3 +164,16 @@ Open a PR upstream to `paperclipai/paperclip`. High career-signal value — a me
 - Net: complexity high, payoff low under current usage.
 
 **Reconsider when:** A specific Cursor or Claude Code workflow needs framework state surfaced as a typed tool rather than via shell, AND the post-2026-07-28 spec has stabilized.
+
+---
+
+## Cloud scheduler instance (Cloudflare + Postgres) — DEFERRED
+
+**Idea:** Run a subset of the autonomous cycles in the cloud (independent of Bryce's local machine being online), using the existing Cloudflare + Postgres provider.
+
+**Why deferred (not rejected):**
+- The cron scripts (`health-check`, `red-team-tester`, `rag-indexer`, `document-sync`, the review cycles) are **local-filesystem Node CLIs** — they read the repo working tree, `tasks/queue/`, agent `memory/`, and write reports into `pm/`. Cloudflare Workers have no filesystem and no repo, so they can't run these as-is.
+- Real cloud execution needs a **different architecture**, e.g. one of: (a) a small always-on container/VM (Fly.io/hosted) with the repo checked out, driven by systemd/cron the same way this local install is; (b) a Cloudflare **Cron Trigger** Worker that calls a webhook on the local box (or a queue the local box drains) — keeps compute local, scheduling cloud; (c) port specific checks to a Worker + Postgres (state in PG, not the filesystem) — largest rewrite.
+- The local systemd-timer install (`scheduler-install.mjs`) already satisfies "runs while my computer is online" with missed-run catch-up.
+
+**Reconsider when:** Bryce wants cycles to run while the local machine is off, or wants a shared cloud dashboard/state — then pick an architecture above (likely (b): Cloudflare Cron Trigger → durable queue → local drainer, preserving privacy-first local compute).
