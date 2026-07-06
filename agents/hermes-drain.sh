@@ -16,7 +16,7 @@ set -uo pipefail
 REPO="${SDLC_REPO:-/home/bryce/agentic-sdlc}"
 DRAIN_HOME="${HERMES_DRAIN_HOME:-/home/bryce/.hermes-drain}"
 PROMPT_FILE="${REPO}/agents/drain-prompt.md"
-LOCK="${REPO}/pm/.hermes-drain.lock"
+LOCKDIR="${REPO}/pm/.hermes-drain.lock.d"
 LOGDIR="${REPO}/pm/drain-logs"
 MAX_OPEN_DRAIN_PRS="${MAX_OPEN_DRAIN_PRS:-3}"
 DRY_RUN=0
@@ -24,16 +24,27 @@ DRY_RUN=0
 
 log() { echo "[hermes-drain] $*"; }
 
-mkdir -p "$LOGDIR" "$(dirname "$LOCK")"
+mkdir -p "$LOGDIR"
 
-# --- single-flight lock (stale after 2h) ---
-if [ -f "$LOCK" ]; then
-  age=$(( $(date +%s) - $(stat -c %Y "$LOCK" 2>/dev/null || echo 0) ))
-  if [ "$age" -lt 7200 ]; then log "another run in progress (lock age ${age}s) — skip"; exit 0; fi
+# --- ATOMIC single-flight lock (stale after 2h) ---
+# mkdir is atomic on POSIX filesystems: exactly one racing process creates the
+# dir, the rest fail. A plain `[ -f lock ]` test + write is a TOCTOU race that
+# let 3 drains run concurrently on the shared host tree once — never again.
+if ! mkdir "$LOCKDIR" 2>/dev/null; then
+  age=$(( $(date +%s) - $(stat -c %Y "$LOCKDIR" 2>/dev/null || echo 0) ))
+  if [ "$age" -lt 7200 ]; then log "another run holds the lock (age ${age}s) — skip"; exit 0; fi
   log "stale lock (${age}s) — reclaiming"
+  rm -rf "$LOCKDIR"
+  mkdir "$LOCKDIR" 2>/dev/null || { log "lost the lock race — skip"; exit 0; }
 fi
-echo "$$" > "$LOCK"
-trap 'rm -f "$LOCK"' EXIT
+echo "$$" > "$LOCKDIR/pid"
+trap 'rm -rf "$LOCKDIR"' EXIT
+
+# --- backstop: never run if another drain worker is already alive ---
+# (belt-and-suspenders in case a lock dir was removed while a worker lived)
+if pgrep -f 'timeout 3600 hermes' >/dev/null 2>&1; then
+  log "a drain worker is already running — skip"; exit 0
+fi
 
 cd "$REPO" || { log "repo not found: $REPO"; exit 1; }
 
