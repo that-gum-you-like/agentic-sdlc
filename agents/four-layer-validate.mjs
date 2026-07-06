@@ -186,8 +186,11 @@ async function resolveTargetFiles() {
     }
   }
 
-  // Only keep .ts/.tsx files
-  return filePaths.filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
+  // Keep source files. TS-only layers (import resolution, Richmond checks,
+  // AST defeat patterns, coverage) filter down to .ts/.tsx internally;
+  // text-based layers (2.5 near-miss, silent-fallback scan) cover the whole
+  // JS family so framework .mjs scripts are validated too.
+  return filePaths.filter((f) => /\.(ts|tsx|mjs|js|jsx)$/.test(f));
 }
 
 // ---------------------------------------------------------------------------
@@ -198,6 +201,9 @@ async function runLayer1(targetFiles) {
   const layerName = 'Research (Import Resolution)';
   const details = [];
   const unresolvedImports = [];
+
+  // This layer builds a TypeScript program — TS files only.
+  targetFiles = targetFiles.filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
 
   if (targetFiles.length === 0) {
     return {
@@ -469,11 +475,38 @@ async function runLayer3(targetFiles) {
   const layerName = 'Code (Defeat Patterns + AST)';
   const issues = [];
 
+  // Pattern E (text-based — needs no compiler): SILENT DEFAULT FALLBACKS.
+  // The NaN-Fallback-Disaster class: a computed value silently defaulted to
+  // zero/empty hides upstream failure instead of surfacing it. Two rules:
+  //   E1: <computation-call>(…) || 0  /  ?? 0   — computed value zeroed on failure
+  //   E2: catch { return 0 | '' | [] }          — error swallowed into an empty default
+  const SILENT_FALLBACK_CALL_RE = /\b(?:parse|compute|calc\w*|total|sum|score|count|rate|avg|average|price|amount|estimate)\w*\s*\([^)\n]*\)\s*(?:\|\||\?\?)\s*0\b/;
+  const SILENT_CATCH_DEFAULT_RE = /catch\s*(?:\([^)]*\))?\s*\{\s*return\s+(?:0|''|""|\[\s*\])\s*;?\s*\}/;
+  const allSourceFiles = targetFiles.filter(
+    (f) => !isTestFile(f) && /\.(ts|tsx|mjs|js|jsx)$/.test(f) && fs.existsSync(f),
+  );
+  for (const filePath of allSourceFiles) {
+    const relPath = rel(filePath);
+    const lines = fs.readFileSync(filePath, 'utf8').split('\n');
+    lines.forEach((line, idx) => {
+      const code = line.split('//')[0];
+      if (SILENT_FALLBACK_CALL_RE.test(code)) {
+        issues.push(`[silent-fallback] ${relPath}:${idx + 1} — computed value silently defaulted to 0 (surface the failure instead)`);
+      }
+      if (SILENT_CATCH_DEFAULT_RE.test(code)) {
+        issues.push(`[silent-fallback] ${relPath}:${idx + 1} — catch returns an empty default (error swallowed; log or rethrow)`);
+      }
+    });
+  }
+
   let ts;
   try {
     const requireFn = createRequire(import.meta.url);
     ts = requireFn(path.join(LINGUAFLOW_ROOT, 'node_modules', 'typescript'));
   } catch (e) {
+    if (issues.length > 0) {
+      return { name: layerName, status: 'fail', details: issues };
+    }
     return {
       name: layerName,
       status: 'warn',
