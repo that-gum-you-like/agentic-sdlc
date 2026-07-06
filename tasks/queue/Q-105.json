@@ -13,11 +13,15 @@
     "openspec/changes/replay-regression-ci-gate/"
   ],
   "blockedBy": [],
-  "status": "pending",
+  "status": "completed",
   "created": "2026-07-06T13:30:00Z",
   "tags": [
     "curriculum-ph7",
     "regression",
     "openspec"
-  ]
+  ],
+  "_file": "Q-105.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-07-06T14:27:50.321Z"
 }
