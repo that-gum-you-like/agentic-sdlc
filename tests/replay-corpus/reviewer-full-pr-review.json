@@ -1,0 +1,40 @@
+{
+  "id": "reviewer-full-pr-review",
+  "description": "buildReviewPrompt with a typical Q-task PR (full fields: task, title, body, diff)",
+  "input": {
+    "task": {
+      "id": "Q-999",
+      "title": "fix: handle edge case in worker prompt assembly",
+      "description": "Fixes a crash when task.description is missing",
+      "priority": "MEDIUM",
+      "status": "pending"
+    },
+    "title": "fix: handle edge case in worker prompt assembly",
+    "body": "Reproduces and fixes the crash when generatePrompt receives a task with no description field.",
+    "diff": "--- a/agents/worker.mjs\n+++ b/agents/worker.mjs\n@@ -267,1 +267,1 @@\n-**Description:** ${task.description}\n+**Description:** ${task.description || '(no description)'}"
+  },
+  "expected": {
+    "mustContain": [
+      "Queue task this PR claims to implement",
+      "\"id\": \"Q-999\"",
+      "PR title",
+      "PR description",
+      "Safety checklist",
+      "verdict",
+      "approve",
+      "reject"
+    ],
+    "mustNotContain": [
+      "OPENROUTER_API_KEY",
+      "undefined"
+    ],
+    "mustMatch": [
+      "\\{\"verdict\":\\s*\"(approve|reject)\""
+    ]
+  },
+  "metadata": {
+    "builderFunction": "buildReviewPrompt",
+    "module": "agents/pr-auto-review.mjs",
+    "capturedAt": "2026-07-06T14:25:23.118Z"
+  }
+}
