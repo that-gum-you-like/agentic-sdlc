@@ -37,7 +37,7 @@ test('drain script exists and is executable', () => {
 
 test('drain script carries the core safety guards', () => {
   const s = readFileSync(script, 'utf8');
-  assert(/worktree add/.test(s) && /WORKTREE/.test(s), 'must isolate work in a DISPOSABLE git worktree (never the main working tree)');
+  assert(/git clone/.test(s) && /DRAIN_CLONE/.test(s), 'must isolate work in a DEDICATED clone (separate .git + tree; main repo never touched)');
   assert(/Ready \\?\(unblocked\\?\)/.test(s), 'must cost-gate on ready-task count');
   assert(/head:agent\/drain\//.test(s) && /MAX_OPEN_DRAIN_PRS/.test(s), 'must cap unreviewed drain PRs');
   assert(/mkdir "\$LOCKDIR"/.test(s) && /\.sdlc-autonomous\.lock/.test(s), 'must use the SHARED atomic (mkdir) mutex (mutually exclusive with pr-auto-review)');
