@@ -146,7 +146,7 @@ test('merge path is squash + delete-branch, rate-limited, and logged', () => {
   assert(/'--squash', '--delete-branch'/.test(source), 'must squash-merge and delete the branch');
   assert(MAX_AUTO_MERGES >= 1 && MAX_AUTO_MERGES <= 5, `sane merge rate limit, got ${MAX_AUTO_MERGES}`);
   assert(/pr-auto-review\.log/.test(source), 'must log decisions to pm/pr-auto-review.log');
-  assert(/\.pr-auto-review\.lock\.d/.test(source), 'must hold a single-flight mkdir lock');
+  assert(/\.sdlc-autonomous\.lock\.d/.test(source), 'must hold the SHARED single-flight mkdir mutex (mutually exclusive with the drain)');
   assert(/sha:\$\{headSha\}/.test(source), 'comments must embed the reviewed head SHA (no spam)');
 });
 

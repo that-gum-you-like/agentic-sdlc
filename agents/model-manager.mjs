@@ -709,7 +709,6 @@ function suggest(taskType) {
   // Also accept all providers if none configured
   if (configuredProviders.size === 0) {
     configuredProviders.add('anthropic');
-    configuredProviders.add('openai');
     configuredProviders.add('groq');
   }
 
@@ -759,7 +758,6 @@ async function research() {
   const intel = loadModelIntel();
   const pricingUrls = {
     anthropic: 'https://docs.anthropic.com/en/docs/about-claude/models',
-    openai: 'https://openai.com/api/pricing/',
     groq: 'https://groq.com/pricing/',
   };
 
@@ -789,53 +787,16 @@ async function research() {
         } else {
           console.log(`     No structured pricing found — page may require JS rendering`);
         }
-      } else if (provider === 'openai') {
-        const priceMatch = html.match(/gpt-4[^"]*|o1[^"]*|o3[^"]*/gi);
-        if (priceMatch) {
-          console.log(`     Found ${[...new Set(priceMatch)].length} model references`);
-        } else {
-          console.log(`     No structured pricing found — page may require JS rendering`);
-        }
       } else {
         console.log(`     Page fetched (${html.length} bytes) — manual review recommended`);
       }
 
       // Note: Full HTML parsing of pricing pages is fragile and provider-specific.
       // For now, we log what we find and recommend manual updates for accurate pricing.
-      // Future: structured API endpoints (e.g., OpenAI /v1/models) for reliable data.
 
     } catch (err) {
       console.log(`     ❌ Failed: ${err.message}`);
     }
-  }
-
-  // Try structured API endpoints where available
-  console.log('\n  📡 Checking OpenAI /v1/models API...');
-  try {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (apiKey) {
-      const res = await fetch('https://api.openai.com/v1/models', {
-        headers: { 'Authorization': `Bearer ${apiKey}` },
-        signal: AbortSignal.timeout(10000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const gptModels = data.data?.filter(m => m.id.startsWith('gpt-') || m.id.startsWith('o1') || m.id.startsWith('o3')) || [];
-        console.log(`     Found ${gptModels.length} GPT/o-series models available on your account`);
-
-        // Check for new models not in our intel
-        for (const m of gptModels) {
-          if (!intel.models[m.id]) {
-            console.log(`     🆕 New model detected: ${m.id} — add to model-intel.json manually`);
-            updated = true;
-          }
-        }
-      }
-    } else {
-      console.log('     Skipped (OPENAI_API_KEY not set)');
-    }
-  } catch (err) {
-    console.log(`     ❌ Failed: ${err.message}`);
   }
 
   // Update timestamp
