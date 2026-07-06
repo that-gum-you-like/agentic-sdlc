@@ -69,7 +69,7 @@ Maturity ladder: Levels 0–6 (`framework/maturity-model.md` is canonical).
 | Capability | Status | Owner |
 |-----------|--------|-------|
 | Named anti-pattern vocabulary | Solid | CLAUDE.md rule 7; reviewer templates |
-| Senior-dev checklist that GROWS | Partial | `agents/templates/checklist.md.template` + pattern-hunt appending defeat tests. The checklist *file* itself grows via review corrections manually; defeat tests are the automated growth path |
+| Senior-dev checklist that GROWS | Solid | `agents/templates/checklist.md.template` + `appendToChecklist()` in pattern-hunt.mjs appends one-line checklist items idempotently when recurring patterns are confirmed under `## Auto-added by pattern-hunt`. Tested via `agents/__tests__/checklist-growth.test.mjs` (append, idempotency, no-op, dry-run) |
 | **Senior review that can BLOCK (not just warn)** | **Solid (new)** | `agents/review-hook.mjs`: enforcing pre-commit `check-staged` exits 1 on blocking violations — a real git commit is blocked (proven in `agents/__tests__/gates-enforce.test.mjs`); required CI check runs the whole suite (H-001); `agents/pr-auto-review.mjs` gates merges (clean-worktree tests + scope scan + OpenRouter LLM review) |
 | Static analysis: AST | Solid | `agents/ast-analyzer.mjs` (TS compiler API: unused exports, cycles, dead code; import-guarded since H-004) |
 | Static analysis: lint/typecheck | Partial | Runs via project-configured `testCmd`/CI; no framework-owned lint runner (projects bring their own) |
