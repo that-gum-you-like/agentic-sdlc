@@ -43,6 +43,7 @@ test('drain script carries the core safety guards', () => {
   assert(/mkdir "\$LOCKDIR"/.test(s) && /\.sdlc-autonomous\.lock/.test(s), 'must use the SHARED atomic (mkdir) mutex (mutually exclusive with pr-auto-review)');
   assert(/pgrep -f 'timeout 3600 hermes'/.test(s), 'must have a pgrep backstop against a live concurrent worker');
   assert(/HERMES_HOME="\$DRAIN_HOME"/.test(s) && /TERMINAL_ENV=local/.test(s), 'must use the isolated local-backend profile');
+  assert(/checkout -q -f -B main origin\/main/.test(s), 'clone refresh must FORCE checkout — the previous worker legitimately leaves the clone dirty (regression: 2026-07-06 "clone checkout failed")');
 });
 
 test('drain prompt encodes the hard constraints (PR-gate, never main, one task)', () => {
