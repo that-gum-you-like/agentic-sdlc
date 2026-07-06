@@ -162,12 +162,26 @@ describe('voice-intake.sh check command', () => {
     assert.ok(output.includes('✅ jq'));
   });
 
-  it('reports audio capture tool', () => {
+  it('reports audio capture tool status (present or missing)', () => {
+    // HERMETIC: `check` reports on the *machine it runs on*. Dev boxes have
+    // sox/alsa; CI runners don't. Assert the script reports audio-capture
+    // status correctly either way, keyed off this machine's actual tools.
+    const hasAudioTool = ['rec', 'arecord'].some((bin) => {
+      try { execSync(`command -v ${bin}`, { stdio: 'ignore' }); return true; }
+      catch { return false; }
+    });
     const output = execSync(`bash "${SCRIPT}" check 2>&1`, { encoding: 'utf8' });
-    assert.ok(
-      output.includes('✅ rec') || output.includes('✅ arecord'),
-      'should report an audio capture tool'
-    );
+    if (hasAudioTool) {
+      assert.ok(
+        output.includes('✅ rec') || output.includes('✅ arecord'),
+        'should report the available audio capture tool'
+      );
+    } else {
+      assert.ok(
+        output.includes('❌ No audio capture tool'),
+        'should report the audio capture tool as missing'
+      );
+    }
   });
 });
 
