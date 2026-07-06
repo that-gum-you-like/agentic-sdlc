@@ -24,6 +24,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { loadConfig } from './load-config.mjs';
+import { loadModelIntel } from './model-manager.mjs';
 
 const config = loadConfig();
 
@@ -51,40 +52,46 @@ function loadPaperclipEnv() {
   return creds;
 }
 
-// --- Model mappings ---
+// --- Model mappings (config-driven, no hardcoded model IDs) ---
+//
+// Projects that use short model aliases in budget.json (e.g. "opus" → a full
+// provider model ID) declare them in budget.json under "modelAliases":
+//   { "modelAliases": { "opus": "claude-opus-4-6", ... }, "agents": { ... } }
+// Without aliases, model strings are treated as full IDs (identity mapping).
 
-const MODEL_FULL = {
-  opus: 'claude-opus-4-6',
-  sonnet: 'claude-sonnet-4-6',
-  haiku: 'claude-haiku-4-5-20251001',
-};
+function loadBudgetFile() {
+  try {
+    return JSON.parse(readFileSync(config.budgetPath, 'utf8'));
+  } catch {
+    return {};
+  }
+}
 
-const MODEL_SHORT = {
-  'claude-opus-4-6': 'opus',
-  'claude-sonnet-4-6': 'sonnet',
-  'claude-haiku-4-5-20251001': 'haiku',
-};
+const _budgetFile = loadBudgetFile();
+const MODEL_ALIASES = _budgetFile.modelAliases || {};
+const MODEL_ALIASES_REVERSE = Object.fromEntries(
+  Object.entries(MODEL_ALIASES).map(([short, full]) => [full, short])
+);
 
-function fullModel(short) { return MODEL_FULL[short] || short; }
-function shortModel(full) { return MODEL_SHORT[full] || full; }
+function fullModel(short) { return MODEL_ALIASES[short] || short; }
+function shortModel(full) { return MODEL_ALIASES_REVERSE[full] || full; }
 
-// --- SDLC slug → Paperclip urlKey mapping ---
+// --- SDLC slug → Paperclip urlKey mapping (config-driven) ---
+//
+// Projects whose Paperclip urlKeys differ from their SDLC slugs declare the
+// mapping in project.json under "paperclip.urlKeys":
+//   { "paperclip": { "urlKeys": { "roy": "roy-trenneman", ... } } }
+// Without a mapping, the slug IS the urlKey (identity).
 
-const SLUG_TO_URLKEY = {
-  roy: 'roy-trenneman',
-  moss: 'maurice-moss',
-  jen: 'jen-barber',
-  richmond: 'richmond-avenal',
-  denholm: 'denholm-reynholm',
-  douglas: 'douglas-reynholm',
-  'bill-crouse': 'bill-crouse',
-  judy: 'judy',
-  barbara: 'barbara',
-  april: 'april',
-  cto: 'cto',
-  'quality-monitor': 'quality-monitor',
-  bryce: 'bryce-board',
-};
+function loadProjectFile() {
+  try {
+    return JSON.parse(readFileSync(resolve(config.agentsDir, 'project.json'), 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+const SLUG_TO_URLKEY = loadProjectFile().paperclip?.urlKeys || {};
 
 function urlKeyToSlug(urlKey) {
   for (const [slug, uk] of Object.entries(SLUG_TO_URLKEY)) {
@@ -113,22 +120,36 @@ const ROLE_MAP = {
   'General': 'general',
 };
 
-// --- Token budget → monthly cents conversion ---
+// --- Token budget → monthly cents conversion (costs from the model catalog) ---
 
-const COST_PER_MILLION_TOKENS = { opus: 45, sonnet: 9, haiku: 0.75 };
+const DEFAULT_COST_PER_M = 1; // used when a model isn't in the catalog (affordable-ladder ballpark)
+
+function costPerMillion(model) {
+  const intel = loadModelIntel();
+  const entry = intel.models?.[fullModel(model)];
+  if (!entry) return DEFAULT_COST_PER_M;
+  // Blend input/output pricing (rough 3:1 input:output token mix)
+  const input = entry.costPer1MInput ?? DEFAULT_COST_PER_M;
+  const output = entry.costPer1MOutput ?? input;
+  return (input * 3 + output) / 4;
+}
 
 function dailyTokensToMonthlyCents(dailyTokens, model) {
-  const costPerM = COST_PER_MILLION_TOKENS[model] || 9;
-  const dailyDollars = (dailyTokens / 1_000_000) * costPerM;
+  const dailyDollars = (dailyTokens / 1_000_000) * costPerMillion(model);
   return Math.round(dailyDollars * 30 * 100);
 }
 
-// --- Max turns by model tier ---
+// --- Max turns per run (config-driven; latency tier from the catalog) ---
 
-function maxTurns(model) {
-  if (model === 'opus') return 300;
-  if (model === 'sonnet') return 300;
-  return 100; // haiku
+const DEFAULT_MAX_TURNS = 300;
+
+function maxTurns(model, agentBudget = {}) {
+  if (Number.isInteger(agentBudget.maxTurnsPerRun)) return agentBudget.maxTurnsPerRun;
+  const intel = loadModelIntel();
+  const entry = intel.models?.[fullModel(model)];
+  // Fast/cheap tiers get a shorter leash by default
+  if (entry?.latencyTier === 'fast') return 100;
+  return DEFAULT_MAX_TURNS;
 }
 
 // --- Load SDLC config ---
@@ -163,7 +184,7 @@ function loadSdlcAgents() {
       slug,
       name: d.name || slug,
       role: d.role || 'General',
-      model: b.model || 'sonnet',
+      model: b.model || budget.emergencyFallbackModel || 'unassigned',
       dailyTokens: b.dailyTokens || 100000,
       permissions: b.permissions || 'full-edit',
       maxInstances: b.maxInstances || 1,
