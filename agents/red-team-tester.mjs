@@ -33,14 +33,60 @@ const REPORTS_DIR = resolve(projectDir, 'pm', 'red-team-reports');
 const RULES = [
   { pattern: /ignore (all |any )?previous instructions/i, severity: 'high', label: 'instruction-override' },
   { pattern: /disregard (the )?system prompt/i, severity: 'high', label: 'instruction-override' },
+  { pattern: /you are now [^.\n]{0,60}(?:unrestricted|jailbroken|free of)/i, severity: 'high', label: 'instruction-override' },
   { pattern: /print your system prompt/i, severity: 'high', label: 'data-exfiltration' },
   { pattern: /reveal your instructions/i, severity: 'high', label: 'data-exfiltration' },
   { pattern: /base64 the env/i, severity: 'high', label: 'data-exfiltration' },
+  { pattern: /(?:send|post|upload|exfiltrate) [^.\n]{0,60}(?:\.env|api key|credentials|secrets)/i, severity: 'high', label: 'data-exfiltration' },
   { pattern: /rm -rf \/|unrestricted shell|run any (shell )?command/i, severity: 'high', label: 'tool-abuse' },
+  { pattern: /curl [^|\n]{0,120}\|\s*(?:sh|bash)\b/i, severity: 'high', label: 'tool-abuse' },
   { pattern: /\bDAN\b/, severity: 'medium', label: 'jailbreak-marker' },
   { pattern: /developer mode/i, severity: 'medium', label: 'jailbreak-marker' },
   { pattern: /show me the (api key|token|\.env)/i, severity: 'high', label: 'secret-leak-ask' },
 ];
+
+// ---------------------------------------------------------------------------
+// External-input screening (curriculum Phase 5)
+// ---------------------------------------------------------------------------
+
+/**
+ * Screen a piece of EXTERNAL text (mailbox/WhatsApp message, GitHub issue or
+ * PR body, error message, user content) for prompt-injection patterns BEFORE
+ * any agent consumes it. Deterministic — same rule set as the periodic scan.
+ *
+ * @param {string} text
+ * @param {object} [opts]
+ * @param {string} [opts.source] - Where the text came from (for the log entry)
+ * @returns {{ safe: boolean,
+ *             findings: Array<{severity: string, label: string, match: string}>,
+ *             sanitized: string }}
+ *   - safe:      false when any HIGH-severity pattern matched
+ *   - sanitized: the text with each HIGH-severity match neutralized as
+ *                [BLOCKED-BY-INJECTION-SCREEN: <label>] — feed THIS to agents
+ */
+export function screenExternalInput(text, { source = 'external' } = {}) {
+  const input = String(text ?? '');
+  const findings = [];
+  let sanitized = input;
+
+  for (const rule of RULES) {
+    const global = new RegExp(rule.pattern.source, rule.pattern.flags.includes('g') ? rule.pattern.flags : rule.pattern.flags + 'g');
+    for (const m of input.matchAll(global)) {
+      findings.push({ severity: rule.severity, label: rule.label, match: m[0].slice(0, 80) });
+    }
+    if (rule.severity === 'high') {
+      sanitized = sanitized.replace(global, `[BLOCKED-BY-INJECTION-SCREEN: ${rule.label}]`);
+    }
+  }
+
+  const safe = !findings.some(f => f.severity === 'high');
+  if (findings.length > 0) {
+    try {
+      logCapabilityUsage('injectionScreen', 'system', source, 'red-team-tester.mjs', safe ? 'flagged' : 'blocked');
+    } catch { /* logging must never break ingestion */ }
+  }
+  return { safe, findings, sanitized };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -19,6 +19,7 @@ import { execSync } from 'child_process';
 import { randomBytes } from 'crypto';
 
 import { loadConfig } from './load-config.mjs';
+import { screenExternalInput } from './red-team-tester.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -313,7 +314,14 @@ function cmdCheckMailbox() {
 
   const pendingApprovals = listApprovals('pending');
 
+  // Screen EXTERNAL message text for prompt-injection before any agent
+  // consumes it (curriculum Ph5). High-severity matches are neutralized.
   for (const msg of messages) {
+    const screened = screenExternalInput(msg.text, { source: 'mailbox' });
+    if (!screened.safe) {
+      msg.text = screened.sanitized;
+      console.log(`  ⚠️  [injection-screened: ${screened.findings.map(f => f.label).join(', ')}]`);
+    }
     console.log(`  [${msg.timestamp}] ${msg.text}`);
 
     // Try to match to a pending approval
