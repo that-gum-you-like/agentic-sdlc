@@ -8,7 +8,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test 'tests/*.test.mjs' && node --test 'agents/__tests__/*.test.mjs' && node agents/four-layer-validate.mjs && node agents/test-behavior.mjs --framework",
+    "test": "node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs' && node agents/four-layer-validate.mjs && node agents/test-behavior.mjs --framework",
     "test:behavior": "node agents/test-behavior.mjs --framework",
     "test:all": "npm test",
     "cross-feature": "node agents/cross-feature-analyze.mjs",

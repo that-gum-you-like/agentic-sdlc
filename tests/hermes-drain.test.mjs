@@ -8,9 +8,10 @@
  * Run: node tests/hermes-drain.test.mjs
  */
 
-import { readFileSync, existsSync, statSync, constants } from 'fs';
+import { readFileSync, existsSync, statSync, constants, mkdtempSync, rmSync } from 'fs';
 import { accessSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { resolve, dirname, join } from 'path';
+import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
 
@@ -54,11 +55,29 @@ test('drain prompt encodes the hard constraints (PR-gate, never main, one task)'
 });
 
 test('running on a non-main branch is a safe no-op (no LLM call)', () => {
-  // The test repo is on a feature branch during development → the script must
-  // skip immediately with exit 0 and never reach the Hermes invocation.
-  const out = execFileSync('bash', [script], { cwd: root, encoding: 'utf8', timeout: 30000 });
-  assert(/not main|skip/i.test(out), `expected a skip message, got: ${out}`);
-  assert(!/invoking Hermes/.test(out), 'must not invoke Hermes when guards fail');
+  // HERMETIC: point SDLC_REPO at a throwaway git repo sitting on a feature
+  // branch. The script must skip immediately with exit 0 and never reach the
+  // Hermes invocation. Never run the script against the real repo from tests:
+  // if the host repo happens to be idle on main with ready tasks, the script
+  // would launch an actual LLM drain worker (this bit us once — a CI-style
+  // worktree run spawned a live worker against the host repo).
+  const tmp = mkdtempSync(join(tmpdir(), 'drain-noop-'));
+  try {
+    const git = (...args) => execFileSync('git', args, { cwd: tmp, encoding: 'utf8' });
+    git('init', '-q', '-b', 'main');
+    git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init');
+    git('checkout', '-q', '-b', 'feature/not-main');
+    const out = execFileSync('bash', [script], {
+      cwd: tmp,
+      encoding: 'utf8',
+      timeout: 30000,
+      env: { ...process.env, SDLC_REPO: tmp },
+    });
+    assert(/not main|skip/i.test(out), `expected a skip message, got: ${out}`);
+    assert(!/invoking Hermes/.test(out), 'must not invoke Hermes when guards fail');
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

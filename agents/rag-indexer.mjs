@@ -184,7 +184,9 @@ export function runIndexer(opts = {}) {
     }
   }
 
-  const useEmbeddings = pythonAvailable();
+  // An injected embedFn (tests, alternate backends) forces the embed path;
+  // otherwise gate on the local python/sentence-transformers stack.
+  const useEmbeddings = opts.embedFn ? true : pythonAvailable();
   let mode = useEmbeddings ? 'embedding' : 'lexical';
 
   const result = { documents: files.length, chunks: records.length, mode, indexPath };
