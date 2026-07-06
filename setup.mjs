@@ -459,6 +459,11 @@ Examples:
   const llmProvider = await ask('Default LLM provider (anthropic/groq/ollama)', 'anthropic');
 
   console.log('');
+  console.log('🎤 Voice Configuration');
+  console.log('─'.repeat(40));
+  const scaffoldVoiceConfig = await ask('Scaffold voice-config.json for voice intake? (y/n)', 'n');
+
+  console.log('');
   console.log('═'.repeat(50));
   console.log('  Creating project structure...');
   console.log('═'.repeat(50));
@@ -523,6 +528,27 @@ Examples:
     JSON.stringify(projectJson, null, 2),
     'agents/project.json'
   );
+
+  // 4b. Scaffold voice-config.json if requested
+  if (scaffoldVoiceConfig === 'y' || scaffoldVoiceConfig === 'yes') {
+    const voiceConfigSrc = join(SDLC_DIR, 'agents/voice-config.json');
+    const voiceConfigDest = join(agentsDir, 'voice-config.json');
+    if (existsSync(voiceConfigSrc)) {
+      if (DRY_RUN) {
+        dryRunPlan.files.push({ path: voiceConfigDest, lines: 0, description: 'agents/voice-config.json' });
+        console.log('  [DRY RUN] Would copy agents/voice-config.json');
+      } else {
+        if (existsSync(voiceConfigDest)) {
+          console.log('  ⏭️  agents/voice-config.json already exists, skipping');
+        } else {
+          cpSync(voiceConfigSrc, voiceConfigDest);
+          console.log('  ✅ Copied agents/voice-config.json (voice intake configuration)');
+        }
+      }
+    }
+  } else {
+    console.log('  ⏭️  Voice configuration skipped');
+  }
 
   // 5. Create budget.json
   const MODEL_FULL_IDS = { opus: 'claude-opus-4-6', sonnet: 'claude-sonnet-4-6', haiku: 'claude-haiku-4-5' };

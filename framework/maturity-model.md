@@ -144,6 +144,7 @@ Use this checklist when starting any project. Work through the levels sequential
 - [ ] Bottleneck detection — alerts when human tasks block agent work
 - [ ] Capability drift detection — fire alerts on 3+ consecutive skips
 - [ ] Cycle history logging — all automated runs recorded
+- [ ] Voice input capability (optional) — push-to-talk transcription via Groq Whisper
 
 ---
 
