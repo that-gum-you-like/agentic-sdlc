@@ -1,0 +1,17 @@
+{
+  "id": "scanner-branch-extract",
+  "description": "taskIdFromBranch extracts the task id from a valid agent/drain/ branch name",
+  "input": {
+    "branch": "agent/drain/Q-105"
+  },
+  "expected": {
+    "mustContain": ["Q-105"],
+    "mustNotContain": ["main"],
+    "mustMatch": ["Q-\\d+"]
+  },
+  "metadata": {
+    "builderFunction": "taskIdFromBranch",
+    "module": "agents/pr-auto-review.mjs",
+    "capturedAt": "2026-07-06T14:03:55.892Z"
+  }
+}

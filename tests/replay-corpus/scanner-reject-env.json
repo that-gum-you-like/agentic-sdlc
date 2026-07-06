@@ -1,0 +1,21 @@
+{
+  "id": "scanner-reject-env",
+  "description": "scanScope with a .env file path — must produce at least one reject",
+  "input": {
+    "paths": [
+      "agents/worker.mjs",
+      "config/.env.production",
+      "tests/hermes-drain.test.mjs"
+    ]
+  },
+  "expected": {
+    "mustContain": [".env.production"],
+    "mustNotContain": [],
+    "mustMatch": []
+  },
+  "metadata": {
+    "builderFunction": "scanScope",
+    "module": "agents/pr-auto-review.mjs",
+    "capturedAt": "2026-07-06T14:03:55.892Z"
+  }
+}

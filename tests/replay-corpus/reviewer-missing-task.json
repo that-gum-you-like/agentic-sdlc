@@ -1,0 +1,28 @@
+{
+  "id": "reviewer-missing-task",
+  "description": "buildReviewPrompt with no matching queue task, empty body, empty diff — must not crash",
+  "input": {
+    "task": null,
+    "title": "docs: update README",
+    "body": "",
+    "diff": ""
+  },
+  "expected": {
+    "mustContain": [
+      "(no matching queue task found",
+      "PR title",
+      "Safety checklist",
+      "verdict"
+    ],
+    "mustNotContain": [
+      "undefined",
+      "null"
+    ],
+    "mustMatch": []
+  },
+  "metadata": {
+    "builderFunction": "buildReviewPrompt",
+    "module": "agents/pr-auto-review.mjs",
+    "capturedAt": "2026-07-06T14:03:55.892Z"
+  }
+}

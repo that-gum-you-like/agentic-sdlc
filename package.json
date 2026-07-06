@@ -9,8 +9,9 @@
   },
   "scripts": {
     "test": "node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs' && node agents/four-layer-validate.mjs && node agents/test-behavior.mjs --framework",
+    "test:replay": "node tests/replay.test.mjs",
     "test:behavior": "node agents/test-behavior.mjs --framework",
-    "test:all": "npm test",
+    "test:all": "npm test && npm run test:replay",
     "cross-feature": "node agents/cross-feature-analyze.mjs",
     "validate": "node agents/four-layer-validate.mjs --files 'agents/*.mjs'",
     "assess": "node agents/maturity-assess.mjs",

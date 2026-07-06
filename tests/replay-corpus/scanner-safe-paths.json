@@ -1,0 +1,21 @@
+{
+  "id": "scanner-safe-paths",
+  "description": "scanScope with normal, safe file paths — must return ok:true with no rejects or flags",
+  "input": {
+    "paths": [
+      "agents/worker.mjs",
+      "tests/adapter-and-model-manager.test.mjs",
+      "README.md"
+    ]
+  },
+  "expected": {
+    "mustContain": ["true", "rejects", "flags"],
+    "mustNotContain": [".env"],
+    "mustMatch": []
+  },
+  "metadata": {
+    "builderFunction": "scanScope",
+    "module": "agents/pr-auto-review.mjs",
+    "capturedAt": "2026-07-06T14:03:55.892Z"
+  }
+}
