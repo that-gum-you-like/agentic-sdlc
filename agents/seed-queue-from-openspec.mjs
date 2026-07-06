@@ -16,7 +16,10 @@
 
 import fs from 'fs';
 import { resolve } from 'path';
+import { fileURLToPath } from 'url';
 import { loadConfig } from './load-config.mjs';
+
+const __filename = fileURLToPath(import.meta.url);
 
 const isDryRun = process.argv.includes('--dry-run');
 
@@ -32,47 +35,58 @@ const DOMAINS_FILE = resolve(config.agentsDir, 'domains.json');
 // ---------------------------------------------------------------------------
 // Load agent domains (optional — fall back to keyword matching if absent)
 // ---------------------------------------------------------------------------
+let _domainsCache;
 function loadDomains() {
+  if (_domainsCache !== undefined) return _domainsCache;
   try {
-    return JSON.parse(fs.readFileSync(DOMAINS_FILE, 'utf8'));
+    _domainsCache = JSON.parse(fs.readFileSync(DOMAINS_FILE, 'utf8'));
   } catch {
-    // domains.json is optional — keyword matching handles routing
-    return null;
+    // domains.json is optional — routing falls back to the configured roster
+    _domainsCache = null;
   }
+  return _domainsCache;
 }
 
 // ---------------------------------------------------------------------------
-// Assign agent based on task title and description keywords.
-// Strategy: check the title first with all rules, then fall back to the full
-// description for rules that won't false-positive on boilerplate subtasks.
-// "test/review" checks are title-only to avoid matching ### Tests sections.
+// Assign agent from domains.json routing (project config, not hardcoded names).
+//
+// Each domains.json entry maps an agent key to { name, role, patterns: [] }.
+// A pattern matches when every non-glob segment (split on "*") appears in the
+// task's title+description (case-insensitive) — so both keyword patterns
+// ("design review") and file-glob patterns ("agents/*.mjs") route correctly.
+// The agent with the most matching patterns wins; title matches are weighted
+// double (titles are specific; descriptions carry boilerplate subtasks).
 // ---------------------------------------------------------------------------
-function assignAgent(title, description) {
-  const titleLower = title.toLowerCase();
-  const fullText = `${title} ${description}`.toLowerCase();
+function patternMatches(pattern, text) {
+  const parts = String(pattern).toLowerCase().split('*').map(p => p.trim()).filter(Boolean);
+  if (parts.length === 0) return false;
+  return parts.every(part => text.includes(part));
+}
 
-  // --- Title-only rules (safe, specific) ---
-  // Deploy/release tasks
-  if (/\b(deploy|pipeline|release|ci\/cd|changelog|merge|version)\b/.test(titleLower)) return 'denholm';
-  // Review/test tasks (title-only — "test" appears in every description's ### Tests section)
-  if (/\b(write tests?|review|anti-pattern|code review|style guide|pattern hunt|validation)\b/.test(titleLower)) return 'richmond';
-  // AI/transcription tasks
-  if (/\b(ai|transcription|whisper|claude|prompt|quiz generation|quiz matching|vocabulary)\b/.test(titleLower)) return 'moss';
-  // Docs tasks
-  if (/\b(doc|guide|readme|documentation)\b/.test(titleLower)) return 'douglas';
-  // Frontend tasks
-  if (/\b(screen|component|navigation|ui|frontend|nativewind|animation|accessibility|styling|tab|layout)\b/.test(titleLower)) return 'jen';
-  // Backend tasks
-  if (/\b(service|store|database|migration|schema|rls|backend|api|hook)\b/.test(titleLower)) return 'roy';
+function assignAgent(title, description, domains) {
+  const titleLower = String(title || '').toLowerCase();
+  const fullText = `${titleLower} ${String(description || '').toLowerCase()}`;
 
-  // --- Full-text fallback (for tasks where title alone doesn't match) ---
-  if (/\b(deploy|pipeline|release)\b/.test(fullText)) return 'denholm';
-  if (/\b(ai pipeline|transcription|whisper|claude|prompt)\b/.test(fullText)) return 'moss';
-  if (/\b(documentation|readme)\b/.test(fullText)) return 'douglas';
-  if (/\b(screen|component|navigation|frontend)\b/.test(fullText)) return 'jen';
-  if (/\b(service|store|migration|schema|database)\b/.test(fullText)) return 'roy';
+  let best = null;
+  let bestScore = 0;
 
-  return 'roy'; // default
+  for (const [agentKey, domain] of Object.entries(domains || {})) {
+    let score = 0;
+    for (const pattern of domain.patterns || []) {
+      if (patternMatches(pattern, titleLower)) score += 2;
+      else if (patternMatches(pattern, fullText)) score += 1;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = agentKey;
+    }
+  }
+
+  if (best) return best;
+
+  // No domain matched — default to the project's first configured agent.
+  const fallback = (domains && Object.keys(domains)[0]) || config.agents?.[0];
+  return fallback || 'unassigned';
 }
 
 // ---------------------------------------------------------------------------
@@ -159,15 +173,17 @@ function parseTasksMd(changeName, tasksPath) {
       }
 
       // Parse inline per-task agent annotation: **Agent:** Jen (Frontend)
-      const agentMatch = line.match(/\*\*Agent:\*\*\s*(\w+)/i);
+      // Honored only if the named agent exists in this project's roster
+      // (domains.json keys or project.json agents list).
+      const agentMatch = line.match(/\*\*Agent:\*\*\s*([\w-]+)/i);
       if (agentMatch) {
         const agentName = agentMatch[1].toLowerCase();
-        const agentMap = {
-          jen: 'jen', roy: 'roy', moss: 'moss',
-          richmond: 'richmond', denholm: 'denholm', douglas: 'douglas',
-        };
-        if (agentMap[agentName]) {
-          currentTask.inlineAgent = agentMap[agentName];
+        const roster = new Set([
+          ...Object.keys(loadDomains() || {}),
+          ...(config.agents || []),
+        ].map(a => a.toLowerCase()));
+        if (roster.has(agentName)) {
+          currentTask.inlineAgent = agentName;
         }
       }
     }
@@ -228,8 +244,8 @@ function main() {
   }
   console.log('');
 
-  // Load domains (optional)
-  loadDomains();
+  // Load domains (optional) — drives agent routing below
+  const domains = loadDomains();
 
   const queueTitles = loadQueueTitles();
 
@@ -318,8 +334,8 @@ function main() {
       // Build description from task content
       const description = task.descriptionLines.join('\n').trim();
 
-      // Assign agent — prefer inline annotation, fall back to keyword detection
-      const agent = task.inlineAgent || assignAgent(task.title, description);
+      // Assign agent — prefer inline annotation, fall back to domain routing
+      const agent = task.inlineAgent || assignAgent(task.title, description, domains);
 
       // Estimate tokens — prefer inline annotation, fall back to subtask count heuristic
       const subtaskCount = Math.max(task.pendingSubtasks, task.doneSubtasks, totalSubtasks);
@@ -381,4 +397,11 @@ function main() {
   }
 }
 
-main();
+export { assignAgent, patternMatches, parseTasksMd, estimateTokens, loadDomains };
+
+// --- CLI ---
+const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
+
+if (__isMainModule) {
+  main();
+}

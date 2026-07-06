@@ -2,7 +2,7 @@
   "id": "H-005",
   "phase": 0,
   "title": "De-couple hardcoded project bindings (REQ-H7)",
-  "description": "agents/seed-queue-from-openspec.mjs hardcodes LinguaFlow agent names (denholm/richmond/moss) and discards the loadDomains() result — read agent routing from domains.json instead. agents/paperclip-sync.mjs hardcodes stale model IDs — read from config. Spec: REQ-H7.",
+  "description": "agents/seed-queue-from-openspec.mjs hardcodes LinguaFlow agent names (denholm/richmond/moss) and discards the loadDomains() result \u2014 read agent routing from domains.json instead. agents/paperclip-sync.mjs hardcodes stale model IDs \u2014 read from config. Spec: REQ-H7.",
   "assignee": "sdlc-developer",
   "priority": "MEDIUM",
   "estimatedTokens": 14000,
@@ -11,11 +11,12 @@
     "agents/paperclip-sync.mjs"
   ],
   "blockedBy": [],
-  "status": "pending",
-  "test_status": null,
+  "status": "completed",
+  "test_status": "passing",
   "created": "2026-07-06T00:20:00Z",
   "tags": [
     "hardening",
     "competitive-roadmap"
-  ]
+  ],
+  "completed_at": "2026-07-06T05:20:00Z"
 }
