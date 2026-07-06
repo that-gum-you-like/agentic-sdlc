@@ -70,12 +70,18 @@ export function extractScenarios(markdown) {
       }
     }
 
+    // A user-story / demo line is its own journey. Close any open Scenario
+    // block first so a story trailing the last scenario is still captured
+    // (the `!current` guard silently dropped it before).
     const userStory = line.match(/^\s*[-*]?\s*As an?\s+(.+?),?\s+I (?:want|can|need)\s+(.+?)(?:\s+so that.*)?$/i);
-    if (userStory && !current) {
+    if (userStory) {
+      if (current) { scenarios.push(current); current = null; }
       scenarios.push({ title: `As a ${userStory[1].trim()}: ${userStory[2].trim()}`, steps: [] });
+      continue;
     }
     const demo = line.match(/Demo Sentence:\s*(.+)$/i);
-    if (demo && !current) {
+    if (demo) {
+      if (current) { scenarios.push(current); current = null; }
       scenarios.push({ title: demo[1].trim(), steps: [] });
     }
   }
