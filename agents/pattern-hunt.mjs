@@ -828,6 +828,118 @@ function generateDefeatTests(recurringPatterns, dryRun = false) {
 }
 
 // ---------------------------------------------------------------------------
+// Checklist growth: auto-append one-line items for confirmed patterns
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolves the path to the reviewer agent's checklist file.
+ * Returns null when no agent with a reviews directory is found.
+ */
+function reviewerChecklistPath() {
+  const reviewer = reviewerAgent();
+  if (!reviewer) return null;
+  const path = resolve(AGENTS_DIR, reviewer, 'checklist.md');
+  return existsSync(path) ? path : null;
+}
+
+/**
+ * Appends one-line checklist items for newly-confirmed recurring patterns
+ * to the project's senior-dev review checklist file under the
+ * `## Auto-added by pattern-hunt` section.
+ *
+ * Requirements from Q-102:
+ *   - Idempotent: never duplicate an item — match on stable pattern category
+ *   - Append-only: never rewrite or reorder existing human-written items
+ *   - No-op with log line when the project has no checklist file
+ *
+ * Returns an array of detail objects describing what was done.
+ */
+function appendToChecklist(recurringPatterns, dryRun = false) {
+  const checklistPath = reviewerChecklistPath();
+
+  if (!checklistPath) {
+    return recurringPatterns.map(p => ({
+      pattern: p.category,
+      action: 'skipped',
+      reason: 'no checklist file found',
+    }));
+  }
+
+  const fileContent = readFileSync(checklistPath, 'utf8');
+  const SECTION_HEADER = '## Auto-added by pattern-hunt';
+  const details = [];
+  let modified = false;
+
+  // Find or create the auto-added section
+  let sectionStart = fileContent.indexOf(`\n${SECTION_HEADER}\n`);
+  if (sectionStart === -1) {
+    sectionStart = fileContent.indexOf(`${SECTION_HEADER}\n`);
+  }
+  let beforeSection, afterSection;
+  let existingItems = [];
+
+  if (sectionStart === -1) {
+    // Section doesn't exist yet — we'll append at the end
+    beforeSection = fileContent;
+    afterSection = '';
+    existingItems = [];
+  } else {
+    // Find end of this section (next ## or end of file)
+    const rest = fileContent.substring(sectionStart + SECTION_HEADER.length + 1);
+    const nextSectionIdx = rest.search(/\n## /);
+    const sectionContent = nextSectionIdx === -1 ? rest : rest.substring(0, nextSectionIdx);
+    beforeSection = fileContent.substring(0, sectionStart);
+    afterSection = nextSectionIdx === -1 ? '' : rest.substring(nextSectionIdx);
+
+    // Extract existing checklist items from the section
+    for (const line of sectionContent.split('\n')) {
+      const match = line.match(/^- \[ \] (\S+):/);
+      if (match) existingItems.push(match[1]);
+    }
+  }
+
+  const existingSet = new Set(existingItems);
+  const newLines = [];
+
+  for (const pattern of recurringPatterns) {
+    if (existingSet.has(pattern.category)) {
+      details.push({
+        pattern: pattern.category,
+        action: 'skipped',
+        reason: 'checklist item already exists',
+      });
+      continue;
+    }
+
+    newLines.push(`- [ ] ${pattern.category}: ${pattern.label} (seen in ${pattern.count} reviews, severity: ${pattern.worstSeverity})`);
+    existingSet.add(pattern.category);
+    details.push({
+      pattern: pattern.category,
+      action: dryRun ? 'would-append' : 'appended',
+      reason: `new recurring pattern checkpoint — ${pattern.count}x reviews at ${pattern.worstSeverity} severity`,
+    });
+  }
+
+  if (!dryRun && newLines.length > 0) {
+    // Build the updated section
+    const sectionBody = SECTION_HEADER + '\n' + newLines.join('\n') + '\n';
+
+    if (sectionStart === -1) {
+      // No section existed — append at end
+      writeFileSync(checklistPath, fileContent.trimEnd() + '\n\n' + sectionBody, 'utf8');
+    } else {
+      // Replace the old section with the updated one
+      const oldSection = fileContent.substring(sectionStart);
+      const updated = beforeSection + '\n' + sectionBody + afterSection;
+      writeFileSync(checklistPath, updated, 'utf8');
+    }
+    modified = true;
+  }
+
+  return details;
+}
+
+// ---------------------------------------------------------------------------
 // Teach: recurring patterns become agent memory (Find → Defeat → TEACH)
 // ---------------------------------------------------------------------------
 
@@ -918,11 +1030,14 @@ function teachAgents(recurringPatterns, dryRun = false) {
 /**
  * Writes the pattern-hunt-output.json summary file to the project's agents dir.
  */
-function writeOutputJson(recurringPatterns, details, dryRun) {
+function writeOutputJson(recurringPatterns, details, checklistDetails, dryRun) {
   const outputPath = resolve(config.agentsDir, 'pattern-hunt-output.json');
   const testsGenerated = details.filter(d => d.action === 'generated').length;
   const testsSkipped = details.filter(d => d.action === 'skipped').length;
   const wouldGenerate = details.filter(d => d.action === 'would-generate').length;
+  const checklistAppended = (checklistDetails || []).filter(d => d.action === 'appended').length;
+  const checklistSkipped = (checklistDetails || []).filter(d => d.action === 'skipped').length;
+  const checklistWould = (checklistDetails || []).filter(d => d.action === 'would-append').length;
 
   const output = {
     timestamp: new Date().toISOString(),
@@ -931,6 +1046,13 @@ function writeOutputJson(recurringPatterns, details, dryRun) {
     testsGenerated: dryRun ? 0 : testsGenerated,
     testsWouldGenerate: dryRun ? wouldGenerate : undefined,
     testsSkipped: dryRun ? testsSkipped : testsSkipped,
+    checklistGrowth: {
+      dryRun,
+      appended: dryRun ? 0 : checklistAppended,
+      wouldAppend: dryRun ? checklistWould : undefined,
+      skipped: checklistSkipped,
+      details: checklistDetails || [],
+    },
     details,
   };
 
@@ -1027,6 +1149,26 @@ function formatHumanReadable(result) {
     }
   }
 
+  // Checklist growth summary
+  const cg = result.checklistGrowth;
+  if (cg) {
+    const modeLabel = cg.dryRun ? 'Checklist Growth (DRY RUN)' : 'Checklist Growth';
+    lines.push(`\n── ${modeLabel} ${'─'.repeat(Math.max(0, 57 - modeLabel.length - 4))}`);
+    if (cg.dryRun) {
+      lines.push(`  Would append: ${cg.wouldAppend}  |  Skipped: ${cg.skipped}`);
+    } else {
+      lines.push(`  Appended: ${cg.appended}  |  Skipped: ${cg.skipped}`);
+    }
+    if (cg.details && cg.details.length > 0) {
+      for (const d of cg.details) {
+        const icon = d.action === 'appended' ? '+' : d.action === 'would-append' ? '~' : '–';
+        lines.push(`  ${icon}  [${d.action.padEnd(14)}]  ${d.pattern.padEnd(20)}  ${d.reason}`);
+      }
+    } else {
+      lines.push('  No recurring patterns to evaluate for checklist growth.');
+    }
+  }
+
   lines.push('\n' + '═'.repeat(60));
   return lines.join('\n');
 }
@@ -1086,6 +1228,11 @@ async function main() {
   // Auto-generate defeat tests for recurring patterns not yet covered
   const generationDetails = generateDefeatTests(recurringPatterns, dryRun);
 
+  // CHECKLIST GROWTH: append one-line items for each newly-confirmed pattern
+  // (curriculum Ph5 "Senior-dev checklist that GROWS" — the same code path
+  // that emits defeat detectors also grows the checklist file idempotently).
+  const checklistDetails = appendToChecklist(recurringPatterns, dryRun);
+
   // TEACH: record each recurring pattern into the responsible agents' memory
   // (Find → Defeat → Teach — the improvement loop's closing step).
   const teachDetails = teachAgents(recurringPatterns, dryRun);
@@ -1093,6 +1240,7 @@ async function main() {
   const { outputPath, testsGenerated, testsSkipped } = writeOutputJson(
     recurringPatterns,
     generationDetails,
+    checklistDetails,
     dryRun,
   );
 
@@ -1135,6 +1283,13 @@ async function main() {
       taught: teachDetails.filter(d => d.action === 'taught').length,
       alreadyTaught: teachDetails.filter(d => d.action === 'already-taught').length,
       details: teachDetails,
+    },
+    checklistGrowth: {
+      dryRun,
+      appended: checklistDetails.filter(d => d.action === 'appended').length,
+      wouldAppend: checklistDetails.filter(d => d.action === 'would-append').length,
+      skipped: checklistDetails.filter(d => d.action === 'skipped').length,
+      details: checklistDetails,
     },
   };
 
