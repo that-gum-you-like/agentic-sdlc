@@ -319,20 +319,92 @@ function completeTaskInClone(repoDir, taskId, log) {
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// Self-healing: rejected PRs become CRITICAL fix tasks (REQ-SH-1)
+// ---------------------------------------------------------------------------
+
+/** Rejection kinds that produce a fix task. Adapter outages (llm-unavailable)
+ *  and human-only outcomes (reject-unsafe, flagged) never do. */
+export const FIXABLE_ACTIONS = ['gate-failed', 'llm-rejected'];
+
+/**
+ * Pure builder for a FIX-<pr> queue task (exported for tests).
+ * Pass `existing` to refresh a prior fix task after a re-rejection at a new SHA.
+ */
+export function buildFixTask({ pr, branch, headSha, reasons, kind, existing }) {
+  const sourceTask = taskIdFromBranch(branch);
+  const feedback = (reasons || []).map(r => `- ${r}`).join('\n')
+    || '- (no detail captured — read the PR review comment)';
+  const description = [
+    `Drain PR #${pr} (branch \`${branch}\`) was NOT merged by pr-auto-review (${kind}).`,
+    `Repair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:`,
+    `1. \`git fetch origin ${branch} && git checkout ${branch}\``,
+    `2. Address EVERY reason below.`,
+    `3. Run \`npm test\` until green.`,
+    `4. Commit and \`git push origin ${branch}\` — the reviewer re-reviews at the new SHA.`,
+    '',
+    '## Rejection reasons (verbatim)',
+    feedback,
+  ].join('\n');
+  const base = existing || {
+    id: `FIX-${pr}`,
+    phase: 1,
+    title: `Fix rejected drain PR #${pr} (${branch})`,
+    assignee: 'sdlc-developer',
+    priority: 'CRITICAL',
+    estimatedTokens: 16000,
+    files: [],
+    blockedBy: [],
+    created: new Date().toISOString(),
+    tags: ['auto-fix'],
+  };
+  return {
+    ...base,
+    description,
+    status: 'pending',
+    fixFor: { pr, branch, headSha, sourceTask, rejectionKind: kind },
+    ...(existing ? { refreshedAt: new Date().toISOString() } : {}),
+  };
+}
+
+/** Upsert FIX-<pr> in the review clone and push to main (REQ-SH-1). */
+function upsertFixTaskInClone(repoDir, prInfo, log) {
+  const clone = ensureReviewClone(repoDir, log);
+  const taskFile = join(clone, 'tasks', 'queue', `FIX-${prInfo.pr}.json`);
+  let existing = null;
+  if (existsSync(taskFile)) {
+    try { existing = JSON.parse(readFileSync(taskFile, 'utf8')); } catch { existing = null; }
+    // Same head SHA already filed and still pending → nothing new to say.
+    if (existing?.fixFor?.headSha === prInfo.headSha && existing.status === 'pending') return false;
+  }
+  const task = buildFixTask({ ...prInfo, existing });
+  writeFileSync(taskFile, JSON.stringify(task, null, 2) + '\n');
+  run('git', ['-C', clone, 'add', 'tasks/']);
+  run('git', ['-C', clone, 'commit', '-q', '-m',
+    `chore(queue): file ${task.id} — drain PR #${prInfo.pr} ${prInfo.kind} (self-healing loop)`]);
+  // Non-ff push fails safe; the next run retries (same semantics as completion).
+  run('git', ['-C', clone, 'push', 'origin', 'main'], { timeout: 120_000 });
+  log(`filed ${task.id} (${prInfo.kind}) — the drain will repair PR #${prInfo.pr} on its existing branch`);
+  return true;
+}
+
 function reconcileMerged(repoDir, cloneDir, log) {
   let merged;
   try {
-    merged = ghJson(['pr', 'list', '--search', 'head:agent/drain/', '--state', 'merged', '--limit', '20', '--json', 'headRefName']);
+    merged = ghJson(['pr', 'list', '--search', 'head:agent/drain/', '--state', 'merged', '--limit', '20', '--json', 'headRefName,number']);
   } catch { return; }
   for (const pr of merged) {
     const taskId = taskIdFromBranch(pr.headRefName);
-    if (!taskId) continue;
-    const taskFile = join(cloneDir, 'tasks', 'queue', `${taskId}.json`);
-    if (!existsSync(taskFile)) continue;
-    const task = JSON.parse(readFileSync(taskFile, 'utf8'));
-    if (task.status === 'completed') continue;
-    log(`reconcile: ${taskId} merged but still ${task.status} — completing`);
-    try { completeTaskInClone(repoDir, taskId, log); } catch (err) { log(`reconcile ${taskId} failed: ${err.message}`); }
+    // A merged PR also closes its FIX-<pr> task, if one was filed (REQ-SH-3).
+    for (const id of [taskId, `FIX-${pr.number}`]) {
+      if (!id) continue;
+      const taskFile = join(cloneDir, 'tasks', 'queue', `${id}.json`);
+      if (!existsSync(taskFile)) continue;
+      const task = JSON.parse(readFileSync(taskFile, 'utf8'));
+      if (task.status === 'completed') continue;
+      log(`reconcile: ${id} merged but still ${task.status} — completing`);
+      try { completeTaskInClone(repoDir, id, log); } catch (err) { log(`reconcile ${id} failed: ${err.message}`); }
+    }
   }
 }
 
@@ -353,6 +425,23 @@ function postReview(prNumber, headSha, lines, dryRun) {
   const body = `${COMMENT_MARKER} sha:${headSha} -->\n## Automated review (pr-auto-review)\n\n${lines.join('\n')}\n\n_This PR stays open. Fix and push, or a CTO session will pick it up._`;
   if (dryRun) return;
   try { gh(['pr', 'comment', String(prNumber), '--body', body]); } catch { /* comment is best-effort */ }
+}
+
+/** Best-effort self-healing hook: file/refresh the FIX task for a declined PR.
+ *  Failure to file must never break the review run itself. */
+function fileFixTask(pr, headSha, reasons, kind, ctx) {
+  if (ctx.dryRun) return;
+  try {
+    upsertFixTaskInClone(ctx.repoDir, {
+      pr: pr.number,
+      branch: pr.headRefName,
+      headSha,
+      reasons: (reasons || []).filter(Boolean),
+      kind,
+    }, ctx.log);
+  } catch (err) {
+    ctx.log(`fix-task filing for PR #${pr.number} failed (non-fatal): ${err.message}`);
+  }
 }
 
 async function reviewPr(pr, ctx) {
@@ -391,6 +480,7 @@ async function reviewPr(pr, ctx) {
       `**Verdict: NOT MERGED** — hard gate failed at \`${gate.step}\` in a clean worktree.`,
       '```', gate.tail || '(no output captured)', '```',
     ], dryRun);
+    fileFixTask(pr, headSha, [`hard gate failed at ${gate.step}`, gate.tail || ''], 'gate-failed', ctx);
     return record;
   }
 
@@ -420,6 +510,9 @@ async function reviewPr(pr, ctx) {
       `**Verdict: NOT MERGED** — hard gate passed, but the LLM review did ${review.verdict === 'reject' ? 'not approve' : 'not complete'}:`,
       ...review.reasons.map(r => `- ${r}`),
     ], dryRun);
+    if (record.action === 'llm-rejected') {
+      fileFixTask(pr, headSha, review.reasons, 'llm-rejected', ctx);
+    }
     return record;
   }
 

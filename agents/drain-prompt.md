@@ -5,7 +5,7 @@ You are the **autonomous drain worker** for the agentic-sdlc repository (GitHub:
 2. Work on small, focused diffs. Services < 150 lines, one logical change.
 
 ## Procedure
-1. **Pick one task — and don't double-work.** Run `node agents/queue-drainer.mjs status` to see ready/unblocked tasks. Then list tasks that already have an open drain PR: `gh pr list --search 'head:agent/drain/' --state open --json headRefName`. Choose the **single highest-priority unblocked task whose `agent/drain/<task-id>` branch/PR does NOT already exist** (a task's queue status stays `pending` on `main` until its PR merges, so you must skip ones already in flight). If every ready task already has an open drain PR, or there are none, **STOP immediately** and output `DRAIN: nothing to do`. Note the chosen task id.
+1. **Pick one task — and don't double-work.** Run `node agents/queue-drainer.mjs status` to see ready/unblocked tasks. Then list tasks that already have an open drain PR: `gh pr list --search 'head:agent/drain/' --state open --json headRefName`. Choose the **single highest-priority unblocked task whose `agent/drain/<task-id>` branch/PR does NOT already exist** (a task's queue status stays `pending` on `main` until its PR merges, so you must skip ones already in flight). **EXCEPTION: `FIX-*` tasks exist BECAUSE a PR is open — never skip a `FIX-*` task for having an open PR; they are CRITICAL priority and get repaired FIRST (see "Fix tasks" below).** If every ready task already has an open drain PR (and none is a `FIX-*` task), or there are none, **STOP immediately** and output `DRAIN: nothing to do`. Note the chosen task id.
 2. **Claim it:** `node agents/queue-drainer.mjs claim <task-id> hermes-drain` (or mark it in-progress).
 3. **Branch from main — never work on main.** Run: `git fetch origin --quiet` then `git checkout -b agent/drain/<task-id> origin/main`. If that branch already exists, append a short timestamp.
 4. **Implement** the task per its spec and CLAUDE.md. If the task requires an OpenSpec change that doesn't exist yet, create the artifacts first (proposal → design → specs → tasks) under `openspec/changes/<name>/`.
@@ -14,6 +14,18 @@ You are the **autonomous drain worker** for the agentic-sdlc repository (GitHub:
 7. **Open a PR for review** (do NOT merge): `gh pr create --base main --head agent/drain/<task-id> --title "..." --body "..."`. Put the task id and a summary in the body, and note it was produced by the autonomous drain for human review.
 8. **Mark complete:** `node agents/queue-drainer.mjs complete <task-id> passing`.
 9. Output `DRAIN: opened PR for <task-id>`. (You are in a disposable git worktree — do NOT `git checkout main`; the worktree is cleaned up for you.)
+
+## Fix tasks (`FIX-<pr>` — repair a rejected drain PR)
+
+A task whose id starts with `FIX-` (it has a `fixFor` field) means an earlier drain PR was reviewed and NOT merged; the task description contains the verbatim rejection reasons. This procedure REPLACES steps 3–7 above:
+
+1. Claim it (step 2 as normal).
+2. **Do NOT create a new branch and do NOT open a new PR.** Check out the EXISTING branch from the task's `fixFor.branch`: `git fetch origin <branch>` then `git checkout <branch>`.
+3. Address **every** rejection reason listed in the task description. Keep the diff focused on the feedback.
+4. Run `npm test` (max 2 fix attempts, same rule as step 5 above). If it cannot go green, mark the task `failing` and STOP with `DRAIN: blocked FIX-<pr> <reason>`.
+5. Commit (with the `Co-Authored-By: hermes-drain` line) and `git push origin <branch>`. The reviewer re-reviews the PR automatically at the new SHA.
+6. Mark the task complete: `node agents/queue-drainer.mjs complete FIX-<pr> passing`.
+7. Output `DRAIN: pushed fix for PR #<pr>`.
 
 ## Hard constraints — NEVER violate
 - **Never** commit to, push to, reset, or force-push `main`. Never `git merge` or `gh pr merge`.

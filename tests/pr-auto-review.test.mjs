@@ -18,6 +18,8 @@ import {
   buildReviewPrompt,
   parseVerdict,
   runAutoReview,
+  buildFixTask,
+  FIXABLE_ACTIONS,
   MAX_AUTO_MERGES,
   FLAG_PATHS,
   DIFF_CHAR_LIMIT,
@@ -170,10 +172,11 @@ test('all review-side git mutation happens in the dedicated clone, never the mai
   assert(/\.sdlc-review-clone/.test(source), 'must use the dedicated review clone');
   assert(/completeTaskInClone/.test(source), 'task completion must run in the clone');
   assert(!/completeTaskOnMain\(/.test(source), 'the main-tree completion path must be gone');
-  // Every git push must be from the clone (the only push call site).
+  // Every git push must be from the clone: task completion + fix-task upsert.
   const pushes = source.match(/'push'/g) || [];
-  assert(pushes.length === 1, `exactly one push call site expected, got ${pushes.length}`);
-  assert(/\['-C', clone, 'push', 'origin', 'main'\]/.test(source), 'the push must target origin main FROM the clone');
+  const clonePushes = source.match(/\['-C', clone, 'push', 'origin', 'main'\]/g) || [];
+  assert(pushes.length === 2, `exactly two push call sites expected (completion + fix-task upsert), got ${pushes.length}`);
+  assert(clonePushes.length === pushes.length, 'EVERY push must target origin main FROM the clone — no other push shape is allowed');
   assert(!/'push',\s*'--force'|'--force',\s*'push'|force-with-lease/.test(source), 'never force-push');
   // No pull/commit/checkout against the caller's repoDir working tree.
   assert(!/\['-C', repoDir, 'pull'/.test(source), 'must not pull in the main tree');
@@ -197,6 +200,59 @@ test('hard gate builds its worktree from the review clone', () => {
 test('the shared mutex records its holder for debuggability', () => {
   assert(/holder/.test(source), 'lock holder metadata must be written');
   assert(/pr-auto-review \$\{process\.pid\}/.test(source), 'holder must identify the job + pid');
+});
+
+// --- self-healing loop: rejections become FIX tasks (REQ-SH-1/2/3) ----------
+
+test('buildFixTask creates a CRITICAL pending FIX-<pr> task carrying the feedback', () => {
+  const t = buildFixTask({
+    pr: 35, branch: 'agent/drain/Q-105', headSha: 'abc123',
+    reasons: ['empty expectations violate SCHEMA.md', 'capture script self-inconsistent'],
+    kind: 'llm-rejected',
+  });
+  assert(t.id === 'FIX-35', `id must be FIX-<pr>, got ${t.id}`);
+  assert(t.priority === 'CRITICAL', 'repairs must preempt new work (CRITICAL)');
+  assert(t.status === 'pending', 'must be immediately drainable');
+  assert(t.fixFor.pr === 35 && t.fixFor.branch === 'agent/drain/Q-105'
+    && t.fixFor.headSha === 'abc123' && t.fixFor.sourceTask === 'Q-105'
+    && t.fixFor.rejectionKind === 'llm-rejected', 'fixFor must carry pr/branch/sha/source/kind');
+  assert(t.description.includes('empty expectations violate SCHEMA.md'), 'reasons must be verbatim in the description');
+  assert(/do NOT create a new branch/i.test(t.description), 'must instruct repair on the EXISTING branch');
+  assert(t.tags.includes('auto-fix'), 'tagged auto-fix');
+  assert(t.id === taskIdFromBranch(`agent/drain/${t.id}`) || /^[A-Za-z]+-\d+$/.test(t.id), 'id must fit the queue id convention');
+});
+
+test('buildFixTask refresh keeps identity, resets to pending, stamps refreshedAt', () => {
+  const first = buildFixTask({ pr: 35, branch: 'agent/drain/Q-105', headSha: 'abc123', reasons: ['r1'], kind: 'llm-rejected' });
+  const done = { ...first, status: 'completed' };
+  const again = buildFixTask({ pr: 35, branch: 'agent/drain/Q-105', headSha: 'def456', reasons: ['r2'], kind: 'gate-failed', existing: done });
+  assert(again.id === 'FIX-35' && again.created === first.created, 'refresh must not mint a new task identity');
+  assert(again.status === 'pending', 'refresh must reopen the task');
+  assert(again.fixFor.headSha === 'def456' && again.fixFor.rejectionKind === 'gate-failed', 'refresh must carry the new rejection');
+  assert(again.description.includes('r2') && !again.description.includes('r1'), 'feedback must be replaced, not appended forever');
+  assert(again.refreshedAt, 'refresh must be stamped');
+});
+
+test('only actionable declines file fix tasks (never unsafe/flagged/unavailable)', () => {
+  assert(JSON.stringify(FIXABLE_ACTIONS) === JSON.stringify(['gate-failed', 'llm-rejected']),
+    'exactly gate-failed + llm-rejected are fixable');
+  // Wiring pins: both actionable exits call fileFixTask…
+  assert(/fileFixTask\(pr, headSha, \[`hard gate failed at \$\{gate\.step\}`/.test(source), 'gate-failed must file a fix task');
+  assert(/record\.action === 'llm-rejected'[\s\S]{0,80}fileFixTask\(pr, headSha, review\.reasons, 'llm-rejected'/.test(source),
+    'llm-rejected (and ONLY that branch of the verdict check) must file a fix task');
+  // …and the human-only exits must not.
+  const unsafeBlock = source.slice(source.indexOf("record.action = 'reject-unsafe'"), source.indexOf("record.action = 'gate-failed'"));
+  assert(!unsafeBlock.includes('fileFixTask'), 'reject-unsafe must stay human-only');
+  const flaggedBlock = source.slice(source.indexOf("record.action = 'flagged'"), source.indexOf('// 4) LLM review'));
+  assert(!flaggedBlock.includes('fileFixTask'), 'flagged (guardrail surface) must stay human-only');
+});
+
+test('fix tasks are written via the review clone and closed on merge', () => {
+  assert(/upsertFixTaskInClone/.test(source), 'upsert must exist');
+  assert(/ensureReviewClone\(repoDir, log\)[\s\S]{0,400}FIX-\$\{prInfo\.pr\}\.json/.test(source),
+    'fix tasks must be written in the review clone, never the main tree');
+  assert(/`FIX-\$\{pr\.number\}`/.test(source), 'reconcileMerged must also complete FIX-<pr> tasks (REQ-SH-3)');
+  assert(/non-fatal/.test(source), 'fix-task filing failures must never break the review run');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

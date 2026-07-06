@@ -45,6 +45,17 @@ test('drain script carries the core safety guards', () => {
   assert(/HERMES_HOME="\$DRAIN_HOME"/.test(s) && /TERMINAL_ENV=local/.test(s), 'must use the isolated local-backend profile');
   assert(/checkout -q -f -B main origin\/main/.test(s), 'clone refresh must FORCE checkout — the previous worker legitimately leaves the clone dirty (regression: 2026-07-06 "clone checkout failed")');
   assert(/SDLC_PROJECT_DIR="\$DRAIN_CLONE"/.test(s), 'worker invocation must pin SDLC_PROJECT_DIR to the clone — the systemd unit exports it pointing at the main repo, which made workers dirty the MAIN tree (regression: 2026-07-06)');
+  assert(/pending_fixes/.test(s) && /-ge "\$MAX_OPEN_DRAIN_PRS" \] && \[ "\$\{pending_fixes:-0\}" -eq 0 \]/.test(s),
+    'the unreviewed-PR cap must NOT starve self-healing: pending FIX-* tasks bypass it (REQ-SH-2)');
+});
+
+test('drain prompt carries the self-healing fix-task procedure (REQ-SH-2)', () => {
+  const p = readFileSync(prompt, 'utf8');
+  assert(/## Fix tasks/.test(p), 'must have a Fix tasks section');
+  assert(/never skip a `FIX-\*` task for having an open PR/i.test(p), 'open-PR skip rule must exempt FIX-* tasks');
+  assert(/Do NOT create a new branch and do NOT open a new PR/i.test(p), 'fixes go to the EXISTING branch, never a second PR');
+  assert(/fixFor/.test(p), 'must point the worker at the fixFor metadata');
+  assert(/pushed fix for PR/.test(p), 'must define the fix-complete output contract');
 });
 
 test('drain prompt encodes the hard constraints (PR-gate, never main, one task)', () => {
