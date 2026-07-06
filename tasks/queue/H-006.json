@@ -2,7 +2,7 @@
   "id": "H-006",
   "phase": 0,
   "title": "Capture realized provider token usage in the ledger (REQ-H3)",
-  "description": "Record provider-reported inputTokens/outputTokens (already returned by the LLM adapters) into the cost ledger, replacing chars/4 for realized usage; keep estimateTokens as a pre-flight estimate only. SCOPE: capture only — dollar math + rollups are P4, do not implement them here. Spec: REQ-H3.",
+  "description": "Record provider-reported inputTokens/outputTokens (already returned by the LLM adapters) into the cost ledger, replacing chars/4 for realized usage; keep estimateTokens as a pre-flight estimate only. SCOPE: capture only \u2014 dollar math + rollups are P4, do not implement them here. Spec: REQ-H3.",
   "assignee": "sdlc-developer",
   "priority": "MEDIUM",
   "estimatedTokens": 14000,
@@ -10,11 +10,12 @@
     "agents/cost-tracker.mjs"
   ],
   "blockedBy": [],
-  "status": "pending",
-  "test_status": null,
+  "status": "completed",
+  "test_status": "passing",
   "created": "2026-07-06T00:20:00Z",
   "tags": [
     "hardening",
     "competitive-roadmap"
-  ]
+  ],
+  "completed_at": "2026-07-06T05:50:00Z"
 }

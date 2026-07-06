@@ -47,6 +47,7 @@ function __isMainModule() {
 
 export const MAX_AUTO_MERGES = Number(process.env.MAX_AUTO_MERGES || 3);
 export const REVIEW_MODEL = process.env.PR_REVIEW_MODEL || 'deepseek/deepseek-chat-v3.1';
+export const REVIEW_AGENT = process.env.PR_REVIEW_AGENT || 'sdlc-reviewer';
 export const DIFF_CHAR_LIMIT = 60_000;
 const COMMENT_MARKER = '<!-- pr-auto-review';
 
@@ -174,6 +175,11 @@ async function llmReview({ task, title, body, diff }) {
       maxTokens: 1500,
       temperature: 0,
     });
+    // Capture realized provider-reported usage in the cost ledger (REQ-H3).
+    try {
+      const { recordRealizedUsage } = await import('./cost-tracker.mjs');
+      recordRealizedUsage(REVIEW_AGENT, task || 'pr-review', res);
+    } catch { /* ledger capture must never break a review */ }
     const parsed = parseVerdict(res.text);
     if (!parsed) return { verdict: null, reasons: ['unparseable LLM response (treated as not approved)'] };
     return parsed;
