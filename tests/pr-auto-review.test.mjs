@@ -164,5 +164,33 @@ test('no OpenAI usage in the pipeline (privacy)', () => {
   assert(/['"]openrouter['"]/.test(source), 'must use the openrouter adapter');
 });
 
+// --- main-tree isolation (production-safety of the autonomous loop) -----------
+
+test('all review-side git mutation happens in the dedicated clone, never the main tree', () => {
+  assert(/\.sdlc-review-clone/.test(source), 'must use the dedicated review clone');
+  assert(/completeTaskInClone/.test(source), 'task completion must run in the clone');
+  assert(!/completeTaskOnMain\(/.test(source), 'the main-tree completion path must be gone');
+  // Every git push must be from the clone (the only push call site).
+  const pushes = source.match(/'push'/g) || [];
+  assert(pushes.length === 1, `exactly one push call site expected, got ${pushes.length}`);
+  assert(/\['-C', clone, 'push', 'origin', 'main'\]/.test(source), 'the push must target origin main FROM the clone');
+  assert(!/'push',\s*'--force'|'--force',\s*'push'|force-with-lease/.test(source), 'never force-push');
+  // No pull/commit/checkout against the caller's repoDir working tree.
+  assert(!/\['-C', repoDir, 'pull'/.test(source), 'must not pull in the main tree');
+  assert(!/\['-C', repoDir, 'commit'/.test(source), 'must not commit in the main tree');
+  assert(!/\['-C', repoDir, 'checkout'/.test(source), 'must not switch branches in the main tree');
+  assert(!/\['-C', repoDir, 'worktree'/.test(source), 'hard-gate worktrees must come from the clone, not the main repo');
+  assert(!/\['-C', repoDir, 'fetch'/.test(source), 'must not fetch into the main repo (FETCH_HEAD races)');
+});
+
+test('hard gate builds its worktree from the review clone', () => {
+  assert(/hardGate\(ctx\.cloneDir/.test(source), 'hardGate must run against the clone');
+});
+
+test('the shared mutex records its holder for debuggability', () => {
+  assert(/holder/.test(source), 'lock holder metadata must be written');
+  assert(/pr-auto-review \$\{process\.pid\}/.test(source), 'holder must identify the job + pid');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
