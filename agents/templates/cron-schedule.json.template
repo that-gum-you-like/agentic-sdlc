@@ -101,6 +101,13 @@
       "script": "~/agentic-sdlc/agents/hermes-drain.sh",
       "description": "Autonomous backlog drain via isolated local-backend Hermes (OpenRouter affordable models). No-op unless the repo is idle on main with a clean tree AND a task is ready; then runs one task → branch → tests → PR for human review. Never touches main.",
       "session": "isolated"
+    },
+    {
+      "name": "pr-auto-review",
+      "cron": "7,27,47 * * * *",
+      "script": "node ~/agentic-sdlc/agents/pr-auto-review.mjs",
+      "description": "Automated review-merge of agent/drain/* PRs: clean-worktree test hard gate + deterministic scope/safety scan + OpenRouter LLM review; merges safe green PRs (max 3/run), marks their queue tasks complete, comments-and-leaves-open everything else. Guardrail-touching diffs are never auto-merged.",
+      "session": "isolated"
     }
   ]
 }

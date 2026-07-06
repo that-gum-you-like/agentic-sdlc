@@ -13,6 +13,7 @@ import {
   selectJobs,
   buildUnits,
   loadSchedule,
+  extraPathDirs,
 } from '../agents/scheduler-install.mjs';
 
 let passed = 0;
@@ -50,6 +51,7 @@ test('cronToOnCalendar translates daily / weekly / monthly / step forms', () => 
     ['*/15 * * * *', '*-*-* *:0/15:00'],
     ['0 */4 * * *', '*-*-* 0/4:00:00'],
     ['17 */6 * * *', '*-*-* 0/6:17:00'],
+    ['7,27,47 * * * *', '*-*-* *:7,27,47:00'],
   ];
   for (const [cron, expected] of cases) {
     const got = cronToOnCalendar(cron);
@@ -96,6 +98,28 @@ test('buildUnits renders a oneshot service + persistent timer with absolute path
   assert(/OnCalendar=\*-\*-\* 06:00:00/.test(u.timer), 'timer must carry OnCalendar');
   assert(/Persistent=true/.test(u.timer), 'timer must be Persistent (catch up missed runs)');
   assert(/WantedBy=timers\.target/.test(u.timer), 'timer must install into timers.target');
+});
+
+// --- unit PATH resolves the tools scheduled jobs shell out to ---
+test('extraPathDirs resolves gh/hermes dirs + ~/.local/bin (deduped)', () => {
+  const whichFn = (bin) => ({ gh: '/opt/brew/bin/gh', hermes: '/home/x/.local/bin/hermes' }[bin] || '');
+  const dirs = extraPathDirs({ home: '/home/x', whichFn });
+  assert(JSON.stringify(dirs) === JSON.stringify(['/opt/brew/bin', '/home/x/.local/bin']),
+    `dirs ${JSON.stringify(dirs)}`);
+  // Tools missing from the installer PATH still leave ~/.local/bin covered.
+  const fallback = extraPathDirs({ home: '/home/x', whichFn: () => '' });
+  assert(JSON.stringify(fallback) === JSON.stringify(['/home/x/.local/bin']), `fallback ${JSON.stringify(fallback)}`);
+});
+
+test('buildUnits bakes pathDirs into the unit PATH (rc=127 hermes/gh fix)', () => {
+  const job = { name: 'pr-auto-review', cron: '7,27,47 * * * *', script: 'node ~/agentic-sdlc/agents/pr-auto-review.mjs' };
+  const u = buildUnits(job, {
+    repoDir: '/home/x/agentic-sdlc', nodeBin: '/opt/node/bin/node', home: '/home/x',
+    pathDirs: ['/opt/brew/bin', '/home/x/.local/bin'],
+  });
+  assert(/Environment=PATH=\/opt\/node\/bin:\/opt\/brew\/bin:\/home\/x\/\.local\/bin:\/usr\/local\/bin:\/usr\/bin:\/bin/.test(u.service),
+    `unit PATH wrong:\n${u.service}`);
+  assert(u.onCalendar === '*-*-* *:7,27,47:00', `comma-list OnCalendar, got ${u.onCalendar}`);
 });
 
 // --- schedule loads and every entry translates ---
