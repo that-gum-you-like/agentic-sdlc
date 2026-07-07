@@ -1,6 +1,7 @@
 {
-  "status": "in-progress",
-  "phase": "implement",
+  "status": "implemented",
+  "phase": "verify",
   "created": "2026-07-06",
-  "lastUpdated": "2026-07-06"
+  "lastUpdated": "2026-07-06",
+  "pr": 42
 }
