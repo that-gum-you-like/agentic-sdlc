@@ -105,8 +105,8 @@
     {
       "name": "kanban-sync",
       "cron": "*/15 * * * *",
-      "script": "node ~/agentic-sdlc/agents/kanban-bridge.mjs sync && node ~/agentic-sdlc/agents/agent-registry.mjs",
-      "description": "Sync the SDLC task queue into the Hermes kanban board and refresh the agent registry, so the command-center dashboard shows live backlog + agent state. Idempotent.",
+      "script": "node ~/agentic-sdlc/agents/command-center-sync.mjs sync",
+      "description": "Full command-center sync: task queue, agent registry, OpenSpec changes + tasks.md sub-cards, BACKLOG.md ideas, run history, and board-side approvals into the Hermes kanban the dashboard reads. Idempotent single command (systemd ExecStart cannot shell-chain).",
       "session": "isolated"
     },
     {
