@@ -1,6 +1,7 @@
 {
-  "status": "proposed",
-  "phase": "proposal",
+  "status": "implemented",
+  "phase": "verify",
   "created": "2026-07-06",
-  "lastUpdated": "2026-07-06"
+  "lastUpdated": "2026-07-06",
+  "notes": "Helper + allowlist + tests shipped (PR pending). Deferred: drain wiring (T7) and branch-protection backstop (T8) until Bryce swaps the broad GITHUB_TOKEN for a fine-grained PAT (GITHUB_WRITE_TOKEN)."
 }

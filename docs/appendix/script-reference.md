@@ -48,6 +48,10 @@
 | `agents/document-sync.mjs` | Content-hash + version knowledge docs (`pm/doc-versions.json`); mark changed docs for re-indexing by `rag-indexer.mjs` |
 | `agents/telegram-notify.mjs` | Telegram Bot API notification sender (stdlib `https`, opt-in, no-op unconfigured); registered as the `telegram` provider in `notify.mjs` |
 | `agents/scheduler-install.mjs` | Activate the schedule as live **systemd user timers** (`sdlc-sched-*`) — `list` / `install [--dry-run]` / `status` / `uninstall`; cron→OnCalendar, agent/adapter-gated, `Persistent=true` catch-up |
+| `agents/kanban-bridge.mjs` | Idempotent sync of `tasks/queue/*.json` → Hermes kanban (`sync [--reconcile]` / `status`); link map in `pm/kanban-links.json` |
+| `agents/agent-registry.mjs` | Emit `pm/agents.json` — agent roster from `budget.json` + today's spend |
+| `agents/command-center-sync.mjs` | Full command-center pass (timer-run every 15 min): OpenSpec changes as approvable cards + tasks.md child cards + BACKLOG.md catalog + run-history card (`pm/runs.json`) + board-side approvals → `status.json`; composes kanban-bridge + agent-registry. See `docs/hermes-backlog-bridge.md` |
+| `agents/hermes-git-push.mjs` | Two-gate GitHub push for autonomous cycles: allowlist (`~/.hermes/github-write-allowlist.json`) + fine-grained PAT; only `hermes/auto/<id>` branches, never protected branches, draft PR into the review gate (`init` / `check` / `push`) |
 | `docs/comparison.md` | Framework comparison (vs LangGraph, Autogen, CrewAI, etc.) |
 | `docs/cursor-setup.md` | Cursor IDE setup guide (OpenAI, OpenSpec without skills) |
 | `docs/troubleshooting.md` | Common issues and recovery patterns |
