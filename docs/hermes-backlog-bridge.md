@@ -70,3 +70,35 @@ The onboarding guide referenced these automation scripts; they now exist under `
 ## Getting started
 
 New to the repo? Read [claude-quickstart.md](claude-quickstart.md) for the operating loop, then `CLAUDE.md` for the full operating manual.
+
+---
+
+## Command-center visibility (openspec change `command-center-visibility`)
+
+`agents/command-center-sync.mjs sync` (run by the `sdlc-sched-kanban-sync` timer every
+15 min) is the single command that fills the board `hermes dashboard` reads:
+
+| Board object | Source | Idempotency key |
+|---|---|---|
+| `OpenSpec: <name>` parent card (proposal excerpt + phase + read path) | `openspec/changes/<name>/` | `openspec:<name>` |
+| Sub-task child cards under each change | that change's `tasks.md` checklist | `subtask:<change>:<n>` |
+| `OpenSpec Backlog` parent + one card per idea | `openspec/BACKLOG.md` `### <id>. <title>` | `backlog:<id>` |
+| Queue task cards (via kanban-bridge) linked under their change | `tasks/queue/*.json` (tag or description naming the change) | task id |
+| `Agent run history` card (one comment per run) + `pm/runs.json` | `pm/cycle-history.json` · `pm/pr-auto-review.log` · `pm/drain-logs/` | `runs:root` |
+| `pm/agents.json` (agent roster + spend) | `budget.json` + cost ledger | — |
+
+**Reading a change from the board:** open the `OpenSpec: <name>` card — the body
+holds the Problem + Value Analysis excerpt and the full read path
+(`openspec show <name>`, `openspec/changes/<name>/`). Its child cards are the
+tasks.md items; phase transitions arrive as comments.
+
+**Approving a change from the board:** comment `approve` (or `approved` / `lgtm` /
+`ship it`) on the change card — dashboard comment box or
+`hermes kanban comment <card-id> approve`. The next sync pass (≤15 min, or run
+`node agents/command-center-sync.mjs sync` now) stamps
+`approved/approvedBy/approvedAt` into that change's `status.json`, records it in
+`pm/approvals.json`, and posts a ✅ confirmation comment back on the card.
+
+State (card ids, seen-run cursor, completed-card cache) lives in
+`pm/command-center-links.json`; deleting it is safe — idempotency keys re-resolve.
+Dry-run: `node agents/command-center-sync.mjs status`.
