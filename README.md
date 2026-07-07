@@ -118,6 +118,16 @@ node ~/agentic-sdlc/setup.mjs --help                          # Full flag refere
 - **Self-healing** — health checks detect provider outages, auto-swap to healthy providers, reset stuck tasks, alert you via notification
 - **Adopt incrementally** — start with a rules file (Level 1), add as you need. No big-bang migration
 
+## Command Center
+
+A single pane of glass over everything the framework is doing — every OpenSpec change, backlog item, spawned sub-task, and agent run, cataloged on one board you can read and **approve** from.
+
+- **Web dashboard** — runs as the `hermes-dashboard` systemd user service on `http://127.0.0.1:7777` (auto-restart, enabled at login). Log in via Nous Portal (`hermes dashboard register`).
+- **One board, full visibility** — a 15-min sync (`agents/command-center-sync.mjs`, wired to the `sdlc-sched-kanban-sync` timer) mirrors the file-based ledger into the Hermes kanban board the dashboard reads: **OpenSpec changes as parent cards**, their `tasks.md` items as **sub-cards**, `BACKLOG.md` ideas, the task queue, and **agent-run history**. Idempotent — re-runs create no duplicates.
+- **Read & approve from the board** — open an `OpenSpec: <name>` card to read its Problem + Value Analysis (full spec via `openspec show <name>`); comment **`approve`** on the card and the next sync stamps `approved` into that change's `status.json` and logs it to `pm/approvals.json`.
+- **Reachable four ways over one ledger** — the web dashboard, the `hermes` CLI, Telegram, and your coding agent (Claude Code / Cursor) all read and write the same work. See [docs/hermes-backlog-bridge.md](docs/hermes-backlog-bridge.md).
+- **Secrets in the UI** — dashboard → **Settings → Secrets** writes to `~/.hermes/.env` (or `hermes config set KEY VALUE`).
+
 ## Maturity Model
 
 Adopt incrementally — each level builds on the previous:
@@ -154,6 +164,11 @@ node ~/agentic-sdlc/agents/model-manager.mjs suggest coding   # Best model for t
 node ~/agentic-sdlc/agents/model-manager.mjs recommend        # Cross-provider recommendations
 node ~/agentic-sdlc/agents/model-manager.mjs research         # Fetch latest pricing
 node ~/agentic-sdlc/agents/cost-tracker.mjs report             # Cost report
+
+# Command Center
+systemctl --user start hermes-dashboard                      # Dashboard service on :7777
+node ~/agentic-sdlc/agents/command-center-sync.mjs           # Sync board now (changes + sub-tasks + runs)
+node ~/agentic-sdlc/agents/agent-registry.mjs                # Refresh agent roster → pm/agents.json
 ```
 
 ## Documentation (Recommended Reading Order)
@@ -167,8 +182,9 @@ node ~/agentic-sdlc/agents/cost-tracker.mjs report             # Cost report
 | 5 | [docs/safety-mechanisms.md](docs/safety-mechanisms.md) | When adding quality gates (Level 4+) |
 | 6 | [docs/adapter-guide.md](docs/adapter-guide.md) | When writing custom adapters |
 | 7 | [framework/maturity-model.md](framework/maturity-model.md) | Strategic planning and full checklists |
-| 8 | [docs/comparison.md](docs/comparison.md) | If evaluating alternatives |
-| 9 | [framework/lesson-plan.md](framework/lesson-plan.md) | 7-hour deep-dive curriculum |
+| 8 | [docs/hermes-backlog-bridge.md](docs/hermes-backlog-bridge.md) | Command center — one ledger, four interfaces, board visibility & approvals |
+| 9 | [docs/comparison.md](docs/comparison.md) | If evaluating alternatives |
+| 10 | [framework/lesson-plan.md](framework/lesson-plan.md) | 7-hour deep-dive curriculum |
 
 ## License
 
