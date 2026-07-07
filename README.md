@@ -120,13 +120,41 @@ node ~/agentic-sdlc/setup.mjs --help                          # Full flag refere
 
 ## Command Center
 
-A single pane of glass over everything the framework is doing — every OpenSpec change, backlog item, spawned sub-task, and agent run, cataloged on one board you can read and **approve** from.
+![The command center — OpenSpec changes, their sub-tasks, and parked work laid out in kanban lanes](docs/images/command-center-board.png)
 
-- **Web dashboard** — runs as the `hermes-dashboard` systemd user service on `http://127.0.0.1:7777` (auto-restart, enabled at login). Log in via Nous Portal (`hermes dashboard register`).
-- **One board, full visibility** — a 15-min sync (`agents/command-center-sync.mjs`, wired to the `sdlc-sched-kanban-sync` timer) mirrors the file-based ledger into the Hermes kanban board the dashboard reads: **OpenSpec changes as parent cards**, their `tasks.md` items as **sub-cards**, `BACKLOG.md` ideas, the task queue, and **agent-run history**. Idempotent — re-runs create no duplicates.
-- **Read & approve from the board** — open an `OpenSpec: <name>` card to read its Problem + Value Analysis (full spec via `openspec show <name>`); comment **`approve`** on the card and the next sync stamps `approved` into that change's `status.json` and logs it to `pm/approvals.json`.
-- **Reachable four ways over one ledger** — the web dashboard, the `hermes` CLI, Telegram, and your coding agent (Claude Code / Cursor) all read and write the same work. See [docs/hermes-backlog-bridge.md](docs/hermes-backlog-bridge.md).
-- **Secrets in the UI** — dashboard → **Settings → Secrets** writes to `~/.hermes/.env` (or `hermes config set KEY VALUE`).
+A single pane of glass over everything the framework is doing. Every OpenSpec change, backlog item, spawned sub-task, and agent run is cataloged on one board you can **read and approve** from — reachable four ways over one shared ledger.
+
+### What it does
+
+A sync (`agents/command-center-sync.mjs`, run every 15 min by the `sdlc-sched-kanban-sync` timer) mirrors the file-based ledger into the Hermes kanban board the dashboard renders:
+
+- **OpenSpec changes** as parent cards — title + phase, body = Problem + Value Analysis excerpt
+- Each change's **`tasks.md` items as sub-cards** (parent → child) — so every spawned sub-task is tracked under its change
+- **`BACKLOG.md` ideas** grouped under one parent, the **task queue** (`tasks/queue/*.json`), and **agent-run history** (scheduler cycles, drain passes, pr-auto-review merges — full ledger in `pm/runs.json`)
+- The **agent roster** + today's token spend (`pm/agents.json`)
+
+### Capabilities
+
+- **Lanes that mean something** — `Todo` (active, unblocked work), `Ready` (changes ready to assign), `In Progress`, `Done`, and a **Parked** lane so deferred / aspirational / rejected work never clutters the active list.
+- **Read & approve from the board** — open an `OpenSpec: <name>` card to read its spec (full text via `openspec show <name>`); comment **`approve`** (or `lgtm` / `ship it`) and the next sync stamps `approved` into that change's `status.json` and logs it to `pm/approvals.json`.
+- **Park & retire** — flag a change `"parked": true` and it (plus its sub-tasks) moves to the Parked lane; delete a change and its cards retire off the board entirely. The board stays an honest picture of real work.
+- **Live agent/job/run history** — see each scheduled cycle, autonomous drain pass, and auto-review merge, Paperclip-style.
+- **Idempotent & self-updating** — re-runs create zero duplicates; the board reflects the repo every 15 minutes.
+
+### Four interfaces, one ledger
+
+| Interface | Use it for |
+|-----------|------------|
+| **Web dashboard** | Click in, read specs, approve, watch runs |
+| **Hermes CLI** (`hermes kanban`, `hermes chat`) | Terminal-native task + agent control |
+| **Telegram** | Manage and get alerts from your phone |
+| **Your coding agent** (Claude Code / Cursor) | Does the work, stays aligned via CLAUDE.md + OpenSpec |
+
+All four read and write the same repo artifacts — there is no separate database of record. See [docs/hermes-backlog-bridge.md](docs/hermes-backlog-bridge.md).
+
+### Access
+
+The dashboard runs as the `hermes-dashboard` systemd user service on **http://127.0.0.1:7777** (auto-restart, survives reboot). Bound to loopback, it **auto-authenticates a browser on the same machine — no login**. For remote access, tunnel it (`ssh -L 7777:127.0.0.1:7777 <host>`) or bind publicly (which then requires a password / OAuth). Add secrets (e.g. a Telegram token) in **dashboard → Settings → Secrets** — they write to `~/.hermes/.env` (or `hermes config set KEY VALUE`).
 
 ## Maturity Model
 

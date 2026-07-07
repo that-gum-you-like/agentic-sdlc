@@ -183,6 +183,14 @@ Token budget for Phase 1: covered by Bryce's Max subscription via this Claude Co
   - Complexity: S (estimatedTokens: 20000)
   - Parallel: blocked-by T-203
 
+- [ ] **T-211**: Behavior-tests pillar — schedule `test-behavior.mjs --drift` as a recurring Level 6 self-improvement check and surface >20% prompt-quality drift into the drift-alert stream
+  - Files: `agents/templates/cron-schedule.json.template`, `agents/test-behavior.mjs`, `agents/metrics.mjs`
+  - Spec: structured-observability/REQ-004 (drift), scheduled-self-improvement
+  - Agent: sdlc-developer
+  - Complexity: S (estimatedTokens: 12000)
+  - Parallel: blocked-by T-208
+  - Notes: Added per Bryce — Level 6 "Self-Improving" needs all three pillars *operationally scheduled*: pattern detection (T-205) + drift monitoring (T-208) + **behavior tests (this task)**. Behavior tests currently run only as a commit gate and weekly review; this makes the behavior-drift check a first-class recurring Level 6 signal, completing the triad.
+
 ---
 
 ### Phase 3: Deployment — close 1.5 → 5.0 (Days 1-3, autonomous)
