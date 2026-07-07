@@ -9,10 +9,16 @@
  *   BACKLOG.md catalog · approval comment -> status.json + approvals.json ·
  *   run ledgers -> pm/runs.json + runs-card comments · queue-task linking ·
  *   idempotent re-run. Driven through a FAKE `hermes` shim on PATH — no live
- *   Hermes needed. `show --json` output is canned via $HERMES_SHOW_FILE.
+ *   Hermes needed. `show --json` output is canned via $HERMES_SHOW_FILE,
+ *   `list --json` via $HERMES_LIST_FILE.
+ *
+ * Also covers REQ-001..REQ-005 from openspec/changes/command-center-parked-lane
+ * ("PARKED REQ-*" tests): `"parked": true` -> parent + open sub-tasks driven to
+ *   the `scheduled` (Parked) lane · idempotent re-park · un-park via unblock ·
+ *   deleted change dir -> cards archived off the board.
  */
 
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, chmodSync } from 'fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, renameSync, chmodSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -52,6 +58,14 @@ writeFileSync(join(proj, 'openspec', 'changes', 'alpha', 'tasks.md'),
 // change beta: implement phase, no tasks.md
 writeFileSync(join(proj, 'openspec', 'changes', 'beta', 'status.json'),
   JSON.stringify({ status: 'in-progress', phase: 'implement', created: '2026-07-06', lastUpdated: '2026-07-06' }));
+// change delta: PARKED — parent + open tasks must land in the scheduled lane
+mkdirSync(join(proj, 'openspec', 'changes', 'delta'), { recursive: true });
+writeFileSync(join(proj, 'openspec', 'changes', 'delta', 'status.json'),
+  JSON.stringify({ status: 'proposed', phase: 'design', created: '2026-07-06', lastUpdated: '2026-07-06', parked: true }));
+writeFileSync(join(proj, 'openspec', 'changes', 'delta', 'proposal.md'),
+  '# Proposal: delta\n\n## Problem\n\nDelta problem.\n\n## Value Analysis\n\nDelta value.\n');
+writeFileSync(join(proj, 'openspec', 'changes', 'delta', 'tasks.md'),
+  ['# Tasks: delta', '', '## Implementation Tasks', '', '- [ ] D1 open task', '- [ ] D2 open task', '- [x] D3 finished task', ''].join('\n'));
 // archived change must never appear
 writeFileSync(join(proj, 'openspec', 'changes', 'archive', 'old-change', 'status.json'),
   JSON.stringify({ status: 'archived', phase: 'archive' }));
@@ -83,7 +97,7 @@ writeFileSync(join(proj, 'agents', 'budget.json'), JSON.stringify({
   agents: { roy: { model: 'qwen/qwen3-coder', permissions: 'full-edit', dailyTokens: 500000 } },
 }));
 
-// fake `hermes`: logs argv; create echoes {id:t_<key>}; list -> []; show -> $HERMES_SHOW_FILE or empty; else ok
+// fake `hermes`: logs argv; create echoes {id:t_<key>}; list -> $HERMES_LIST_FILE or []; show -> $HERMES_SHOW_FILE or empty; else ok
 const shim = `#!/usr/bin/env node
 import fs from 'fs';
 const a = process.argv.slice(2);
@@ -92,7 +106,9 @@ if (a[1] === 'create') {
   const i = a.indexOf('--idempotency-key');
   process.stdout.write(JSON.stringify({ id: 't_' + (i >= 0 ? a[i + 1] : 'x') }));
 } else if (a[1] === 'list') {
-  process.stdout.write('[]');
+  const lf = process.env.HERMES_LIST_FILE;
+  if (lf && fs.existsSync(lf)) process.stdout.write(fs.readFileSync(lf, 'utf8'));
+  else process.stdout.write('[]');
 } else if (a[1] === 'show') {
   const f = process.env.HERMES_SHOW_FILE;
   if (f && fs.existsSync(f)) process.stdout.write(fs.readFileSync(f, 'utf8'));
@@ -108,9 +124,11 @@ if (a[1] === 'create') {
 writeFileSync(join(fakeBin, 'hermes'), shim);
 chmodSync(join(fakeBin, 'hermes'), 0o755);
 
+const listFile = join(fakeBin, 'list.json');
 process.env.SDLC_PROJECT_DIR = proj;
 process.env.HERMES_LOG = hermesLog;
 delete process.env.HERMES_SHOW_FILE;
+delete process.env.HERMES_LIST_FILE;
 const ORIG_PATH = process.env.PATH;
 process.env.PATH = fakeBin + ':' + ORIG_PATH;
 
@@ -151,9 +169,15 @@ test('collectRuns: merges 3 sources, skips garbage, newest first', () => {
 });
 test('scanChanges: skips archive/, reads phase', () => {
   const changes = cc.scanChanges();
-  assertEqual(changes.length, 2);
+  assertEqual(changes.length, 3);
   assert(!changes.some((c) => c.name === 'old-change'), 'archive/ excluded');
   assertEqual(changes.find((c) => c.name === 'beta').phase, 'implement');
+});
+test('REQ-001 (parked): scanChanges surfaces parked flag; statusReport counts it', () => {
+  const changes = cc.scanChanges();
+  assertEqual(changes.find((c) => c.name === 'delta').parked, true);
+  assert(changes.filter((c) => c.name !== 'delta').every((c) => c.parked === false), 'others unparked');
+  assertEqual(cc.statusReport().parked, 1);
 });
 
 console.log('\n📋 command-center-sync: first full pass');
@@ -186,6 +210,29 @@ test('REQ-002: tasks.md items are child cards of the change; checked one complet
   assertEqual(s1[s1.indexOf('--parent') + 1], 't_openspec:alpha', 'sub-card parented to change card');
   assert(lines.some((a) => a[1] === 'complete' && a[2] === 't_subtask:alpha:1'), 'checked item completed');
   assertEqual(createsFor(lines, 'subtask:alpha:3').length, 0, 'prerequisite item not synced');
+});
+test('PARKED REQ-002: parked parent created with (Parked) title, PARKED body, no initial lane, then scheduled', () => {
+  const lines = logLines();
+  const d = createsFor(lines, 'openspec:delta')[0];
+  assert(d, 'delta card created');
+  assertEqual(d[2], 'OpenSpec (Parked): delta', 'unmistakable Parked title');
+  assert(/PARKED/.test(d[d.indexOf('--body') + 1]), 'PARKED banner in body');
+  assert(!d.includes('--initial-status'), 'parked create passes no initial lane');
+  const sched = lines.find((a) => a[1] === 'schedule' && a[2] === 't_openspec:delta');
+  assert(sched, 'parent parked via hermes kanban schedule');
+  assert(/PARKED/.test(String(sched[3] || '')), 'schedule reason carries PARKED marker');
+});
+test('PARKED REQ-002: unchecked sub-tasks scheduled beside parent; checked one completes, not scheduled', () => {
+  const lines = logLines();
+  assert(lines.some((a) => a[1] === 'schedule' && a[2] === 't_subtask:delta:1'), 'D1 parked');
+  assert(lines.some((a) => a[1] === 'schedule' && a[2] === 't_subtask:delta:2'), 'D2 parked');
+  assert(!lines.some((a) => a[1] === 'schedule' && a[2] === 't_subtask:delta:3'), 'checked D3 never scheduled');
+  assert(lines.some((a) => a[1] === 'complete' && a[2] === 't_subtask:delta:3'), 'checked D3 completed');
+});
+test('PARKED REQ-002: non-parked changes never receive a schedule call', () => {
+  const scheduled = logLines().filter((a) => a[1] === 'schedule').map((a) => a[2]);
+  assert(scheduled.every((id) => id.includes('delta')), `only delta cards scheduled, got: ${scheduled.join(',')}`);
+  assertEqual(scheduled.length, 3, 'parent + 2 open tasks, nothing else');
 });
 test('REQ-003: backlog root + children; shipped idea completed; no rejected card', () => {
   const lines = logLines();
@@ -229,6 +276,11 @@ test('re-run: completed cards are not re-completed (state remembers)', () => {
 });
 test('re-run: no phase comment when phase unchanged', () => {
   assert(!logLines().some((a) => a[1] === 'comment' && String(a[3] || '').startsWith('phase:')), 'no spurious phase comment');
+});
+test('PARKED REQ-003: re-run issues zero redundant schedule calls (parkedCards cache holds)', () => {
+  assertEqual(logLines().filter((a) => a[1] === 'schedule').length, 0, 'no repeat schedule calls');
+  const st = JSON.parse(readFileSync(join(proj, 'pm', 'command-center-links.json'), 'utf8'));
+  assertEqual(st.parkedCards.length, 3, 'parked cards persisted in state');
 });
 
 console.log('\n📋 command-center-sync: phase transition');
@@ -288,16 +340,59 @@ test('REQ-004: sync-authored comments never trigger detection (beta stays unappr
   assertEqual(st.approved, true, 'beta approved by bryce comment (same canned show)');
 });
 
-console.log('\n📋 command-center-sync: archived-later change completes its card');
+console.log('\n📋 command-center-sync: un-park (flag removed)');
 delete process.env.HERMES_SHOW_FILE;
-rmSync(join(proj, 'openspec', 'changes', 'beta'), { recursive: true, force: true });
+writeFileSync(join(proj, 'openspec', 'changes', 'delta', 'status.json'),
+  JSON.stringify({ status: 'proposed', phase: 'design', created: '2026-07-06', lastUpdated: '2026-07-06' }));
+writeFileSync(listFile, JSON.stringify([
+  { id: 't_openspec:delta', title: 'OpenSpec (Parked): delta', status: 'scheduled' },
+  { id: 't_subtask:delta:1', title: 'D1 open task', status: 'scheduled' },
+  { id: 't_subtask:delta:2', title: 'D2 open task', status: 'scheduled' },
+  { id: 't_subtask:delta:3', title: 'D3 finished task', status: 'done' },
+]));
+process.env.HERMES_LIST_FILE = listFile;
 writeFileSync(hermesLog, '');
 cc.fullSync({});
-test('REQ-001: vanished change dir -> card completed once', () => {
+test('PARKED REQ-004: removing the flag unblocks exactly the cards the sync parked', () => {
+  const unblocked = logLines().filter((a) => a[1] === 'unblock').map((a) => a[2]).sort();
+  assertEqual(unblocked.join(','), 't_openspec:delta,t_subtask:delta:1,t_subtask:delta:2', 'parent + 2 open tasks, never done D3');
+});
+test('PARKED REQ-004: parkedCards cache emptied; second pass unblocks nothing', () => {
+  const st = JSON.parse(readFileSync(join(proj, 'pm', 'command-center-links.json'), 'utf8'));
+  assertEqual(st.parkedCards.length, 0, 'cache emptied');
+  writeFileSync(hermesLog, '');
+  cc.fullSync({});
+  assert(!logLines().some((a) => a[1] === 'unblock'), 'no repeat unblock — human-scheduled cards stay parked');
+});
+delete process.env.HERMES_LIST_FILE;
+
+console.log('\n📋 command-center-sync: vanished change dirs (archived vs deleted)');
+mkdirSync(join(proj, 'openspec', 'changes', 'archive'), { recursive: true });
+renameSync(join(proj, 'openspec', 'changes', 'beta'), join(proj, 'openspec', 'changes', 'archive', 'beta'));
+writeFileSync(hermesLog, '');
+cc.fullSync({});
+test('REQ-001: change moved to archive/ -> card completed once', () => {
   assert(logLines().some((a) => a[1] === 'complete' && a[2] === 't_openspec:beta'), 'beta card completed');
+  assert(!logLines().some((a) => a[1] === 'archive'), 'archived change is completed, not board-archived');
   writeFileSync(hermesLog, '');
   cc.fullSync({});
   assert(!logLines().some((a) => a[1] === 'complete' && a[2] === 't_openspec:beta'), 'not re-completed next pass');
+});
+rmSync(join(proj, 'openspec', 'changes', 'delta'), { recursive: true, force: true });
+writeFileSync(hermesLog, '');
+cc.fullSync({});
+test('PARKED REQ-005: deleted change dir -> parent + every sub-card archived off the board', () => {
+  const archived = logLines().filter((a) => a[1] === 'archive').map((a) => a[2]).sort();
+  assertEqual(archived.join(','), 't_openspec:delta,t_subtask:delta:1,t_subtask:delta:2,t_subtask:delta:3');
+  assert(!logLines().some((a) => a[1] === 'complete' && a[2] === 't_openspec:delta'), 'deleted change is not fake-completed');
+});
+test('PARKED REQ-005: state purged; next pass issues nothing for the deleted change', () => {
+  const st = JSON.parse(readFileSync(join(proj, 'pm', 'command-center-links.json'), 'utf8'));
+  assert(!('delta' in st.changes) && !('delta' in st.phases), 'change entries removed');
+  assert(!Object.keys(st.subtasks).some((k) => k.includes('delta')), 'subtask entries removed');
+  writeFileSync(hermesLog, '');
+  cc.fullSync({});
+  assert(!logLines().some((a) => a[1] === 'archive' || String(a[2] || '').includes('delta')), 'silent no-op');
 });
 
 console.log('\n📋 command-center-sync: status (dry-run) + degradation');

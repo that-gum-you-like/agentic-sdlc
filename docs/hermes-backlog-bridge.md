@@ -99,6 +99,33 @@ tasks.md items; phase transitions arrive as comments.
 `approved/approvedBy/approvedAt` into that change's `status.json`, records it in
 `pm/approvals.json`, and posts a ✅ confirmation comment back on the card.
 
-State (card ids, seen-run cursor, completed-card cache) lives in
+State (card ids, seen-run cursor, completed-card + parked-card caches) lives in
 `pm/command-center-links.json`; deleting it is safe — idempotency keys re-resolve.
 Dry-run: `node agents/command-center-sync.mjs status`.
+
+## Parked changes (openspec change `command-center-parked-lane`)
+
+Kanban lanes are fixed (`triage · todo · scheduled · ready · running · blocked ·
+done`), so the **`scheduled` lane is repurposed as the Parked lane**: deliberately
+deferred OpenSpec changes live there, off the active Todo, without losing their
+written proposal/design/specs.
+
+**Park a change:** add `"parked": true` to
+`openspec/changes/<name>/status.json`. The next sync pass moves the change's
+parent card AND all of its unchecked sub-task cards to `scheduled` (via
+`hermes kanban schedule`, which also stamps a `SCHEDULED: PARKED — …` comment on
+each card). New parent cards for parked changes are titled
+`OpenSpec (Parked): <name>`. Checked (finished) tasks stay in `done`. Re-runs are
+idempotent — 0 duplicates, 0 redundant lane moves (`parkedCards` cache +
+live-lane check).
+
+**Un-park:** remove the `"parked": true` flag. The next pass issues
+`hermes kanban unblock` for exactly the cards the sync parked (never a card a
+human scheduled by hand); Hermes re-gates them to `ready`/`todo` by dependency
+state.
+
+**Deleting a change outright** (dir removed, NOT moved to
+`openspec/changes/archive/`): the sync archives the parent card and every
+sub-task card off the board entirely and forgets them — no orphan cards in
+Todo. A change moved to `archive/` instead completes its parent card (finished
+work), as before.

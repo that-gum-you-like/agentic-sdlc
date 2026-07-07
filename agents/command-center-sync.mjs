@@ -22,9 +22,15 @@
  * Zero npm deps; shells out to `hermes` via kanban-bridge.runKanban. Card ids
  * and cursors persist in pm/command-center-links.json (pm/ is gitignored).
  *
+ * Parked lane: lanes are fixed, so the kanban `scheduled` lane is repurposed
+ * as **Parked** — a change with `"parked": true` in its status.json has its
+ * parent card AND all open sub-task cards driven there (never todo). See
+ * docs/hermes-backlog-bridge.md "Parked changes".
+ *
  * Exports (for tests): mapChangePhase, scanChanges, parseSubtasks,
  * parseBacklog, collectRuns, syncChanges, syncBacklog, syncRuns,
- * reconcileApprovals, linkQueueTasks, fullSync, statusReport
+ * reconcileApprovals, linkQueueTasks, fullSync, statusReport,
+ * parkCard, unparkCard, completeCard
  */
 
 import { fileURLToPath } from 'node:url';
@@ -71,6 +77,7 @@ function loadState() {
     seenRuns: s.seenRuns || [],     // run keys already commented
     linkedPairs: s.linkedPairs || [], // `${parentKid}:${childKid}` already linked
     completedCards: s.completedCards || [], // kanban ids we already drove to done
+    parkedCards: s.parkedCards || [],       // kanban ids we already drove to scheduled (Parked)
   };
 }
 function kanbanId(created) {
@@ -102,6 +109,38 @@ export function completeCard(kid, boardById, state) {
   const done = /^Completed/im.test(out);
   if (done || /terminal state/i.test(out)) state.completedCards.push(kid);
   return done;
+}
+
+/**
+ * Park a card in the `scheduled` lane — the board's Parked lane (lanes are
+ * fixed; `scheduled` is repurposed for deliberately deferred work, see
+ * docs/hermes-backlog-bridge.md). `hermes kanban schedule` exits non-zero on a
+ * card already in `scheduled` (or `done`), so guard on both the state cache
+ * and the live lane — re-runs must issue zero redundant moves.
+ */
+export function parkCard(kid, boardById, state, reason) {
+  if (state.parkedCards.includes(kid)) return false;
+  const lane = boardById[kid] && boardById[kid].status;
+  if (lane === 'scheduled') { state.parkedCards.push(kid); return false; }
+  if (lane === 'done' || lane === 'archived') return false; // finished work stays finished
+  runKanban(['schedule', kid, reason]);
+  state.parkedCards.push(kid);
+  return true;
+}
+
+/**
+ * Reverse of parkCard for a change that lost its `"parked": true` flag. Only
+ * cards THIS sync parked (recorded in state.parkedCards) are ever unblocked —
+ * a card a human scheduled by hand is never touched.
+ */
+export function unparkCard(kid, boardById, state) {
+  const i = state.parkedCards.indexOf(kid);
+  if (i === -1) return false;
+  state.parkedCards.splice(i, 1);
+  const lane = boardById[kid] && boardById[kid].status;
+  if (lane !== 'scheduled') return false; // moved by other means; cache entry dropped is enough
+  try { runKanban(['unblock', kid]); } catch { return false; }
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -140,7 +179,7 @@ export function scanChanges() {
     try { proposal = fs.readFileSync(join(dir, 'proposal.md'), 'utf8'); } catch { /* proposal optional */ }
     let tasksMd = '';
     try { tasksMd = fs.readFileSync(join(dir, 'tasks.md'), 'utf8'); } catch { /* tasks optional */ }
-    out.push({ name, dir, phase: status.phase || 'proposal', status: status.status || 'proposed', approved: !!status.approved, proposal, tasksMd });
+    out.push({ name, dir, phase: status.phase || 'proposal', status: status.status || 'proposed', approved: !!status.approved, parked: !!status.parked, proposal, tasksMd });
   }
   return out;
 }
@@ -150,6 +189,7 @@ function changeCardBody(c) {
   const value = sectionExcerpt(c.proposal, 'Value Analysis');
   return [
     `**OpenSpec change** \`${c.name}\` — phase at card creation: **${c.phase}** (status: ${c.status}). Live phase updates arrive as comments below.`,
+    c.parked ? `\n**📦 PARKED** — deliberately deferred (\`"parked": true\` in status.json). This card and its sub-tasks live in the \`scheduled\` lane (the board's Parked lane), off the active Todo. Un-park: remove the flag; the next sync pass returns the cards.` : '',
     problem ? `\n## Problem (excerpt)\n${problem}` : '',
     value ? `\n## Value Analysis (excerpt)\n${value}` : '',
     '\n---',
@@ -162,14 +202,16 @@ function changeCardBody(c) {
 /** Upsert one card per change; comment on phase transitions; complete archived. */
 export function syncChanges(state, boardById) {
   const changes = scanChanges();
-  let created = 0, phaseComments = 0, completed = 0;
+  let created = 0, phaseComments = 0, completed = 0, parked = 0, retired = 0;
   for (const c of changes) {
-    const target = mapChangePhase(c.phase);
+    // Parked overrides phase mapping: the whole change sits in the `scheduled`
+    // (Parked) lane until its `"parked": true` flag is removed.
+    const target = c.parked ? { lane: 'scheduled', verb: 'schedule', initial: null } : mapChangePhase(c.phase);
     // Cached id short-circuits the create spawn: with ~300 cards every 15 min,
     // re-upserting each pass costs minutes of CPU for zero board change.
     let kid = state.changes[c.name];
     if (!kid) {
-      const args = ['create', `OpenSpec: ${c.name}`, '--idempotency-key', `openspec:${c.name}`, '--json',
+      const args = ['create', `OpenSpec${c.parked ? ' (Parked)' : ''}: ${c.name}`, '--idempotency-key', `openspec:${c.name}`, '--json',
         '--body', changeCardBody(c), '--priority', '200', '--created-by', SYNC_AUTHOR];
       if (target.initial) args.push('--initial-status', target.initial);
       kid = kanbanId(runKanban(args, { json: true }));
@@ -185,16 +227,37 @@ export function syncChanges(state, boardById) {
     }
     state.phases[c.name] = c.phase;
 
-    if (target.verb === 'complete' && completeCard(kid, boardById, state)) completed++;
+    if (c.parked) {
+      if (parkCard(kid, boardById, state, `PARKED — "parked": true in openspec/changes/${c.name}/status.json; deferred, not deleted. Un-park by removing the flag.`)) parked++;
+    } else {
+      unparkCard(kid, boardById, state); // no-op unless this sync parked it earlier
+      if (target.verb === 'complete' && completeCard(kid, boardById, state)) completed++;
+    }
   }
-  // Changes whose dir vanished (archived after sync) -> complete their card once.
+  // Changes whose dir vanished: moved to archive/ -> complete the card once
+  // (finished work); deleted outright -> retire the parent AND all its
+  // sub-task cards off the board (`hermes kanban archive` works from any
+  // lane) and purge state so later passes are silent no-ops.
   const liveNames = new Set(changes.map((c) => c.name));
   for (const [name, kid] of Object.entries(state.changes)) {
     if (liveNames.has(name) || state.phases[name] === 'archived') continue;
-    try { if (completeCard(kid, boardById, state)) completed++; } catch { /* card may be gone */ }
-    state.phases[name] = 'archived';
+    if (fs.existsSync(join(CHANGES_DIR, 'archive', name))) {
+      try { if (completeCard(kid, boardById, state)) completed++; } catch { /* card may be gone */ }
+      state.phases[name] = 'archived';
+      continue;
+    }
+    const subKeys = Object.keys(state.subtasks).filter((k) => k.startsWith(`subtask:${name}:`));
+    const kids = [kid, ...subKeys.map((k) => state.subtasks[k])];
+    for (const k of kids) {
+      try { runKanban(['archive', k]); retired++; } catch { /* already archived / gone */ }
+    }
+    delete state.changes[name];
+    delete state.phases[name];
+    for (const k of subKeys) delete state.subtasks[k];
+    state.parkedCards = state.parkedCards.filter((x) => !kids.includes(x));
+    state.completedCards = state.completedCards.filter((x) => !kids.includes(x));
   }
-  return { changes: changes.length, created, phaseComments, completed, list: changes };
+  return { changes: changes.length, created, phaseComments, completed, parked, retired, list: changes };
 }
 
 // ---------------------------------------------------------------------------
@@ -231,7 +294,7 @@ function cleanTitle(text) {
 
 /** Upsert each change's tasks.md items as child cards of the change card. */
 export function syncSubtasks(state, boardById, changeList) {
-  let created = 0, completed = 0, total = 0;
+  let created = 0, completed = 0, parked = 0, total = 0;
   for (const c of changeList) {
     const parentKid = state.changes[c.name];
     if (!parentKid || !c.tasksMd) continue;
@@ -246,10 +309,19 @@ export function syncSubtasks(state, boardById, changeList) {
         created++;
         state.subtasks[key] = kid;
       }
-      if (item.checked && completeCard(kid, boardById, state)) completed++;
+      if (item.checked) {
+        // Finished work stays finished even inside a parked change.
+        if (completeCard(kid, boardById, state)) completed++;
+      } else if (c.parked) {
+        // A parked change's open tasks must NOT sit in todo — park them
+        // beside their parent in the `scheduled` (Parked) lane.
+        if (parkCard(kid, boardById, state, `parked with change ${c.name}`)) parked++;
+      } else {
+        unparkCard(kid, boardById, state); // change un-parked -> return its open tasks
+      }
     }
   }
-  return { subtasks: total, created, completed };
+  return { subtasks: total, created, completed, parked };
 }
 
 // ---------------------------------------------------------------------------
@@ -458,7 +530,7 @@ export function fullSync({ reconcile = false } = {}) {
   let boardById = {};
   try { boardById = boardMap(); } catch { /* board unreadable -> treat as empty */ }
   let changeList = [];
-  section('changes', () => { const r = syncChanges(state, boardById); changeList = r.list; return { changes: r.changes, created: r.created, phaseComments: r.phaseComments, completed: r.completed }; });
+  section('changes', () => { const r = syncChanges(state, boardById); changeList = r.list; return { changes: r.changes, created: r.created, phaseComments: r.phaseComments, completed: r.completed, parked: r.parked, retired: r.retired }; });
   section('subtasks', () => syncSubtasks(state, boardById, changeList));
   section('backlog', () => syncBacklog(state, boardById));
   section('links', () => linkQueueTasks(state, changeList));
@@ -481,6 +553,7 @@ export function statusReport() {
   return {
     changes: changes.length,
     changesOnBoard: Object.keys(state.changes).length,
+    parked: changes.filter((c) => c.parked).length,
     subtasks,
     backlog,
     runs: runs.length,
@@ -504,7 +577,7 @@ if (__isMainModule) {
       if (Object.values(r).some((res) => !res.ok)) process.exit(1);
     } else if (cmd === 'status') {
       const r = statusReport();
-      console.log(`📋 command center: ${r.changes} changes (${r.changesOnBoard} on board) · ${r.subtasks} sub-tasks · ${r.backlog} backlog ideas · ${r.queueTasks} queue tasks · ${r.runs} runs (${r.runsPendingComment} pending comment)`);
+      console.log(`📋 command center: ${r.changes} changes (${r.changesOnBoard} on board, ${r.parked} parked) · ${r.subtasks} sub-tasks · ${r.backlog} backlog ideas · ${r.queueTasks} queue tasks · ${r.runs} runs (${r.runsPendingComment} pending comment)`);
     } else {
       console.error('Usage: command-center-sync.mjs <sync [--reconcile] | status>');
       process.exit(1);
