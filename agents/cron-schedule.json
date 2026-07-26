@@ -125,7 +125,7 @@
     },
     {
       "name": "pilot-drain",
-      "cron": "*/15 * * * *",
+      "cron": "3,18,33,48 * * * *",
       "script": "/usr/bin/env SDLC_REPO=/home/bryce/hermes-pilot /home/bryce/agentic-sdlc/agents/hermes-drain.sh",
       "description": "Autonomous drain for hermes-pilot (openspec: pilot-autonomous-replication)",
       "session": "isolated"
