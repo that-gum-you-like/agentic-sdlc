@@ -88,7 +88,9 @@ function dumpFullOutput(config, output) {
 async function main() {
   const project = readProjectJson();
   const config = loadConfig();
-  const rollbackCmd = project.rollbackCmd;
+  // deploy.rollbackCmd (openspec: autonomous-deploy-pipeline) is preferred;
+  // legacy top-level rollbackCmd remains supported.
+  const rollbackCmd = project.deploy?.rollbackCmd || project.rollbackCmd;
   const debounceSeconds = project.rollbackDebounce ?? DEFAULT_DEBOUNCE_SECONDS;
 
   if (!rollbackCmd) {

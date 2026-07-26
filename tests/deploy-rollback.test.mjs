@@ -126,6 +126,26 @@ test('Scenario 4: debounce marker written after successful fire', () => {
   rmSync(dir, { recursive: true });
 });
 
+test('deploy.rollbackCmd is preferred over legacy top-level rollbackCmd (openspec: autonomous-deploy-pipeline)', () => {
+  const dir = makeFixture({
+    name: 'test',
+    rollbackCmd: 'false',
+    deploy: { enabled: true, deployCmd: 'true', rollbackCmd: 'echo deploy-block-rollback-OK' },
+  });
+  const result = runHelper(dir, ['--reason', 'source-order', '--no-debounce']);
+  assert(result.status === 0, `expected exit 0 via deploy.rollbackCmd, got ${result.status}\n${result.stdout}\n${result.stderr}`);
+  assert(/deploy-block-rollback-OK/.test(result.stdout), 'the deploy-block command must be the one executed');
+  rmSync(dir, { recursive: true });
+});
+
+test('legacy top-level rollbackCmd still works when no deploy block exists', () => {
+  const dir = makeFixture({ name: 'test', rollbackCmd: 'echo legacy-rollback-OK' });
+  const result = runHelper(dir, ['--reason', 'legacy', '--no-debounce']);
+  assert(result.status === 0, `expected exit 0 via legacy rollbackCmd, got ${result.status}`);
+  assert(/legacy-rollback-OK/.test(result.stdout), 'legacy command must run');
+  rmSync(dir, { recursive: true });
+});
+
 test('Exit code 3 when project.json missing', () => {
   const dir = mkdtempSync(join(tmpdir(), 'deploy-rollback-test-no-pj-'));
   const result = runHelper(dir, ['--reason', 'missing-pj']);

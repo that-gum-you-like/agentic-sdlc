@@ -88,6 +88,22 @@ test('the guardrail flag list covers drain, pipeline, budget, scheduler', () => 
   }
 });
 
+test('the guardrail flag list covers the deploy surface (openspec: autonomous-deploy-pipeline)', () => {
+  for (const must of ['agents/deploy-runner.mjs', 'agents/deploy-rollback.mjs',
+    'agents/cron-schedule.json', 'tests/deploy-runner.test.mjs']) {
+    assert(FLAG_PATHS.includes(must), `${must} missing from FLAG_PATHS — a drain PR could rewrite the deploy pipeline`);
+  }
+});
+
+test('the autonomous mutex is pinned to the FRAMEWORK repo, not the reviewed project (REQ-006)', () => {
+  const source = readFileSync(new URL('../agents/pr-auto-review.mjs', import.meta.url), 'utf8');
+  assert(/SDLC_LOCK_DIR/.test(source), 'lock dir must be SDLC_LOCK_DIR-overridable (parity with hermes-drain.sh)');
+  assert(/resolve\(__dirname, '\.\.'\), 'pm', '\.sdlc-autonomous\.lock\.d'/.test(source),
+    'default lock must live in the framework repo pm/ so reviewing another project still excludes a framework drain');
+  assert(!/join\(logDir, '\.sdlc-autonomous\.lock\.d'\)/.test(source),
+    'the old per-project lock path must be gone');
+});
+
 // --- branch → task id ---------------------------------------------------------
 
 test('taskIdFromBranch extracts queue task ids', () => {

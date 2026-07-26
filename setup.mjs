@@ -522,6 +522,24 @@ Examples:
     llm: {
       defaultProvider: llmProvider,
     },
+    // Production deploy block (openspec: autonomous-deploy-pipeline).
+    // Consumed by agents/deploy-runner.mjs — opt-in per project: set enabled
+    // true, fill deployCmd/verify, and add the project to the deploy-reconcile
+    // job in agents/cron-schedule.json.
+    deploy: {
+      enabled: false,
+      deployCmd: 'vercel --prod --yes',
+      rollbackCmd: 'vercel rollback --yes',
+      baseBranch: null,
+      approval: 'telegram',
+      verifyTests: true,
+      cooldownSeconds: 600,
+      verify: {
+        smokeUrl: '',
+        expectStatus: 200,
+        timeoutSeconds: 60,
+      },
+    },
   };
   writeIfNotExists(
     join(agentsDir, 'project.json'),

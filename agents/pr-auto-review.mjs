@@ -29,7 +29,7 @@
  */
 
 import { existsSync, readFileSync, appendFileSync, mkdirSync, rmSync, mkdtempSync, writeFileSync, statSync } from 'fs';
-import { execFileSync } from 'child_process';
+import { execFileSync, spawn } from 'child_process';
 import { dirname, join, resolve } from 'path';
 import { tmpdir, homedir } from 'os';
 import { fileURLToPath } from 'url';
@@ -70,9 +70,13 @@ export const FLAG_PATHS = [
   'agents/pr-auto-review.mjs',
   'agents/budget.json',
   'agents/templates/cron-schedule.json.template',
+  'agents/cron-schedule.json',
   'agents/scheduler-install.mjs',
+  'agents/deploy-runner.mjs',
+  'agents/deploy-rollback.mjs',
   'tests/pr-auto-review.test.mjs',
   'tests/hermes-drain.test.mjs',
+  'tests/deploy-runner.test.mjs',
 ];
 const FLAG_PREFIXES = ['.github/workflows/'];
 
@@ -531,6 +535,13 @@ async function reviewPr(pr, ctx) {
   // Best-effort notify (openspec: telegram-activation) — the merge already
   // happened; a notification failure must not fail the run or the record.
   try { sendNotification(`✅ auto-merged PR #${pr.number}: ${pr.title}`); } catch { /* notify is best-effort */ }
+  // Fire-and-forget deploy-runner kick (openspec: autonomous-deploy-pipeline
+  // REQ-007) — a latency optimization only; the reconcile timer is the safety
+  // net, and the merge outcome must never depend on the deploy path.
+  try {
+    spawn('node', [join(__dirname, 'deploy-runner.mjs'), '--project-dir', repoDir],
+      { detached: true, stdio: 'ignore' }).unref();
+  } catch { /* reconcile timer will catch it */ }
   return record;
 }
 
@@ -548,8 +559,11 @@ export async function runAutoReview({ dryRun = false } = {}) {
   const record = (obj) => appendFileSync(logFile, JSON.stringify(obj) + '\n');
 
   // SHARED atomic mutex (atomic mkdir; stale after 2h) — mutually exclusive with
-  // the drain (same path), so only one autonomous git-mutating job runs at a time.
-  const lockDir = join(logDir, '.sdlc-autonomous.lock.d');
+  // the drain (same path), so only one autonomous git-mutating job runs at a
+  // time HOST-WIDE. Pinned to the FRAMEWORK repo (like hermes-drain.sh), not
+  // the project under review: reviewing ~/tally must still exclude a framework
+  // drain. Override: SDLC_LOCK_DIR (openspec: autonomous-deploy-pipeline REQ-006).
+  const lockDir = process.env.SDLC_LOCK_DIR || join(resolve(__dirname, '..'), 'pm', '.sdlc-autonomous.lock.d');
   const holderFile = join(lockDir, 'holder');
   const readHolder = () => { try { return readFileSync(holderFile, 'utf8').trim(); } catch { return '(unknown)'; } };
   try {

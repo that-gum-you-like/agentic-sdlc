@@ -1,5 +1,5 @@
 {
-  "description": "Recommended automated iteration cycle schedules for the agentic SDLC framework.",
+  "description": "Live schedule for THIS host (preferred over the template by scheduler-install). Regenerate timers after edits: node agents/scheduler-install.mjs install",
   "schedules": [
     {
       "name": "daily-review",
@@ -119,7 +119,7 @@
     {
       "name": "deploy-reconcile",
       "cron": "*/30 * * * *",
-      "script": "node ~/agentic-sdlc/agents/deploy-runner.mjs --project-dir ~/agentic-sdlc",
+      "script": "node ~/agentic-sdlc/agents/deploy-runner.mjs --project-dir /home/bryce/tally",
       "description": "Reconciling approval-gated production deploy runner (openspec: autonomous-deploy-pipeline). Add one --project-dir per deployable project; projects with deploy.enabled=false are no-ops.",
       "session": "isolated"
     }
