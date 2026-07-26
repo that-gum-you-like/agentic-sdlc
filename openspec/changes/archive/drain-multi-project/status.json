@@ -1,0 +1,11 @@
+{
+  "status": "complete",
+  "phase": "archived",
+  "created": "2026-07-20",
+  "lastUpdated": "2026-07-26",
+  "completedDate": "2026-07-26",
+  "archivedDate": "2026-07-26",
+  "tasks": "12/12 complete (100%)",
+  "shippedTo": "agents/hermes-drain.sh, agents/drain-prompt.md, tests/hermes-drain.test.mjs",
+  "notes": "Implementation was written 2026-07-20 but sat uncommitted in the working tree. Verified 2026-07-26: npm test 165/165 green; live check `SDLC_REPO=~/tally hermes-drain.sh --dry-run` reports 5 ready task(s) against clone ~/.sdlc-drain-clone-tally with the framework prompt — the exact failure scenario (T-105 master-default repo, T-205) now passes."
+}
