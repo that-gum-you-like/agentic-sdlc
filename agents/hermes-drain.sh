@@ -197,4 +197,15 @@ log "$ready ready task(s) — invoking Hermes drain worker in clone (log: $logfi
 rc=$?
 tail -3 "$logfile" 2>/dev/null | sed 's/^/[hermes-drain]   /'
 log "drain finished (rc=$rc)"
+
+# --- best-effort completion notify (openspec: telegram-activation) ---
+# Routed through the DRAINED project's own notification config (a project with
+# provider "none" stays silent). MUST NOT change the drain's exit code: a
+# successful drain with a failed notification is still a successful drain.
+status_icon="✅"; [ "$rc" -ne 0 ] && status_icon="❌"
+last_line="$(tail -1 "$logfile" 2>/dev/null | cut -c1-200)"
+SDLC_PROJECT_DIR="$REPO" node "$SCRIPTS_DIR/notify.mjs" send \
+  "$status_icon drain $PROJECT_NAME finished (rc=$rc) — $ready task(s) were ready. Last: $last_line" \
+  >/dev/null 2>&1 || true
+
 exit 0

@@ -92,8 +92,32 @@ function sendViaNone(message) {
   return true;
 }
 
+/**
+ * Best-effort GNOME desktop popup via notify-send. A courtesy channel layered
+ * on top of the primary provider — never a substitute for it, so this NEVER
+ * throws and its outcome never affects sendNotification's return value.
+ * Timer-run systemd user units lack DBUS_SESSION_BUS_ADDRESS; the standard
+ * user-bus path is supplied as a fallback so popups work from scheduled jobs.
+ */
+export function sendDesktopNotification(message, { execFn } = {}) {
+  try {
+    const exec = execFn || execSync;
+    const env = { ...process.env };
+    if (!env.DBUS_SESSION_BUS_ADDRESS) {
+      env.DBUS_SESSION_BUS_ADDRESS = `unix:path=/run/user/${process.getuid()}/bus`;
+    }
+    exec(`notify-send --app-name="Agentic SDLC" "Agentic SDLC" "${String(message).replace(/"/g, '\\"')}"`,
+      { stdio: 'pipe', timeout: 5000, env });
+    return true;
+  } catch {
+    return false; // no notify-send / no session bus — silently skip
+  }
+}
+
 function sendNotification(message, mediaPath) {
   try { logCapabilityUsage('openclawNotify', process.env.AGENT || 'system', process.env.TASK_ID || 'unknown', 'notify.mjs', 'send'); } catch {}
+
+  if (NOTIF.desktop) sendDesktopNotification(message);
 
   switch (NOTIF.provider) {
     case 'openclaw':

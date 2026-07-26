@@ -35,6 +35,7 @@ import { tmpdir, homedir } from 'os';
 import { fileURLToPath } from 'url';
 import { loadLlmAdapter } from './adapters/load-adapter.mjs';
 import { loadConfig } from './load-config.mjs';
+import { sendNotification } from './notify.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -527,6 +528,9 @@ async function reviewPr(pr, ctx) {
   if (taskId) {
     try { completeTaskInClone(repoDir, taskId, log); } catch (err) { log(`task-complete ${taskId} failed (reconcile will retry): ${err.message}`); }
   }
+  // Best-effort notify (openspec: telegram-activation) — the merge already
+  // happened; a notification failure must not fail the run or the record.
+  try { sendNotification(`✅ auto-merged PR #${pr.number}: ${pr.title}`); } catch { /* notify is best-effort */ }
   return record;
 }
 

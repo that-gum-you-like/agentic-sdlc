@@ -163,6 +163,7 @@ Type=oneshot
 WorkingDirectory=${repoDir}
 Environment=PATH=${path}
 Environment=SDLC_PROJECT_DIR=${repoDir}
+EnvironmentFile=-%h/.hermes/.env
 ExecStart=${execStart}
 `;
 

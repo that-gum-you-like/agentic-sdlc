@@ -177,6 +177,8 @@ export function loadConfig() {
       mediaDir: resolve(raw.projectDir, raw.notification?.mediaDir || 'pm/media'),
       approvalsDir: resolve(raw.projectDir, 'pm/approvals'),
       triggers: raw.notification?.triggers || {},
+      desktop: raw.notification?.desktop === true,
+      telegram: raw.notification?.telegram || {},
     },
     // Capability monitoring (optional)
     // NOTE: setup.mjs should scaffold agents/capabilities.json from

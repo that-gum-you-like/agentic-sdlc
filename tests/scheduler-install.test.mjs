@@ -98,6 +98,11 @@ test('buildUnits renders a oneshot service + persistent timer with absolute path
   assert(/OnCalendar=\*-\*-\* 06:00:00/.test(u.timer), 'timer must carry OnCalendar');
   assert(/Persistent=true/.test(u.timer), 'timer must be Persistent (catch up missed runs)');
   assert(/WantedBy=timers\.target/.test(u.timer), 'timer must install into timers.target');
+
+  // Secrets: scheduled jobs must be able to read host tokens (telegram, github)
+  // from ~/.hermes/.env. The leading '-' keeps hosts without the file working.
+  assert(u.service.includes('EnvironmentFile=-%h/.hermes/.env'),
+    'service must load optional ~/.hermes/.env so timer-run scripts see host secrets');
 });
 
 // --- unit PATH resolves the tools scheduled jobs shell out to ---

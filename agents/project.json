@@ -5,15 +5,19 @@
   "testCmd": "node tests/adapter-and-model-manager.test.mjs",
   "agents": ["sdlc-developer", "jony-aive", "sdlc-reviewer", "sdlc-documentarian"],
   "notification": {
-    "provider": "none",
+    "provider": "telegram",
     "channel": "",
+    "desktop": true,
     "mailboxPath": "pm/mailbox.md",
     "mediaDir": "pm/media",
     "triggers": {
       "blocker": true,
       "budgetAlert": true,
       "highSeverityFailure": true,
-      "dailySummary": false
+      "dailySummary": false,
+      "deployComplete": true,
+      "deployFailed": true,
+      "deployRolledBack": true
     }
   },
   "humanWellness": {

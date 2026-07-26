@@ -223,5 +223,22 @@ test('a fresh clone installs dependencies before tests are expected to pass', ()
   assert(/dependency install failed/.test(s), 'a failed install must skip rather than invoke the LLM into certain failure');
 });
 
+// --- completion notify (openspec: telegram-activation, REQ-004) ---
+test('drain completion notifies through the DRAINED project\'s config, best-effort only', () => {
+  const s = readFileSync(script, 'utf8');
+  const notifyLine = s.match(/SDLC_PROJECT_DIR="\$REPO" node "\$SCRIPTS_DIR\/notify\.mjs" send[\s\S]*?\|\| true/);
+  assert(notifyLine, 'completion notify must route via notify.mjs with the drained project\'s own SDLC_PROJECT_DIR and be || true guarded');
+  // Ordering: the notify hook must sit AFTER the worker invocation and the
+  // dry-run early-exit, so --dry-run never notifies.
+  const workerIdx = s.indexOf('timeout 3600 hermes -z');
+  const dryRunIdx = s.indexOf('DRY RUN — would drain');
+  const notifyIdx = s.indexOf('notify.mjs');
+  assert(workerIdx !== -1 && dryRunIdx !== -1 && notifyIdx !== -1, 'expected worker, dry-run, and notify markers in the script');
+  assert(notifyIdx > workerIdx && dryRunIdx < workerIdx,
+    'notify must come after the worker (dry-run exits earlier and must never notify)');
+  // A notify failure must not flip the drain exit code: exit 0 follows the hook.
+  assert(/\|\| true\n\nexit 0/.test(s), 'the drain must still exit 0 after a failed notification');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
