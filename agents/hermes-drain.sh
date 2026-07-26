@@ -198,6 +198,13 @@ rc=$?
 tail -3 "$logfile" 2>/dev/null | sed 's/^/[hermes-drain]   /'
 log "drain finished (rc=$rc)"
 
+# --- failed runs land in the outbox for inspection (openspec: operator-desktop-launcher) ---
+if [ "$rc" -ne 0 ]; then
+  outbox="${HERMES_OUTBOX:-$HOME/hermes-outbox}"
+  mkdir -p "$outbox" 2>/dev/null || true
+  cp "$logfile" "$outbox/$(date +%Y%m%d-%H%M%S)-drain-$PROJECT_NAME-failed.log" 2>/dev/null || true
+fi
+
 # --- best-effort completion notify (openspec: telegram-activation) ---
 # Routed through the DRAINED project's own notification config (a project with
 # provider "none" stays silent). MUST NOT change the drain's exit code: a

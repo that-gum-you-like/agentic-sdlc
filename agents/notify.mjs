@@ -12,7 +12,7 @@
  *   node agents/notify.mjs wellness-check
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, appendFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, appendFileSync, copyFileSync } from 'fs';
 import { resolve, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
@@ -111,6 +111,27 @@ export function sendDesktopNotification(message, { execFn } = {}) {
     return true;
   } catch {
     return false; // no notify-send / no session bus — silently skip
+  }
+}
+
+/**
+ * Outbox artifact delivery (openspec: operator-desktop-launcher) — copy a file
+ * into the local outbox folder Bryce actually looks at, then notify about it.
+ * Courtesy channel contract: returns false on any failure, never throws.
+ */
+export function deliverArtifact(srcPath, note, { outboxDir, copyFn, notifyFn } = {}) {
+  try {
+    const src = resolve(srcPath);
+    if (!existsSync(src)) return false;
+    const outbox = outboxDir || process.env.HERMES_OUTBOX || resolve(process.env.HOME || '', 'hermes-outbox');
+    mkdirSync(outbox, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/T/, '-').slice(0, 15);
+    const dest = resolve(outbox, `${stamp}-${basename(src)}`);
+    (copyFn || ((a, b) => copyFileSync(a, b)))(src, dest);
+    (notifyFn || sendNotification)(`📦 ${note || 'Artifact delivered'} → ${dest}`);
+    return dest;
+  } catch {
+    return false;
   }
 }
 
@@ -795,6 +816,21 @@ switch (cmd) {
   case 'wellness-check':
     runWellnessCheck();
     break;
+  case 'deliver': {
+    const [srcPath, ...noteParts] = args;
+    if (!srcPath) {
+      console.error('Usage: notify.mjs deliver <path> [note]');
+      process.exit(1);
+    }
+    const dest = deliverArtifact(srcPath, noteParts.join(' '));
+    if (dest) {
+      console.log(`📦 Delivered to ${dest}`);
+    } else {
+      console.error(`❌ Could not deliver ${srcPath} (missing file or copy failure)`);
+      process.exit(1);
+    }
+    break;
+  }
   case 'human-task-notify': {
     const taskPath = args[0];
     if (!taskPath) {
@@ -825,6 +861,7 @@ Usage:
   notify.mjs resolve <id> approved|rejected [--note]  Manually resolve approval
   notify.mjs status                                   Check provider health
   notify.mjs wellness-check                           Check human wellness thresholds (advisory)
+  notify.mjs deliver <path> [note]                    Copy a file to the outbox (~/hermes-outbox) + notify
   notify.mjs human-task-notify <path>                 Notify human of a new human task
 
 Options for approve:

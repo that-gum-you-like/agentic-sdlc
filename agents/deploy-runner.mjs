@@ -279,6 +279,28 @@ function readTrim(path) {
   try { return readFileSync(path, 'utf8').trim(); } catch { return null; }
 }
 
+/**
+ * Deploy receipt → outbox (openspec: operator-desktop-launcher REQ-003).
+ * Best-effort: a receipt failure never affects deploy state.
+ */
+export function writeDeployReceipt({ projectName, targetSha, baseBranch, verifyStatus, smokeUrl, outboxDir }) {
+  try {
+    const outbox = outboxDir || process.env.HERMES_OUTBOX || join(homedir(), 'hermes-outbox');
+    mkdirSync(outbox, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/T/, '-').slice(0, 15);
+    const path = join(outbox, `${stamp}-deploy-${projectName}-${targetSha.slice(0, 8)}.txt`);
+    writeFileSync(path, [
+      `project:  ${projectName}`,
+      `commit:   ${targetSha} (origin/${baseBranch})`,
+      `verified: HTTP ${verifyStatus ?? '(skipped)'}${smokeUrl ? ` — ${smokeUrl}` : ''}`,
+      `deployed: ${new Date().toISOString()}`,
+    ].join('\n') + '\n');
+    return path;
+  } catch {
+    return false;
+  }
+}
+
 export async function runProject(projectDir, { dryRun = false, log = (m) => console.log(`[deploy-runner] ${m}`) } = {}) {
   const projectName = basename(projectDir);
   const cfg = loadDeployConfig(projectDir);
@@ -388,6 +410,7 @@ export async function runProject(projectDir, { dryRun = false, log = (m) => cons
     for (const kind of ['pending', 'approved']) {
       try { unlinkSync(tokenPath(projectDir, kind, sha8)); } catch { /* already gone */ }
     }
+    writeDeployReceipt({ projectName, targetSha, baseBranch, verifyStatus: v.status, smokeUrl: deploy.verify.smokeUrl });
     const url = deploy.verify.smokeUrl ? ` — ${deploy.verify.smokeUrl}` : '';
     notify(projectDir, `✅ Deployed ${projectName} ${sha8} and verified (HTTP ${v.status ?? 'skip'})${url}`);
     log(`${projectName}: deployed + verified ${sha8}`);
