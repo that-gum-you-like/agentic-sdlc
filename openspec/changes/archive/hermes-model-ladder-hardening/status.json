@@ -1,0 +1,11 @@
+{
+  "status": "complete",
+  "phase": "archived",
+  "created": "2026-07-06",
+  "lastUpdated": "2026-07-26",
+  "completedDate": "2026-07-06",
+  "archivedDate": "2026-07-26",
+  "tasks": "5/5 complete (100%)",
+  "shippedTo": "~/.hermes/config.yaml, ~/.hermes-drain/config.yaml, agents/budget.json",
+  "notes": "Config fix was applied live 2026-07-06 with Bryce right after the free-model incident; change dangled as 'proposed' with no tasks. Retroactively formalized + verified 2026-07-26 (north-mini grep=0, deepseek-led ladders, no :free primaries or emergency fallback) and archived."
+}

@@ -1,0 +1,9 @@
+{
+  "status": "closed-not-pursued",
+  "phase": "archived",
+  "created": "2026-07-06",
+  "lastUpdated": "2026-07-26",
+  "archivedDate": "2026-07-26",
+  "tasks": "0/0 — closed before tasks; see decision.md",
+  "notes": "Salvage not executed: deploy need met by autonomous-deploy-pipeline (Vercel/Supabase), salvage material has poor provenance (budget-exhausted free models, 75-commits-stale base). hermes-sandbox-review branch + bundle retained as recovery surface. Root causes fixed by hermes-model-ladder-hardening + hermes-github-write-access."
+}
