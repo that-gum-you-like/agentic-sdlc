@@ -119,8 +119,22 @@
     {
       "name": "deploy-reconcile",
       "cron": "*/30 * * * *",
-      "script": "node ~/agentic-sdlc/agents/deploy-runner.mjs --project-dir /home/bryce/tally",
+      "script": "node ~/agentic-sdlc/agents/deploy-runner.mjs --project-dir /home/bryce/tally --project-dir /home/bryce/hermes-pilot",
       "description": "Reconciling approval-gated production deploy runner (openspec: autonomous-deploy-pipeline). Add one --project-dir per deployable project; projects with deploy.enabled=false are no-ops.",
+      "session": "isolated"
+    },
+    {
+      "name": "pilot-drain",
+      "cron": "*/15 * * * *",
+      "script": "/usr/bin/env SDLC_REPO=/home/bryce/hermes-pilot /home/bryce/agentic-sdlc/agents/hermes-drain.sh",
+      "description": "Autonomous drain for hermes-pilot (openspec: pilot-autonomous-replication)",
+      "session": "isolated"
+    },
+    {
+      "name": "pilot-review",
+      "cron": "9,29,49 * * * *",
+      "script": "/usr/bin/env SDLC_PROJECT_DIR=/home/bryce/hermes-pilot node /home/bryce/agentic-sdlc/agents/pr-auto-review.mjs",
+      "description": "PR auto-review for hermes-pilot (staggered off the framework review; shared host-global mutex)",
       "session": "isolated"
     }
   ]

@@ -13,9 +13,9 @@
 
 ## Arming (ONLY after Telegram is live — REQ-002)
 
-- [ ] **T5**: `notify.mjs status` ✅ + test Telegram message received
+- [x] **T5**: `notify.mjs status` ✅ + test Telegram message received
   - Complexity: S · Spec: REQ-002
-- [ ] **T6**: Add pilot-drain / pilot-review jobs + extend deploy-reconcile in `agents/cron-schedule.json`; `scheduler-install.mjs install`
+- [x] **T6**: Add pilot-drain / pilot-review jobs + extend deploy-reconcile in `agents/cron-schedule.json`; `scheduler-install.mjs install`
   - Complexity: S · Spec: REQ-002
 
 ## Proof (autonomous — observe only)
