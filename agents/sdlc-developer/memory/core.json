@@ -108,6 +108,15 @@
           "major": 0,
           "minor": 0
         }
+      },
+      "2026-W30": {
+        "correctionsReceived": 0,
+        "selfCorrections": 0,
+        "reviewSeverity": {
+          "critical": 0,
+          "major": 0,
+          "minor": 0
+        }
       }
     }
   }
