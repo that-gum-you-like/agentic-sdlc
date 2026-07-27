@@ -159,10 +159,13 @@ test('buildReviewPrompt truncates oversized diffs and tolerates a missing task',
 
 // --- structural guards (REQ-001, REQ-004) --------------------------------------
 
-test('hard gate runs npm test + four-layer-validate in a detached temp worktree', () => {
+test('hard gate runs the PROJECT testCmd + conditional four-layer-validate in a detached temp worktree', () => {
   assert(/worktree', 'add', '--detach'/.test(source), 'must use a detached temp worktree');
-  assert(/\['test'\]/.test(source), 'must run npm test in the gate');
-  assert(/four-layer-validate\.mjs/.test(source), 'must run four-layer-validate in the gate');
+  assert(/hardGate\(cloneDir, headRef, testCmd = 'npm test'\)/.test(source),
+    'gate must take the project testCmd (hardcoded npm test failed hermes-pilot, 2026-07-26)');
+  assert(/steps\.push\(\[testCmd, 'bash', \['-c', testCmd\]/.test(source), 'must run the project testCmd via shell');
+  assert(/existsSync\(join\(wt, 'agents', 'four-layer-validate\.mjs'\)\)/.test(source),
+    'four-layer-validate must be conditional on the file existing in the project');
   assert(/worktree', 'remove', '--force'/.test(source), 'must clean the worktree up');
 });
 
@@ -208,7 +211,10 @@ test('all review-side git mutation happens in the dedicated clone, never the mai
   assert(!/\['-C', repoDir, 'fetch'/.test(source), 'must not fetch into the main repo (FETCH_HEAD races)');
   // The clone refresh must FORCE the checkout — leftover dirty state from an
   // interrupted run must never brick the refresh (drain-clone regression, 2026-07-06).
-  assert(/'checkout', '-q', '-f', '-B', 'main', 'origin\/main'/.test(source), 'review-clone refresh must use checkout -f');
+  assert(/'checkout', '-q', '-f', '-B', base, `origin\/\$\{base\}`/.test(source),
+    'review-clone refresh must use checkout -f onto the DETECTED base branch (hardcoded main broke master-default repos)');
+  assert(/\.sdlc-review-clone-\$\{repoDir/.test(source),
+    'review clone must be per-project (a shared clone keeps the first project\'s origin forever — hermes-pilot gate failure, 2026-07-26)');
   // Queue completion runs queue-drainer in a subprocess; SDLC_PROJECT_DIR must
   // be re-pointed at the clone or load-config prefers the inherited (main-repo)
   // value and the completion dirties the MAIN tree (regression: 2026-07-06).

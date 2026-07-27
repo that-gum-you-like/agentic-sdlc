@@ -229,16 +229,30 @@ function ghJson(args) {
 // HARD GATE — clean-worktree test run. No pass, no merge.
 // ---------------------------------------------------------------------------
 
-function hardGate(cloneDir, headRef) {
+function hardGate(cloneDir, headRef, testCmd = 'npm test') {
   const wt = mkdtempSync(join(tmpdir(), 'pr-review-'));
   const result = { passed: false, step: null, tail: '' };
   try {
     run('git', ['-C', cloneDir, 'fetch', 'origin', headRef], { timeout: 120_000 });
     run('git', ['-C', cloneDir, 'worktree', 'add', '--detach', wt, 'FETCH_HEAD'], { timeout: 120_000 });
-    for (const [step, cmd, args, timeout] of [
-      ['npm test', 'npm', ['test'], 900_000],
-      ['four-layer-validate', 'node', ['agents/four-layer-validate.mjs'], 300_000],
-    ]) {
+    // The gate runs the PROJECT's own test command, not a hardcoded framework
+    // one — hermes-pilot's gate is `node tests/smoke.test.mjs`, tally's is
+    // vitest (observed live 2026-07-26: hardcoded npm test failed the pilot).
+    // Dependencies install only when the project actually declares some — the
+    // framework declares none, so its reviews stay install-free and fast.
+    const steps = [];
+    try {
+      const pkg = JSON.parse(readFileSync(join(wt, 'package.json'), 'utf8'));
+      if (Object.keys(pkg.dependencies || {}).length || Object.keys(pkg.devDependencies || {}).length) {
+        steps.push(['install deps', 'bash', ['-c', existsSync(join(wt, 'package-lock.json')) ? 'npm ci --silent' : 'npm install --silent'], 600_000]);
+      }
+    } catch { /* no package.json — a zero-dep project is fine */ }
+    steps.push([testCmd, 'bash', ['-c', testCmd], 900_000]);
+    // Framework-specific validation layer runs only where it exists.
+    if (existsSync(join(wt, 'agents', 'four-layer-validate.mjs'))) {
+      steps.push(['four-layer-validate', 'node', ['agents/four-layer-validate.mjs'], 300_000]);
+    }
+    for (const [step, cmd, args, timeout] of steps) {
       result.step = step;
       try {
         run(cmd, args, { cwd: wt, timeout });
@@ -271,24 +285,44 @@ function hardGate(cloneDir, headRef) {
 // persistent dedicated clone (same pattern as the drain's ~/.sdlc-drain-clone),
 // so the main working tree and its .git are NEVER mutated by this job.
 
-export const REVIEW_CLONE = process.env.SDLC_REVIEW_CLONE
-  || join(homedir(), '.sdlc-review-clone');
+// PER-PROJECT (like ~/.sdlc-drain-clone-<name> and ~/.sdlc-deploy-clone-<name>).
+// A single shared clone keeps the FIRST project's origin forever — observed
+// live 2026-07-26: reviewing hermes-pilot fetched agent/drain/PILOT-001 from
+// the framework repo's origin and failed the gate on "couldn't find remote ref".
+export function reviewCloneDir(repoDir) {
+  return process.env.SDLC_REVIEW_CLONE
+    || join(homedir(), `.sdlc-review-clone-${repoDir.split('/').filter(Boolean).pop()}`);
+}
 
-/** Provision (once) and hard-refresh the dedicated review clone onto origin/main. */
+/** Provision (once) and hard-refresh the dedicated review clone onto the remote base branch. */
 function ensureReviewClone(repoDir, log) {
+  const cloneDir = reviewCloneDir(repoDir);
   const remoteUrl = run('git', ['-C', repoDir, 'remote', 'get-url', 'origin']).trim();
-  if (!existsSync(join(REVIEW_CLONE, '.git'))) {
-    log(`creating dedicated review clone at ${REVIEW_CLONE} (one-time)…`);
-    run('git', ['clone', '--quiet', remoteUrl, REVIEW_CLONE], { timeout: 300_000 });
+  if (!existsSync(join(cloneDir, '.git'))) {
+    log(`creating dedicated review clone at ${cloneDir} (one-time)…`);
+    run('git', ['clone', '--quiet', remoteUrl, cloneDir], { timeout: 300_000 });
   }
-  run('git', ['-C', REVIEW_CLONE, 'fetch', '--quiet', 'origin'], { timeout: 120_000 });
+  run('git', ['-C', cloneDir, 'fetch', '--quiet', 'origin'], { timeout: 120_000 });
+  // Base branch is DETECTED (origin/HEAD), not assumed — tally defaults to
+  // master; hardcoded main was the drain's exact bug (drain-multi-project).
+  let base = '';
+  try {
+    base = run('git', ['-C', cloneDir, 'symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD']).trim().replace(/^origin\//, '');
+  } catch { /* fall through */ }
+  if (!base) {
+    try { run('git', ['-C', cloneDir, 'remote', 'set-head', 'origin', '-a'], { timeout: 60_000 }); } catch { /* offline */ }
+    try {
+      base = run('git', ['-C', cloneDir, 'symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD']).trim().replace(/^origin\//, '');
+    } catch { /* fall through */ }
+  }
+  base = base || 'main';
   // The clone is fully owned by this job — a hard reset is always safe here.
   // -f: never let leftover dirty state (e.g. an interrupted completion) block
   // the refresh — the same failure mode hit the drain clone (2026-07-06).
-  run('git', ['-C', REVIEW_CLONE, 'checkout', '-q', '-f', '-B', 'main', 'origin/main'], { timeout: 60_000 });
-  run('git', ['-C', REVIEW_CLONE, 'reset', '--hard', '-q', 'origin/main'], { timeout: 60_000 });
-  run('git', ['-C', REVIEW_CLONE, 'clean', '-fdq'], { timeout: 60_000 });
-  return REVIEW_CLONE;
+  run('git', ['-C', cloneDir, 'checkout', '-q', '-f', '-B', base, `origin/${base}`], { timeout: 60_000 });
+  run('git', ['-C', cloneDir, 'reset', '--hard', '-q', `origin/${base}`], { timeout: 60_000 });
+  run('git', ['-C', cloneDir, 'clean', '-fdq'], { timeout: 60_000 });
+  return cloneDir;
 }
 
 // ---------------------------------------------------------------------------
@@ -477,7 +511,7 @@ async function reviewPr(pr, ctx) {
   // created from the dedicated review CLONE so the main repo's .git is never
   // touched (no fetch, no worktree metadata, no FETCH_HEAD races).
   log(`PR #${pr.number} ${pr.headRefName}: running hard gate (clean worktree from review clone)…`);
-  const gate = hardGate(ctx.cloneDir, pr.headRefName);
+  const gate = hardGate(ctx.cloneDir, pr.headRefName, ctx.testCmd);
   if (!gate.passed) {
     record.action = 'gate-failed';
     record.detail = gate.step;
@@ -550,7 +584,7 @@ async function reviewPr(pr, ctx) {
 // ---------------------------------------------------------------------------
 
 export async function runAutoReview({ dryRun = false } = {}) {
-  const { projectDir } = loadConfig();
+  const { projectDir, testCmd } = loadConfig();
   const repoDir = projectDir || resolve(__dirname, '..');
   // gh resolves the target repo from the process cwd. The systemd unit's
   // WorkingDirectory is the FRAMEWORK repo, so reviewing another project
@@ -613,7 +647,7 @@ export async function runAutoReview({ dryRun = false } = {}) {
       if (merges >= MAX_AUTO_MERGES) { log(`merge rate limit (${MAX_AUTO_MERGES}) reached — deferring the rest`); break; }
       let res;
       try {
-        res = await reviewPr(pr, { repoDir, cloneDir, log, dryRun });
+        res = await reviewPr(pr, { repoDir, cloneDir, log, dryRun, testCmd });
       } catch (err) {
         res = { ts: new Date().toISOString(), pr: pr.number, branch: pr.headRefName, action: 'error', detail: err.message };
       }
