@@ -95,6 +95,12 @@ test('the guardrail flag list covers the deploy surface (openspec: autonomous-de
   }
 });
 
+test('runAutoReview pins the process cwd to the reviewed project so gh targets the right repo', () => {
+  const source = readFileSync(new URL('../agents/pr-auto-review.mjs', import.meta.url), 'utf8');
+  assert(/process\.chdir\(repoDir\)/.test(source),
+    'without chdir, gh inherits the unit WorkingDirectory (framework) and lists the wrong repo\'s PRs');
+});
+
 test('the autonomous mutex is pinned to the FRAMEWORK repo, not the reviewed project (REQ-006)', () => {
   const source = readFileSync(new URL('../agents/pr-auto-review.mjs', import.meta.url), 'utf8');
   assert(/SDLC_LOCK_DIR/.test(source), 'lock dir must be SDLC_LOCK_DIR-overridable (parity with hermes-drain.sh)');

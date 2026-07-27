@@ -552,6 +552,12 @@ async function reviewPr(pr, ctx) {
 export async function runAutoReview({ dryRun = false } = {}) {
   const { projectDir } = loadConfig();
   const repoDir = projectDir || resolve(__dirname, '..');
+  // gh resolves the target repo from the process cwd. The systemd unit's
+  // WorkingDirectory is the FRAMEWORK repo, so reviewing another project
+  // (SDLC_PROJECT_DIR=~/hermes-pilot) would silently list the framework's PRs
+  // — observed live 2026-07-26: pilot PR #1 open, review said "no open drain
+  // PRs". Pin the cwd to the project under review.
+  process.chdir(repoDir);
   const logDir = join(repoDir, 'pm');
   mkdirSync(logDir, { recursive: true });
   const logFile = join(logDir, 'pr-auto-review.log');
