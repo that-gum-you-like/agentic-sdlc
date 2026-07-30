@@ -64,13 +64,25 @@ test('install → status → uninstall cycle in a temp XDG_DATA_HOME, idempotent
     assert(existsSync(p.desktopFile) && existsSync(p.iconFile), 'both files installed');
     assert(p.desktopFile.startsWith(xdg), 'installed under the temp XDG dir, not the real one');
 
-    // desktop-file-validate (when present on the host) must accept the entry
+    // desktop-file-validate (when present on the host) must accept the entry.
+    // The "is it installed" probe and the "does it validate" check are kept in
+    // separate try/catches on purpose: both execFileSync calls throw an Error
+    // whose .message contains the string "desktop-file-validate" (it's just the
+    // argv), so a single catch block can't tell "validator missing" (fine, skip)
+    // apart from "validator ran and rejected the file" (a real failure) by
+    // pattern-matching the message. That conflation is exactly what made this
+    // test fail on CI's headless runner, which doesn't have desktop-file-utils
+    // installed — the "not installed" case was being mistaken for a validation
+    // failure and rethrown. Checking existence first, unconditionally, and only
+    // ever letting the validate call itself throw fixes that.
+    let validatorPath = null;
     try {
-      execFileSync('which', ['desktop-file-validate'], { stdio: 'pipe' });
-      execFileSync('desktop-file-validate', [p.desktopFile], { stdio: 'pipe' });
-    } catch (err) {
-      if (err.message.includes('desktop-file-validate')) throw err;
-      // validator not installed — acceptable, unit checks above still hold
+      validatorPath = execFileSync('which', ['desktop-file-validate'], { stdio: 'pipe' }).toString().trim();
+    } catch {
+      validatorPath = null; // not installed on this host — acceptable, unit checks above still hold
+    }
+    if (validatorPath) {
+      execFileSync('desktop-file-validate', [p.desktopFile], { stdio: 'pipe' }); // throws (and fails the test) if actually invalid
     }
 
     const s1 = status(opts);
