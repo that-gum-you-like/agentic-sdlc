@@ -26,6 +26,12 @@ function fakeProbes({
   v6connect = {},  // host -> boolean (throws if false)
   ipv6Route = null, // boolean | null(unknown) | Error to throw
   resolvers = ['1.1.1.1'],
+  // getaddrinfo order — host -> array of {address, family}. This is what
+  // decides whether "no IPv6 route" actually breaks anything: a client only
+  // fails if selection hands it the AAAA address first. Defaults to
+  // IPv6-first, the pre-remedy behaviour of a stock gai.conf.
+  order = {},
+  orderError = null,
 } = {}) {
   return {
     resolve4: async (host) => {
@@ -47,6 +53,14 @@ function fakeProbes({
       return ipv6Route;
     },
     activeResolvers: async () => resolvers,
+    lookupOrdered: async (host) => {
+      if (orderError) throw orderError;
+      if (host in order) return order[host];
+      // Default: whatever AAAA exists sorts ahead of A (stock RFC 6724).
+      const v6 = (aaaa[host] || []).map(address => ({ address, family: 6 }));
+      const v4 = (a[host] || []).map(address => ({ address, family: 4 }));
+      return [...v6, ...v4];
+    },
   };
 }
 
@@ -69,6 +83,40 @@ test('the exact blackhole scenario: AAAA present, no v6 route, v4 OK -> single i
   assert.equal(result.findings[0].severity, 'critical');
   assert.match(result.findings[0].remedy, /network-preflight\.sh/);
   assert.match(result.checkedAt, /^\d{4}-\d{2}-\d{2}T/);
+});
+
+test('AFTER the remedy: no v6 route but IPv4 precedence in effect -> info, ok:true', async () => {
+  // The bug this guards: the original check keyed off "AAAA exists AND no v6
+  // route", which the remedy cannot change — applying network-preflight.sh
+  // left net-doctor reporting critical forever and pinned health-check at
+  // 'down'. A finding whose own documented fix can't clear it is broken.
+  const probes = fakeProbes({
+    a: { 'openrouter.ai': ['104.18.3.115'] },
+    aaaa: { 'openrouter.ai': ['2606:4700::6812:373'] },
+    v4connect: { 'openrouter.ai': true },
+    ipv6Route: false,
+    order: { 'openrouter.ai': [{ address: '104.18.3.115', family: 4 }, { address: '2606:4700::6812:373', family: 6 }] },
+  });
+  const result = await checkEgress({ hosts: ['openrouter.ai'], probes });
+  assert.equal(result.ok, true, 'a mitigated host is healthy');
+  assert.equal(result.findings.length, 1);
+  assert.equal(result.findings[0].id, 'ipv6-unroutable-mitigated');
+  assert.equal(result.findings[0].severity, 'info');
+});
+
+test('address-selection order that cannot be determined is a warn, not a critical', async () => {
+  // "We can't tell" must never masquerade as "it's broken".
+  const probes = fakeProbes({
+    a: { 'openrouter.ai': ['104.18.3.115'] },
+    aaaa: { 'openrouter.ai': ['2606:4700::6812:373'] },
+    v4connect: { 'openrouter.ai': true },
+    ipv6Route: false,
+    orderError: new Error('getaddrinfo unavailable'),
+  });
+  const result = await checkEgress({ hosts: ['openrouter.ai'], probes });
+  assert.equal(result.findings[0].id, 'ipv6-order-unknown');
+  assert.equal(result.findings[0].severity, 'warn');
+  assert.equal(result.ok, true, 'a warn must not flip ok to false');
 });
 
 test('fully healthy host: A + AAAA resolve, v4 and v6 connect OK, public resolver -> ok:true, zero findings', async () => {

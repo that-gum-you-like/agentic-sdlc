@@ -1,7 +1,7 @@
 {
-  "status": "in-progress",
-  "phase": "implement",
+  "status": "implemented",
+  "phase": "verify",
   "created": "2026-07-30",
   "lastUpdated": "2026-07-30",
-  "notes": "T1/T4 complete (net-doctor + 9 hermetic tests). T2 (network-preflight.sh), T3/T5 (health-check wiring) in flight. T7 live-host apply is Bryce's call — it needs sudo and must never enter the autonomous path (REQ-004)."
+  "notes": "All tasks complete. Remedy applied on the live host 2026-07-30 by Bryce (sudo): gai.conf IPv4 precedence + systemd-resolved drop-in (1.1.1.1/9.9.9.9). Verified: getent puts IPv4 first for both hosts, httpx reaches api.telegram.org (302) and openrouter.ai/api/v1/models (200), net-doctor exits 0, health-check reports [ok] egress, Tailscale MagicDNS + tailnet ping still work. REQ-006 added after the apply exposed that the original route-based check could never be cleared by its own remedy."
 }

@@ -26,9 +26,17 @@
 - [x] **T6**: Guardrail grep — `network-preflight.sh` appears only in
   remedies, docs, and tests; no new `sudo` in `agents/`
   - Complexity: S · Spec: REQ-004
-- [ ] **T7**: Live host verification — `net-doctor` reports the blackhole
-  before the fix; `--check` writes nothing; after applying, `net-doctor`
-  reports `ok`, Tailscale still works, and Hermes reaches Telegram
+- [x] **T7**: Live host verification — `net-doctor` reported the blackhole
+  before the fix; `--check` wrote nothing (checksum-verified); after applying,
+  `getent ahosts` puts IPv4 first for both hosts, `httpx` reaches both,
+  `net-doctor` exits 0, `health-check` reports `[ok] egress`, and Tailscale
+  MagicDNS + tailnet connectivity still work
   - Complexity: S · Spec: REQ-003, REQ-005
+- [x] **T9**: `agents/net-doctor.mjs` — decide the blackhole on getaddrinfo
+  order via a `lookupOrdered` probe; mitigated → info, undeterminable → warn
+  - Complexity: S · Spec: REQ-006
+- [x] **T10**: `tests/net-doctor.test.mjs` — post-remedy mitigated case and the
+  undeterminable-order case; fake probe set gains `order`/`orderError`
+  - Complexity: S · Spec: REQ-006
 - [x] **T8**: `npm test` green (unit + four-layer-validate + behavior)
   - Complexity: S · Spec: all

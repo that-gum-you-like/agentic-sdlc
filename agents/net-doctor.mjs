@@ -23,7 +23,7 @@
  *   import { checkEgress } from './net-doctor.mjs';  # programmatic use
  */
 
-import { resolve4 as dnsResolve4, resolve6 as dnsResolve6 } from 'node:dns/promises';
+import { resolve4 as dnsResolve4, resolve6 as dnsResolve6, lookup as dnsLookup } from 'node:dns/promises';
 import { getServers as dnsGetServers } from 'node:dns';
 import { createConnection } from 'node:net';
 import { execFile } from 'node:child_process';
@@ -96,12 +96,29 @@ async function defaultActiveResolvers() {
   return dnsGetServers();
 }
 
+/**
+ * Address-selection order as an actual client will see it.
+ *
+ * Deliberately dns.lookup() and NOT dns.resolve4/6: lookup() goes through
+ * getaddrinfo, so it honours /etc/gai.conf and the RFC 6724 precedence table,
+ * which is exactly the mechanism the remedy manipulates. resolve4/resolve6
+ * query DNS directly and bypass address selection entirely, so they can never
+ * tell us whether IPv4 precedence took effect. `verbatim: true` stops Node
+ * reordering the result behind our back.
+ *
+ * @returns {Promise<Array<{address: string, family: number}>>}
+ */
+async function defaultLookupOrdered(host) {
+  return dnsLookup(host, { all: true, verbatim: true });
+}
+
 const DEFAULT_PROBES = {
   resolve4: dnsResolve4,
   resolve6: dnsResolve6,
   tcpConnect: defaultTcpConnect,
   ipv6DefaultRoute: defaultIpv6DefaultRoute,
   activeResolvers: defaultActiveResolvers,
+  lookupOrdered: defaultLookupOrdered,
 };
 
 // ---------------------------------------------------------------------------
@@ -188,15 +205,52 @@ async function checkHost(host, { timeoutMs, probes }) {
     }
 
     if (routeOk === false) {
-      // No IPv6 default route at all: this IS the blackhole. Don't bother
-      // waiting on a connect attempt that can only ever fail instantly.
-      findings.push({
-        id: 'ipv6-blackhole',
-        severity: 'critical',
-        summary: `${host} resolves AAAA records (${ips6.join(', ')}) but this host has no IPv6 default route`,
-        detail: 'IPv6-preferring HTTP stacks will try the AAAA address first, fail instantly (ENETUNREACH), and misreport this as the remote service being down.',
-        remedy: REMEDY_PREFLIGHT,
-      });
+      // No IPv6 default route. Whether that actually breaks anything depends
+      // on address SELECTION: the failure is "a client tries the AAAA address
+      // first and dies with ENETUNREACH", not "AAAA records exist". Once
+      // /etc/gai.conf gives IPv4 precedence, getaddrinfo hands back the A
+      // record first and nothing ever attempts IPv6 — the host is fine.
+      //
+      // Checking the route alone made this finding un-clearable: applying the
+      // documented remedy left it reporting critical forever, which would pin
+      // health-check at 'down' and train everyone to ignore the alert. So ask
+      // getaddrinfo what a real client would actually try first.
+      let first = null;
+      let lookupErr = null;
+      try {
+        const ordered = asList(await withTimeout(probes.lookupOrdered(host), timeoutMs, `lookupOrdered(${host})`));
+        first = ordered[0] || null;
+      } catch (e) {
+        lookupErr = e;
+      }
+
+      if (first && first.family === 4) {
+        findings.push({
+          id: 'ipv6-unroutable-mitigated',
+          severity: 'info',
+          summary: `${host} publishes AAAA records and this host has no IPv6 route, but IPv4 precedence is in effect`,
+          detail: `getaddrinfo returns ${first.address} (IPv4) first, so clients never attempt the unreachable AAAA address. AAAA: ${ips6.join(', ')}`,
+          remedy: 'None needed. Keep the IPv4 precedence rule in /etc/gai.conf in place.',
+        });
+      } else if (first && first.family === 6) {
+        findings.push({
+          id: 'ipv6-blackhole',
+          severity: 'critical',
+          summary: `${host} resolves AAAA records (${ips6.join(', ')}) but this host has no IPv6 default route`,
+          detail: `getaddrinfo returns ${first.address} (IPv6) first, so IPv6-preferring HTTP stacks will try it, fail instantly (ENETUNREACH), and misreport this as the remote service being down.`,
+          remedy: REMEDY_PREFLIGHT,
+        });
+      } else {
+        // Couldn't establish selection order. Report it as a warning rather
+        // than a critical: "we can't tell" must not masquerade as "it's broken".
+        findings.push({
+          id: 'ipv6-order-unknown',
+          severity: 'warn',
+          summary: `${host} publishes AAAA records and this host has no IPv6 route; address-selection order could not be determined`,
+          detail: lookupErr ? lookupErr.message : 'getaddrinfo returned no addresses',
+          remedy: `Check manually with \`getent ahosts ${host}\` — an IPv4 address on the first line means egress is fine.`,
+        });
+      }
     } else {
       // Route present (or its presence is unknown) — verify with a direct connect.
       let v6ok = false;

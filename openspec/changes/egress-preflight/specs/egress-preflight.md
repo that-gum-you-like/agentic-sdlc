@@ -69,6 +69,32 @@ finding remedies, docs, and tests — never from an executed code path; no new
 **Complexity:** S
 **Value:** Keeps root out of the autonomous loop.
 
+## REQ-006 — The remedy clears the finding
+
+**Statement:** The blackhole verdict is decided by **address selection**, not by
+the route table alone. `checkEgress` probes getaddrinfo order (`dns.lookup`
+with `all` + `verbatim`, which honours `/etc/gai.conf`; never `resolve4`/
+`resolve6`, which bypass selection). When a host publishes AAAA records and no
+IPv6 default route exists:
+- getaddrinfo returns IPv6 first → `ipv6-blackhole`, critical
+- getaddrinfo returns IPv4 first → `ipv6-unroutable-mitigated`, **info**, and
+  `ok` stays true
+- order undeterminable → `ipv6-order-unknown`, **warn**, never critical
+
+**Rationale:** the original check keyed off "AAAA exists AND no IPv6 route", a
+condition the documented remedy cannot change — `network-preflight.sh` alters
+precedence, not routes. Applying the fix therefore left the finding reporting
+critical forever, which would pin `health-check` at `down` permanently and
+train every reader to ignore the alert. A finding its own remedy cannot clear
+is worse than no finding.
+**Acceptance:** hermetic tests assert all three branches; on the live host
+after applying the remedy, `net-doctor` exits 0 and `health-check` reports
+`[ok] egress` while `ip -6 route show default` is still empty.
+**Dependencies:** REQ-001, REQ-003
+**Complexity:** S
+**Value:** Makes the alert trustworthy — it goes green exactly when the problem
+is actually gone.
+
 ## REQ-005 — Health check sees egress
 
 **Statement:** `runHealthCheck()` includes an `egress` check derived from
