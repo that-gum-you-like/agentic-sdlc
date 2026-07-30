@@ -1,0 +1,7 @@
+{
+  "status": "in-progress",
+  "phase": "verify",
+  "created": "2026-07-30",
+  "lastUpdated": "2026-07-30",
+  "notes": "Verified on disk that all nine Level-6 gaps listed as open in curriculum-conformance.md actually shipped in PRs #20-#28; the doc's tables and its 'Remaining gap list' section are stale. Fixing the two maturity-assess detection bugs (substring-inferred evidence polarity, deploy-pipeline blindness) and adding a drift guard so the rubric cannot silently go stale again. Explicitly not tuning weights or inventing credit (REQ-005)."
+}

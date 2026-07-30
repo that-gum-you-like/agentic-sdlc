@@ -35,6 +35,40 @@ try {
   PROJECT_DIR = dirIdx >= 0 ? resolve(args[dirIdx + 1]) : process.cwd();
 }
 
+// --- Evidence ---
+//
+// Evidence records carry their own polarity. The renderer used to infer it by
+// testing each line for the substring 'No ', which reported the *positive*
+// findings "No dependency vulnerabilities possible (zero attack surface)" and
+// "No critical/high vulnerabilities in dependencies" as failures, and fed the
+// same mistake into the Top-3 recommendations (which once opened with the
+// passing line "CI/CD: GitHub Actions"). The check that runs already knows the
+// answer, so it records it.
+
+/** Passing finding. */
+const pass = (text) => ({ text, ok: true });
+/** Failing finding — a real gap. */
+const fail = (text) => ({ text, ok: false });
+/** Informational — neither credit nor gap (e.g. partial credit with a caveat). */
+const info = (text) => ({ text, ok: null });
+
+export function evidenceText(e) {
+  return typeof e === 'string' ? e : e.text;
+}
+
+/** @returns {boolean|null} true=pass, false=gap, null=informational */
+export function evidenceOk(e) {
+  if (typeof e !== 'string') return e.ok;
+  // Legacy plain-string evidence (possible from an external consumer): fall
+  // back to the old substring heuristic rather than silently calling it a pass.
+  return !(e.includes('No ') || e.includes('stale') || e.includes('Vulnerabilities') || e.includes('non-deterministic'));
+}
+
+export function evidenceIcon(e) {
+  const ok = evidenceOk(e);
+  return ok === null ? '•' : ok ? '✅' : '❌';
+}
+
 // --- Helpers ---
 
 function fileExists(relPath) {
@@ -87,39 +121,43 @@ function assessSDLC() {
   // Level 1: Rules file
   const hasClaudeMd = fileExists('CLAUDE.md');
   const hasCursorRules = fileExists('.cursorrules');
-  if (hasClaudeMd || hasCursorRules) { score += 1; evidence.push(`Rules file: ${hasClaudeMd ? 'CLAUDE.md' : '.cursorrules'}`); }
-  else evidence.push('No rules file (CLAUDE.md or .cursorrules)');
+  if (hasClaudeMd || hasCursorRules) { score += 1; evidence.push(pass(`Rules file: ${hasClaudeMd ? 'CLAUDE.md' : '.cursorrules'}`)); }
+  else evidence.push(fail('No rules file (CLAUDE.md or .cursorrules)'));
 
   // Level 2: Test command configured
   const pkg = readFile('package.json');
   const hasTestScript = pkg && JSON.parse(pkg).scripts?.test;
-  if (hasTestScript) { score += 0.5; evidence.push(`Test script: ${hasTestScript}`); }
+  if (hasTestScript) { score += 0.5; evidence.push(pass(`Test script: ${hasTestScript}`)); }
 
   // Level 3: Task queue + agents
   const hasTaskQueue = fileExists('tasks/queue');
   const hasAgents = fileExists('agents/project.json');
   const hasDomains = fileExists('agents/domains.json');
-  if (hasTaskQueue && hasAgents) { score += 1; evidence.push('Task queue + agent config present'); }
-  if (hasDomains) { score += 0.5; evidence.push('Domain routing configured'); }
+  if (hasTaskQueue && hasAgents) { score += 1; evidence.push(pass('Task queue + agent config present')); }
+  if (hasDomains) { score += 0.5; evidence.push(pass('Domain routing configured')); }
 
   // Level 4 (Autonomous): quality gates
   const hasDefeatTests = fileExists('agents/four-layer-validate.mjs') || runCmd('grep -rl "defeat" agents/ 2>/dev/null')?.length > 0;
-  if (hasDefeatTests) { score += 0.5; evidence.push('Defeat tests / validation pipeline present'); }
+  if (hasDefeatTests) { score += 0.5; evidence.push(pass('Defeat tests / validation pipeline present')); }
 
   // Level 5: Memory system
-  const hasMemory = readdirSync(join(PROJECT_DIR, 'agents')).some(d => {
-    try { return existsSync(join(PROJECT_DIR, 'agents', d, 'memory', 'core.json')); } catch { return false; }
+  // Guarded: this used to readdirSync unconditionally and crash the whole
+  // assessment with ENOENT on any project that has no agents/ directory —
+  // i.e. exactly the greenfield projects the assessor is meant to grade.
+  const agentsDir = join(PROJECT_DIR, 'agents');
+  const hasMemory = existsSync(agentsDir) && readdirSync(agentsDir).some(d => {
+    try { return existsSync(join(agentsDir, d, 'memory', 'core.json')); } catch { return false; }
   });
-  if (hasMemory) { score += 0.5; evidence.push('Agent memory system present'); }
+  if (hasMemory) { score += 0.5; evidence.push(pass('Agent memory system present')); }
 
   // Level 6: Behavior tests + pattern hunt
   const hasBehaviorTests = fileExists('agents/test-behavior.mjs');
   const hasPatternHunt = fileExists('agents/pattern-hunt.mjs');
-  if (hasBehaviorTests && hasPatternHunt) { score += 0.5; evidence.push('Behavior tests + pattern hunt present'); }
+  if (hasBehaviorTests && hasPatternHunt) { score += 0.5; evidence.push(pass('Behavior tests + pattern hunt present')); }
 
   // OpenSpec governance
   const hasOpenspec = fileExists('openspec/changes') || fileExists('openspec/specs');
-  if (hasOpenspec) { score += 0.5; evidence.push('OpenSpec governance in use'); }
+  if (hasOpenspec) { score += 0.5; evidence.push(pass('OpenSpec governance in use')); }
 
   return { dimension: 'SDLC Process', score: Math.min(score, 5), evidence };
 }
@@ -133,31 +171,39 @@ function assessTesting() {
   const srcCount = countFiles('.', f => (f.endsWith('.ts') || f.endsWith('.js') || f.endsWith('.mjs') || f.endsWith('.py')) && !f.includes('.test.') && !f.includes('.spec.'));
   const ratio = srcCount > 0 ? testCount / srcCount : 0;
 
-  if (testCount > 0) { score += 1; evidence.push(`${testCount} test files found (ratio: ${ratio.toFixed(2)} test/src)`); }
-  else evidence.push('No test files found');
+  if (testCount > 0) { score += 1; evidence.push(pass(`${testCount} test files found (ratio: ${ratio.toFixed(2)} test/src)`)); }
+  else evidence.push(fail('No test files found'));
 
-  if (ratio >= 0.5) { score += 1; evidence.push('Good test-to-source ratio (≥0.5)'); }
-  else if (ratio >= 0.2) { score += 0.5; evidence.push('Moderate test-to-source ratio'); }
+  if (ratio >= 0.5) { score += 1; evidence.push(pass('Good test-to-source ratio (≥0.5)')); }
+  else if (ratio >= 0.2) { score += 0.5; evidence.push(pass('Moderate test-to-source ratio')); }
 
   // CI runs tests
   const ciConfig = readFile('.github/workflows/test.yml') || readFile('.github/workflows/ci.yml');
-  if (ciConfig && ciConfig.includes('test')) { score += 1; evidence.push('CI runs tests on push/PR'); }
-  else evidence.push('No CI test pipeline detected');
+  if (ciConfig && ciConfig.includes('test')) { score += 1; evidence.push(pass('CI runs tests on push/PR')); }
+  else evidence.push(fail('No CI test pipeline detected'));
 
   // Defeat tests / static analysis
   const hasFourLayer = fileExists('agents/four-layer-validate.mjs');
   const hasLint = readFile('package.json')?.includes('"lint"');
-  if (hasFourLayer) { score += 1; evidence.push('Four-layer validation pipeline present'); }
-  if (hasLint) { score += 0.5; evidence.push('Linting configured'); }
+  if (hasFourLayer) { score += 1; evidence.push(pass('Four-layer validation pipeline present')); }
+  else evidence.push(fail('No four-layer validation pipeline'));
+  if (hasLint) { score += 0.5; evidence.push(pass('Linting configured')); }
+  else evidence.push(fail('No linter configured'));
 
   // E2E tests
-  const hasE2E = fileExists('e2e') || fileExists('tests/e2e') || countFiles('.', f => f.includes('e2e') || f.includes('playwright') || f.includes('cypress')) > 0;
-  if (hasE2E) { score += 0.5; evidence.push('E2E test infrastructure detected'); }
+  // Matched on filenames only, which missed a browser-test runner that happens
+  // not to have "e2e"/"playwright" in its name — so also look for a driver
+  // reference inside agents/ (e.g. agents/browser-user-test.mjs).
+  const hasE2E = fileExists('e2e') || fileExists('tests/e2e')
+    || countFiles('.', f => f.includes('e2e') || f.includes('playwright') || f.includes('cypress')) > 0
+    || !!runCmd('grep -rlie "playwright\\|cypress\\|puppeteer" agents/ 2>/dev/null');
+  if (hasE2E) { score += 0.5; evidence.push(pass('E2E test infrastructure detected')); }
+  else evidence.push(fail('No E2E test infrastructure (e2e/, playwright, or cypress)'));
 
   return { dimension: 'Testing & Quality', score: Math.min(score, 5), evidence };
 }
 
-function assessDeployment() {
+export function assessDeployment() {
   const evidence = [];
   let score = 0;
 
@@ -165,28 +211,36 @@ function assessDeployment() {
   const hasGHA = fileExists('.github/workflows');
   const hasGitlabCI = fileExists('.gitlab-ci.yml');
   const hasJenkinsfile = fileExists('Jenkinsfile');
-  if (hasGHA || hasGitlabCI || hasJenkinsfile) { score += 1; evidence.push(`CI/CD: ${hasGHA ? 'GitHub Actions' : hasGitlabCI ? 'GitLab CI' : 'Jenkins'}`); }
-  else evidence.push('No CI/CD pipeline detected');
+  if (hasGHA || hasGitlabCI || hasJenkinsfile) { score += 1; evidence.push(pass(`CI/CD: ${hasGHA ? 'GitHub Actions' : hasGitlabCI ? 'GitLab CI' : 'Jenkins'}`)); }
+  else evidence.push(fail('No CI/CD pipeline detected'));
 
-  // Deploy script
-  const hasDeployScript = fileExists('scripts/deploy.sh') || fileExists('deploy.sh') || (readFile('package.json')?.includes('"deploy"'));
-  if (hasDeployScript) { score += 1; evidence.push('Deploy script/command exists'); }
-  else evidence.push('No deploy script found');
+  // Deploy pipeline. The original probe encoded one idiom — a shell script or
+  // an npm script — as though it were the only one, and so reported "No deploy
+  // script found" for a repo whose approval-gated deploy runner and
+  // deploy-reconcile timer demonstrably run every hour.
+  const hasDeployScript = fileExists('scripts/deploy.sh') || fileExists('deploy.sh')
+    || (readFile('package.json')?.includes('"deploy"'))
+    || fileExists('agents/deploy-runner.mjs')                 // framework-owned runner
+    || (readFile('agents/project.json')?.includes('"deploy"')); // project deploy block
+  if (hasDeployScript) { score += 1; evidence.push(pass('Deploy script/command exists')); }
+  else evidence.push(fail('No deploy script found'));
 
   // Containerization
   const hasDocker = fileExists('Dockerfile') || fileExists('docker-compose.yml');
-  if (hasDocker) { score += 1; evidence.push('Containerization (Dockerfile/docker-compose)'); }
+  if (hasDocker) { score += 1; evidence.push(pass('Containerization (Dockerfile/docker-compose)')); }
+  else evidence.push(fail('No containerized release artifact (Dockerfile/docker-compose)'));
 
   // DORA: Deployment frequency from git log
   const recentDeploys = runCmd('git log --oneline --since="30 days ago" --grep="deploy\\|release\\|ship" 2>/dev/null');
   const deployCount = recentDeploys ? recentDeploys.split('\n').filter(l => l.trim()).length : 0;
-  if (deployCount >= 20) { score += 1; evidence.push(`DORA Deploy Frequency: ${deployCount}/month (elite)`); }
-  else if (deployCount >= 4) { score += 0.5; evidence.push(`DORA Deploy Frequency: ${deployCount}/month (high)`); }
-  else evidence.push(`DORA Deploy Frequency: ${deployCount}/month`);
+  if (deployCount >= 20) { score += 1; evidence.push(pass(`DORA Deploy Frequency: ${deployCount}/month (elite)`)); }
+  else if (deployCount >= 4) { score += 0.5; evidence.push(pass(`DORA Deploy Frequency: ${deployCount}/month (high)`)); }
+  else evidence.push(fail(`DORA Deploy Frequency: ${deployCount}/month`));
 
   // Rollback docs
   const hasRollback = runCmd('grep -rl "rollback" docs/ 2>/dev/null || grep -rl "rollback" CLAUDE.md 2>/dev/null');
-  if (hasRollback) { score += 0.5; evidence.push('Rollback procedures documented'); }
+  if (hasRollback) { score += 0.5; evidence.push(pass('Rollback procedures documented')); }
+  else evidence.push(fail('No rollback procedures documented'));
 
   return { dimension: 'Deployment & Release', score: Math.min(score, 5), evidence };
 }
@@ -197,26 +251,26 @@ function assessObservability() {
 
   // Logging
   const hasStructuredLogs = runCmd('grep -rl "winston\\|pino\\|bunyan\\|structlog\\|logrus" . --include="*.json" --include="*.ts" --include="*.js" 2>/dev/null');
-  if (hasStructuredLogs) { score += 1; evidence.push('Structured logging library detected'); }
+  if (hasStructuredLogs) { score += 1; evidence.push(pass('Structured logging library detected')); }
 
   // Error tracking
   const hasSentry = runCmd('grep -rl "sentry\\|bugsnag\\|rollbar\\|datadog" . --include="*.json" --include="*.ts" --include="*.js" --include="*.env*" 2>/dev/null');
-  if (hasSentry) { score += 1; evidence.push('Error tracking service configured'); }
+  if (hasSentry) { score += 1; evidence.push(pass('Error tracking service configured')); }
 
   // Health endpoints
   const hasHealthCheck = runCmd('grep -rl "health\\|healthz\\|readyz\\|livez" . --include="*.ts" --include="*.js" --include="*.py" 2>/dev/null');
-  if (hasHealthCheck) { score += 1; evidence.push('Health check endpoints detected'); }
+  if (hasHealthCheck) { score += 1; evidence.push(pass('Health check endpoints detected')); }
 
   // Performance ledger (SDLC-specific)
   const hasLedger = fileExists('pm/model-performance.jsonl');
   const hasCostLog = fileExists('agents/cost-log.json');
-  if (hasLedger || hasCostLog) { score += 1; evidence.push('Performance/cost tracking present'); }
+  if (hasLedger || hasCostLog) { score += 1; evidence.push(pass('Performance/cost tracking present')); }
 
   // Alerting
   const hasAlerting = runCmd('grep -rl "alert\\|pagerduty\\|opsgenie\\|notification.*trigger" agents/ docs/ 2>/dev/null');
-  if (hasAlerting) { score += 1; evidence.push('Alerting/notification system configured'); }
+  if (hasAlerting) { score += 1; evidence.push(pass('Alerting/notification system configured')); }
 
-  if (score === 0) evidence.push('No observability infrastructure detected');
+  if (score === 0) evidence.push(fail('No observability infrastructure detected'));
 
   return { dimension: 'Observability', score: Math.min(score, 5), evidence };
 }
@@ -227,12 +281,12 @@ function assessSecurity() {
 
   // No hardcoded secrets
   const hasEnvExample = fileExists('.env.example') || fileExists('.env.template');
-  if (hasEnvExample) { score += 1; evidence.push('.env.example exists (secrets documented)'); }
+  if (hasEnvExample) { score += 1; evidence.push(pass('.env.example exists (secrets documented)')); }
 
   // .gitignore covers sensitive files
   const gitignore = readFile('.gitignore') || '';
   const ignoresEnv = gitignore.includes('.env');
-  if (ignoresEnv) { score += 0.5; evidence.push('.gitignore excludes .env files'); }
+  if (ignoresEnv) { score += 0.5; evidence.push(pass('.gitignore excludes .env files')); }
 
   // Dependency audit — check if zero-dep first
   const pkg = readFile('package.json');
@@ -246,7 +300,7 @@ function assessSecurity() {
 
   if (isZeroDep) {
     score += 1.5;
-    evidence.push('Zero dependencies — no supply chain attack surface');
+    evidence.push(pass('Zero dependencies — no supply chain attack surface'));
   } else {
     const auditResult = runCmd('npm audit --json 2>/dev/null');
     if (auditResult) {
@@ -255,25 +309,36 @@ function assessSecurity() {
         const vulns = audit.metadata?.vulnerabilities || {};
         const critical = vulns.critical || 0;
         const high = vulns.high || 0;
-        if (critical === 0 && high === 0) { score += 1.5; evidence.push('No critical/high vulnerabilities in dependencies'); }
-        else evidence.push(`Vulnerabilities: ${critical} critical, ${high} high`);
-      } catch { evidence.push('npm audit ran but output unparseable'); }
+        if (critical === 0 && high === 0) { score += 1.5; evidence.push(pass('No critical/high vulnerabilities in dependencies')); }
+        else evidence.push(fail(`Vulnerabilities: ${critical} critical, ${high} high`));
+      } catch { evidence.push(fail('npm audit ran but output unparseable')); }
     } else {
       const hasLockfile = fileExists('package-lock.json') || fileExists('yarn.lock') || fileExists('pnpm-lock.yaml');
-      if (hasLockfile) { score += 0.5; evidence.push('Lock file present (dependency pinning)'); }
-      else evidence.push('No lock file found');
+      if (hasLockfile) { score += 0.5; evidence.push(pass('Lock file present (dependency pinning)')); }
+      else evidence.push(fail('No lock file found'));
     }
   }
 
   // Auth patterns
   const hasAuth = runCmd('grep -rl "auth\\|jwt\\|oauth\\|session\\|cookie" . --include="*.ts" --include="*.js" --include="*.py" 2>/dev/null');
-  if (hasAuth) { score += 0.5; evidence.push('Authentication patterns detected'); }
+  if (hasAuth) { score += 0.5; evidence.push(pass('Authentication patterns detected')); }
+  else evidence.push(info('No authentication surface in this repo (nothing to authenticate)'));
 
   // OWASP awareness in review
   const hasSecurityReview = runCmd('grep -rl "OWASP\\|XSS\\|injection\\|CSRF" agents/ docs/ CLAUDE.md 2>/dev/null');
-  if (hasSecurityReview) { score += 1; evidence.push('Security review patterns in agent/doc config'); }
+  if (hasSecurityReview) { score += 1; evidence.push(pass('Security review patterns in agent/doc config')); }
+  else evidence.push(fail('No security review patterns in agent/doc config'));
 
-  if (score === 0) evidence.push('No security practices detected');
+  // Same rubric inversion as Dependency Health: the zero-dependency branch
+  // awards 1.5 where the has-dependencies branch can award 2.0 (npm audit +
+  // lock file), so a repo with no supply chain at all tops out at 4.5 while
+  // one with 50 audited deps can reach 5.0. Stated rather than silently
+  // corrected — changing it moves the headline number on a judgement call.
+  if (isZeroDep) {
+    evidence.push(info('Dimension caps at 4.5/5 for zero-dependency repos — the remaining 0.5 requires an auditable dependency set'));
+  }
+
+  if (score === 0) evidence.push(fail('No security practices detected'));
 
   return { dimension: 'Security Posture', score: Math.min(score, 5), evidence };
 }
@@ -286,10 +351,10 @@ function assessDependencyHealth() {
   if (!pkg) {
     // Check for other package managers
     if (fileExists('requirements.txt') || fileExists('Cargo.toml') || fileExists('go.mod')) {
-      evidence.push('Non-Node project — dependency check limited');
+      evidence.push(info('Non-Node project — dependency check limited'));
       score = 2; // Assume baseline
     } else {
-      evidence.push('No package manifest found');
+      evidence.push(fail('No package manifest found'));
       return { dimension: 'Dependency Health', score: 0, evidence };
     }
   }
@@ -304,38 +369,46 @@ function assessDependencyHealth() {
   if (isZeroDep) {
     // Zero-dependency is a deliberate architectural choice for portability
     score = 3;
-    evidence.push('Zero-dependency by design — maximum portability (git clone + node)');
-    evidence.push('No dependency vulnerabilities possible (zero attack surface)');
-    evidence.push('No lock file needed (nothing to lock)');
+    evidence.push(pass('Zero-dependency by design — maximum portability (git clone + node)'));
+    evidence.push(pass('No dependency vulnerabilities possible (zero attack surface)'));
+    evidence.push(pass('No lock file needed (nothing to lock)'));
 
     // Bonus: check if engines are specified (good practice even for zero-dep)
     if (parsedPkg.engines?.node) {
       score += 0.5;
-      evidence.push(`Node engine requirement specified: ${parsedPkg.engines.node}`);
+      evidence.push(pass(`Node engine requirement specified: ${parsedPkg.engines.node}`));
     }
 
     // Bonus: package.json is well-formed
     if (parsedPkg.name && parsedPkg.version && parsedPkg.type === 'module') {
       score += 0.5;
-      evidence.push('Well-formed manifest (name, version, type:module)');
+      evidence.push(pass('Well-formed manifest (name, version, type:module)'));
     }
+
+    // Be explicit that this branch tops out at 4.0/5 rather than leaving the
+    // missing point unexplained. Arguably an inversion in the rubric — a repo
+    // with zero dependencies carries strictly less dependency risk than one
+    // whose 50 deps merely happen to be current, yet only the latter can score
+    // 5.0. Flagged rather than silently "corrected": changing it would move the
+    // headline number on a judgement call, which is Bryce's to make.
+    evidence.push(info('Dimension caps at 4.0/5 for zero-dependency repos — the remaining point requires dependencies to keep current'));
 
     return { dimension: 'Dependency Health', score: Math.min(score, 5), evidence };
   }
 
   // Standard dependency health checks for projects with deps
   const hasLock = fileExists('package-lock.json') || fileExists('yarn.lock') || fileExists('pnpm-lock.yaml');
-  if (hasLock) { score += 1; evidence.push('Lock file committed'); }
-  else evidence.push('No lock file — builds are non-deterministic');
+  if (hasLock) { score += 1; evidence.push(pass('Lock file committed')); }
+  else evidence.push(fail('No lock file — builds are non-deterministic'));
 
   // Last dependency update
   const lastDepCommit = runCmd('git log --oneline -1 --diff-filter=M -- "package.json" 2>/dev/null');
   if (lastDepCommit) {
     const dateStr = runCmd('git log -1 --format=%ci --diff-filter=M -- "package.json" 2>/dev/null');
     const days = daysSince(dateStr);
-    if (days < 30) { score += 1.5; evidence.push(`Dependencies updated ${days} days ago (recent)`); }
-    else if (days < 90) { score += 1; evidence.push(`Dependencies updated ${days} days ago`); }
-    else { score += 0.5; evidence.push(`Dependencies last updated ${days} days ago (stale)`); }
+    if (days < 30) { score += 1.5; evidence.push(pass(`Dependencies updated ${days} days ago (recent)`)); }
+    else if (days < 90) { score += 1; evidence.push(pass(`Dependencies updated ${days} days ago`)); }
+    else { score += 0.5; evidence.push(info(`Dependencies last updated ${days} days ago (stale)`)); }
   }
 
   // Outdated packages
@@ -344,10 +417,10 @@ function assessDependencyHealth() {
     try {
       const pkgs = JSON.parse(outdated);
       const count = Object.keys(pkgs).length;
-      if (count === 0) { score += 1.5; evidence.push('All dependencies up to date'); }
-      else if (count < 5) { score += 1; evidence.push(`${count} outdated packages`); }
-      else { score += 0.5; evidence.push(`${count} outdated packages (needs attention)`); }
-    } catch { /* empty output = all current */ score += 1; evidence.push('Dependencies appear current'); }
+      if (count === 0) { score += 1.5; evidence.push(pass('All dependencies up to date')); }
+      else if (count < 5) { score += 1; evidence.push(pass(`${count} outdated packages`)); }
+      else { score += 0.5; evidence.push(info(`${count} outdated packages (needs attention)`)); }
+    } catch { /* empty output = all current */ score += 1; evidence.push(pass('Dependencies appear current')); }
   }
 
   return { dimension: 'Dependency Health', score: Math.min(score, 5), evidence };
@@ -361,29 +434,29 @@ function assessDocumentation() {
   const readme = readFile('README.md');
   if (readme) {
     score += 1;
-    evidence.push(`README.md exists (${readme.split('\n').length} lines)`);
-    if (readme.includes('## ') && readme.split('## ').length >= 4) { score += 0.5; evidence.push('README has multiple sections'); }
-  } else evidence.push('No README.md');
+    evidence.push(pass(`README.md exists (${readme.split('\n').length} lines)`));
+    if (readme.includes('## ') && readme.split('## ').length >= 4) { score += 0.5; evidence.push(pass('README has multiple sections')); }
+  } else evidence.push(fail('No README.md'));
 
   // Onboarding
   const hasOnboarding = fileExists('ONBOARDING.md') || fileExists('docs/getting-started.md') || fileExists('CONTRIBUTING.md');
-  if (hasOnboarding) { score += 1; evidence.push('Onboarding/contributing guide exists'); }
+  if (hasOnboarding) { score += 1; evidence.push(pass('Onboarding/contributing guide exists')); }
 
   // Architecture docs
   const hasArchDocs = fileExists('docs/') && readdirSync(join(PROJECT_DIR, 'docs')).length >= 3;
-  if (hasArchDocs) { score += 1; evidence.push(`docs/ directory with ${readdirSync(join(PROJECT_DIR, 'docs')).length} files`); }
+  if (hasArchDocs) { score += 1; evidence.push(pass(`docs/ directory with ${readdirSync(join(PROJECT_DIR, 'docs')).length} files`)); }
 
   // API docs or ADRs
   const hasADRs = fileExists('docs/adr') || fileExists('adr/') || runCmd('grep -rl "ADR\\|Architecture Decision" docs/ 2>/dev/null');
-  if (hasADRs) { score += 0.5; evidence.push('Architecture decision records detected'); }
+  if (hasADRs) { score += 0.5; evidence.push(pass('Architecture decision records detected')); }
 
   // Glossary
   const hasGlossary = runCmd('grep -rl "glossary\\|Glossary" . --include="*.md" 2>/dev/null');
-  if (hasGlossary) { score += 0.5; evidence.push('Glossary exists'); }
+  if (hasGlossary) { score += 0.5; evidence.push(pass('Glossary exists')); }
 
   // Troubleshooting
   const hasTroubleshooting = fileExists('docs/troubleshooting.md') || runCmd('grep -rl "Troubleshooting" . --include="*.md" 2>/dev/null');
-  if (hasTroubleshooting) { score += 0.5; evidence.push('Troubleshooting guide exists'); }
+  if (hasTroubleshooting) { score += 0.5; evidence.push(pass('Troubleshooting guide exists')); }
 
   return { dimension: 'Documentation', score: Math.min(score, 5), evidence };
 }
@@ -394,26 +467,26 @@ function assessOperationalReadiness() {
 
   // Budget/cost controls
   const hasBudget = fileExists('agents/budget.json');
-  if (hasBudget) { score += 1; evidence.push('Budget controls configured (agents/budget.json)'); }
+  if (hasBudget) { score += 1; evidence.push(pass('Budget controls configured (agents/budget.json)')); }
 
   // Model manager / cost tracking
   const hasModelManager = fileExists('agents/model-manager.mjs');
   const hasCostTracker = fileExists('agents/cost-tracker.mjs');
-  if (hasModelManager) { score += 1; evidence.push('Model manager for token budget monitoring'); }
-  if (hasCostTracker) { score += 0.5; evidence.push('Cost tracking enabled'); }
+  if (hasModelManager) { score += 1; evidence.push(pass('Model manager for token budget monitoring')); }
+  if (hasCostTracker) { score += 0.5; evidence.push(pass('Cost tracking enabled')); }
 
   // Notification/alerting
   const hasNotify = fileExists('agents/notify.mjs');
-  if (hasNotify) { score += 0.5; evidence.push('Notification system configured'); }
+  if (hasNotify) { score += 0.5; evidence.push(pass('Notification system configured')); }
 
   // Backup/recovery
   const hasMemoryBackup = fileExists('agents/rem-sleep.mjs');
-  if (hasMemoryBackup) { score += 0.5; evidence.push('Memory consolidation (REM sleep) for data preservation'); }
+  if (hasMemoryBackup) { score += 0.5; evidence.push(pass('Memory consolidation (REM sleep) for data preservation')); }
 
   // Conservation mode / circuit breakers
   const budget = readFile('agents/budget.json');
-  if (budget?.includes('conservationMode')) { score += 0.5; evidence.push('Conservation mode available'); }
-  if (budget?.includes('fallbackChain')) { score += 0.5; evidence.push('Fallback chains configured for resilience'); }
+  if (budget?.includes('conservationMode')) { score += 0.5; evidence.push(pass('Conservation mode available')); }
+  if (budget?.includes('fallbackChain')) { score += 0.5; evidence.push(pass('Fallback chains configured for resilience')); }
 
   // Cross-provider fallbacks
   if (budget) {
@@ -425,11 +498,11 @@ function assessOperationalReadiness() {
         // This is a simplified check
         return (a.fallbackChain?.length || 0) >= 3;
       });
-      if (hasCrossProvider) { score += 0.5; evidence.push('Cross-provider fallback chains (3+ models)'); }
+      if (hasCrossProvider) { score += 0.5; evidence.push(pass('Cross-provider fallback chains (3+ models)')); }
     } catch {}
   }
 
-  if (score === 0) evidence.push('No operational readiness infrastructure detected');
+  if (score === 0) evidence.push(fail('No operational readiness infrastructure detected'));
 
   return { dimension: 'Operational Readiness', score: Math.min(score, 5), evidence };
 }
@@ -502,7 +575,9 @@ function run() {
   console.log(`\n## Top 3 Recommendations`);
   for (let i = 0; i < weakest.length; i++) {
     const r = weakest[i];
-    const gaps = r.evidence.filter(e => !e.includes('present') && !e.includes('exists') && !e.includes('configured') && !e.includes('detected') && !e.includes('committed') && !e.includes('recent') && !e.includes('current') && !e.includes('Good') && !e.includes('updated'));
+    // Only actual gaps can be recommendations. The previous keyword filter let
+    // passing lines through, so the top recommendation was sometimes a success.
+    const gaps = r.evidence.filter(e => evidenceOk(e) === false).map(evidenceText);
     console.log(`${i + 1}. **${r.dimension}** (${r.score.toFixed(1)}/5): ${gaps[0] || 'Room for improvement'}`);
   }
 
@@ -511,11 +586,18 @@ function run() {
   for (const r of results) {
     console.log(`### ${r.dimension} — ${r.score.toFixed(1)}/5`);
     for (const e of r.evidence) {
-      const icon = e.includes('No ') || e.includes('stale') || e.includes('Vulnerabilities') || e.includes('non-deterministic') ? '❌' : '✅';
-      console.log(`  ${icon} ${e}`);
+      console.log(`  ${evidenceIcon(e)} ${evidenceText(e)}`);
     }
     console.log('');
   }
 }
 
-run();
+// This module now exports helpers, so the CLI must not fire on import
+// (CLAUDE.md rule 9; enforced by four-layer Layer 5).
+function __isMainModule() {
+  return process.argv[1] && resolve(process.argv[1]) === __filename;
+}
+
+if (__isMainModule()) {
+  run();
+}
