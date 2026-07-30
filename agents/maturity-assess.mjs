@@ -101,6 +101,76 @@ function countFiles(dir, predicate) {
   return count;
 }
 
+/**
+ * Content scan, in Node, without shelling out.
+ *
+ * These scans used to run `grep -rl "pat" <flags> . --include="*.js" …`, which
+ * was broken twice over on this host:
+ *   1. `grep` here is **ugrep**, not GNU grep, and its --include/--exclude
+ *      semantics differ — the flags were silently ignored.
+ *   2. Every --include sat AFTER the `.` path operand, so even GNU grep would
+ *      have stopped treating them as options.
+ * Net effect: the "filtered" whole-tree scans searched every file of every
+ * type, matched "pino" inside a sympy test and "sentry" inside a pygments
+ * lexer under .venv/, and awarded Observability a fake 5.0/5 for a logging
+ * library and an error tracker this repo does not contain. They were also slow
+ * enough to blow runCmd's 10s timeout under parallel load, which — since a
+ * timeout is indistinguishable from no-match — made the score vary with
+ * machine load.
+ *
+ * A framework meant to grade arbitrary projects on arbitrary hosts cannot
+ * depend on which grep is installed, so this does the walk itself.
+ *
+ * @param {RegExp} pattern
+ * @param {{exts?: string[], roots?: string[], skipSelf?: boolean}} opts
+ * @returns {string|null} first matching repo-relative path, or null
+ */
+const SKIP_DIRS = new Set([
+  '.git', 'node_modules', '.venv', 'venv', '__pycache__',
+  'dist', 'build', '.next', 'coverage', 'vendor',
+  // Generated output, not source: pm/ holds ledgers, reports and a multi-MB
+  // RAG index whose indexed prose matched 'pino'.
+  'pm',
+  // A test that merely mentions a tool is not evidence that tool is wired up.
+  '__tests__', 'tests',
+]);
+
+export function scanForPattern(pattern, { exts = [], roots = ['.'], skipSelf = true } = {}) {
+  const matchesExt = (name) => exts.length === 0 || exts.some(e => name.endsWith(e));
+  let found = null;
+
+  function walk(abs, rel) {
+    if (found) return;
+    let entries;
+    try { entries = readdirSync(abs, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      if (found) return;
+      if (entry.isDirectory()) {
+        if (SKIP_DIRS.has(entry.name)) continue;
+        walk(join(abs, entry.name), rel ? `${rel}/${entry.name}` : entry.name);
+      } else if (entry.isFile() && matchesExt(entry.name)) {
+        // The scanner must not measure itself: every search term appears
+        // verbatim in this file's own source.
+        if (skipSelf && entry.name === 'maturity-assess.mjs') continue;
+        try {
+          if (pattern.test(readFileSync(join(abs, entry.name), 'utf8'))) {
+            found = rel ? `${rel}/${entry.name}` : entry.name;
+            return;
+          }
+        } catch { /* unreadable/binary — skip */ }
+      }
+    }
+  }
+
+  for (const root of roots) {
+    if (found) break;
+    const abs = join(PROJECT_DIR, root === '.' ? '' : root);
+    if (!existsSync(abs)) continue;
+    walk(abs, root === '.' ? '' : root);
+  }
+  return found;
+}
+
 function runCmd(cmd) {
   try {
     return execSync(cmd, { cwd: PROJECT_DIR, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 10000 }).trim();
@@ -250,25 +320,30 @@ function assessObservability() {
   let score = 0;
 
   // Logging
-  const hasStructuredLogs = runCmd('grep -rl "winston\\|pino\\|bunyan\\|structlog\\|logrus" . --include="*.json" --include="*.ts" --include="*.js" 2>/dev/null');
+  const hasStructuredLogs = scanForPattern(/\b(winston|pino|bunyan|structlog|logrus)\b/, { exts: ['.json', '.ts', '.js', '.mjs'] });
   if (hasStructuredLogs) { score += 1; evidence.push(pass('Structured logging library detected')); }
+  else evidence.push(fail('No structured logging library (winston/pino/bunyan/structlog/logrus)'));
 
   // Error tracking
-  const hasSentry = runCmd('grep -rl "sentry\\|bugsnag\\|rollbar\\|datadog" . --include="*.json" --include="*.ts" --include="*.js" --include="*.env*" 2>/dev/null');
+  const hasSentry = scanForPattern(/\b(sentry|bugsnag|rollbar|datadog)\b/i, { exts: ['.json', '.ts', '.js', '.mjs', '.env'] });
   if (hasSentry) { score += 1; evidence.push(pass('Error tracking service configured')); }
+  else evidence.push(fail('No error-tracking service (sentry/bugsnag/rollbar/datadog)'));
 
   // Health endpoints
-  const hasHealthCheck = runCmd('grep -rl "health\\|healthz\\|readyz\\|livez" . --include="*.ts" --include="*.js" --include="*.py" 2>/dev/null');
+  const hasHealthCheck = scanForPattern(/\b(health|healthz|readyz|livez)\b/, { exts: ['.ts', '.js', '.mjs', '.py'] });
   if (hasHealthCheck) { score += 1; evidence.push(pass('Health check endpoints detected')); }
+  else evidence.push(fail('No health-check endpoint detected'));
 
   // Performance ledger (SDLC-specific)
   const hasLedger = fileExists('pm/model-performance.jsonl');
   const hasCostLog = fileExists('agents/cost-log.json');
   if (hasLedger || hasCostLog) { score += 1; evidence.push(pass('Performance/cost tracking present')); }
+  else evidence.push(fail('No performance/cost ledger (pm/model-performance.jsonl or agents/cost-log.json)'));
 
   // Alerting
-  const hasAlerting = runCmd('grep -rl "alert\\|pagerduty\\|opsgenie\\|notification.*trigger" agents/ docs/ 2>/dev/null');
+  const hasAlerting = scanForPattern(/\b(alert|pagerduty|opsgenie|notification)\b/i, { exts: ['.md', '.mjs', '.json'], roots: ['agents', 'docs'] });
   if (hasAlerting) { score += 1; evidence.push(pass('Alerting/notification system configured')); }
+  else evidence.push(fail('No alerting/notification system configured'));
 
   if (score === 0) evidence.push(fail('No observability infrastructure detected'));
 
@@ -320,12 +395,12 @@ function assessSecurity() {
   }
 
   // Auth patterns
-  const hasAuth = runCmd('grep -rl "auth\\|jwt\\|oauth\\|session\\|cookie" . --include="*.ts" --include="*.js" --include="*.py" 2>/dev/null');
+  const hasAuth = scanForPattern(/\bauth\b|jwt|oauth|session|cookie/i, { exts: ['.ts', '.js', '.mjs', '.py'] });
   if (hasAuth) { score += 0.5; evidence.push(pass('Authentication patterns detected')); }
   else evidence.push(info('No authentication surface in this repo (nothing to authenticate)'));
 
   // OWASP awareness in review
-  const hasSecurityReview = runCmd('grep -rl "OWASP\\|XSS\\|injection\\|CSRF" agents/ docs/ CLAUDE.md 2>/dev/null');
+  const hasSecurityReview = scanForPattern(/\b(OWASP|XSS|injection|CSRF)\b/, { exts: ['.md', '.mjs'], roots: ['agents', 'docs'] }) || scanForPattern(/\b(OWASP|XSS|injection|CSRF)\b/, { exts: ['CLAUDE.md'] });
   if (hasSecurityReview) { score += 1; evidence.push(pass('Security review patterns in agent/doc config')); }
   else evidence.push(fail('No security review patterns in agent/doc config'));
 
@@ -451,11 +526,11 @@ function assessDocumentation() {
   if (hasADRs) { score += 0.5; evidence.push(pass('Architecture decision records detected')); }
 
   // Glossary
-  const hasGlossary = runCmd('grep -rl "glossary\\|Glossary" . --include="*.md" 2>/dev/null');
+  const hasGlossary = scanForPattern(/glossary/i, { exts: ['.md'] });
   if (hasGlossary) { score += 0.5; evidence.push(pass('Glossary exists')); }
 
   // Troubleshooting
-  const hasTroubleshooting = fileExists('docs/troubleshooting.md') || runCmd('grep -rl "Troubleshooting" . --include="*.md" 2>/dev/null');
+  const hasTroubleshooting = fileExists('docs/troubleshooting.md') || scanForPattern(/troubleshooting/i, { exts: ['.md'] });
   if (hasTroubleshooting) { score += 0.5; evidence.push(pass('Troubleshooting guide exists')); }
 
   return { dimension: 'Documentation', score: Math.min(score, 5), evidence };

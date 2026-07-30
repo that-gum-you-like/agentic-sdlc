@@ -119,7 +119,7 @@
     {
       "name": "deploy-reconcile",
       "cron": "*/30 * * * *",
-      "script": "node ~/agentic-sdlc/agents/deploy-runner.mjs --project-dir /home/bryce/tally --project-dir /home/bryce/hermes-pilot",
+      "script": "node ~/agentic-sdlc/agents/deploy-runner.mjs --project-dir /home/bryce/tally --project-dir /home/bryce/hermes-pilot --project-dir /home/bryce/wireframe-live",
       "description": "Reconciling approval-gated production deploy runner (openspec: autonomous-deploy-pipeline). Add one --project-dir per deployable project; projects with deploy.enabled=false are no-ops.",
       "session": "isolated"
     },

@@ -19,6 +19,7 @@ import {
   smokeVerify,
   loadDeployConfig,
   parseArgs,
+  redactRemote,
   DEFAULTS,
 } from '../agents/deploy-runner.mjs';
 
@@ -147,6 +148,23 @@ t('parseArgs collects repeated --project-dir and --dry-run', () => {
 });
 
 // --- sequential runner (async-aware) ---
+// --- credential redaction (added 2026-07-30 after a live token hit stdout) ---
+t('redactRemote strips embedded credentials from a git remote', () => {
+  const leaky = 'https://x-access-token:gho_AAAABBBBCCCCDDDD@github.com/that-gum-you-like/wireframe-live.git';
+  const safe = redactRemote(leaky);
+  assert(!safe.includes('gho_'), `token survived redaction: ${safe}`);
+  assert(!safe.includes('x-access-token'), `userinfo survived redaction: ${safe}`);
+  assert(safe === 'https://***@github.com/that-gum-you-like/wireframe-live.git', safe);
+});
+
+t('redactRemote leaves a credential-free remote untouched', () => {
+  const plain = 'https://github.com/that-gum-you-like/agentic-sdlc.git';
+  assert(redactRemote(plain) === plain, redactRemote(plain));
+  const ssh = 'git@github.com:that-gum-you-like/agentic-sdlc.git';
+  assert(redactRemote(ssh) === ssh, redactRemote(ssh));
+});
+
+
 for (const { name, fn } of queue) {
   process.stdout.write(`  ${name} ... `);
   try {

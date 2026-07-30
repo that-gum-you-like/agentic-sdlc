@@ -47,6 +47,20 @@ export function missionDomainFor(name, baseDomain = MISSION_BASE_DOMAIN) {
   return `${name}.${baseDomain}`;
 }
 
+/**
+ * argv for attaching a domain to the project linked in cwd.
+ *
+ * Exactly ONE argument after `add`. `vercel domains add --help` on CLI 50.23.2
+ * documents `domains add domain project`, but passing the project rejects at
+ * runtime with "expects one argument" — the project comes from the .vercel
+ * link in cwd. Extracted so the arity is testable: the original two-arg form
+ * failed on every single run and nobody noticed, because the caller treats a
+ * domain attach as best-effort and falls back to the vercel.app URL.
+ */
+export function vercelDomainAddArgs(sub) {
+  return ['domains', 'add', sub];
+}
+
 // ---------------------------------------------------------------------------
 // Pure helpers (unit tested)
 // ---------------------------------------------------------------------------
@@ -233,7 +247,7 @@ export async function bootstrap({ name, description = '', deploy = true, dryRun 
     const sub = missionDomainFor(name, domain);
     step(`domain: vercel domains add ${sub} ${name} (best-effort; falls back to vercel.app)`, () => {
       try {
-        sh('vercel', ['domains', 'add', sub, name], { cwd: projectDir, timeout: 60_000 });
+        sh('vercel', vercelDomainAddArgs(sub), { cwd: projectDir, timeout: 60_000 });
         const path = join(projectDir, 'agents', 'project.json');
         const project = JSON.parse(readFileSync(path, 'utf8'));
         project.deploy.verify.smokeUrl = `https://${sub}`;

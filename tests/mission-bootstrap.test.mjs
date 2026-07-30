@@ -19,6 +19,7 @@ import {
   buildCronJobs,
   bootstrap,
   missionDomainFor,
+  vercelDomainAddArgs,
   VERCEL_TEAM_SLUG,
   MISSION_BASE_DOMAIN,
 } from '../agents/mission-bootstrap.mjs';
@@ -41,6 +42,16 @@ t('validateName accepts kebab names, rejects everything that would break repo/ve
 
 t('smokeUrlFor uses the team-scoped alias (bare <name>.vercel.app may be foreign-owned)', () => {
   assert(smokeUrlFor('demo') === `https://demo-${VERCEL_TEAM_SLUG}.vercel.app`, smokeUrlFor('demo'));
+});
+
+t('vercel domains add takes exactly ONE argument (the two-arg form silently failed every run)', () => {
+  const args = vercelDomainAddArgs('demo.brycewadley.com');
+  assert(args.length === 3, `expected ['domains','add',<domain>], got ${JSON.stringify(args)}`);
+  assert(args[0] === 'domains' && args[1] === 'add', JSON.stringify(args));
+  assert(args[2] === 'demo.brycewadley.com', args[2]);
+  // The project must NOT be passed — the CLI infers it from the .vercel link
+  // in cwd and rejects a second positional with "expects one argument".
+  assert(!args.includes('demo'), 'project name must not be a positional arg');
 });
 
 t('missions live on subdomains of brycewadley.com by default', () => {

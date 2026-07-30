@@ -224,13 +224,26 @@ function detectBaseBranch(cloneDir) {
   } catch { return null; }
 }
 
+/**
+ * Strip credentials from a git remote before it is ever logged.
+ *
+ * Hermes writes push-capable remotes as
+ * `https://x-access-token:gho_…@github.com/owner/repo.git`, so logging the URL
+ * verbatim writes a live GitHub token into the systemd journal and pm/ logs on
+ * every first clone of a new project. Redact at the boundary rather than
+ * trusting each call site to remember.
+ */
+export function redactRemote(remote) {
+  return String(remote).replace(/\/\/[^/@]*@/, '//***@');
+}
+
 /** Provision/refresh the dedicated deploy clone at origin/<base>; returns { cloneDir, baseBranch, targetSha }. */
 function refreshDeployClone(projectDir, configuredBase, log) {
   const projectName = basename(projectDir);
   const cloneDir = process.env.SDLC_DEPLOY_CLONE || join(homedir(), `.sdlc-deploy-clone-${projectName}`);
   if (!existsSync(join(cloneDir, '.git'))) {
     const remote = git(projectDir, ['remote', 'get-url', 'origin']);
-    log(`cloning ${remote} → ${cloneDir}`);
+    log(`cloning ${redactRemote(remote)} → ${cloneDir}`);
     execFileSync('git', ['clone', '--quiet', remote, cloneDir], { encoding: 'utf8' });
   }
   git(cloneDir, ['fetch', 'origin', '--quiet']);
