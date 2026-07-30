@@ -42,7 +42,9 @@
 | `agents/cross-feature-analyze.mjs` | OpenSpec backlog conflict analyzer |
 | `agents/deploy-rollback.mjs` | Project-defined deploy rollback helper |
 | `agents/claude-md-split.mjs` | Reproducible CLAUDE.md split (this file's structure) |
-| `agents/health-check.mjs` | Autonomous health check — queue depth, per-agent budget headroom, disk free, cron liveness → `ok/degraded/down` report; `--notify` on non-ok |
+| `agents/health-check.mjs` | Autonomous health check — queue depth, per-agent budget headroom, disk free, cron liveness, outbound egress → `ok/degraded/down` report; `--notify` on non-ok |
+| `agents/net-doctor.mjs` | Egress diagnostic — DNS resolution, IPv4/IPv6 reachability of the LLM provider + notification host, and the IPv6-blackhole failure mode that makes a broken host look like a dead provider. Exports `checkEgress()`; CLI exits non-zero on a critical finding |
+| `scripts/network-preflight.sh` | The remedy net-doctor points at — idempotent IPv4-precedence + reliable-resolver fix, with `--check` and `--revert`. **Human-run only** (needs root); no agent, cron, or timer may invoke it |
 | `agents/red-team-tester.mjs` | Adversarial scan of agent outputs / AGENT.md prompts for prompt-injection, exfiltration, tool-abuse, jailbreak markers → report in `pm/red-team-reports/`; `--notify` on high severity |
 | `agents/rag-indexer.mjs` | Build a local semantic index of `docs/`, `openspec/`, agent `memory/` — local embeddings when available, deterministic lexical fallback otherwise (zero npm deps) |
 | `agents/document-sync.mjs` | Content-hash + version knowledge docs (`pm/doc-versions.json`); mark changed docs for re-indexing by `rag-indexer.mjs` |

@@ -69,8 +69,10 @@ The **"Never One More Thing" rule**: when an idea strikes mid-task, capture it i
 All are stdlib-only, import-safe, and dry-runnable:
 
 ```bash
-node ~/agentic-sdlc/agents/health-check.mjs            # queue / budget / disk / cron → ok|degraded|down
+node ~/agentic-sdlc/agents/health-check.mjs            # queue / budget / disk / cron / egress → ok|degraded|down
 node ~/agentic-sdlc/agents/health-check.mjs --notify   # alert if not ok
+node ~/agentic-sdlc/agents/net-doctor.mjs              # egress only: DNS, IPv4/IPv6 reachability, IPv6-blackhole
+sudo bash ~/agentic-sdlc/scripts/network-preflight.sh  # the fix net-doctor points at (human-run; never automated)
 node ~/agentic-sdlc/agents/red-team-tester.mjs --dry-run   # scan agent prompts/outputs for injection & jailbreaks
 node ~/agentic-sdlc/agents/rag-indexer.mjs             # build local semantic index (docs/ openspec/ memory/)
 node ~/agentic-sdlc/agents/document-sync.mjs --dry-run # version knowledge docs, flag changes for re-index

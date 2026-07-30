@@ -51,7 +51,7 @@ The onboarding guide referenced these automation scripts; they now exist under `
 | `red-team-tester.mjs` | Adversarial injection / jailbreak / alignment scan over agent prompts & outputs → `pm/red-team-reports/` | `constitutional-ai-engineer` |
 | `rag-indexer.mjs` | Local semantic index of `docs/` + `openspec/` + agent `memory/` → `pm/rag-index/` (embedding or lexical fallback) | `rag-specialist`, `token-embedding-analyzer` |
 | `document-sync.mjs` | Version-track knowledge docs, flag changes into `pm/rag-index/reindex-queue.json` | `rag-indexer.mjs` (feeds it) |
-| `health-check.mjs` | Queue / budget / disk / cron liveness → `ok\|degraded\|down` | autonomous launcher, cron |
+| `health-check.mjs` | Queue / budget / disk / cron liveness / egress → `ok\|degraded\|down` | autonomous launcher, cron |
 | `telegram-notify.mjs` | Opt-in Telegram notification channel (stdlib `https`, no-op when unconfigured) | `notify.mjs` provider pattern |
 
 **Data flow:** `document-sync.mjs` detects changed docs → writes a re-index queue → `rag-indexer.mjs` rebuilds the index → `rag-specialist` retrieves against it. All embeddings are **local-only** (privacy-first, no OpenAI, zero npm deps), degrading to a deterministic lexical index when `sentence-transformers` isn't installed.

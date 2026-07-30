@@ -64,8 +64,10 @@ async function main() {
   });
 
   // --- health-check ---
-  await test('runHealthCheck returns a valid status + checks', () => {
-    const r = runHealthCheck();
+  await test('runHealthCheck returns a valid status + checks', async () => {
+    // Egress is stubbed: this suite asserts the shape of the rollup, and must
+    // not depend on (or wait on) real network reachability to do it.
+    const r = await runHealthCheck({ egress: async () => ({ ok: true, findings: [] }) });
     assert(['ok', 'degraded', 'down'].includes(r.status), `bad status: ${r.status}`);
     assert(Array.isArray(r.checks) && r.checks.length > 0, 'checks not a non-empty array');
     for (const c of r.checks) {

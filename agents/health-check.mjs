@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Health Check — System health across queue depth, budget config, disk, and cron liveness.
+ * Health Check — System health across queue depth, budget config, disk, cron
+ * liveness, and outbound egress.
  *
  * Runs a small set of best-effort checks and rolls them up into a single
  * overall status (ok|degraded|down). Intended to be run standalone or wired
@@ -18,10 +19,15 @@ import { fileURLToPath } from 'url';
 
 import { loadConfig } from './load-config.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
+import { checkEgress } from './net-doctor.mjs';
 
 const QUEUE_DEPTH_WARN = 50;
 const DISK_FREE_DEGRADED_PCT = 15;
 const DISK_FREE_DOWN_PCT = 5;
+// Shorter than net-doctor's own 5s CLI default so the daily run stays brisk.
+// The failure that matters (a black-holed connect) fails instantly anyway, so
+// the tighter budget costs nothing in the case we're actually watching for.
+const EGRESS_TIMEOUT_MS = 3000;
 
 const SEVERITY_RANK = { ok: 0, degraded: 1, down: 2 };
 
@@ -98,6 +104,44 @@ function checkCron() {
   return { name: 'cron', status: 'degraded', detail: 'no OpenClaw cron config or report found (best-effort check)' };
 }
 
+/**
+ * Outbound egress to the LLM provider and the notification channel.
+ *
+ * This is the check that catches the IPv6-blackhole failure mode: when a host
+ * has no IPv6 default route but resolvers still hand back AAAA records,
+ * IPv6-preferring HTTP stacks fail instantly with ENETUNREACH and every layer
+ * above reports it as "the provider is down". Without this check the one
+ * fault that stops every autonomous cycle is the one thing health-check
+ * cannot see. See agents/net-doctor.mjs.
+ *
+ * @param {() => Promise<{findings: Array<{id: string, severity: string, remedy: string}>}>} probe
+ */
+async function checkEgressHealth(probe) {
+  let result;
+  try {
+    result = await probe();
+  } catch (e) {
+    // Best-effort like every other check here: a diagnostic that failed to run
+    // must stay distinguishable from a network that's actually down.
+    return { name: 'egress', status: 'degraded', detail: `egress probe failed to run: ${e.message}` };
+  }
+
+  const findings = Array.isArray(result?.findings) ? result.findings : [];
+  const critical = findings.filter(f => f.severity === 'critical');
+  if (critical.length > 0) {
+    const ids = [...new Set(critical.map(f => f.id))].join(', ');
+    return { name: 'egress', status: 'down', detail: `${ids} — ${critical[0].remedy}` };
+  }
+
+  const warn = findings.filter(f => f.severity === 'warn');
+  if (warn.length > 0) {
+    const ids = [...new Set(warn.map(f => f.id))].join(', ');
+    return { name: 'egress', status: 'degraded', detail: ids };
+  }
+
+  return { name: 'egress', status: 'ok', detail: 'provider + notification hosts reachable' };
+}
+
 // ---------------------------------------------------------------------------
 // Orchestration
 // ---------------------------------------------------------------------------
@@ -105,10 +149,15 @@ function checkCron() {
 /**
  * Run all health checks and roll them up into an overall status.
  *
+ * Async because egress can only be measured, never inferred — there is no
+ * honest synchronous way to probe the network.
+ *
  * @param {object} [opts]
- * @returns {{status: 'ok'|'degraded'|'down', checks: Array<{name: string, status: string, detail: string}>, timestamp: string}}
+ * @param {() => Promise<object>} [opts.egress] override the egress probe (tests)
+ * @returns {Promise<{status: 'ok'|'degraded'|'down', checks: Array<{name: string, status: string, detail: string}>, timestamp: string}>}
  */
-export function runHealthCheck(opts = {}) {
+export async function runHealthCheck(opts = {}) {
+  const { egress = () => checkEgress({ timeoutMs: EGRESS_TIMEOUT_MS }) } = opts;
   const config = loadConfig();
 
   const checks = [
@@ -116,6 +165,7 @@ export function runHealthCheck(opts = {}) {
     checkBudget(config),
     checkDisk(config),
     checkCron(config),
+    await checkEgressHealth(egress),
   ];
 
   let status = 'ok';
@@ -139,7 +189,7 @@ if (__isMainModule()) {
   const args = process.argv.slice(2);
   const notify = args.includes('--notify');
 
-  const result = runHealthCheck();
+  const result = await runHealthCheck();
 
   console.log(`Health: ${result.status} (${result.timestamp})`);
   for (const check of result.checks) {

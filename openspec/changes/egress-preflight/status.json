@@ -1,0 +1,7 @@
+{
+  "status": "in-progress",
+  "phase": "implement",
+  "created": "2026-07-30",
+  "lastUpdated": "2026-07-30",
+  "notes": "T1/T4 complete (net-doctor + 9 hermetic tests). T2 (network-preflight.sh), T3/T5 (health-check wiring) in flight. T7 live-host apply is Bryce's call — it needs sudo and must never enter the autonomous path (REQ-004)."
+}
