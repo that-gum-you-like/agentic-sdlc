@@ -37,6 +37,15 @@ function __isMainModule() {
 
 export const GH_OWNER = 'that-gum-you-like';
 export const VERCEL_TEAM_SLUG = 'that-gum-you-likes-projects';
+// Missions ship on subdomains of Bryce's domain (Cloudflare DNS with a
+// wildcard *.brycewadley.com → cname.vercel-dns.com record, DNS-only).
+// Override/disable per run with --domain <base> / --no-domain.
+export const MISSION_BASE_DOMAIN = 'brycewadley.com';
+
+/** Production home for a mission when the base domain is in play. */
+export function missionDomainFor(name, baseDomain = MISSION_BASE_DOMAIN) {
+  return `${name}.${baseDomain}`;
+}
 
 // ---------------------------------------------------------------------------
 // Pure helpers (unit tested)
@@ -150,7 +159,7 @@ function sh(cmd, args, opts = {}) {
   return execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts });
 }
 
-export async function bootstrap({ name, description = '', deploy = true, dryRun = false, home = homedir(), log = (m) => console.log(`[mission-bootstrap] ${m}`) }) {
+export async function bootstrap({ name, description = '', deploy = true, dryRun = false, domain = MISSION_BASE_DOMAIN, home = homedir(), log = (m) => console.log(`[mission-bootstrap] ${m}`) }) {
   if (!validateName(name)) {
     throw new Error(`invalid mission name "${name}" — kebab-case, 2-39 chars, [a-z0-9-], no leading digit/dash`);
   }
@@ -216,6 +225,29 @@ export async function bootstrap({ name, description = '', deploy = true, dryRun 
     });
   }
 
+  // 7.5. Custom production domain: <name>.<baseDomain>. Best-effort — when the
+  // attach succeeds, the smoke URL is upgraded and the verify timeout widened
+  // (first-deploy cert issuance); when it fails, the team vercel.app alias
+  // from step 5 stays authoritative and the mission still ships.
+  if (deploy && domain) {
+    const sub = missionDomainFor(name, domain);
+    step(`domain: vercel domains add ${sub} ${name} (best-effort; falls back to vercel.app)`, () => {
+      try {
+        sh('vercel', ['domains', 'add', sub, name], { cwd: projectDir, timeout: 60_000 });
+        const path = join(projectDir, 'agents', 'project.json');
+        const project = JSON.parse(readFileSync(path, 'utf8'));
+        project.deploy.verify.smokeUrl = `https://${sub}`;
+        project.deploy.verify.timeoutSeconds = Math.max(project.deploy.verify.timeoutSeconds || 0, 180);
+        writeFileSync(path, JSON.stringify(project, null, 2) + '\n');
+        sh('git', ['add', 'agents/project.json'], { cwd: projectDir });
+        try { sh('git', ['commit', '-m', `chore: production domain ${sub}`], { cwd: projectDir }); sh('git', ['push'], { cwd: projectDir, timeout: 60_000 }); } catch { /* nothing to commit */ }
+        log(`  production domain: https://${sub}`);
+      } catch (err) {
+        log(`  domain attach failed (${String(err.message).split('\n')[0]}) — keeping ${smokeUrlFor(name)}`);
+      }
+    });
+  }
+
   // 8-9. Schedule
   step(`cron-schedule.json: ${name}-drain + ${name}-review (minutes ${JSON.stringify(cronMinutesFor(name))})${deploy ? ' + deploy-reconcile registration' : ''}`, () => {
     const schedPath = join(FRAMEWORK_REPO, 'agents', 'cron-schedule.json');
@@ -241,7 +273,7 @@ export async function bootstrap({ name, description = '', deploy = true, dryRun 
   log(`MISSION READY: ${name}`);
   log(`  project:   ${projectDir}`);
   log(`  repo:      https://github.com/${GH_OWNER}/${name}`);
-  log(`  smoke URL: ${deploy ? smokeUrlFor(name) : '(deploy dark)'}`);
+  log(`  smoke URL: ${deploy ? (domain ? `https://${missionDomainFor(name, domain)} (fallback ${smokeUrlFor(name)})` : smokeUrlFor(name)) : '(deploy dark)'}`);
   log(`  next:      author openspec artifacts + seed tasks/queue/*.json in the project,`);
   log(`             git push, then the ${name}-drain timer takes over.`);
   return { projectDir, plan };
@@ -255,14 +287,16 @@ if (__isMainModule()) {
   const args = process.argv.slice(2);
   const name = args.find(a => !a.startsWith('--'));
   const dIdx = args.indexOf('--description');
+  const domIdx = args.indexOf('--domain');
   const opts = {
     name,
     description: dIdx !== -1 ? args[dIdx + 1] : '',
     deploy: !args.includes('--no-deploy'),
     dryRun: args.includes('--dry-run'),
+    domain: args.includes('--no-domain') ? null : (domIdx !== -1 ? args[domIdx + 1] : MISSION_BASE_DOMAIN),
   };
   if (!name) {
-    console.error('Usage: mission-bootstrap.mjs <kebab-name> [--description "…"] [--no-deploy] [--dry-run]');
+    console.error('Usage: mission-bootstrap.mjs <kebab-name> [--description "…"] [--domain <base>|--no-domain] [--no-deploy] [--dry-run]');
     process.exit(1);
   }
   bootstrap(opts).catch((err) => {

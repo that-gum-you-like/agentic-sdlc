@@ -22,10 +22,13 @@ node ~/agentic-sdlc/agents/mission-bootstrap.mjs <name> --description "<one-line
 
 This creates the private repo (`that-gum-you-like/<name>`), clones to
 `~/<name>`, scaffolds the framework, sets OpenRouter-only model ladders,
-wires Telegram+desktop notifications, enables the approval-gated Vercel deploy
-(smoke URL `https://<name>-that-gum-you-likes-projects.vercel.app`), links
-Vercel, pushes `main`, and schedules `<name>-drain` / `<name>-review` timers.
-Add `--no-deploy` only if Bryce said the project shouldn't ship anywhere yet.
+wires Telegram+desktop notifications, enables the approval-gated Vercel deploy,
+links Vercel, attaches the production domain **`<name>.brycewadley.com`**
+(automatic once the wildcard DNS record exists; falls back to
+`https://<name>-that-gum-you-likes-projects.vercel.app` if the attach fails),
+pushes `main`, and schedules `<name>-drain` / `<name>-review` timers.
+Add `--no-deploy` only if Bryce said the project shouldn't ship anywhere yet;
+`--no-domain` keeps a mission off brycewadley.com.
 
 ## 3. Supabase (ONLY if the idea needs a database/auth/storage)
 
@@ -67,6 +70,20 @@ will arrive here; deploys wait for your `APPROVE <sha8>` to
 
 ## 6. Guardrails (hard rules)
 
+- NEVER create `hermes cron` jobs (or any other scheduler entries). ALL
+  scheduling already exists: mission-bootstrap installs the drain/review
+  timers and registers deploy-reconcile. If you think a schedule is missing,
+  report it to Bryce — do not build one. (Live incident 2026-07-27: an agent
+  created queue-drainer/*2min* + deploy jobs pointing at scripts that never
+  existed, spamming failures.)
+- ALWAYS work inside `~/<project>`. Before ANY scaffold, bootstrap, or git
+  command, run `pwd` and confirm it. NEVER create `agents/`, `pm/`, `tasks/`,
+  `scripts/`, `docs/`, or `logs/` at the HOME directory root or `/workspace`.
+  (Live incident 2026-07-27: `$HOME` got scaffolded as a fake "/workspace"
+  project, as root.)
+- NEVER use `sudo` or `docker`. Everything you legitimately need runs as the
+  normal user. A permission error means STOP and report, not escalate.
+- NEVER reference a script path you have not verified exists (`ls` it first).
 - NEVER push to `main` directly, run `vercel`/`supabase db push` deploy
   commands yourself, or mark tasks completed — the pipeline owns all of that.
 - NEVER modify `~/agentic-sdlc` (the framework) or any project's

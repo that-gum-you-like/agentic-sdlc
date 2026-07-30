@@ -18,7 +18,9 @@ import {
   rewriteBudgetLadders,
   buildCronJobs,
   bootstrap,
+  missionDomainFor,
   VERCEL_TEAM_SLUG,
+  MISSION_BASE_DOMAIN,
 } from '../agents/mission-bootstrap.mjs';
 
 let passed = 0;
@@ -39,6 +41,12 @@ t('validateName accepts kebab names, rejects everything that would break repo/ve
 
 t('smokeUrlFor uses the team-scoped alias (bare <name>.vercel.app may be foreign-owned)', () => {
   assert(smokeUrlFor('demo') === `https://demo-${VERCEL_TEAM_SLUG}.vercel.app`, smokeUrlFor('demo'));
+});
+
+t('missions live on subdomains of brycewadley.com by default', () => {
+  assert(MISSION_BASE_DOMAIN === 'brycewadley.com', 'base domain');
+  assert(missionDomainFor('demo') === 'demo.brycewadley.com', missionDomainFor('demo'));
+  assert(missionDomainFor('demo', 'other.dev') === 'demo.other.dev', 'override supported');
 });
 
 t('cronMinutesFor never lands on the framework minutes, is deterministic, varies by name (REQ-002)', () => {
