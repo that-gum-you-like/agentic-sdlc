@@ -99,6 +99,37 @@ function estimateTokens(subtaskCount) {
 }
 
 // ---------------------------------------------------------------------------
+// Seedability
+//
+// This gate used to demand `status === 'active' && phase === 'tasks'`. Nothing
+// in the framework has ever used those values — not one change, and not the
+// status.json.template, which ships "proposed"/"proposal". Real changes use
+// proposed/design, in-progress/implement, implemented/verify, and so on. So the
+// seeder silently skipped every change it was ever pointed at and reported
+// "Tasks would create: 0", which reads as "nothing to do" rather than "this
+// tool has never worked". That is what blocked agents from building their own
+// backlog: the only remaining path was hand-written queue JSON.
+//
+// Inverted to an explicit terminal-state list. A change is seedable unless it
+// is finished or still upstream of having tasks, so new vocabulary defaults to
+// seedable (loud, fixable) rather than silently dropped.
+// ---------------------------------------------------------------------------
+
+const DONE_STATUSES = new Set(['implemented', 'complete', 'completed', 'archived', 'cancelled', 'abandoned']);
+const NOT_YET_PHASES = new Set(['proposal', 'design', 'planning', 'specs']);
+const DONE_PHASES = new Set(['verify', 'verified', 'archive', 'archived', 'done']);
+
+/** @returns {boolean} true when a change has tasks worth queueing. */
+export function isSeedable(status = {}) {
+  const s = String(status.status ?? '').toLowerCase();
+  const p = String(status.phase ?? '').toLowerCase();
+  if (DONE_STATUSES.has(s) || DONE_PHASES.has(p)) return false;
+  if (NOT_YET_PHASES.has(p)) return false;
+  return true;
+}
+
+
+// ---------------------------------------------------------------------------
 // Parse proposal.md priority
 // ---------------------------------------------------------------------------
 function parsePriority(changeName) {
@@ -143,6 +174,34 @@ function parseTasksMd(changeName, tasksPath) {
         rawNumber: taskHeading[1],
         taskNumber,
         title: taskHeading[2].trim(),
+        descriptionLines: [line],
+        pendingSubtasks: 0,
+        doneSubtasks: 0,
+      };
+      continue;
+    }
+
+    // Match the bullet form: `- [ ] **T1**: Title`.
+    //
+    // This is the format MISSION_PLAYBOOK tells agents to write, that
+    // tasks.md.template ships, and that every tasks.md in this framework
+    // actually uses — but only the `## Task N:` heading form was ever parsed,
+    // so a correctly-authored tasks.md seeded nothing. Checked items are
+    // skipped: already done is not backlog.
+    const taskBullet = line.match(/^\s*-\s+\[( |x)\]\s+\*\*([\w.]+)\*\*\s*[:—-]\s*(.+)$/i);
+    if (taskBullet) {
+      if (currentTask) {
+        tasks.push(currentTask);
+      }
+      if (taskBullet[1].toLowerCase() === 'x') {
+        currentTask = null; // completed — don't re-queue it
+        continue;
+      }
+      taskNumber++;
+      currentTask = {
+        rawNumber: taskBullet[2].replace(/^T/i, ''),
+        taskNumber,
+        title: taskBullet[3].trim(),
         descriptionLines: [line],
         pendingSubtasks: 0,
         doneSubtasks: 0,
@@ -271,6 +330,7 @@ function main() {
 
   for (const entry of changeEntries) {
     const changeName = entry.name;
+    if (changeName.startsWith('_') || changeName.startsWith('.')) continue; // scratch dirs
     const changeDir = resolve(OPENSPEC_CHANGES_DIR, changeName);
     const statusFile = resolve(changeDir, 'status.json');
     const tasksFile = resolve(changeDir, 'tasks.md');
@@ -289,8 +349,8 @@ function main() {
       continue;
     }
 
-    // --- Guard: must be active + in tasks phase ---
-    if (status.status !== 'active' || status.phase !== 'tasks') {
+    // --- Guard: skip only what is genuinely finished or not yet planned ---
+    if (!isSeedable(status)) {
       console.log(`[seed] SKIP ${changeName}: status=${status.status}, phase=${status.phase}`);
       continue;
     }

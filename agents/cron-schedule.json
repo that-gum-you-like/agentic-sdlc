@@ -119,7 +119,7 @@
     {
       "name": "deploy-reconcile",
       "cron": "*/30 * * * *",
-      "script": "node ~/agentic-sdlc/agents/deploy-runner.mjs --project-dir /home/bryce/tally --project-dir /home/bryce/hermes-pilot --project-dir /home/bryce/wireframe-live",
+      "script": "node ~/agentic-sdlc/agents/deploy-runner.mjs --project-dir /home/bryce/tally --project-dir /home/bryce/hermes-pilot --project-dir /home/bryce/personal-website",
       "description": "Reconciling approval-gated production deploy runner (openspec: autonomous-deploy-pipeline). Add one --project-dir per deployable project; projects with deploy.enabled=false are no-ops.",
       "session": "isolated"
     },
@@ -135,6 +135,20 @@
       "cron": "9,29,49 * * * *",
       "script": "/usr/bin/env SDLC_PROJECT_DIR=/home/bryce/hermes-pilot node /home/bryce/agentic-sdlc/agents/pr-auto-review.mjs",
       "description": "PR auto-review for hermes-pilot (staggered off the framework review; shared host-global mutex)",
+      "session": "isolated"
+    },
+    {
+      "name": "personal-website-drain",
+      "cron": "13,28,43,58 * * * *",
+      "script": "/usr/bin/env SDLC_REPO=/home/bryce/personal-website /home/bryce/agentic-sdlc/agents/hermes-drain.sh",
+      "description": "Autonomous drain for personal-website (mission-bootstrap)",
+      "session": "isolated"
+    },
+    {
+      "name": "personal-website-review",
+      "cron": "13,33,53 * * * *",
+      "script": "/usr/bin/env SDLC_PROJECT_DIR=/home/bryce/personal-website node /home/bryce/agentic-sdlc/agents/pr-auto-review.mjs",
+      "description": "PR auto-review for personal-website (mission-bootstrap)",
       "session": "isolated"
     }
   ]
