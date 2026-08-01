@@ -1,3 +1,10 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "id": "M-1785625484991",
+      "content": "Health-check design rule: a monitoring check must distinguish 'I could not measure this' from 'this is broken'. model-manager.mjs now has an 'unmonitored' status for providers with no HEALTH_ENDPOINTS entry — it is logged loudly (console + provider-unmonitored ledger event) but never latches down, never swaps an agent's model, and never fires highSeverityFailure. Same failure class as egress-preflight REQ-006. Any new provider added to budget.json must ship with a probe; tests/adapter-and-model-manager.test.mjs enforces this.",
+      "date": "2026-08-01",
+      "timestamp": "2026-08-01T23:04:44.991Z"
+    }
+  ]
 }

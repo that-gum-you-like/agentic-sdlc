@@ -60,6 +60,18 @@ The following ideas from the 2026-03-13 curriculum review have been implemented:
 
 ---
 
+### 28. Cross-Provider Fallback Rungs
+
+**Problem:** Every rung of every agent's `fallbackChain` in `agents/budget.json` is an OpenRouter model. A genuine OpenRouter outage therefore blocks all four agents at once — `findHealthyFallback()` has nowhere healthy to go, and the correct response is the CRITICAL "no healthy fallback" page rather than a graceful downgrade. Surfaced by `provider-health-probe-gaps` (2026-08-01), where a *false* OpenRouter outage exposed the single point of failure.
+
+**Idea:** Append a free-tier cross-provider rung (Groq, and Gemini/Cerebras once keyed) to the end of each agent's chain, per the CLAUDE.md guidance that free-tier fallbacks should end every chain. Groq is already configured and probing `up`.
+
+**Deliberately NOT bundled with `provider-health-probe-gaps`:** adding a working fallback would have silently downgraded all four agents to a fallback model during an outage that was never happening — masking the monitoring bug instead of fixing it. Resilience only belongs on top of a health check that tells the truth.
+
+**Complexity:** Small. **Value:** High — currently a single-provider outage is a total work stoppage.
+
+---
+
 ## Backlog Management
 
 - **To promote an idea**: Run `openspec-new-change` with the idea as the basis for the proposal

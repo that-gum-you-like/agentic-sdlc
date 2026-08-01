@@ -1,3 +1,10 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "id": "M-1785625469429",
+      "content": "provider-health-probe-gaps (2026-08-01): Hermes paged 'OpenRouter is DOWN / no healthy fallback' 7,204 times on a HEALTHY provider. Root cause was not the provider — HEALTH_ENDPOINTS in agents/model-manager.mjs had no openrouter entry, so pingProvider returned {up:false, error:'unknown provider'}, latching status=down at 2 failures (reached 255). The openrouter-provider change (2026-07-05) switched defaultProvider and every agent to OpenRouter but never added the health probe, and no test checked the two stayed in sync. LESSON: when a health check reports a failure that no provider-side recovery could ever clear, suspect the checker, not the provider. Fix: /auth/key probe (free, no model tokens), key resolved from ~/.hermes/.env, new 'unmonitored' status so a missing probe can never masquerade as an outage, plus a guard test asserting every budget.json provider has a HEALTH_ENDPOINTS entry.",
+      "date": "2026-08-01",
+      "timestamp": "2026-08-01T23:04:29.429Z"
+    }
+  ]
 }
