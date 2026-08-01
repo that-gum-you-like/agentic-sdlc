@@ -177,7 +177,7 @@ This change is complete when:
 - [x] Negative control (T-403) confirms real outages still latch `down` and page
 - [ ] Bryce confirms the false Telegram alerts have stopped
 - [x] Memory is updated
-- [ ] Change is committed and pushed to `~/agentic-sdlc` (NOT `~/languageapp`)
+- [x] Change is committed and pushed to `~/agentic-sdlc` (NOT `~/languageapp`) — branch `feature/provider-health-probe-gaps`, commit df8e193. NOT yet merged to `main`.
 
 ---
 
