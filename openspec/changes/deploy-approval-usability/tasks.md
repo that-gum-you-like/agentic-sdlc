@@ -106,7 +106,7 @@ reply. Per design.md and `specs/deploy-approval.md` (REQ-001..REQ-005).
   - Notes: The existing `.deploy-pending-db255a7c` token stays as-is — it is what
     binds his reply to this sha. Do NOT approve on his behalf; the gate is his.
 
-- [ ] **T-303**: After Bryce approves, confirm the next tick deploys and smoke-verifies
+- [x] **T-303**: After Bryce approves, confirm the next tick deploys and smoke-verifies
       `https://brycewadley.com/design`, and that `pm/.last-deployed` is written
   - Spec: Scenario 2
   - Agent: sdlc-documentarian
@@ -122,7 +122,7 @@ reply. Per design.md and `specs/deploy-approval.md` (REQ-001..REQ-005).
 - [x] No regressions in the existing suite
 - [x] Live handle resolves to `@Nels_hermes_deploy_bot`
 - [x] Bryce receives an actionable approval request
-- [ ] Bryce approves and `brycewadley.com` deploys + verifies
+- [x] Bryce approves and `brycewadley.com` deploys + verifies — db255a7c deployed + verified 2026-08-01, HTTP 200
 - [x] Change is committed and pushed to `~/agentic-sdlc` — merged to main, 9c474db
 
 ---
