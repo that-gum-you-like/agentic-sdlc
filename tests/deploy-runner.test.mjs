@@ -21,6 +21,9 @@ import {
   parseArgs,
   redactRemote,
   DEFAULTS,
+  buildApprovalMessage,
+  deployBotHandle,
+  _resetDeployBotHandle,
 } from '../agents/deploy-runner.mjs';
 
 let passed = 0;
@@ -162,6 +165,57 @@ t('redactRemote leaves a credential-free remote untouched', () => {
   assert(redactRemote(plain) === plain, redactRemote(plain));
   const ssh = 'git@github.com:that-gum-you-like/agentic-sdlc.git';
   assert(redactRemote(ssh) === ssh, redactRemote(ssh));
+});
+
+// --- approval message (openspec: deploy-approval-usability) ---
+// Added 2026-08-01 after the pipeline sat at zero deploys: the request said
+// "Reply to the DEPLOY bot" without naming it, and the bot that delivers the
+// message is not the bot that can accept the reply.
+const MSG_ARGS = {
+  projectName: 'personal-website',
+  baseBranch: 'main',
+  sha8: 'db255a7c',
+  subject: 'feat: something',
+  handle: '@Nels_hermes_deploy_bot',
+};
+
+t('approval message names the deploy bot and the exact command', () => {
+  const msg = buildApprovalMessage(MSG_ARGS);
+  assert(msg.includes('@Nels_hermes_deploy_bot'), `no handle: ${msg}`);
+  assert(msg.includes('https://t.me/Nels_hermes_deploy_bot'), `no t.me link: ${msg}`);
+  assert(msg.includes('APPROVE db255a7c'), `no approve command: ${msg}`);
+  assert(msg.includes('REJECT db255a7c'), `no reject command: ${msg}`);
+  assert(/DIFFERENT bot/i.test(msg), `no different-bot warning: ${msg}`);
+  assert(!msg.includes('t.me/@'), `t.me link must not keep the @: ${msg}`);
+});
+
+t('approval message commands round-trip through parseApprovalCommand', () => {
+  // The instruction we print must be one the runner will actually accept — a
+  // standalone line matching the parser's whole-string regex.
+  for (const args of [MSG_ARGS, { ...MSG_ARGS, handle: null }]) {
+    const lines = buildApprovalMessage(args).split('\n');
+    const approve = lines.find((l) => /^APPROVE /.test(l));
+    assert(approve, 'no standalone APPROVE line');
+    const parsed = parseApprovalCommand(approve);
+    assert(parsed && parsed.action === 'approve' && parsed.sha8 === 'db255a7c',
+      `emitted APPROVE line is not parseable: ${JSON.stringify(approve)}`);
+  }
+});
+
+t('approval message falls back safely without a handle', () => {
+  const msg = buildApprovalMessage({ ...MSG_ARGS, handle: null });
+  assert(msg.includes('APPROVE db255a7c'), `no approve command: ${msg}`);
+  assert(/DEPLOY bot/i.test(msg), `no deploy-bot mention: ${msg}`);
+  assert(/DIFFERENT bot/i.test(msg), `no different-bot warning: ${msg}`);
+  assert(!msg.includes('undefined') && !msg.includes('null'), `leaked placeholder: ${msg}`);
+  assert(!msg.includes('t.me'), `fallback must not emit a bogus link: ${msg}`);
+});
+
+t('deployBotHandle returns null without a token and never throws', async () => {
+  _resetDeployBotHandle();
+  const h = await deployBotHandle('');           // no token — must not hit the network
+  assert(h === null, `expected null, got ${JSON.stringify(h)}`);
+  _resetDeployBotHandle();
 });
 
 

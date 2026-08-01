@@ -1,0 +1,7 @@
+{
+  "status": "in-progress",
+  "phase": "implement",
+  "created": "2026-08-01",
+  "lastUpdated": "2026-08-01",
+  "notes": "The approval-gated deploy pipeline has never completed a deploy. Root cause: the approval request says 'Reply to the DEPLOY bot' without naming it. Notifications come from @Nels_hermes_bot; only @Nels_hermes_deploy_bot (TELEGRAM_DEPLOY_BOT_TOKEN) is polled for APPROVE/REJECT, so replying where the message arrived is a silent no-op. Verified: deploy bot getWebhookInfo pending_update_count 0 (never messaged), ~/personal-website/pm/.deploy-pending-db255a7c open since 2026-07-31 16:30, no .last-deployed. Everything else healthy: Vercel CLI logged in as that-gum-you-like, both tokens valid, 30-min reconcile timer active. Fix: resolve the bot @username from getMe (memoised, fail-soft), name it + t.me link + exact APPROVE <sha8> command + an explicit warning that the delivering chat cannot accept the reply. Two-bot split preserved deliberately — the notify bot is agent-writable, so accepting approvals there would let a prompt-injected agent approve its own production deploy. Bryce's decision 2026-08-01: keep the approval gate on ALL deploys."
+}
