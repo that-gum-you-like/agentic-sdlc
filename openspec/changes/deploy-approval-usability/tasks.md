@@ -123,7 +123,7 @@ reply. Per design.md and `specs/deploy-approval.md` (REQ-001..REQ-005).
 - [x] Live handle resolves to `@Nels_hermes_deploy_bot`
 - [x] Bryce receives an actionable approval request
 - [ ] Bryce approves and `brycewadley.com` deploys + verifies
-- [ ] Change is committed and pushed to `~/agentic-sdlc`
+- [x] Change is committed and pushed to `~/agentic-sdlc` — merged to main, 9c474db
 
 ---
 

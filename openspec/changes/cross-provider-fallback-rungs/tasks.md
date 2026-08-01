@@ -114,7 +114,7 @@ Per design.md and `specs/fallback-resilience.md` (REQ-001..REQ-004). Closes BACK
 - [x] No swap occurs while OpenRouter is healthy
 - [x] No secret staged or committed
 - [x] BACKLOG #28 marked promoted
-- [ ] Change is committed and pushed to `~/agentic-sdlc`
+- [x] Change is committed and pushed to `~/agentic-sdlc` — merged to main, af60774
 
 ---
 
