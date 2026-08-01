@@ -133,6 +133,59 @@ function telegramGet(token, method, params) {
   });
 }
 
+// Resolved deploy-bot handle: undefined = not yet looked up, null = lookup
+// failed, '@name' = resolved. Memoised for the process lifetime — the runner is
+// a oneshot unit, so each 30-min tick re-resolves.
+let _deployBotHandle;
+
+/**
+ * The deploy bot's '@username', derived from the token we actually poll — so the
+ * bot we name is by construction the bot that can approve. Returns null on any
+ * failure; callers fall back to generic wording. Never throws, never blocks
+ * deploy state (same contract as notify()).
+ */
+export async function deployBotHandle(token) {
+  if (_deployBotHandle !== undefined) return _deployBotHandle;
+  _deployBotHandle = null;
+  if (!token) return _deployBotHandle;
+  try {
+    // telegramGet has no timeout of its own; don't let a hung request stall the tick.
+    const resp = await Promise.race([
+      telegramGet(token, 'getMe', {}),
+      new Promise((r) => setTimeout(() => r(null), 5000)),
+    ]);
+    const username = resp?.ok && resp.result?.username;
+    if (username) _deployBotHandle = `@${username}`;
+  } catch { /* stays null */ }
+  return _deployBotHandle;
+}
+
+/** Test seam: reset the memoised handle. */
+export function _resetDeployBotHandle() { _deployBotHandle = undefined; }
+
+/**
+ * Build the approval request. Pure so the wording is testable offline — the
+ * previous message said only "Reply to the DEPLOY bot" without naming it, which
+ * made every request unactionable (openspec: deploy-approval-usability).
+ * Plain text, no parse mode: commit subjects can't break rendering or inject markup.
+ */
+export function buildApprovalMessage({ projectName, baseBranch, sha8, subject, handle }) {
+  const head = `🚀 Deploy ${projectName}? origin/${baseBranch}@${sha8} — "${subject}"`;
+  const where = handle
+    ? `Approve in the deploy bot ${handle} — https://t.me/${handle.replace(/^@/, '')}`
+    : 'Approve in the dedicated DEPLOY bot (TELEGRAM_DEPLOY_BOT_TOKEN) — NOT this chat.';
+  return [
+    head,
+    '',
+    where,
+    'Send exactly:',
+    `APPROVE ${sha8}`,
+    `(or: REJECT ${sha8})`,
+    '',
+    'Note: that is a DIFFERENT bot from the one sending this message. Replying here does nothing.',
+  ].join('\n');
+}
+
 /**
  * One non-blocking poll of the deploy bot. Writes sha-bound token files into
  * each project's pm/ dir. The offset cursor lives in the FRAMEWORK pm/ — one
@@ -360,9 +413,8 @@ export async function runProject(projectDir, { dryRun = false, log = (m) => cons
     if (action === 'request-approval') {
       const subject = git(cloneDir, ['log', '-1', '--format=%s', targetSha]);
       writeFileSync(tokenPath(projectDir, 'pending', sha8), new Date().toISOString() + '\n');
-      notify(projectDir,
-        `🚀 Deploy ${projectName}? origin/${baseBranch}@${sha8} — "${subject}"\n` +
-        `Reply to the DEPLOY bot: APPROVE ${sha8}  (or REJECT ${sha8})`);
+      const handle = await deployBotHandle(process.env.TELEGRAM_DEPLOY_BOT_TOKEN);
+      notify(projectDir, buildApprovalMessage({ projectName, baseBranch, sha8, subject, handle }));
       log(`${projectName}: approval requested for ${sha8}`);
       return { project: projectName, action, sha8 };
     }
