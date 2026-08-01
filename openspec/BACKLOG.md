@@ -34,6 +34,7 @@ The following ideas from the 2026-03-13 curriculum review have been implemented:
 | 25 | Hermes ↔ Repo ↔ Claude Integration | `hermes-integration` (proposed 2026-07-04) — ports 6 Hermes skills to `agents/templates/execution-agents/*.md`, adds 5 cron scripts (`red-team-tester`, `rag-indexer`, `health-check`, `telegram-notify`, `document-sync`) + `tests/hermes-integration.test.mjs`, and writes `docs/claude-quickstart.md` + `docs/hermes-backlog-bridge.md`. Corrects the old fork/PAT hand-off guide. |
 | — | spaCy NLP Analyzer (backlog #25) | `nlp-code-analysis` (shipped 2026-07-06, PR #24) — optional Layer 2.5 semantic near-miss detector; `agents/nlp-analyze.py` + `agents/nlp-analyzer.mjs` with zero-dep deterministic fallback |
 | — | capability-monitor test coverage (backlog #26) | Q-101 (completed) — `agents/__tests__/capability-checklist.test.mjs` covering schema validation, drift-detection, and scope-creep detection, wired into `npm test` |
+| — | Cross-Provider Fallback Rungs (backlog #28) | `cross-provider-fallback-rungs` (shipped 2026-08-01) — all 15 rungs across 4 agents were OpenRouter, so one outage stopped everything. Added `GROQ_API_KEY` to `~/.hermes/.env` (systemd units never saw the `~/.bashrc` export) + `llama-3.3-70b-versatile` as the last rung for each agent + guard tests. |
 | — | voice-intake finishing touches (backlog #27 item c) | Carried forward from `voice-intake` archive — row added to promoted table; (a) setup.mjs scaffold, (b) maturity-model update, (d) manual E2E test still outstanding |
 
 ---
@@ -57,18 +58,6 @@ The following ideas from the 2026-03-13 curriculum review have been implemented:
 **Idea:** Add agent specialization templates and a "split" command that forks an agent's memory and AGENT.md.
 
 **Complexity:** Medium.
-
----
-
-### 28. Cross-Provider Fallback Rungs
-
-**Problem:** Every rung of every agent's `fallbackChain` in `agents/budget.json` is an OpenRouter model. A genuine OpenRouter outage therefore blocks all four agents at once — `findHealthyFallback()` has nowhere healthy to go, and the correct response is the CRITICAL "no healthy fallback" page rather than a graceful downgrade. Surfaced by `provider-health-probe-gaps` (2026-08-01), where a *false* OpenRouter outage exposed the single point of failure.
-
-**Idea:** Append a free-tier cross-provider rung (Groq, and Gemini/Cerebras once keyed) to the end of each agent's chain, per the CLAUDE.md guidance that free-tier fallbacks should end every chain. Groq is already configured and probing `up`.
-
-**Deliberately NOT bundled with `provider-health-probe-gaps`:** adding a working fallback would have silently downgraded all four agents to a fallback model during an outage that was never happening — masking the monitoring bug instead of fixing it. Resilience only belongs on top of a health check that tells the truth.
-
-**Complexity:** Small. **Value:** High — currently a single-provider outage is a total work stoppage.
 
 ---
 

@@ -8,7 +8,14 @@
       "dailyTokens": 500000,
       "permissions": "full-edit",
       "maxInstances": 1,
-      "fallbackChain": ["qwen/qwen3-coder", "qwen/qwen3-coder-30b-a3b-instruct", "deepseek/deepseek-v4-flash", "deepseek/deepseek-chat-v3.1", "qwen/qwen3-coder:free"],
+      "fallbackChain": [
+        "qwen/qwen3-coder",
+        "qwen/qwen3-coder-30b-a3b-instruct",
+        "deepseek/deepseek-v4-flash",
+        "deepseek/deepseek-chat-v3.1",
+        "qwen/qwen3-coder:free",
+        "llama-3.3-70b-versatile"
+      ],
       "activeModel": null,
       "modelPreferences": {
         "simple fix": "qwen/qwen3-coder:free",
@@ -22,7 +29,12 @@
       "dailyTokens": 300000,
       "permissions": "full-edit",
       "maxInstances": 1,
-      "fallbackChain": ["deepseek/deepseek-chat-v3.1", "deepseek/deepseek-v4-flash", "qwen/qwen3-next-80b-a3b-instruct:free"],
+      "fallbackChain": [
+        "deepseek/deepseek-chat-v3.1",
+        "deepseek/deepseek-v4-flash",
+        "qwen/qwen3-next-80b-a3b-instruct:free",
+        "llama-3.3-70b-versatile"
+      ],
       "activeModel": null,
       "modelPreferences": {
         "design critique": "deepseek/deepseek-chat-v3.1",
@@ -36,7 +48,12 @@
       "dailyTokens": 200000,
       "permissions": "read-only",
       "maxInstances": 1,
-      "fallbackChain": ["deepseek/deepseek-chat-v3.1", "deepseek/deepseek-v4-flash", "meta-llama/llama-3.3-70b-instruct:free"],
+      "fallbackChain": [
+        "deepseek/deepseek-chat-v3.1",
+        "deepseek/deepseek-v4-flash",
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "llama-3.3-70b-versatile"
+      ],
       "activeModel": null,
       "modelPreferences": {}
     },
@@ -46,7 +63,12 @@
       "dailyTokens": 200000,
       "permissions": "full-edit",
       "maxInstances": 1,
-      "fallbackChain": ["deepseek/deepseek-v4-flash", "deepseek/deepseek-chat-v3.1", "qwen/qwen3-next-80b-a3b-instruct:free"],
+      "fallbackChain": [
+        "deepseek/deepseek-v4-flash",
+        "deepseek/deepseek-chat-v3.1",
+        "qwen/qwen3-next-80b-a3b-instruct:free",
+        "llama-3.3-70b-versatile"
+      ],
       "activeModel": null,
       "modelPreferences": {}
     }

@@ -687,6 +687,45 @@ test('resolveProviderKey prefers env over env file', () => {
   }
 });
 
+// --- fallback chain composition (openspec: cross-provider-fallback-rungs) ---
+// CLAUDE.md has always said free-tier fallbacks should end every chain; before
+// 2026-08-01 all 15 rungs across all 4 agents were OpenRouter, so a single
+// provider outage stopped every agent at once. Documentation without
+// enforcement is how that happened.
+
+test('every fallback rung resolves to a known model', () => {
+  const budget = mm.loadBudget();
+  const intel = mm.loadModelIntel();
+  const bad = [];
+  for (const [name, cfg] of Object.entries(budget.agents || {})) {
+    for (const model of cfg.fallbackChain || []) {
+      if (!intel.models?.[model]) bad.push(`${name} → ${model}`);
+    }
+  }
+  assert(bad.length === 0, `fallback rungs with no model-intel.json entry: ${bad.join(', ')}`);
+});
+
+test('every agent has a cross-provider fallback rung', () => {
+  const budget = mm.loadBudget();
+  const intel = mm.loadModelIntel();
+  const stranded = [];
+  for (const [name, cfg] of Object.entries(budget.agents || {})) {
+    const primary = cfg.provider || intel.models?.[cfg.model]?.provider;
+    // Derived from model-intel, not hardcoded to groq — adding a Gemini or
+    // Cerebras rung later must not require editing this test.
+    const escapes = (cfg.fallbackChain || []).some((m) => {
+      const p = intel.models?.[m]?.provider;
+      return p && p !== primary;
+    });
+    if (!escapes) stranded.push(`${name} (all rungs on ${primary})`);
+  }
+  assert(
+    stranded.length === 0,
+    `agents with no escape from their primary provider: ${stranded.join(', ')}. ` +
+      'A single-provider outage would block them entirely — add a cross-provider rung.'
+  );
+});
+
 test('resolveProviderKey returns null when key is absent everywhere', () => {
   const saved = process.env.FAKE_KEY_FOR_TESTS;
   delete process.env.FAKE_KEY_FOR_TESTS;
