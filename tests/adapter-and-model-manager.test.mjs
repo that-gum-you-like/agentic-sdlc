@@ -624,6 +624,83 @@ test('setup.mjs --discover outputs valid JSON', async () => {
 });
 
 // ============================================================================
+// Provider health probes (openspec/changes/provider-health-probe-gaps)
+// ============================================================================
+
+console.log('\n🩺 Provider Health Probes');
+
+const mm = await import(resolve(SDLC_ROOT, 'agents/model-manager.mjs'));
+
+// Resolved up-front: the test harness calls fn() synchronously and does not await.
+const unknownPing = await mm.pingProvider('nonexistent-provider-for-tests');
+
+test('every budget.json provider has a health endpoint', () => {
+  // Mirrors how checkAllProviderHealth() derives its provider set: each agent's
+  // provider, plus the provider of every model in every fallback chain.
+  const budget = mm.loadBudget();
+  const intel = mm.loadModelIntel();
+  const providers = new Set();
+  for (const cfg of Object.values(budget.agents || {})) {
+    if (cfg.provider) providers.add(cfg.provider);
+    for (const model of cfg.fallbackChain || []) {
+      const p = intel.models?.[model]?.provider;
+      if (p) providers.add(p);
+    }
+  }
+  assert(providers.size > 0, 'Should derive at least one provider from budget.json');
+
+  const missing = [...providers].filter((p) => !mm.HEALTH_ENDPOINTS[p]);
+  assert(
+    missing.length === 0,
+    `Providers used by budget.json with no HEALTH_ENDPOINTS entry: ${missing.join(', ')}. ` +
+      'Without a probe they cannot be health-checked — add an entry in model-manager.mjs.'
+  );
+});
+
+test('openrouter health endpoint is defined and probes /auth/key', () => {
+  const ep = mm.HEALTH_ENDPOINTS.openrouter;
+  assert(ep, 'openrouter must have a HEALTH_ENDPOINTS entry');
+  assert(ep.method === 'GET', `Expected GET, got ${ep.method}`);
+  assert(ep.url.endsWith('/api/v1/auth/key'), `Expected /auth/key probe, got ${ep.url}`);
+  assert(ep.keyEnv === 'OPENROUTER_API_KEY', `Expected OPENROUTER_API_KEY, got ${ep.keyEnv}`);
+  assert(!ep.body, 'Probe must send no body — it costs no model tokens');
+  assert(/Bearer /.test(ep.headers('k').Authorization || ''), 'Should send a Bearer token');
+  assert(typeof ep.envFile === 'function', 'Should declare envFile() for key resolution');
+  assert(ep.envFile().length > 0, 'envFile() should yield at least one candidate path');
+});
+
+test('unknown provider yields unmonitored, never down', () => {
+  assert(unknownPing.unmonitored === true, 'Unknown provider should be flagged unmonitored');
+  assert(unknownPing.up !== false, 'Unknown provider must NOT report up:false — that latches a false `down`');
+  assert(unknownPing.up === null, `Expected up:null, got ${unknownPing.up}`);
+});
+
+test('resolveProviderKey prefers env over env file', () => {
+  const ep = mm.HEALTH_ENDPOINTS.openrouter;
+  const saved = process.env.OPENROUTER_API_KEY;
+  try {
+    process.env.OPENROUTER_API_KEY = 'sentinel-from-env';
+    assert(mm.resolveProviderKey(ep) === 'sentinel-from-env', 'Should read process.env first');
+  } finally {
+    if (saved === undefined) delete process.env.OPENROUTER_API_KEY;
+    else process.env.OPENROUTER_API_KEY = saved;
+  }
+});
+
+test('resolveProviderKey returns null when key is absent everywhere', () => {
+  const saved = process.env.FAKE_KEY_FOR_TESTS;
+  delete process.env.FAKE_KEY_FOR_TESTS;
+  try {
+    const ep = { keyEnv: 'FAKE_KEY_FOR_TESTS', envFile: () => ['/nonexistent/path/.env'] };
+    assert(mm.resolveProviderKey(ep) === null, 'Missing key should resolve to null, not throw');
+    // Endpoints with no envFile must behave exactly as before this change.
+    assert(mm.resolveProviderKey({ keyEnv: 'FAKE_KEY_FOR_TESTS' }) === null, 'No envFile should still return null');
+  } finally {
+    if (saved !== undefined) process.env.FAKE_KEY_FOR_TESTS = saved;
+  }
+});
+
+// ============================================================================
 // Summary
 // ============================================================================
 

@@ -10,7 +10,8 @@
  */
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync } from 'fs';
-import { resolve } from 'path';
+import { resolve, join } from 'path';
+import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 import { loadConfig } from './load-config.mjs';
 
@@ -133,17 +134,63 @@ const HEALTH_ENDPOINTS = {
     body: JSON.stringify({ model: 'llama3.1-8b', max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] }),
     keyEnv: 'CEREBRAS_API_KEY',
   },
+  // OpenRouter is probed via /auth/key rather than a chat completion: it costs no model
+  // tokens (this runs on every scheduler tick) and does not pin liveness to a model id
+  // that could be retired out from under us. 200 only for a genuinely valid key.
+  openrouter: {
+    url: 'https://openrouter.ai/api/v1/auth/key',
+    method: 'GET',
+    headers: (key) => ({ 'Authorization': `Bearer ${key}` }),
+    body: undefined,
+    keyEnv: 'OPENROUTER_API_KEY',
+    // The scheduler does not carry OPENROUTER_API_KEY in its environment; the key lives
+    // in the Hermes profile. Same files agents/pr-auto-review.mjs already reads.
+    envFile: () => [
+      process.env.HERMES_DRAIN_HOME && join(process.env.HERMES_DRAIN_HOME, '.env'),
+      join(homedir(), '.hermes-drain', '.env'),
+      join(homedir(), '.hermes', '.env'),
+    ].filter(Boolean),
+  },
 };
 
 /**
+ * Resolve a provider's API key: process.env first, then any .env files the endpoint
+ * declares via envFile(). Endpoints without envFile behave exactly as before.
+ * Returns the key, or null when it cannot be found anywhere.
+ */
+function resolveProviderKey(ep) {
+  const fromEnv = process.env[ep.keyEnv];
+  if (fromEnv && fromEnv.trim()) return fromEnv.trim();
+  if (typeof ep.envFile !== 'function') return null;
+
+  for (const path of ep.envFile()) {
+    try {
+      if (!existsSync(path)) continue;
+      const m = readFileSync(path, 'utf8').match(new RegExp(`^${ep.keyEnv}=(.+)$`, 'm'));
+      if (!m) continue;
+      const key = m[1].trim().replace(/^["']|["']$/g, '');
+      if (!key) continue;
+      process.env[ep.keyEnv] = key; // cache for the rest of this run
+      return key;
+    } catch {
+      continue; // unreadable file is the not-configured case, not an error
+    }
+  }
+  return null;
+}
+
+/**
  * Ping a provider's API to check if it's reachable and functional.
- * Returns { up: boolean, error: string|null, latencyMs: number }
+ * Returns { up: boolean|null, error: string|null, latencyMs: number }
  */
 async function pingProvider(provider) {
   const ep = HEALTH_ENDPOINTS[provider];
-  if (!ep) return { up: false, error: 'unknown provider', latencyMs: 0 };
+  // No probe defined is a gap in THIS framework, not an outage at the provider. Reporting
+  // it as a failure produces a `down` latch that no provider-side recovery can ever
+  // clear — see openspec/changes/provider-health-probe-gaps.
+  if (!ep) return { up: null, error: 'no health endpoint configured', latencyMs: 0, unmonitored: true };
 
-  const apiKey = process.env[ep.keyEnv];
+  const apiKey = resolveProviderKey(ep);
   if (!apiKey) return { up: null, error: `${ep.keyEnv} not set (not configured)`, latencyMs: 0, notConfigured: true };
 
   const start = Date.now();
@@ -207,7 +254,13 @@ async function checkAllProviderHealth() {
     const result = await pingProvider(provider);
     const prev = health[provider] || { status: 'unknown', consecutiveFailures: 0 };
 
-    if (result.notConfigured) {
+    if (result.unmonitored) {
+      // Framework config gap — never latches down, never swaps, never pages. Loud in the
+      // console and the ledger so the gap gets closed rather than silently tolerated.
+      results[provider] = { status: 'unmonitored', lastChecked: now, consecutiveFailures: 0, error: result.error };
+      appendLedger({ event: 'provider-unmonitored', provider, error: result.error });
+      console.log(`  ⚠️  ${provider}: UNMONITORED — no health endpoint configured (framework gap, not an outage)`);
+    } else if (result.notConfigured) {
       // No API key — don't count as failure, don't trigger swaps
       results[provider] = { status: 'not-configured', lastChecked: now, consecutiveFailures: 0, error: result.error };
       console.log(`  ⚪ ${provider}: not configured (no API key)`);
@@ -814,6 +867,7 @@ async function research() {
 // --- Exports ---
 
 export { check, report, recommend, reset, models, suggest, research, buildCostOrder, loadModelIntel, estimateBurnRate };
+export { HEALTH_ENDPOINTS, pingProvider, resolveProviderKey, loadBudget };
 
 // --- CLI ---
 
