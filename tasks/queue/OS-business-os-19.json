@@ -1,0 +1,14 @@
+{
+  "id": "OS-business-os-19",
+  "title": "T-701: Full suite green \u2014 `npm test`,",
+  "description": "- [ ] **T-701**: Full suite green \u2014 `npm test`,\n      `node agents/four-layer-validate.mjs`, `node agents/test-behavior.mjs`.\n  - Command: `npm test && node agents/four-layer-validate.mjs && node agents/test-behavior.mjs`\n  - Expected: all passing, zero new npm dependencies\n  - Parallel: blocked-by all implementation tasks",
+  "priority": "MEDIUM",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/business-os/tasks.md",
+  "createdAt": "2026-09-02T18:29:42.808Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedReason": "verification \u2014 runs after all implementation lands."
+}

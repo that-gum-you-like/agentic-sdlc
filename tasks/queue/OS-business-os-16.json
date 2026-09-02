@@ -1,0 +1,21 @@
+{
+  "id": "OS-business-os-16",
+  "title": "T-603: Rewrite `docs/MISSION_PLAYBOOK.md` \u2014 insert the design step as",
+  "description": "- [ ] **T-603**: Rewrite `docs/MISSION_PLAYBOOK.md` \u2014 insert the design step as\n      \u00a74 (component-library search, then wireframe, then stop for approval),\n      renumber task-seeding to \u00a75 and report to \u00a76.\n  - Files: `docs/MISSION_PLAYBOOK.md`\n  - Spec: wireframe-gate/REQ-001, REQ-002\n  - Agent: jony-aive (design step content) + sdlc-documentarian (structure)\n  - Test: search step precedes the wireframe step and is non-optional; \u00a7\n    renumbering is internally consistent\n  - Parallel: blocked-by T-602\n  - Complexity: M",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "jony-aive",
+  "estimatedTokens": 3500,
+  "source": "openspec/business-os/tasks.md",
+  "createdAt": "2026-09-02T18:29:42.808Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-business-os-15"
+  ],
+  "tags": [
+    "business-os",
+    "hermes-handoff",
+    "phase-6"
+  ]
+}

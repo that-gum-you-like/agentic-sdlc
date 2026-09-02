@@ -1,0 +1,21 @@
+{
+  "id": "OS-business-os-9",
+  "title": "T-405: Register the heartbeat in `agents/cron-schedule.json` and",
+  "description": "- [ ] **T-405**: Register the heartbeat in `agents/cron-schedule.json` and\n      install via `scheduler-install.mjs`, matching sibling units' PATH,\n      `WorkingDirectory`, and `EnvironmentFile=-%h/.hermes/.env`.\n  - Files: `agents/cron-schedule.json`\n  - Spec: liveness-heartbeat/REQ-005\n  - Agent: sdlc-developer\n  - Test: generated unit matches sibling shape; `OnCalendar` minute avoids\n    {0,15,30,45}; existing `scheduler-install` tests pass\n  - Parallel: blocked-by T-403\n  - Complexity: S\n\n### Phase 5: Personal lane (parallel with Phase 2)",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/business-os/tasks.md",
+  "createdAt": "2026-09-02T18:29:42.806Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-business-os-7"
+  ],
+  "tags": [
+    "business-os",
+    "hermes-handoff",
+    "phase-4"
+  ]
+}
