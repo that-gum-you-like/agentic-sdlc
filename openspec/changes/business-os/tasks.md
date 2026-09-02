@@ -472,7 +472,7 @@ Phase 1, but not the guard.
   - Complexity: S
   - Notes: Those rules exist because each one already went wrong once.
 
-- [ ] **T-605**: Author the `sdlc-portfolio` Hermes skill so Telegram can
+- [x] **T-605**: Author the `sdlc-portfolio` Hermes skill so Telegram can
       answer roster questions by shelling out to `portfolio.mjs`.
   - Files: `skills/sdlc-portfolio/SKILL.md`
   - Spec: portfolio-registry/REQ-002
