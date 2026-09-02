@@ -829,6 +829,29 @@ async function runLayer5_CLIGuards() {
 // Spec: openspec/changes/business-os/specs/portfolio-registry.md REQ-003
 // ---------------------------------------------------------------------------
 
+// Commands that reach a real environment WITHOUT passing env-guard. An agent
+// that writes one of these into a task description has routed around the
+// boundary — not maliciously, just by doing what a shell-shaped task says. The
+// guard can only protect calls that go through it.
+const DIRECT_DEPLOY_RE = /\b(?:supabase\s+db\s+(?:push|reset)|vercel\s+(?:--prod|deploy\s+--prod)|npx\s+supabase\s+db\s+(?:push|reset))\b/i;
+
+/** Scan queued task descriptions for commands that bypass env-guard. */
+function scanTasksForGuardBypass(projectDir) {
+  const queueDir = path.join(projectDir, 'tasks', 'queue');
+  if (!fs.existsSync(queueDir)) return [];
+  const hits = [];
+  for (const f of fs.readdirSync(queueDir)) {
+    if (!f.endsWith('.json')) continue;
+    let task;
+    try { task = JSON.parse(fs.readFileSync(path.join(queueDir, f), 'utf8')); } catch { continue; }
+    if (task && task.status === 'completed') continue;
+    const text = [task && task.title, task && task.description].filter(Boolean).join(' ');
+    const m = DIRECT_DEPLOY_RE.exec(text);
+    if (m) hits.push(`${f}: task instructs "${m[0]}" directly — route it through env-guard / deploy-runner instead`);
+  }
+  return hits;
+}
+
 async function runLayer6_Portfolio() {
   const layerName = 'Portfolio Integrity';
   const portfolioPath = process.env.PORTFOLIO_PATH || path.join(__dirname, '..', 'portfolio.json');
@@ -861,10 +884,20 @@ async function runLayer6_Portfolio() {
     };
   }
 
+  const bypass = scanTasksForGuardBypass(path.join(__dirname, '..'));
+  if (bypass.length) {
+    return {
+      name: layerName,
+      status: 'fail',
+      details: [`${bypass.length} queued task(s) bypass env-guard:`, ...bypass.map((b) => `  - ${b}`)],
+    };
+  }
+
   const s = mod.status(doc);
   const details = [
     `${s.projects} project(s) — ${s.byOwner.client} client, ${s.byOwner.self} internal`,
     `${s.environments} environment(s): ${Object.entries(s.byTier).map(([t, n]) => `${t}=${n}`).join(' ')}`,
+    'no queued task bypasses env-guard',
   ];
   if (s.missingPath.length) {
     details.push(`WARN: path missing on disk for: ${s.missingPath.join(', ')}`);

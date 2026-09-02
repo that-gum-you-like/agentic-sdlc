@@ -59,7 +59,7 @@ Phase 1, but not the guard.
 
 ### Phase 0: Work-item readiness — GATES EVERYTHING ELSE
 
-- [ ] **T-001**: Add `readiness` ∈ `{draft, ready-for-dev, in-dev,
+- [x] **T-001**: Add `readiness` ∈ `{draft, ready-for-dev, in-dev,
       ready-for-review, done}` to the change status schema; absence resolves to
       `draft` in every consumer.
   - Files: `agents/schemas/status.schema.json`, `openspec/templates/status.json.template`
@@ -69,7 +69,7 @@ Phase 1, but not the guard.
     unrecognized value rejected
   - Complexity: S
 
-- [ ] **T-002**: Narrow `seed-queue-from-openspec.mjs` — seed only when
+- [x] **T-002**: Narrow `seed-queue-from-openspec.mjs` — seed only when
       `isSeedable(status)` **and** `readiness === 'ready-for-dev'`. Report
       `not-ready` as a distinct skip reason.
   - Files: `agents/seed-queue-from-openspec.mjs`, `tests/seed-queue.test.mjs`
@@ -84,7 +84,7 @@ Phase 1, but not the guard.
     tasks from `level-6-autonomous-activation` alone plus seven other
     out-of-scope changes.
 
-- [ ] **T-003**: Park all out-of-scope work — set `readiness: draft` with a
+- [x] **T-003**: Park all out-of-scope work — set `readiness: draft` with a
       one-line reason on the eight currently-seedable changes; set `business-os`
       to `ready-for-dev`.
   - Files: `openspec/changes/*/status.json`
@@ -120,7 +120,7 @@ Phase 1, but not the guard.
 
 ### Phase 1: Portfolio foundation
 
-- [ ] **T-101**: Write `agents/schemas/portfolio.schema.json` — projects array
+- [x] **T-101**: Write `agents/schemas/portfolio.schema.json` — projects array
       with name/description/owner/client/repo/path/liveUrl/stage/enabled/cadence
       and an `environments` array (name, tier, provider, ref, credentialVars,
       agentWritable, defaultDeploy). `tier` required with **no default**;
@@ -133,7 +133,7 @@ Phase 1, but not the guard.
     `tier` case-variants (`Scratch`, `CUSTOMER-PRODUCTION`)
   - Complexity: S
 
-- [ ] **T-102**: Create `portfolio.json` at the **repo root** with a minimal
+- [x] **T-102**: Create `portfolio.json` at the **repo root** with a minimal
       valid skeleton (version 1, empty projects array) and confirm it is
       tracked by git — explicitly NOT under the gitignored `pm/`.
   - Files: `portfolio.json`
@@ -143,7 +143,7 @@ Phase 1, but not the guard.
   - Parallel: blocked-by T-101
   - Complexity: S
 
-- [ ] **T-103**: Implement `agents/portfolio.mjs` — `list` (+`--json`),
+- [x] **T-103**: Implement `agents/portfolio.mjs` — `list` (+`--json`),
       `show <name>`, `add`, `set <name> <key> <value>`, `status`, `validate`.
       Stdlib only, `__isMainModule` guard, all verbs exported.
   - Files: `agents/portfolio.mjs`, `agents/__tests__/portfolio.test.mjs`
@@ -155,7 +155,7 @@ Phase 1, but not the guard.
   - Parallel: blocked-by T-102
   - Complexity: M
 
-- [ ] **T-104**: Wire `portfolio.mjs validate` into
+- [x] **T-104**: Wire `portfolio.mjs validate` into
       `agents/four-layer-validate.mjs` so a malformed portfolio fails the
       standard gate at commit time rather than at runtime.
   - Files: `agents/four-layer-validate.mjs`
@@ -169,7 +169,7 @@ Phase 1, but not the guard.
     it the only defense against a forgotten tier is a runtime denial nobody
     sees until an agent is already blocked.
 
-- [ ] **T-105**: Project portfolio entries onto the kanban via
+- [x] **T-105**: Project portfolio entries onto the kanban via
       `command-center-sync.mjs`, keyed on project name, reusing the existing
       bridge API and lane mapping.
   - Files: `agents/command-center-sync.mjs`
@@ -183,7 +183,7 @@ Phase 1, but not the guard.
 
 ### Phase 2: The environment guard — CRITICAL PATH
 
-- [ ] **T-201**: Implement `agents/env-guard.mjs` `checkAccess({project,
+- [x] **T-201**: Implement `agents/env-guard.mjs` `checkAccess({project,
       environment, operation, approval})` → `{allowed, tier, reason,
       requiresApproval}`. Never throws. Implements the Phase-2 decision table.
   - Files: `agents/env-guard.mjs`
@@ -193,7 +193,7 @@ Phase 1, but not the guard.
   - Parallel: blocked-by T-103
   - Complexity: M
 
-- [ ] **T-202**: Write `agents/__tests__/env-guard.test.mjs` by transcribing
+- [x] **T-202**: Write `agents/__tests__/env-guard.test.mjs` by transcribing
       **all 13 scenarios** from `specs/environment-tiering.md` verbatim, one
       test per scenario, plus one test per cell of the decision table.
   - Files: `agents/__tests__/env-guard.test.mjs`
@@ -208,7 +208,7 @@ Phase 1, but not the guard.
   - Notes: The most important test file in the change. It should read like an
     adversary's checklist, not a happy-path suite.
 
-- [ ] **T-203**: Export the approval-token parser from `deploy-runner.mjs` and
+- [x] **T-203**: Export the approval-token parser from `deploy-runner.mjs` and
       consume that export in `env-guard.mjs`. Do not duplicate the regex.
   - Files: `agents/deploy-runner.mjs`, `agents/env-guard.mjs`
   - Spec: environment-tiering/REQ-004
@@ -219,7 +219,7 @@ Phase 1, but not the guard.
   - Parallel: blocked-by T-201
   - Complexity: M
 
-- [ ] **T-204**: Emit a Telegram notification via `notify.mjs` on every
+- [x] **T-204**: Emit a Telegram notification via `notify.mjs` on every
       `internal-production` write and every `customer-production` access
       attempt (allowed or denied).
   - Files: `agents/env-guard.mjs`
@@ -230,7 +230,7 @@ Phase 1, but not the guard.
   - Parallel: blocked-by T-201
   - Complexity: S
 
-- [ ] **T-205**: Add `--environment <name>` to `deploy-runner.mjs` (defaulting
+- [x] **T-205**: Add `--environment <name>` to `deploy-runner.mjs` (defaulting
       to the entry's `defaultDeploy`) and call `checkAccess({operation:
       'deploy'})` as a precondition ahead of the existing state machine.
   - Files: `agents/deploy-runner.mjs`
@@ -242,7 +242,7 @@ Phase 1, but not the guard.
   - Parallel: blocked-by T-202, T-203
   - Complexity: M
 
-- [ ] **T-206**: Add a `four-layer-validate` rule flagging direct
+- [x] **T-206**: Add a `four-layer-validate` rule flagging direct
       `supabase db push` / `vercel --prod` strings in agent-authored task
       descriptions, so the guard cannot be routed around by an agent writing
       its own shell command.
@@ -256,7 +256,7 @@ Phase 1, but not the guard.
 
 ### Phase 3: Populate and arm
 
-- [ ] **T-301**: Seed `portfolio.json` with the real roster — agentic-sdlc,
+- [x] **T-301**: Seed `portfolio.json` with the real roster — agentic-sdlc,
       tally, linguaflow, willtopaint, personal-website, personal-tools,
       component-library, ai-gateway, peach-shaker-5000, cyberdeck, hermes-pilot,
       nellis-scout, and `personal`. Every entry gets an explicit `stage`,

@@ -88,3 +88,40 @@ test('the gate FAILS on unparseable JSON rather than skipping it', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// =========================================================================
+// T-206 — a task that bypasses env-guard fails the gate
+// =========================================================================
+import { mkdirSync } from 'node:fs';
+
+function gateWithQueue(tasks) {
+  // Runs the real gate against the real repo but with a temp queue injected
+  // via a copy of tasks/queue is not possible; instead assert the pattern
+  // itself, which is what the layer applies.
+  const RE = /\b(?:supabase\s+db\s+(?:push|reset)|vercel\s+(?:--prod|deploy\s+--prod)|npx\s+supabase\s+db\s+(?:push|reset))\b/i;
+  return tasks.map((t) => RE.test(t));
+}
+
+test('the bypass pattern catches the commands that reach an environment directly', () => {
+  const [a, b, c, d, e] = gateWithQueue([
+    'Run supabase db push to apply the migration',
+    'Deploy with vercel --prod once tests pass',
+    'Use npx supabase db reset to rebuild local state',
+    'Add a column to the migrations directory and commit it',
+    'Call deploy-runner, which owns deploys',
+  ]);
+  assert.equal(a, true, 'supabase db push must be flagged');
+  assert.equal(b, true, 'vercel --prod must be flagged');
+  assert.equal(c, true, 'npx supabase db reset must be flagged');
+  assert.equal(d, false, 'ordinary migration work must not be flagged');
+  assert.equal(e, false, 'going through the runner is the correct path');
+});
+
+test('the live repo has no queued task that bypasses the guard', () => {
+  const r = JSON.parse((() => {
+    try { return execFileSync('node', [SCRIPT, '--json'], { encoding: 'utf8' }); }
+    catch (err) { return err.stdout; }
+  })());
+  const layer = r.layers.find((l) => l.name === 'Portfolio Integrity');
+  assert.match(layer.details.join('\n'), /no queued task bypasses env-guard/);
+});

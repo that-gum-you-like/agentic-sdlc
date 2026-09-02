@@ -34,6 +34,16 @@ import https from 'https';
 import { basename, dirname, join, resolve } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'node:module';
+
+// env-guard imports parseApprovalCommand from THIS module, so importing it at
+// the top level would create an evaluation cycle. Both sides only need each
+// other inside function bodies, so resolve lazily and the cycle never forms.
+const __req = createRequire(import.meta.url);
+const guardModule = () => __req('./env-guard.mjs');
+const checkAccess = (args) => guardModule().checkAccess(args);
+const recordAccess = (r, o) => guardModule().recordAccess(r, o);
+const portfolioLoad = (path) => __req('./portfolio.mjs').load(path);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -82,6 +92,23 @@ export function loadDeployConfig(projectDir) {
     },
     testCmd: project.testCmd || 'npm test',
   };
+}
+
+/**
+ * Which portfolio environment does this project deploy to?
+ * `--environment` wins; otherwise the entry's defaultDeploy environment;
+ * otherwise the literal name "production". Pure so it is unit-testable.
+ */
+export function environmentFor(projectName, deploy = {}, portfolioDoc = null) {
+  if (deploy.environment) return deploy.environment;
+  if (process.env.DEPLOY_ENVIRONMENT) return process.env.DEPLOY_ENVIRONMENT;
+  try {
+    const doc = portfolioDoc || portfolioLoad();
+    const proj = (doc.projects || []).find((p) => p && p.name === projectName);
+    const def = (proj && proj.environments || []).find((e) => e && e.defaultDeploy);
+    if (def) return def.name;
+  } catch { /* fall through — the guard will deny on an unknown environment */ }
+  return 'production';
 }
 
 // ---------------------------------------------------------------------------
@@ -375,7 +402,12 @@ export async function runProject(projectDir, { dryRun = false, log = (m) => cons
   const { deploy, testCmd } = cfg;
 
   // Single-flight per project (atomic mkdir; stale after 2h).
+  // pm/ must exist first: mkdir with recursive:false throws ENOENT when the
+  // parent is missing, which used to land in the catch below and return
+  // 'locked' with NO log — so a project with no pm/ directory (i.e. every
+  // freshly bootstrapped one) was skipped silently and forever, exit 0.
   const lockDir = join(projectDir, 'pm', '.sdlc-deploy.lock.d');
+  mkdirSync(join(projectDir, 'pm'), { recursive: true });
   try {
     mkdirSync(lockDir, { recursive: false });
   } catch {
@@ -383,7 +415,12 @@ export async function runProject(projectDir, { dryRun = false, log = (m) => cons
     try { age = Date.now() - statSync(lockDir).mtimeMs; } catch { /* stale */ }
     if (age < 2 * 60 * 60 * 1000) { log(`${projectName}: another deploy holds the lock — skip`); return { project: projectName, action: 'locked' }; }
     rmSync(lockDir, { recursive: true, force: true });
-    try { mkdirSync(lockDir); } catch { return { project: projectName, action: 'locked' }; }
+    try { mkdirSync(lockDir); } catch (err) {
+      // Never return silently: an unexplained skip is indistinguishable from
+      // "nothing to do", which is how a dead pipeline hides.
+      log(`${projectName}: cannot acquire deploy lock — ${err && err.message ? err.message : err}`);
+      return { project: projectName, action: 'locked' };
+    }
   }
 
   try {
@@ -404,6 +441,29 @@ export async function runProject(projectDir, { dryRun = false, log = (m) => cons
       approvalMode: deploy.approval,
       cooldownOk,
     });
+
+    // --- Environment guard (openspec: business-os / environment-tiering REQ-005)
+    //
+    // Runs BEFORE the action is honoured and independently of deploy.approval.
+    // That independence is the point (REQ-004a): a project can set
+    // approval:"none" for speed, but the TIER still governs, so speed can never
+    // be configured onto a customer's database. A project absent from the
+    // portfolio has no known tier and is therefore denied.
+    if (action === 'deploy' || action === 'request-approval') {
+      const envName = environmentFor(projectName, deploy);
+      const guard = checkAccess({
+        project: projectName,
+        environment: envName,
+        operation: 'deploy',
+        approval: existsSync(tokenPath(projectDir, 'approved', sha8)) ? sha8 : undefined,
+      });
+      if (!guard.allowed) {
+        recordAccess(guard);
+        log(`${projectName}: BLOCKED by env-guard (${envName}) — ${guard.reason}`);
+        return { project: projectName, action: 'blocked', sha8, reason: guard.reason, tier: guard.tier };
+      }
+      if (guard.notify) recordAccess(guard);
+    }
 
     log(`${projectName}: origin/${baseBranch}@${sha8} — ${action}${dryRun ? ' (dry-run)' : ''}`);
     if (dryRun || action === 'up-to-date' || action === 'terminal' || action === 'cooldown' || action === 'wait-approval') {
