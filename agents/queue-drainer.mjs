@@ -151,11 +151,21 @@ function sortByPriority(tasks) {
   });
 }
 
+// T-502 (personal-task-lane REQ-001/REQ-002): a task's effective kind.
+// Absent `kind` reads as 'code' everywhere; chore/note items never drain.
+function getKind(task) {
+  return task.kind || 'code';
+}
+
 function findIndependentTasks(tasks) {
   const pending = tasks.filter(t => t.status === 'pending');
 
+  // Only code work drains (REQ-002): chore/note tasks are never claimed,
+  // never assigned to an agent, and never counted toward drain capacity.
+  const drainable = pending.filter(t => getKind(t) === 'code');
+
   // A task is independent if none of its blockedBy are incomplete
-  const independent = pending.filter(task => {
+  const independent = drainable.filter(task => {
     if (!task.blockedBy || task.blockedBy.length === 0) return true;
     return task.blockedBy.every(depId => {
       const dep = tasks.find(t => t.id === depId);
@@ -345,6 +355,9 @@ function showStatus(tasks) {
   console.log(`  Pending:     ${pending.length}`);
   console.log(`  In Progress: ${inProgress.length}`);
   console.log(`  Completed:   ${completed.length} (+ ${archivedCount} archived)`);
+  const codePending = pending.filter(t => getKind(t) === 'code').length;
+  const nonCodePending = pending.length - codePending;
+  console.log(`  Pending by kind: ${codePending} code, ${nonCodePending} chore/note`);
   console.log(`  Ready (unblocked): ${independent.length}`);
   console.log(`${'─'.repeat(50)}`);
 

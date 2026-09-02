@@ -389,7 +389,7 @@ Phase 1, but not the guard.
     files validate unchanged; an unrecognized value fails validation
   - Complexity: S
 
-- [ ] **T-502**: Filter the drain to `kind === 'code'` (absent counts as code)
+- [x] **T-502**: Filter the drain to `kind === 'code'` (absent counts as code)
       in `agents/queue-drainer.mjs`; report code and non-code counts separately
       in `status`.
   - Files: `agents/queue-drainer.mjs`
