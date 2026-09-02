@@ -41,6 +41,40 @@ The following ideas from the 2026-03-13 curriculum review have been implemented:
 
 ## Remaining Ideas
 
+### 29. Nels Workshop Hub (the operations website)
+
+**Problem:** Bryce needs to see his operations *as a business*. **Nels Workshop
+is the umbrella for all client dev work** — Tally is a Texas Olive Ranch
+engagement under it, not a personal side project — but nothing renders that
+view. `hermes dashboard` (:7777) shows a dev kanban: tasks, agents, backlog. It
+answers "what is the queue doing," not "which clients do I have, what's live,
+what's stalled, what's mine vs. billable."
+
+**Idea:** A separate Next.js repo (`nels-workshop-hub`) rendering a business
+view over the `business-os` ledgers: `portfolio.json` grouped by client,
+per-project stage and health, live URLs, open approvals, drain activity, spend.
+
+**Scope decisions already made (2026-09-02):**
+- **Separate repo, not the framework.** The framework is zero-npm-dependency
+  Node stdlib by rule; a Next.js app in it breaks portability.
+- **v1 is read + light actions**: add a task, toggle a project's drain, request
+  a deploy. Every write goes through the existing scripts.
+- **It can ask for anything; it can approve nothing.** Deploy approval stays the
+  sha-bound Telegram token. See `business-os` design Decision 8 — a browser
+  button that approves a `customer-production` deploy is a second, weaker
+  approval path introduced by the least-scrutinized code in the system.
+- **Not a source of truth.** It reads the ledger and writes back only through
+  the scripts. A hub with its own store becomes `pm/DASHBOARD.md` with better
+  typography.
+- **Sequencing:** starts after `business-os` workstreams B (portfolio) and C
+  (environment tiering) land, and is built as **mission #1 through the new
+  pipeline** — dogfooding the wireframe gate on Bryce's own project rather than
+  discovering its rough edges on a client.
+- Out of scope for v1: invoicing, contracts, money, client logins.
+
+**Complexity:** L. **Blocked on:** `business-os` B + C.
+
+
 ### 11. Agent-to-Agent Direct Communication Protocol
 
 **Problem:** Agents currently communicate through task handoffs and Matrix messages, but there's no structured protocol for agents to request specific information from each other in real-time (e.g., Roy asking Moss "what embedding model did you use?").

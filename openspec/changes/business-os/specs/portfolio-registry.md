@@ -34,6 +34,15 @@ values** — environments name credential *variables* only.
 **Complexity:** S
 **Value:** CRITICAL — every other capability in this change reads this file.
 
+**Notes — business semantics (confirmed 2026-09-02):** **Nels Workshop is the
+umbrella business for all client dev work.** Therefore `owner: "self"` means
+Nels Workshop's own project (internal or personal), and `owner: "client"` means
+billable client work, with `client` naming the client. Tally is a client
+engagement for Texas Olive Ranch under Nels Workshop, not a personal project.
+`client` stays a flat string in v1 — grouping by client is a rendering concern,
+and a `clients` table is not earned until there is something to attach to it
+(money, contracts, contacts), all of which are out of scope here.
+
 ---
 
 ## REQ-002 — `portfolio.mjs` exposes the full verb set

@@ -414,6 +414,30 @@ task; making `kind` required.
 the drain's filter is one predicate. A required field would break every existing
 task file and every external writer of task JSON.
 
+### Decision 8: A future web hub reads the ledger; it never becomes a second approval path
+
+**Chosen**: The Nels Workshop hub (separate repo, separate change — see
+`openspec/BACKLOG.md`) is a **read + light-action** surface over this change's
+ledgers. Its writes call the same scripts (`portfolio.mjs`, the queue, the
+drain toggle). For deploys it may **request** an approval — rendering a button
+that triggers the existing Telegram approval request — but the approval itself
+is granted only by the sha-bound `APPROVE <sha8>` reply to the deploy bot.
+
+**Considered**: Letting an authenticated hub session approve a
+`customer-production` deploy directly; giving the hub its own signed-action
+token; hub as read-only with no actions at all.
+
+**Rationale**: Decision 4 says there is exactly one approval mechanism, and a
+browser button that approves deploys is a second one wearing a different hat —
+it moves the trust boundary from "a single-use token sent to a bot paired to
+Bryce's account" to "whoever holds a logged-in browser session." That is a
+strictly weaker guarantee protecting a customer's production database, and it
+would be introduced by a *dashboard*, which is the least-scrutinized kind of
+code in any system. Read-only was rejected as too weak to be useful: adding
+tasks, toggling a project's drain, and requesting a deploy are all safe because
+each is either reversible or itself gated. **The rule is: the hub can ask for
+anything; it can approve nothing.**
+
 ---
 
 ## Risks and Mitigations
