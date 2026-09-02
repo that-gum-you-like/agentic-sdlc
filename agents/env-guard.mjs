@@ -272,7 +272,13 @@ export function main(argv) {
 const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
 if (__isMainModule) {
   const out = main(process.argv.slice(2));
-  if (typeof out === 'number') process.exit(out);
-  await recordAccess(out.result);
-  process.exit(out.code);
+  if (typeof out === 'number') {
+    process.exit(out);
+  } else {
+    // NO top-level await here. deploy-runner require()s this module, and
+    // require() cannot load an ESM graph containing top-level await — adding
+    // one silently broke the guard on the deploy path (it threw instead of
+    // blocking) while the unit tests, which import it, stayed green.
+    recordAccess(out.result).finally(() => process.exit(out.code));
+  }
 }

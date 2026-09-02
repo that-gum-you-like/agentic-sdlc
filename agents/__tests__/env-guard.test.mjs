@@ -402,3 +402,18 @@ test('a notifier that throws never upgrades a denial to an allow', async () => {
     assert.equal(r.allowed, false, 'the decision object is unchanged by recording');
   });
 });
+
+// =========================================================================
+// Regression: env-guard must stay require()-able from deploy-runner
+// =========================================================================
+test('env-guard has no top-level await — deploy-runner require()s it', async () => {
+  // Making recordAccess async once introduced `await` at this module's top
+  // level. require() cannot load an ESM graph with top-level await, so the
+  // guard threw on the deploy path and stopped blocking — while these unit
+  // tests, which use import(), stayed green. The drain's own test run is what
+  // caught it.
+  const { createRequire } = await import('node:module');
+  const req = createRequire(import.meta.url);
+  assert.doesNotThrow(() => req('../env-guard.mjs'),
+    'env-guard must remain require()-able; do not add top-level await to it');
+});
