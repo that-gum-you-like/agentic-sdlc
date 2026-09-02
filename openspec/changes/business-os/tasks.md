@@ -401,7 +401,7 @@ Phase 1, but not the guard.
   - Parallel: blocked-by T-501
   - Complexity: S
 
-- [ ] **T-503**: Author the `sdlc-inbox` Hermes skill (source in `skills/`,
+- [x] **T-503**: Author the `sdlc-inbox` Hermes skill (source in `skills/`,
       installed to `~/.hermes/skills/`) that captures a dictated item as a
       schema-valid `chore`/`note` task against a named project or `personal`.
   - Files: `skills/sdlc-inbox/SKILL.md`
