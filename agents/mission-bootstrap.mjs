@@ -77,12 +77,20 @@ export const MISSION_ENVIRONMENTS = Object.freeze([
   { name: 'production', tier: 'internal-production', agentWritable: false, defaultDeploy: true },
 ]);
 
-/** The portfolio project entry a fresh mission registers as. */
-export function buildPortfolioEntry(name, { description = '' } = {}) {
+/**
+ * The portfolio project entry a fresh mission registers as. By default a
+ * mission is owned by the framework operator (`owner: self`); with
+ * `--client <name>` the entry is marked `owner: client` with the client's name
+ * (REQ-004). Client ownership never changes the environment pair — a mission
+ * is still born staging (scratch) + production (internal-production), never
+ * customer-production.
+ */
+export function buildPortfolioEntry(name, { description = '', client = '' } = {}) {
   return {
     name,
     description,
-    owner: 'self',
+    owner: client ? 'client' : 'self',
+    ...(client ? { client } : {}),
     stage: 'idea',
     enabled: true,
     environments: MISSION_ENVIRONMENTS.map((e) => ({ ...e })),
@@ -217,7 +225,7 @@ function sh(cmd, args, opts = {}) {
   return execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts });
 }
 
-export async function bootstrap({ name, description = '', deploy = true, dryRun = false, domain = MISSION_BASE_DOMAIN, home = homedir(), portfolioPath = join(FRAMEWORK_REPO, 'portfolio.json'), log = (m) => console.log(`[mission-bootstrap] ${m}`) }) {
+export async function bootstrap({ name, description = '', deploy = true, dryRun = false, domain = MISSION_BASE_DOMAIN, home = homedir(), portfolioPath = join(FRAMEWORK_REPO, 'portfolio.json'), client = '', log = (m) => console.log(`[mission-bootstrap] ${m}`) }) {
   if (!validateName(name)) {
     throw new Error(`invalid mission name "${name}" — kebab-case, 2-39 chars, [a-z0-9-], no leading digit/dash`);
   }
@@ -259,13 +267,14 @@ export async function bootstrap({ name, description = '', deploy = true, dryRun 
   });
 
   // 5.5. Portfolio registration — the mission is born with exactly two tiered
-  // environments (wireframe-gate REQ-003). Idempotent: a re-run finds the name
-  // already present and changes nothing.
-  step(`portfolio: register ${name} — ${MISSION_ENVIRONMENTS.map((e) => `${e.name} (${e.tier})`).join(' + ')} in ${portfolioPath}`, () => {
-    const { doc, status } = registerInPortfolio(loadPortfolio(portfolioPath), name, { description });
+  // environments (wireframe-gate REQ-003). --client marks owner: client + a
+  // client name (REQ-004) but never touches the tiers. Idempotent: a re-run
+  // finds the name already present and changes nothing.
+  step(`portfolio: register ${name}${client ? ` — owner client (${client})` : ''} — ${MISSION_ENVIRONMENTS.map((e) => `${e.name} (${e.tier})`).join(' + ')} in ${portfolioPath}`, () => {
+    const { doc, status } = registerInPortfolio(loadPortfolio(portfolioPath), name, { description, client });
     if (status === 'added') {
       writeFileSync(portfolioPath, JSON.stringify(doc, null, 2) + '\n');
-      log(`  portfolio: ${name} registered — staging (scratch) + production (internal-production)`);
+      log(`  portfolio: ${name} registered${client ? ` for client ${client}` : ''} — staging (scratch) + production (internal-production)`);
     } else {
       log(`  portfolio: ${name} already registered — no change`);
     }
@@ -345,6 +354,7 @@ export async function bootstrap({ name, description = '', deploy = true, dryRun 
   log(`  project:   ${projectDir}`);
   log(`  repo:      https://github.com/${GH_OWNER}/${name}`);
   log(`  environments: ${MISSION_ENVIRONMENTS.map((e) => `${e.name} (${e.tier})`).join(' + ')}${dryRun ? ' — nothing written (dry-run)' : ' — registered in portfolio.json'}`);
+  log(`  owner:       ${client ? `client (${client})` : 'self (operator)'}`);
   log(`  smoke URL: ${deploy ? (domain ? `https://${missionDomainFor(name, domain)} (fallback ${smokeUrlFor(name)})` : smokeUrlFor(name)) : '(deploy dark)'}`);
   log(`  next:      author openspec artifacts + seed tasks/queue/*.json in the project,`);
   log(`             git push, then the ${name}-drain timer takes over.`);
@@ -360,15 +370,17 @@ if (__isMainModule()) {
   const name = args.find(a => !a.startsWith('--'));
   const dIdx = args.indexOf('--description');
   const domIdx = args.indexOf('--domain');
+  const clIdx = args.indexOf('--client');
   const opts = {
     name,
     description: dIdx !== -1 ? args[dIdx + 1] : '',
     deploy: !args.includes('--no-deploy'),
     dryRun: args.includes('--dry-run'),
     domain: args.includes('--no-domain') ? null : (domIdx !== -1 ? args[domIdx + 1] : MISSION_BASE_DOMAIN),
+    client: clIdx !== -1 ? (args[clIdx + 1] || '') : '',
   };
   if (!name) {
-    console.error('Usage: mission-bootstrap.mjs <kebab-name> [--description "…"] [--domain <base>|--no-domain] [--no-deploy] [--dry-run]');
+    console.error('Usage: mission-bootstrap.mjs <kebab-name> [--description "…"] [--client "…"] [--domain <base>|--no-domain] [--no-deploy] [--dry-run]');
     process.exit(1);
   }
   bootstrap(opts).catch((err) => {
