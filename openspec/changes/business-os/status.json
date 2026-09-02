@@ -2,5 +2,6 @@
   "status": "proposed",
   "phase": "tasks",
   "created": "2026-09-02",
-  "lastUpdated": "2026-09-02"
+  "lastUpdated": "2026-09-02",
+  "readiness": "ready-for-dev"
 }

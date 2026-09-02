@@ -2,5 +2,7 @@
   "status": "ready-to-implement",
   "phase": "tasks",
   "created": "2026-05-21",
-  "lastUpdated": "2026-05-21"
+  "lastUpdated": "2026-09-02",
+  "readiness": "draft",
+  "readinessReason": "parked: 3/46, maturity-score work; T-103/T-104 superseded by business-os portfolio.json"
 }

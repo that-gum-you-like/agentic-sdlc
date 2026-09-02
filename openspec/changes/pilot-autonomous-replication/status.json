@@ -2,6 +2,8 @@
   "status": "in-progress",
   "phase": "implement",
   "created": "2026-07-26",
-  "lastUpdated": "2026-07-26",
-  "notes": "Setup T1-T4 done (repo, vercel link, OpenRouter ladders, PILOT-001 seeded, dry-run 1 ready task). Arming T5-T6 blocked on Bryce providing the two Telegram bot tokens + chat id. Proof T7-T11 run autonomously after arming."
+  "lastUpdated": "2026-09-02",
+  "notes": "Setup T1-T4 done (repo, vercel link, OpenRouter ladders, PILOT-001 seeded, dry-run 1 ready task). Arming T5-T6 blocked on Bryce providing the two Telegram bot tokens + chat id. Proof T7-T11 run autonomously after arming.",
+  "readiness": "draft",
+  "readinessReason": "out of scope for the business-os body of work (2026-09-02)"
 }

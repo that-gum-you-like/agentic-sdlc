@@ -46,7 +46,7 @@ test('the vocabulary real changes actually use is seedable', () => {
 
 test('finished work is not re-seeded', () => {
   for (const s of [
-    { status: 'implemented', phase: 'verify' },
+    { status: 'implemented', phase: 'verify', readiness: 'ready-for-dev' },
     { status: 'complete', phase: 'done' },
     { status: 'archived', phase: 'archive' },
     { status: 'cancelled', phase: 'implement' },
@@ -75,7 +75,12 @@ test('unrecognised vocabulary defaults to seedable, not silently dropped', () =>
 
 // --- the task parser ---------------------------------------------------------
 
-function seedFixture(tasksMd, status = { status: 'in-progress', phase: 'implement' }) {
+// Default fixture status is authorized. Readiness defaults to `draft` in the
+// seeder (openspec: business-os / work-item-readiness REQ-001) so that merely
+// authoring a change never authorizes an agent to build it; these fixtures test
+// the parser and phase gate, so they opt in explicitly. The unauthorized path
+// has its own coverage in tests/seed-queue-readiness.test.mjs and below.
+function seedFixture(tasksMd, status = { status: 'in-progress', phase: 'implement', readiness: 'ready-for-dev' }) {
   const dir = mkdtempSync(join(tmpdir(), 'seed-fixture-'));
   try {
     mkdirSync(join(dir, 'agents'), { recursive: true });
@@ -139,6 +144,26 @@ test('completed bullets are not re-queued', () => {
 });
 
 test('a change in a terminal phase seeds nothing', () => {
-  const { count } = seedFixture(`- [ ] **T1**: pending\n`, { status: 'implemented', phase: 'verify' });
+  const { count } = seedFixture(`- [ ] **T1**: pending\n`, { status: 'implemented', phase: 'verify', readiness: 'ready-for-dev' });
   assert.equal(count, 0);
+});
+
+
+test('a change with no readiness seeds nothing, however complete its tasks', () => {
+  // Regression for 2026-09-02: nine changes sat in a seedable phase with no
+  // readiness field. Enabling the drain would have queued ~43 out-of-scope
+  // tasks from level-6-autonomous-activation alone.
+  const { count, out } = seedFixture(
+    `- [ ] **T-001**: pending\n- [ ] **T-002**: also pending\n`,
+    { status: 'in-progress', phase: 'implement' },
+  );
+  assert.equal(count, 0, out);
+  assert.match(out, /not-ready/);
+});
+
+test('hyphenated task ids are parsed', () => {
+  // The bullet regex used [\w.] which excludes '-', so every tasks.md in this
+  // repo (T-001, T-101) reported "no tasks found" for the life of the file.
+  const { count, out } = seedFixture(`- [ ] **T-001**: hyphenated\n- [ ] **T-102**: also hyphenated\n`);
+  assert.equal(count, 2, out);
 });

@@ -115,6 +115,36 @@ function estimateTokens(subtaskCount) {
 // seedable (loud, fixable) rather than silently dropped.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Readiness (openspec: business-os / work-item-readiness)
+//
+// Phase describes how far AUTHORSHIP has got. Readiness describes whether the
+// work is AUTHORIZED to be built. They are orthogonal: a change can be fully
+// specced with tasks written and still be draft.
+//
+// Absent readiness means 'draft'. This default is deliberately restrictive:
+// writing something down must never be sufficient reason for an agent to start
+// building it. On 2026-09-02 nine changes sat in a seedable phase and eight
+// were out of scope — level-6-autonomous-activation alone would have dumped
+// ~43 open tasks into the queue the moment the drain came back on.
+// ---------------------------------------------------------------------------
+
+export const READINESS_STATES = new Set([
+  'draft', 'ready-for-dev', 'in-dev', 'ready-for-review', 'done',
+]);
+
+/** @returns {string} the change's readiness; absent/unset resolves to 'draft'. */
+export function readinessOf(status = {}) {
+  const r = String(status.readiness ?? '').toLowerCase().trim();
+  if (!r) return 'draft';
+  return READINESS_STATES.has(r) ? r : 'invalid';
+}
+
+/** @returns {boolean} true only when a change is authorized for the dev loop. */
+export function isReadyForDev(status = {}) {
+  return readinessOf(status) === 'ready-for-dev';
+}
+
 const DONE_STATUSES = new Set(['implemented', 'complete', 'completed', 'archived', 'cancelled', 'abandoned']);
 const NOT_YET_PHASES = new Set(['proposal', 'design', 'planning', 'specs']);
 const DONE_PHASES = new Set(['verify', 'verified', 'archive', 'archived', 'done']);
@@ -188,7 +218,11 @@ function parseTasksMd(changeName, tasksPath) {
     // actually uses — but only the `## Task N:` heading form was ever parsed,
     // so a correctly-authored tasks.md seeded nothing. Checked items are
     // skipped: already done is not backlog.
-    const taskBullet = line.match(/^\s*-\s+\[( |x)\]\s+\*\*([\w.]+)\*\*\s*[:—-]\s*(.+)$/i);
+    // Task ids in this repo are hyphenated (T-001, T-101). `\w` excludes the
+    // hyphen, so this pattern matched nothing for the entire life of the file
+    // and every tasks.md silently reported "no tasks found" (openspec:
+    // business-os / work-item-readiness).
+    const taskBullet = line.match(/^\s*-\s+\[( |x)\]\s+\*\*([\w.-]+)\*\*\s*[:—-]\s*(.+)$/i);
     if (taskBullet) {
       if (currentTask) {
         tasks.push(currentTask);
@@ -346,6 +380,17 @@ function main() {
       status = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
     } catch (err) {
       console.log(`[seed] SKIP ${changeName}: malformed status.json — ${err.message}`);
+      continue;
+    }
+
+    // --- Guard: readiness — authored is not authorized (work-item-readiness) ---
+    const readiness = readinessOf(status);
+    if (readiness === 'invalid') {
+      console.log(`[seed] SKIP ${changeName}: not-ready (unrecognized readiness "${status.readiness}")`);
+      continue;
+    }
+    if (!isReadyForDev(status)) {
+      console.log(`[seed] SKIP ${changeName}: not-ready (readiness=${readiness})`);
       continue;
     }
 

@@ -40,7 +40,8 @@ test in the same task. Zero new npm dependencies.
 
 | Work Stream | Agent | Tasks | Parallel With |
 |---|---|---|---|
-| Portfolio foundation | sdlc-developer | T-101..T-105 | — |
+| **Readiness gate (blocks all)** | sdlc-developer | T-001..T-005 | — |
+| Portfolio foundation | sdlc-developer | T-101..T-105 | blocked-by T-003 |
 | Environment guard (critical) | sdlc-developer | T-201..T-206 | blocked-by T-103 |
 | Arm the system | sdlc-developer + Bryce | T-301..T-305 | blocked-by T-206 |
 | Liveness | sdlc-developer | T-401..T-405 | parallel with Phase 2 |
@@ -55,6 +56,67 @@ Phase 1, but not the guard.
 ---
 
 ## Implementation Tasks
+
+### Phase 0: Work-item readiness — GATES EVERYTHING ELSE
+
+- [ ] **T-001**: Add `readiness` ∈ `{draft, ready-for-dev, in-dev,
+      ready-for-review, done}` to the change status schema; absence resolves to
+      `draft` in every consumer.
+  - Files: `agents/schemas/status.schema.json`, `openspec/templates/status.json.template`
+  - Spec: work-item-readiness/REQ-001
+  - Agent: sdlc-developer
+  - Test: five values accepted, absence accepted and resolving to `draft`,
+    unrecognized value rejected
+  - Complexity: S
+
+- [ ] **T-002**: Narrow `seed-queue-from-openspec.mjs` — seed only when
+      `isSeedable(status)` **and** `readiness === 'ready-for-dev'`. Report
+      `not-ready` as a distinct skip reason.
+  - Files: `agents/seed-queue-from-openspec.mjs`, `tests/seed-queue.test.mjs`
+  - Spec: work-item-readiness/REQ-002
+  - Agent: sdlc-developer
+  - Test: phase `tasks` + readiness absent seeds nothing; same change at
+    `ready-for-dev` seeds its open tasks; dry-run distinguishes `not-ready`
+    from the phase-based skip
+  - Parallel: blocked-by T-001
+  - Complexity: S
+  - Notes: Without this, enabling the drain floods the queue with ~43 open
+    tasks from `level-6-autonomous-activation` alone plus seven other
+    out-of-scope changes.
+
+- [ ] **T-003**: Park all out-of-scope work — set `readiness: draft` with a
+      one-line reason on the eight currently-seedable changes; set `business-os`
+      to `ready-for-dev`.
+  - Files: `openspec/changes/*/status.json`
+  - Spec: work-item-readiness/REQ-005
+  - Agent: sdlc-developer
+  - Test: dry-run seed reports exactly the `business-os` tasks and nothing else
+  - Parallel: blocked-by T-002
+  - Complexity: S
+
+- [ ] **T-004**: Advance readiness through the loop — `ready-for-dev → in-dev`
+      on first claim, `in-dev → ready-for-review` on tasks complete with an open
+      PR, `ready-for-review → done` on merge. Illegal transitions refused;
+      replays are no-ops.
+  - Files: `agents/queue-drainer.mjs`, `agents/pr-auto-review.mjs`
+  - Spec: work-item-readiness/REQ-003
+  - Agent: sdlc-developer
+  - Test: each transition; illegal transition refused and logged; replay is a
+    no-op not an error
+  - Parallel: blocked-by T-003
+  - Complexity: M
+
+- [ ] **T-005**: Render readiness on the change card and accept a `ready`
+      comment to promote `draft → ready-for-dev`, mirroring the existing
+      `approve` comment mechanism.
+  - Files: `agents/command-center-sync.mjs`
+  - Spec: work-item-readiness/REQ-004
+  - Agent: sdlc-developer
+  - Test: readiness appears on the parent card; a `ready` comment promotes and
+    survives the next sync; `in-dev`/`ready-for-review` are not settable by
+    comment
+  - Parallel: blocked-by T-004
+  - Complexity: M
 
 ### Phase 1: Portfolio foundation
 

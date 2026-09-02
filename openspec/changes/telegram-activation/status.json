@@ -2,5 +2,7 @@
   "status": "in-progress",
   "phase": "implement",
   "created": "2026-07-26",
-  "lastUpdated": "2026-07-26"
+  "lastUpdated": "2026-09-02",
+  "readiness": "draft",
+  "readinessReason": "superseded operationally by business-os Workstream A (gateway+timers restored 2026-09-02)"
 }
