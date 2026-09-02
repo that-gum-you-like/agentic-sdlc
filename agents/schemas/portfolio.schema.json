@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "portfolio.schema.json",
+  "title": "Portfolio — the roster of projects, clients, and their environments",
+  "description": "Spec: openspec/changes/business-os/specs/portfolio-registry.md. Lives at the repo ROOT (pm/ is gitignored). Contains NO credential values — environments name credential VARIABLES only.",
+  "type": "object",
+  "required": ["version", "projects"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "integer", "enum": [1] },
+    "projects": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/project" }
+    }
+  },
+  "definitions": {
+    "project": {
+      "type": "object",
+      "required": ["name", "owner", "stage"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,38}$",
+          "description": "kebab-case, unique; the primary key every consumer uses"
+        },
+        "description": { "type": "string" },
+        "owner": {
+          "type": "string",
+          "enum": ["self", "client"],
+          "description": "self = Nels Workshop internal/personal; client = billable client work"
+        },
+        "client": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Required when owner is 'client'. The client's name."
+        },
+        "repo": { "type": "string" },
+        "path": { "type": "string" },
+        "liveUrl": { "type": "string" },
+        "stage": {
+          "type": "string",
+          "enum": ["idea", "design", "build", "live", "maintenance", "parked"]
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Autonomous drain toggle. Carried forward from level-6-autonomous-activation T-103."
+        },
+        "cadence": { "type": "string" },
+        "environments": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/environment" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "owner": { "const": "client" } }, "required": ["owner"] },
+          "then": { "required": ["client"] }
+        }
+      ]
+    },
+    "environment": {
+      "type": "object",
+      "required": ["name", "tier"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "tier": {
+          "type": "string",
+          "enum": ["scratch", "internal-production", "customer-production"],
+          "description": "REQUIRED, no default. Matching is exact — env-guard denies on absent, unknown, or case-variant values."
+        },
+        "provider": { "type": "string" },
+        "ref": { "type": "string" },
+        "credentialVars": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]*$",
+            "description": "Variable NAMES only. The uppercase-underscore pattern makes it structurally hard to paste a value here."
+          }
+        },
+        "agentWritable": { "type": "boolean", "default": false },
+        "defaultDeploy": { "type": "boolean", "default": false }
+      }
+    }
+  }
+}
