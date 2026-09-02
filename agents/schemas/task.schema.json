@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "task",
+  "title": "Task",
+  "description": "A work item in tasks/queue/. kind is optional and absent means \"code\" — so every pre-existing task file validates unchanged and the drain treats it exactly as before.",
+  "type": "object",
+  "required": ["id", "title", "description", "priority", "status"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique task identifier (e.g. OS-business-os-10)"
+    },
+    "title": {
+      "type": "string",
+      "description": "One-line summary of the work"
+    },
+    "description": {
+      "type": "string",
+      "description": "Full task body: spec references, files, acceptance tests, complexity"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["HIGH", "MEDIUM", "LOW"],
+      "description": "Scheduling priority"
+    },
+    "status": {
+      "type": "string",
+      "description": "pending | in_progress | blocked | completed (written by the queue drainer)"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["code", "chore", "note"],
+      "description": "What kind of work this is. ABSENT means \"code\" everywhere; chore and note items are never claimed by the drain."
+    },
+    "agent": {
+      "type": "string",
+      "description": "Agent template that owns the task (new-style task files)"
+    },
+    "assignee": {
+      "type": "string",
+      "description": "Agent that owns the task (legacy task files)"
+    },
+    "estimatedTokens": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Rough token budget for the task. Optional — captured chore/note items carry none."
+    },
+    "source": {
+      "type": "string",
+      "description": "Where the task came from (e.g. openspec/business-os/tasks.md)"
+    },
+    "blockedBy": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Task IDs that must complete first"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Free-form categorization tags"
+    },
+    "createdAt": {
+      "type": "string",
+      "description": "ISO 8601 timestamp when the task was created"
+    },
+    "claimedAt": {
+      "type": "string",
+      "description": "ISO 8601 timestamp when an agent claimed the task"
+    },
+    "claimedBy": {
+      "type": ["string", "null"],
+      "description": "Agent instance that claimed the task; null means unclaimed"
+    },
+    "testStatus": {
+      "type": ["string", "null"],
+      "description": "passing | failing (new-style task files); null means untested"
+    },
+    "blockedReason": {
+      "type": "string",
+      "description": "Why the task is blocked, when status is blocked"
+    },
+    "files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Files the task is expected to touch (legacy task files)"
+    },
+    "phase": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Phase/cycle the task belongs to (legacy task files)"
+    },
+    "test_status": {
+      "type": "string",
+      "description": "passing | failing (legacy task files)"
+    },
+    "created": {
+      "type": "string",
+      "description": "ISO 8601 timestamp when the task was created (legacy task files)"
+    },
+    "completed_at": {
+      "type": "string",
+      "description": "ISO 8601 timestamp when the task completed (legacy task files)"
+    }
+  }
+}

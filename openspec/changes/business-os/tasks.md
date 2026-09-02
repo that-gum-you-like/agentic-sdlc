@@ -380,7 +380,7 @@ Phase 1, but not the guard.
 
 ### Phase 5: Personal lane (parallel with Phase 2)
 
-- [ ] **T-501**: Add `kind` ∈ `{code, chore, note}` to
+- [x] **T-501**: Add `kind` ∈ `{code, chore, note}` to
       `agents/schemas/task.schema.json`, optional, absence meaning `code`.
   - Files: `agents/schemas/task.schema.json`
   - Spec: personal-task-lane/REQ-001

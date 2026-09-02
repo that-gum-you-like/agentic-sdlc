@@ -33,6 +33,7 @@ describe('Schema files', () => {
     'review-result',
     'deploy-request',
     'human-task',
+    'task',
   ];
 
   for (const name of EXPECTED_SCHEMAS) {
