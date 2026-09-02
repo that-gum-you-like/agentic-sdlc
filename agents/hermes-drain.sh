@@ -205,14 +205,20 @@ if [ "$rc" -ne 0 ]; then
   cp "$logfile" "$outbox/$(date +%Y%m%d-%H%M%S)-drain-$PROJECT_NAME-failed.log" 2>/dev/null || true
 fi
 
-# --- best-effort completion notify (openspec: telegram-activation) ---
+# --- best-effort FAILURE notify (openspec: telegram-activation, business-os) ---
 # Routed through the DRAINED project's own notification config (a project with
 # provider "none" stays silent). MUST NOT change the drain's exit code: a
 # successful drain with a failed notification is still a successful drain.
-status_icon="✅"; [ "$rc" -ne 0 ] && status_icon="❌"
-last_line="$(tail -1 "$logfile" 2>/dev/null | cut -c1-200)"
-SDLC_PROJECT_DIR="$REPO" node "$SCRIPTS_DIR/notify.mjs" send \
-  "$status_icon drain $PROJECT_NAME finished (rc=$rc) — $ready task(s) were ready. Last: $last_line" \
-  >/dev/null 2>&1 || true
+#
+# Success is DELIBERATELY silent. The drain fires every 15 minutes; a message
+# per tick trains the reader to ignore the channel, which costs you the one
+# message that mattered. Routine success belongs in the daily heartbeat;
+# this channel carries deploys and failures only (Bryce, 2026-09-02).
+if [ "$rc" -ne 0 ]; then
+  last_line="$(tail -1 "$logfile" 2>/dev/null | cut -c1-200)"
+  SDLC_PROJECT_DIR="$REPO" node "$SCRIPTS_DIR/notify.mjs" send \
+    "❌ drain $PROJECT_NAME FAILED (rc=$rc) — $ready task(s) were ready. Last: $last_line" \
+    >/dev/null 2>&1 || true
+fi
 
 exit 0

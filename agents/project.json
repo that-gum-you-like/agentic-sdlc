@@ -3,7 +3,12 @@
   "projectDir": "/home/bryce/agentic-sdlc",
   "appDir": ".",
   "testCmd": "node tests/adapter-and-model-manager.test.mjs",
-  "agents": ["sdlc-developer", "jony-aive", "sdlc-reviewer", "sdlc-documentarian"],
+  "agents": [
+    "sdlc-developer",
+    "jony-aive",
+    "sdlc-reviewer",
+    "sdlc-documentarian"
+  ],
   "notification": {
     "provider": "telegram",
     "channel": "",
@@ -17,7 +22,9 @@
       "dailySummary": false,
       "deployComplete": true,
       "deployFailed": true,
-      "deployRolledBack": true
+      "deployRolledBack": true,
+      "drainComplete": false,
+      "mergeComplete": false
     }
   },
   "humanWellness": {
@@ -34,5 +41,10 @@
   "llm": {
     "defaultProvider": "openrouter"
   },
-  "doneChecklist": ["openspec", "tests", "commit", "push"]
+  "doneChecklist": [
+    "openspec",
+    "tests",
+    "commit",
+    "push"
+  ]
 }

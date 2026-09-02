@@ -236,8 +236,28 @@ test('drain completion notifies through the DRAINED project\'s config, best-effo
   assert(workerIdx !== -1 && dryRunIdx !== -1 && notifyIdx !== -1, 'expected worker, dry-run, and notify markers in the script');
   assert(notifyIdx > workerIdx && dryRunIdx < workerIdx,
     'notify must come after the worker (dry-run exits earlier and must never notify)');
-  // A notify failure must not flip the drain exit code: exit 0 follows the hook.
-  assert(/\|\| true\n\nexit 0/.test(s), 'the drain must still exit 0 after a failed notification');
+  // A notify failure must not flip the drain exit code: exit 0 still follows
+  // the hook. Asserted structurally rather than by literal adjacency, since the
+  // hook is now wrapped in a failure-only guard (see the next test).
+  assert(/\|\| true\n(?:fi\n)?\nexit 0/.test(s), 'the drain must still exit 0 after a failed notification');
+});
+
+test('a SUCCESSFUL drain is silent — only failures notify', () => {
+  // The drain fires every 15 minutes. A message per tick trains the reader to
+  // ignore the channel, which costs them the one message that mattered
+  // (Bryce, 2026-09-02: "i don't need a message every 15 minutes, i just need
+  // deploy and failure notifications"). Routine success lives in the daily
+  // heartbeat instead.
+  const s = readFileSync(script, 'utf8');
+  // There is more than one `if [ "$rc" -ne 0 ]` block (an earlier one copies the
+  // failed log to the outbox), so check that SOME failure guard contains the
+  // notify — not merely the first one.
+  const guards = [...s.matchAll(/if \[ "\$rc" -ne 0 \]; then([\s\S]*?)\nfi/g)].map((m) => m[1]);
+  assert(guards.length > 0, 'expected at least one `if [ "$rc" -ne 0 ]` guard');
+  assert(guards.some((g) => /notify\.mjs/.test(g)), 'the notify call must be INSIDE a failure guard');
+  // And there must be no other unguarded notify send in the script.
+  const allSends = [...s.matchAll(/notify\.mjs" send/g)];
+  assert(allSends.length === 1, `expected exactly one notify send, found ${allSends.length}`);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

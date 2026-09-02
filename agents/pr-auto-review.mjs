@@ -35,7 +35,7 @@ import { tmpdir, homedir } from 'os';
 import { fileURLToPath } from 'url';
 import { loadLlmAdapter } from './adapters/load-adapter.mjs';
 import { loadConfig } from './load-config.mjs';
-import { sendNotification } from './notify.mjs';
+import { sendNotification, triggerNotification } from './notify.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -568,7 +568,11 @@ async function reviewPr(pr, ctx) {
   }
   // Best-effort notify (openspec: telegram-activation) — the merge already
   // happened; a notification failure must not fail the run or the record.
-  try { sendNotification(`✅ auto-merged PR #${pr.number}: ${pr.title}`); } catch { /* notify is best-effort */ }
+  // Config-gated: sendNotification() bypasses notification.triggers entirely,
+  // so this fired on every merge no matter how the triggers were set. Routed
+  // through triggerNotification so `mergeComplete: false` actually silences it
+  // (an absent trigger is also off).
+  try { triggerNotification('mergeComplete', `✅ auto-merged PR #${pr.number}: ${pr.title}`); } catch { /* notify is best-effort */ }
   // Fire-and-forget deploy-runner kick (openspec: autonomous-deploy-pipeline
   // REQ-007) — a latency optimization only; the reconcile timer is the safety
   // net, and the merge outcome must never depend on the deploy path.
