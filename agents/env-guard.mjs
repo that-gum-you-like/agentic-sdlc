@@ -36,7 +36,6 @@ import * as portfolio from './portfolio.mjs';
 // REQ-004: reuse the proven parser rather than restating the regex. A second
 // copy is a second thing to get wrong, and they drift silently.
 import { parseApprovalCommand } from './deploy-runner.mjs';
-import { createRequire } from 'node:module';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -220,9 +219,13 @@ export function consumeApproval(verdict) {
  * was granted. Best-effort by contract — a failed send is logged, never thrown,
  * and never upgrades a denial to an allow.
  *
- * @returns {boolean} true if something was delivered.
+ * Async because notify.mjs is an ESM module with top-level await, which
+ * require() cannot load — a synchronous version silently failed to deliver
+ * every denial, which is the exact failure this whole change exists to stop.
+ *
+ * @returns {Promise<boolean>} true if something was delivered.
  */
-export function recordAccess(result, { notifyFn } = {}) {
+export async function recordAccess(result, { notifyFn } = {}) {
   if (!result || !result.notify) return false;
   const n = result.notify;
   const verdict = result.allowed ? 'ALLOWED' : 'DENIED';
@@ -238,10 +241,9 @@ export function recordAccess(result, { notifyFn } = {}) {
 
   try {
     if (notifyFn) return Boolean(notifyFn(message, n));
-    // Lazy import: notify.mjs reads project config at module load, which we do
-    // not want to pay for (or fail on) in the common allow-and-move-on path.
-    const req = createRequire(import.meta.url);
-    const notify = req('./notify.mjs');
+    // Lazy dynamic import: notify.mjs reads project config at module load, and
+    // carries top-level await, so it must be import()ed rather than require()d.
+    const notify = await import('./notify.mjs');
     const trigger = n.level === 'denied' ? 'highSeverityFailure' : 'deployComplete';
     return Boolean(notify.triggerNotification(trigger, message));
   } catch (err) {
@@ -263,12 +265,14 @@ export function main(argv) {
   const i = argv.indexOf('--approval');
   const approval = i >= 0 ? argv[i + 1] : undefined;
   const r = checkAccess({ project, environment, operation, approval });
-  recordAccess(r);
   console.log(JSON.stringify(r, null, 2));
-  return r.allowed ? 0 : 1;
+  return { result: r, code: r.allowed ? 0 : 1 };
 }
 
 const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
 if (__isMainModule) {
-  process.exit(main(process.argv.slice(2)));
+  const out = main(process.argv.slice(2));
+  if (typeof out === 'number') process.exit(out);
+  await recordAccess(out.result);
+  process.exit(out.code);
 }

@@ -366,39 +366,39 @@ test('OPERATIONS is exactly the four documented verbs', () => {
 // =========================================================================
 import { recordAccess } from '../env-guard.mjs';
 
-test('recordAccess emits for internal-production writes, denials, and approvals', () => {
+test('recordAccess emits for internal-production writes, denials, and approvals', async () => {
   const sent = [];
   const notifyFn = (msg, n) => { sent.push({ msg, n }); return true; };
 
-  withPortfolio([project([{ name: 'production', tier: 'internal-production' }])], (path) => {
+  await withPortfolio([project([{ name: 'production', tier: 'internal-production' }])], async (path) => {
     const r = checkAccess({ project: 'demo', environment: 'production', operation: 'write', portfolioPath: path });
-    assert.equal(recordAccess(r, { notifyFn }), true);
+    assert.equal(await recordAccess(r, { notifyFn }), true);
     assert.match(sent.at(-1).msg, /ALLOWED write on demo\/production/);
     assert.match(sent.at(-1).msg, /tier: internal-production/);
   });
 
-  withPortfolio([project([{ name: 'production', tier: 'customer-production' }])], (path) => {
+  await withPortfolio([project([{ name: 'production', tier: 'customer-production' }])], async (path) => {
     const r = checkAccess({ project: 'demo', environment: 'production', operation: 'write', portfolioPath: path });
-    assert.equal(recordAccess(r, { notifyFn }), true);
+    assert.equal(await recordAccess(r, { notifyFn }), true);
     assert.match(sent.at(-1).msg, /DENIED write on demo\/production/);
   });
 });
 
-test('recordAccess stays silent for scratch activity', () => {
+test('recordAccess stays silent for scratch activity', async () => {
   const sent = [];
-  withPortfolio([project([{ name: 'dev', tier: 'scratch' }])], (path) => {
+  await withPortfolio([project([{ name: 'dev', tier: 'scratch' }])], async (path) => {
     const r = checkAccess({ project: 'demo', environment: 'dev', operation: 'write', portfolioPath: path });
-    assert.equal(recordAccess(r, { notifyFn: (m) => { sent.push(m); return true; } }), false);
+    assert.equal(await recordAccess(r, { notifyFn: (m) => { sent.push(m); return true; } }), false);
     assert.equal(sent.length, 0);
   });
 });
 
-test('a notifier that throws never upgrades a denial to an allow', () => {
-  withPortfolio([project([{ name: 'production', tier: 'customer-production' }])], (path) => {
+test('a notifier that throws never upgrades a denial to an allow', async () => {
+  await withPortfolio([project([{ name: 'production', tier: 'customer-production' }])], async (path) => {
     const r = checkAccess({ project: 'demo', environment: 'production', operation: 'write', portfolioPath: path });
     assert.equal(r.allowed, false);
     const boom = () => { throw new Error('telegram is down'); };
-    assert.doesNotThrow(() => recordAccess(r, { notifyFn: boom }));
+    await assert.doesNotReject(async () => recordAccess(r, { notifyFn: boom }));
     assert.equal(r.allowed, false, 'the decision object is unchanged by recording');
   });
 });

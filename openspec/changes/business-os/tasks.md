@@ -295,7 +295,7 @@ Phase 1, but not the guard.
   - Parallel: blocked-by T-302
   - Complexity: S
 
-- [ ] **T-304**: Demonstrate a **live denial** — attempt a
+- [x] **T-304**: Demonstrate a **live denial** — attempt a
       `customer-production` write against tally with no approval, confirm it is
       denied, and capture the evidence. Do this before any deploy timer is armed.
   - Files: `pm/wave2-preflight.md`
@@ -305,7 +305,7 @@ Phase 1, but not the guard.
   - Parallel: blocked-by T-303
   - Complexity: S
 
-- [ ] **T-305**: Enable wave 2 — `autonomous-drain`, `pilot-drain`,
+- [x] **T-305**: Enable wave 2 — `autonomous-drain`, `pilot-drain`,
       `personal-website-drain`, `pr-auto-review`, `pilot-review`,
       `personal-website-review`, `deploy-reconcile`.
   - Files: (systemd user units — operational)

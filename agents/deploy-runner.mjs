@@ -458,11 +458,11 @@ export async function runProject(projectDir, { dryRun = false, log = (m) => cons
         approval: existsSync(tokenPath(projectDir, 'approved', sha8)) ? sha8 : undefined,
       });
       if (!guard.allowed) {
-        recordAccess(guard);
+        await recordAccess(guard);
         log(`${projectName}: BLOCKED by env-guard (${envName}) — ${guard.reason}`);
         return { project: projectName, action: 'blocked', sha8, reason: guard.reason, tier: guard.tier };
       }
-      if (guard.notify) recordAccess(guard);
+      if (guard.notify) await recordAccess(guard);
     }
 
     log(`${projectName}: origin/${baseBranch}@${sha8} — ${action}${dryRun ? ' (dry-run)' : ''}`);
