@@ -91,6 +91,35 @@ approval concept, command, or bot is introduced.
 
 ---
 
+## REQ-004a — Approval is tier-driven, not universal
+
+**Statement:** Deploy approval is required **only** for `customer-production`.
+`scratch` and `internal-production` deploy without a gate. This supersedes
+`deploy-approval-usability`'s "keep the approval gate on **all** deploys"
+position.
+
+**Acceptance:**
+- `project.json` `deploy.approval: "none"` is honored for self-owned projects
+  (already applied to `hermes-pilot` and `personal-website`, 2026-09-02)
+- A `customer-production` environment requires approval **regardless** of the
+  project's `deploy.approval` setting — the tier overrides local config, so
+  speed cannot be configured onto a customer's database
+- A test asserts `approval: "none"` + `tier: customer-production` still denies
+
+**Dependencies:** REQ-004
+**Complexity:** S
+**Value:** CRITICAL
+
+**Notes — rationale (Bryce, 2026-09-02):** "deploy doesn't need my approve right
+now, we are going for speed." Correct for everything that actually deploys:
+`hermes-pilot` and `personal-website` are self-owned, smoke-verified, and
+auto-rollback on failure, so the gate was ceremony. Tally is the only
+`customer-production` project and it is `deploy.enabled: false` today — so
+removing the gate cost nothing there and changed nothing. The tier override in
+this REQ is what keeps that true if tally is ever re-enabled in a hurry.
+
+---
+
 ## REQ-005 — `deploy-runner` consults the guard before deploying
 
 **Statement:** `agents/deploy-runner.mjs` accepts `--environment <name>`
