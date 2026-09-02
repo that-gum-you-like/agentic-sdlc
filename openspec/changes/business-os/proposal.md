@@ -25,7 +25,7 @@ what exists and what Bryce described.
 - `hermes-gateway.service` is `inactive` and `disabled`. Its own state file
   (`~/.hermes/gateway_state.json`) records the last Telegram connection at
   **2026-08-01T21:19:29Z**. The gateway is the only thing that answers Telegram.
-- All **20** `sdlc-sched-*` timers are present but `disabled` — including
+- All **18** `sdlc-sched-*` timers (plus `sdlc-update`) are present but `disabled` — including
   `autonomous-drain`, `pr-auto-review`, `kanban-sync`, `deploy-reconcile`, and
   the daily/weekly self-improvement cycles. `systemctl --user list-timers
   'sdlc-sched-*'` lists **zero**.
@@ -158,11 +158,11 @@ four thin, additive layers on the shipped rails, and switching the machine back
 on with a heartbeat so it can never again go quiet unnoticed.
 
 **A. Cold start + liveness.** Enable and start `hermes-gateway.service` and the
-20 `sdlc-sched-*` timers; add a `sdlc-sched-heartbeat` timer that posts a daily
+18 `sdlc-sched-*` timers (plus `sdlc-update`); add a `sdlc-sched-heartbeat` timer that posts a daily
 one-line Telegram digest (timers alive, drain ticks in 24h, open approvals,
 blocked tasks, spend). Silence becomes a signal instead of an ambiguity.
 
-**B. The portfolio ledger (`pm/portfolio.json` + `agents/portfolio.mjs`).** One
+**B. The portfolio ledger (`portfolio.json` + `agents/portfolio.mjs`).** One
 entry per project: name, repo, local path, `owner: self | client`, client name,
 live URL, lifecycle stage, cadence, whether autonomous drain is enabled, and a
 free-text "what this is." Seeded from the existing repos. `portfolio.mjs`
@@ -259,7 +259,7 @@ Everything is zero-dependency Node stdlib, every script tested and
 | Alternative | Reason Rejected |
 |-------------|-----------------|
 | Build a custom framework to replace Hermes | Hermes already provides the Telegram gateway, tool-calling agent, skills, kanban, sandboxes, and OpenRouter fallback ladder — all working and integrated. Replacing it discards a year of proven rails to re-earn the same capabilities. This change is a portfolio layer *on* Hermes, not instead of it. |
-| Use Hermes' kanban (`kanban.db`) as the portfolio ledger | The kanban is the *view*, not the source — it is SQLite-in-`~/.hermes`, not versioned, not reviewable in a PR, and not readable by the framework's stdlib scripts without shelling out. `pm/portfolio.json` stays the source of truth and syncs into the board through the existing bridge, matching the "three runtimes, one ledger" principle already established. |
+| Use Hermes' kanban (`kanban.db`) as the portfolio ledger | The kanban is the *view*, not the source — it is SQLite-in-`~/.hermes`, not versioned, not reviewable in a PR, and not readable by the framework's stdlib scripts without shelling out. `portfolio.json` stays the source of truth and syncs into the board through the existing bridge, matching the "three runtimes, one ledger" principle already established. |
 | Finish `level-6-autonomous-activation` first (46 tasks) | It is a maturity-score change, not a capability change; its remaining work does not unblock any part of Bryce's stated vision, and starting there delays the cold start by weeks. Portfolio + tiering raise the same Observability and Deployment dimensions as a side effect. |
 | Rely on the playbook's prose guardrails for client data | Prose does not survive a model swap, a context compaction, or a cheap fallback rung. The whole point of the framework is that guardrails are code with tests. |
 | Add environment tiering later, after client work starts | The first client engagement is exactly when the guardrail must already exist. Retrofitting a safety boundary around live customer data is strictly worse than building it while the only customer relationship is one Bryce controls end to end. |
@@ -281,10 +281,11 @@ both ride entirely on artifacts that already exist.
 
 ### In Scope
 
-- Enabling and starting `hermes-gateway.service` + the 20 `sdlc-sched-*` timers,
+- Enabling and starting `hermes-gateway.service` + the 18 `sdlc-sched-*` timers
+  (plus `sdlc-update`),
   in two waves, with verification.
 - `agents/heartbeat.mjs` + `sdlc-sched-heartbeat` timer — daily Telegram digest.
-- `pm/portfolio.json` schema + `agents/portfolio.mjs`
+- `portfolio.json` schema + `agents/portfolio.mjs`
   (`list|show|add|status|sync`) + seeding from existing repos.
 - Portfolio → kanban surfacing through the existing `command-center-sync`
   bridge.
@@ -328,7 +329,7 @@ Reviewed; none block, and one requires a deliberate decision:
   project registry with `enable/disable/list/add/remove/status`, which was never
   built (its timers were delivered by `scheduler-daemon` instead). The portfolio
   ledger is a strict superset of it — same verbs, plus ownership, client,
-  environments, and tiering. **Decision: extend, do not fork.** `pm/portfolio.json`
+  environments, and tiering. **Decision: extend, do not fork.** `portfolio.json` (repo root — `pm/` is gitignored)
   is the single registry; T-103/T-104 are marked superseded in design, and the
   `enabled` toggle they specify is carried forward as a portfolio field.
 - **`deploy-runner.mjs`** — overlaps `autonomous-deploy-pipeline`,
@@ -363,6 +364,6 @@ Reviewed; none block, and one requires a deliberate decision:
 ## Next Step
 
 If approved: proceed to design phase using `openspec-continue-change`. The design
-must settle, at minimum: the `pm/portfolio.json` schema; the exact `env-guard`
+must settle, at minimum: the `portfolio.json` schema; the exact `env-guard`
 decision table and its failure-closed semantics; where the guard is invoked from
 so it cannot be bypassed; and the wireframe artifact's format and hand-off.
