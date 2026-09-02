@@ -425,7 +425,7 @@ Phase 1, but not the guard.
 
 ### Phase 6: Wireframe gate
 
-- [ ] **T-601**: Extend `mission-bootstrap.mjs` to provision a **staging +
+- [x] **T-601**: Extend `mission-bootstrap.mjs` to provision a **staging +
       production pair** and register both in `portfolio.json` with tiers
       `scratch` and `internal-production`.
   - Files: `agents/mission-bootstrap.mjs`

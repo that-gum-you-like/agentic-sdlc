@@ -26,6 +26,7 @@ import { execFileSync } from 'child_process';
 import { dirname, join, resolve } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
+import { load as loadPortfolio, add as addPortfolioEntry } from './portfolio.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -59,6 +60,49 @@ export function missionDomainFor(name, baseDomain = MISSION_BASE_DOMAIN) {
  */
 export function vercelDomainAddArgs(sub) {
   return ['domains', 'add', sub];
+}
+
+// ---------------------------------------------------------------------------
+// Environment pair + portfolio registration (wireframe-gate REQ-003, T-601)
+// ---------------------------------------------------------------------------
+
+/**
+ * The two environments a bootstrapped mission is born with (REQ-003): staging
+ * on the scratch tier, production on internal-production. A mission is NEVER
+ * born customer-production — that tier is a hand edit to portfolio.json,
+ * reviewed and dated, never a bootstrap output.
+ */
+export const MISSION_ENVIRONMENTS = Object.freeze([
+  { name: 'staging', tier: 'scratch', agentWritable: true },
+  { name: 'production', tier: 'internal-production', agentWritable: false, defaultDeploy: true },
+]);
+
+/** The portfolio project entry a fresh mission registers as. */
+export function buildPortfolioEntry(name, { description = '' } = {}) {
+  return {
+    name,
+    description,
+    owner: 'self',
+    stage: 'idea',
+    enabled: true,
+    environments: MISSION_ENVIRONMENTS.map((e) => ({ ...e })),
+  };
+}
+
+/**
+ * Register (or re-confirm) a mission in the portfolio. Idempotent: a second
+ * run finds the name already present and changes nothing — no duplicate entry,
+ * no re-provision (REQ-003). The write goes through portfolio.mjs `add`,
+ * which rejects the entry if it would fail portfolio schema validation.
+ *
+ * @returns {{ doc: object, status: 'added' | 'exists' }}
+ */
+export function registerInPortfolio(doc, name, opts = {}) {
+  const entry = buildPortfolioEntry(name, opts);
+  if ((doc.projects || []).some((p) => p.name === name)) {
+    return { doc, status: 'exists' };
+  }
+  return { doc: addPortfolioEntry(doc, entry), status: 'added' };
 }
 
 // ---------------------------------------------------------------------------
@@ -173,7 +217,7 @@ function sh(cmd, args, opts = {}) {
   return execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts });
 }
 
-export async function bootstrap({ name, description = '', deploy = true, dryRun = false, domain = MISSION_BASE_DOMAIN, home = homedir(), log = (m) => console.log(`[mission-bootstrap] ${m}`) }) {
+export async function bootstrap({ name, description = '', deploy = true, dryRun = false, domain = MISSION_BASE_DOMAIN, home = homedir(), portfolioPath = join(FRAMEWORK_REPO, 'portfolio.json'), log = (m) => console.log(`[mission-bootstrap] ${m}`) }) {
   if (!validateName(name)) {
     throw new Error(`invalid mission name "${name}" — kebab-case, 2-39 chars, [a-z0-9-], no leading digit/dash`);
   }
@@ -212,6 +256,19 @@ export async function bootstrap({ name, description = '', deploy = true, dryRun 
     const path = join(projectDir, 'agents', 'project.json');
     const project = JSON.parse(readFileSync(path, 'utf8'));
     writeFileSync(path, JSON.stringify(patchProjectJson(project, { name, deploy }), null, 2) + '\n');
+  });
+
+  // 5.5. Portfolio registration — the mission is born with exactly two tiered
+  // environments (wireframe-gate REQ-003). Idempotent: a re-run finds the name
+  // already present and changes nothing.
+  step(`portfolio: register ${name} — ${MISSION_ENVIRONMENTS.map((e) => `${e.name} (${e.tier})`).join(' + ')} in ${portfolioPath}`, () => {
+    const { doc, status } = registerInPortfolio(loadPortfolio(portfolioPath), name, { description });
+    if (status === 'added') {
+      writeFileSync(portfolioPath, JSON.stringify(doc, null, 2) + '\n');
+      log(`  portfolio: ${name} registered — staging (scratch) + production (internal-production)`);
+    } else {
+      log(`  portfolio: ${name} already registered — no change`);
+    }
   });
 
   // 6. gitignore + initial push
@@ -287,6 +344,7 @@ export async function bootstrap({ name, description = '', deploy = true, dryRun 
   log(`MISSION READY: ${name}`);
   log(`  project:   ${projectDir}`);
   log(`  repo:      https://github.com/${GH_OWNER}/${name}`);
+  log(`  environments: ${MISSION_ENVIRONMENTS.map((e) => `${e.name} (${e.tier})`).join(' + ')}${dryRun ? ' — nothing written (dry-run)' : ' — registered in portfolio.json'}`);
   log(`  smoke URL: ${deploy ? (domain ? `https://${missionDomainFor(name, domain)} (fallback ${smokeUrlFor(name)})` : smokeUrlFor(name)) : '(deploy dark)'}`);
   log(`  next:      author openspec artifacts + seed tasks/queue/*.json in the project,`);
   log(`             git push, then the ${name}-drain timer takes over.`);
