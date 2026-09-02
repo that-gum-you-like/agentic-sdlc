@@ -150,6 +150,13 @@
       "script": "/usr/bin/env SDLC_PROJECT_DIR=/home/bryce/personal-website node /home/bryce/agentic-sdlc/agents/pr-auto-review.mjs",
       "description": "PR auto-review for personal-website (mission-bootstrap)",
       "session": "isolated"
+    },
+    {
+      "name": "heartbeat",
+      "cron": "23 8 * * *",
+      "script": "node ~/agentic-sdlc/agents/heartbeat.mjs",
+      "description": "Daily liveness digest to Telegram: timers alive, drain ticks, merges, open approvals, blocked tasks, spend, health. Sent even when nominal \u2014 silence must never be ambiguous. Replaces the per-tick drain chatter.",
+      "session": "isolated"
     }
   ]
 }

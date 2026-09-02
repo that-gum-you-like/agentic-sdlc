@@ -367,7 +367,7 @@ Phase 1, but not the guard.
   - Notes: This is the mitigation for the highest-likelihood risk in the design
     — the portfolio becoming another lying dashboard.
 
-- [ ] **T-405**: Register the heartbeat in `agents/cron-schedule.json` and
+- [x] **T-405**: Register the heartbeat in `agents/cron-schedule.json` and
       install via `scheduler-install.mjs`, matching sibling units' PATH,
       `WorkingDirectory`, and `EnvironmentFile=-%h/.hermes/.env`.
   - Files: `agents/cron-schedule.json`
