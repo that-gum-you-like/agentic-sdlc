@@ -437,7 +437,7 @@ Phase 1, but not the guard.
   - Parallel: blocked-by T-103
   - Complexity: M
 
-- [ ] **T-602**: Add `--client <name>` setting `owner: client` + `client`, and
+- [x] **T-602**: Add `--client <name>` setting `owner: client` + `client`, and
       assert **no code path** can write `customer-production`.
   - Files: `agents/mission-bootstrap.mjs`
   - Spec: wireframe-gate/REQ-004
