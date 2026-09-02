@@ -72,6 +72,39 @@ per-project stage and health, live URLs, open approvals, drain activity, spend.
   discovering its rough edges on a client.
 - Out of scope for v1: invoicing, contracts, money, client logins.
 
+**UI — reuse Granary, do not reinvent (Bryce, 2026-09-02).** The hub is built on
+the existing Granary look and the component library, not a new design language.
+Verified available today, all `deps: none`:
+
+| Component | Path | What it gives the hub |
+|---|---|---|
+| `granary-theme` | `web/tokens/granary-theme` | Warm-paper light + green-dark CSS tokens bridged into Tailwind v4 |
+| `granary-ui-kit` | `web/layout/granary-ui-kit` | Page header, rust-banded cards, **stat tiles**, badges, sections, empty states, buttons, table primitives |
+| `collapsible-card` | `web/layout/collapsible-card` | Foldable cards flush with the kit — per-client grouping |
+| `collapsible-section` | `web/layout/collapsible-section` | Breaking a long ops page into on-demand zones |
+| `inline-edit-cell` | `web/editing/inline-edit-cell` | The "light actions" surface — click-to-edit with async save |
+| `info-button` | `web/feedback/info-button` | Plain-language definitions for tier/stage jargon |
+
+Mandatory: run `node ~/component-library/bin/search.mjs <keywords>` before
+authoring any component; on a hit, copy and adapt; on a miss, build it in the
+hub and contribute it back per the library's `AGENTS.md`. Theme integration
+(CSS variables into `globals.css` + Tailwind color mappings) follows
+`references/nextjs-integration.md` in the library.
+
+**Watching it get built (Bryce, 2026-09-02).** Bryce wants to see the hub being
+built through the Hermes portal as it happens. This needs no new machinery —
+it is what the restored stack already does, provided the hub is bootstrapped as
+a registered mission:
+- `mission-bootstrap.mjs` seeds the hub's tasks into `tasks/queue/`
+- `command-center-sync` (every 15 min, live since 2026-09-02) projects them as
+  cards onto the board `hermes dashboard` serves on :7777
+- cards move `todo → running → done` as the drain claims and completes them
+- Telegram announces each merge, and the deploy waits on `APPROVE <sha8>`
+- the wireframe gate delivers a visual checkpoint before any code is written
+The one requirement this places on `business-os` is that the hub's portfolio
+entry and task cards actually appear on the board — covered by
+`portfolio-registry/REQ-004` (T-105) and T-605.
+
 **Complexity:** L. **Blocked on:** `business-os` B + C.
 
 
