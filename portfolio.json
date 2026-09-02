@@ -1,4 +1,179 @@
 {
   "version": 1,
-  "projects": []
+  "projects": [
+    {
+      "name": "agentic-sdlc",
+      "description": "The framework itself — agents, drain, deploy pipeline, OpenSpec workflow.",
+      "owner": "self",
+      "repo": "that-gum-you-like/agentic-sdlc",
+      "path": "/home/bryce/agentic-sdlc",
+      "stage": "maintenance",
+      "enabled": true,
+      "cadence": "continuous",
+      "environments": [
+        { "name": "local", "tier": "scratch", "agentWritable": true }
+      ]
+    },
+    {
+      "name": "tally",
+      "description": "Multi-tenant inventory SaaS for grow-and-sell farms. Live at granary.farm.",
+      "owner": "client",
+      "client": "Texas Olive Ranch",
+      "repo": "that-gum-you-like/tally",
+      "path": "/home/bryce/tally",
+      "liveUrl": "https://granary.farm",
+      "stage": "live",
+      "enabled": false,
+      "cadence": "weekly",
+      "environments": [
+        {
+          "name": "production",
+          "tier": "customer-production",
+          "provider": "supabase",
+          "credentialVars": ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
+          "agentWritable": false,
+          "defaultDeploy": true
+        }
+      ]
+    },
+    {
+      "name": "linguaflow",
+      "description": "Human-to-human language learning platform. AI is a backend tool only, never a tutor.",
+      "owner": "self",
+      "repo": "that-gum-you-like/languageapp",
+      "path": "/home/bryce/languageapp",
+      "stage": "build",
+      "enabled": false,
+      "cadence": "weekly",
+      "environments": [
+        {
+          "name": "production",
+          "tier": "internal-production",
+          "provider": "supabase",
+          "credentialVars": ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
+          "agentWritable": false,
+          "defaultDeploy": true
+        }
+      ]
+    },
+    {
+      "name": "willtopaint",
+      "description": "Gallery and store for the artist William Inder. Live at willtopaint.com.",
+      "owner": "self",
+      "repo": "that-gum-you-like/WilltoPaint",
+      "path": "/home/bryce/willtopaint",
+      "liveUrl": "https://willtopaint.com",
+      "stage": "live",
+      "enabled": false,
+      "cadence": "monthly",
+      "environments": [
+        { "name": "production", "tier": "internal-production", "agentWritable": false, "defaultDeploy": true }
+      ]
+    },
+    {
+      "name": "personal-website",
+      "description": "brycewadley.com — portfolio plus the design workspace at /design.",
+      "owner": "self",
+      "repo": "that-gum-you-like/personal-website",
+      "path": "/home/bryce/personal-website",
+      "liveUrl": "https://brycewadley.com",
+      "stage": "live",
+      "enabled": true,
+      "cadence": "continuous",
+      "environments": [
+        { "name": "production", "tier": "internal-production", "agentWritable": true, "defaultDeploy": true }
+      ]
+    },
+    {
+      "name": "hermes-pilot",
+      "description": "Proving ground for the autonomous idea-to-deploy chain.",
+      "owner": "self",
+      "repo": "that-gum-you-like/hermes-pilot",
+      "path": "/home/bryce/hermes-pilot",
+      "stage": "build",
+      "enabled": true,
+      "cadence": "continuous",
+      "environments": [
+        { "name": "production", "tier": "scratch", "agentWritable": true, "defaultDeploy": true }
+      ]
+    },
+    {
+      "name": "component-library",
+      "description": "44+ copy-source UI components. Search before building any UI.",
+      "owner": "self",
+      "repo": "that-gum-you-like/component-library",
+      "path": "/home/bryce/component-library",
+      "stage": "maintenance",
+      "enabled": false,
+      "cadence": "as-needed",
+      "environments": []
+    },
+    {
+      "name": "personal-tools",
+      "description": "Private monorepo — screenrec, nellis-scout.",
+      "owner": "self",
+      "repo": "that-gum-you-like/personal-tools",
+      "path": "/home/bryce/personal-tools",
+      "stage": "maintenance",
+      "enabled": false,
+      "cadence": "as-needed",
+      "environments": [
+        { "name": "local", "tier": "scratch", "agentWritable": true }
+      ]
+    },
+    {
+      "name": "ai-gateway",
+      "description": "Metered AI gateway on Vercel; serves Ask Meadow.",
+      "owner": "self",
+      "repo": "that-gum-you-like/ai-gateway",
+      "path": "/home/bryce/ai-gateway",
+      "stage": "live",
+      "enabled": false,
+      "cadence": "as-needed",
+      "environments": [
+        { "name": "production", "tier": "internal-production", "agentWritable": false, "defaultDeploy": true }
+      ]
+    },
+    {
+      "name": "peach-shaker-5000",
+      "description": "Expo React Native shake-the-fruit toy. Blocked on Apple hardware and store accounts.",
+      "owner": "self",
+      "repo": "that-gum-you-like/peach-shaker-5000",
+      "path": "/home/bryce/peach-shaker-5000",
+      "stage": "build",
+      "enabled": false,
+      "cadence": "as-needed",
+      "environments": []
+    },
+    {
+      "name": "cyberdeck",
+      "description": "ESP32 cyberdeck alarm clock and pet game.",
+      "owner": "self",
+      "repo": "that-gum-you-like/cyberdeck",
+      "path": "/home/bryce/cyberdeck",
+      "stage": "build",
+      "enabled": false,
+      "cadence": "as-needed",
+      "environments": []
+    },
+    {
+      "name": "wireframe-live",
+      "description": "Superseded by the /design workspace inside personal-website. Retained for its unpushed history.",
+      "owner": "self",
+      "repo": "that-gum-you-like/wireframe-live",
+      "path": "/home/bryce/wireframe-live",
+      "stage": "parked",
+      "enabled": false,
+      "environments": []
+    },
+    {
+      "name": "personal",
+      "description": "Non-code lane — chores and notes that are not tied to a repo.",
+      "owner": "self",
+      "stage": "maintenance",
+      "enabled": false,
+      "cadence": "continuous",
+      "environments": []
+    }
+  ]
 }

@@ -817,21 +817,78 @@ async function runLayer5_CLIGuards() {
 // Main
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Layer 6: Portfolio Integrity — the commit-time half of the fail-closed guard
+//
+// env-guard.mjs denies at runtime anything it cannot positively identify as a
+// permissive tier. That protects the customer's data but only tells you at the
+// moment an agent is already blocked. This layer catches the same mistake at
+// commit time — a forgotten `tier`, a client project with no client, a secret
+// pasted where a variable NAME belongs — so the failure surfaces in review
+// rather than in production.
+// Spec: openspec/changes/business-os/specs/portfolio-registry.md REQ-003
+// ---------------------------------------------------------------------------
+
+async function runLayer6_Portfolio() {
+  const layerName = 'Portfolio Integrity';
+  const portfolioPath = process.env.PORTFOLIO_PATH || path.join(__dirname, '..', 'portfolio.json');
+
+  if (!fs.existsSync(portfolioPath)) {
+    // Not every consuming project keeps a portfolio; absence is not a failure.
+    return { name: layerName, status: 'pass', details: ['No portfolio.json — skipped'] };
+  }
+
+  let mod;
+  try {
+    mod = await import('./portfolio.mjs');
+  } catch (err) {
+    return { name: layerName, status: 'fail', details: [`Could not load portfolio.mjs: ${err.message}`] };
+  }
+
+  let doc;
+  try {
+    doc = mod.load(portfolioPath);
+  } catch (err) {
+    return { name: layerName, status: 'fail', details: [err.message] };
+  }
+
+  const errors = mod.validate(doc);
+  if (errors.length) {
+    return {
+      name: layerName,
+      status: 'fail',
+      details: [`portfolio.json has ${errors.length} problem(s):`, ...errors.map((e) => `  - ${e}`)],
+    };
+  }
+
+  const s = mod.status(doc);
+  const details = [
+    `${s.projects} project(s) — ${s.byOwner.client} client, ${s.byOwner.self} internal`,
+    `${s.environments} environment(s): ${Object.entries(s.byTier).map(([t, n]) => `${t}=${n}`).join(' ')}`,
+  ];
+  if (s.missingPath.length) {
+    details.push(`WARN: path missing on disk for: ${s.missingPath.join(', ')}`);
+    return { name: layerName, status: 'warn', details };
+  }
+  return { name: layerName, status: 'pass', details };
+}
+
 async function main() {
   try { logCapabilityUsage('defeatTests', process.env.AGENT || 'system', process.env.TASK_ID || 'unknown', 'four-layer-validate.mjs', 'run'); } catch {}
 
   const targetFiles = await resolveTargetFiles();
 
-  const [layer1, layer2, layer2_5, layer3, layer4, layer5] = await Promise.all([
+  const [layer1, layer2, layer2_5, layer3, layer4, layer5, layer6] = await Promise.all([
     runLayer1(targetFiles),
     runLayer2(targetFiles),
     runLayer2_5_NLP(targetFiles),
     runLayer3(targetFiles),
     runLayer4(targetFiles),
     runLayer5_CLIGuards(),
+    runLayer6_Portfolio(),
   ]);
 
-  const layers = [layer1, layer2, layer2_5, layer3, layer4, layer5];
+  const layers = [layer1, layer2, layer2_5, layer3, layer4, layer5, layer6];
   const passed = layers.every((l) => l.status === 'pass' || l.status === 'warn');
 
   const report = { passed, layers };

@@ -38,6 +38,7 @@ import { dirname, resolve, join } from 'node:path';
 import fs from 'node:fs';
 import { runKanban, sync as bridgeSync, readTasks } from './kanban-bridge.mjs';
 import { buildRegistry } from './agent-registry.mjs';
+import * as portfolioModule from './portfolio.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const PROJECT_DIR = process.env.SDLC_PROJECT_DIR || resolve(dirname(__filename), '..');
@@ -48,6 +49,7 @@ const STATE_PATH = join(PM_DIR, 'command-center-links.json');
 const APPROVALS_PATH = join(PM_DIR, 'approvals.json');
 const RUNS_PATH = join(PM_DIR, 'runs.json');
 const LINKS_PATH = join(PM_DIR, 'kanban-links.json');
+const PORTFOLIO_PATH = process.env.PORTFOLIO_PATH || join(PROJECT_DIR, 'portfolio.json');
 
 export const SYNC_AUTHOR = 'sdlc-sync';
 const MAX_RUN_COMMENTS_PER_PASS = 20;
@@ -78,6 +80,7 @@ function loadState() {
     linkedPairs: s.linkedPairs || [], // `${parentKid}:${childKid}` already linked
     completedCards: s.completedCards || [], // kanban ids we already drove to done
     parkedCards: s.parkedCards || [],       // kanban ids we already drove to scheduled (Parked)
+    portfolio: s.portfolio || {},   // project name -> kanban id
   };
 }
 function kanbanId(created) {
@@ -516,6 +519,59 @@ function writeAgentRegistry() {
  * One full pass. Sections are isolated: a failure is captured per-section so
  * the rest of the board still fills. Returns per-section results.
  */
+/**
+ * Portfolio projects -> board cards, keyed on project name.
+ *
+ * The roster is the business view: which projects exist, who they are for, and
+ * which environments are real. `stage: parked` maps to the Parked lane so the
+ * board agrees with the ledger rather than showing every project as active.
+ * Spec: openspec/changes/business-os/specs/portfolio-registry.md REQ-004
+ */
+export function syncPortfolio(state, boardById) {
+  let projects = [];
+  try {
+    if (!fs.existsSync(PORTFOLIO_PATH)) return { projects: 0, created: 0, parked: 0, skipped: 'no portfolio.json' };
+    projects = portfolioModule.load(PORTFOLIO_PATH).projects || [];
+  } catch (e) {
+    // A broken portfolio must not abort the rest of the sync; Layer 6 of
+    // four-layer-validate is what fails loudly on malformed content.
+    return { projects: 0, created: 0, parked: 0, error: e.message };
+  }
+
+  let created = 0, parked = 0;
+  for (const p of projects) {
+    const who = p.owner === 'client' ? (p.client || 'client') : 'Nels Workshop';
+    const envs = (p.environments || []).map((e) => `${e.name}: ${e.tier}`).join(', ') || 'none registered';
+    const body = [
+      p.description || '',
+      '',
+      `Owner: ${p.owner === 'client' ? `client — ${who}` : 'self (Nels Workshop)'}`,
+      `Stage: ${p.stage}`,
+      `Autonomous drain: ${p.enabled ? 'enabled' : 'disabled'}`,
+      p.repo ? `Repo: ${p.repo}` : '',
+      p.liveUrl ? `Live: ${p.liveUrl}` : '',
+      `Environments: ${envs}`,
+    ].filter(Boolean).join('\n');
+
+    let kid = state.portfolio[p.name];
+    if (!kid) {
+      const args = ['create', `Project: ${p.name}`, '--idempotency-key', `portfolio:${p.name}`, '--json',
+        '--body', body, '--priority', '150', '--created-by', SYNC_AUTHOR];
+      kid = kanbanId(runKanban(args, { json: true }));
+      if (!kid) continue;
+      created++;
+      state.portfolio[p.name] = kid;
+    }
+
+    if (p.stage === 'parked') {
+      if (parkCard(kid, boardById, state, `PARKED — stage: parked in portfolio.json. Un-park by changing the stage.`)) parked++;
+    } else {
+      unparkCard(kid, boardById, state);
+    }
+  }
+  return { projects: projects.length, created, parked };
+}
+
 export function fullSync({ reconcile = false } = {}) {
   const state = loadState();
   const results = {};
@@ -531,6 +587,7 @@ export function fullSync({ reconcile = false } = {}) {
   try { boardById = boardMap(); } catch { /* board unreadable -> treat as empty */ }
   let changeList = [];
   section('changes', () => { const r = syncChanges(state, boardById); changeList = r.list; return { changes: r.changes, created: r.created, phaseComments: r.phaseComments, completed: r.completed, parked: r.parked, retired: r.retired }; });
+  section('portfolio', () => syncPortfolio(state, boardById));
   section('subtasks', () => syncSubtasks(state, boardById, changeList));
   section('backlog', () => syncBacklog(state, boardById));
   section('links', () => linkQueueTasks(state, changeList));
