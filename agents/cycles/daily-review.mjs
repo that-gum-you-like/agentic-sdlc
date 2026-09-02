@@ -187,6 +187,11 @@ ${matSection}`;
   return summary;
 }
 
+// Activity headings the daily review records into (REQ-004). The framework
+// template ships `## Recent Activity`, but a live dashboard may carry
+// `## Recent Changes (OpenSpec)` instead — target whichever actually exists.
+const ACTIVITY_HEADERS = ['## Recent Activity', '## Recent Changes (OpenSpec)'];
+
 function updateDashboard(summary, actionItemsSection) {
   if (!existsSync(DASHBOARD_PATH)) {
     console.error('Dashboard not found at', DASHBOARD_PATH);
@@ -194,20 +199,35 @@ function updateDashboard(summary, actionItemsSection) {
   }
 
   let dashboard = readFileSync(DASHBOARD_PATH, 'utf8');
+  const warnings = [];
 
-  // Update the "Recent Activity" section
-  const activityHeader = '## Recent Activity';
-  const activityIdx = dashboard.indexOf(activityHeader);
-  if (activityIdx >= 0) {
-    const date = new Date().toISOString().split('T')[0];
-    const time = new Date().toTimeString().split(' ')[0].substring(0, 5);
+  const date = new Date().toISOString().split('T')[0];
+  const time = new Date().toTimeString().split(' ')[0].substring(0, 5);
+
+  // Record the activity row under a heading that actually exists (REQ-004).
+  const activityHeader = ACTIVITY_HEADERS.find(h => dashboard.includes(h));
+  if (activityHeader) {
     const newEntry = `| ${date} ${time} | System | Daily review completed |`;
+    const activityIdx = dashboard.indexOf(activityHeader);
 
-    // Find the table and add entry
+    // Prefer inserting after the table's separator row when a table follows
+    // the heading; otherwise insert directly after the heading line.
+    let insertPoint = -1;
     const tableStart = dashboard.indexOf('|', activityIdx + activityHeader.length);
-    const headerEnd = dashboard.indexOf('\n', dashboard.indexOf('\n', tableStart) + 1);
-    const insertPoint = headerEnd + 1;
+    if (tableStart >= 0) {
+      const firstRowEnd = dashboard.indexOf('\n', tableStart);
+      const separatorEnd = firstRowEnd >= 0 ? dashboard.indexOf('\n', firstRowEnd + 1) : -1;
+      if (separatorEnd >= 0) insertPoint = separatorEnd + 1;
+    }
+    if (insertPoint < 0) {
+      const headingLineEnd = dashboard.indexOf('\n', activityIdx);
+      insertPoint = headingLineEnd >= 0 ? headingLineEnd + 1 : dashboard.length;
+    }
     dashboard = dashboard.slice(0, insertPoint) + newEntry + '\n' + dashboard.slice(insertPoint);
+  } else {
+    warnings.push(
+      `pm/DASHBOARD.md has no activity heading (looked for: ${ACTIVITY_HEADERS.join(', ')}) — activity row not recorded`
+    );
   }
 
   // Inject or replace action items section at the top of the dashboard content
@@ -227,13 +247,25 @@ function updateDashboard(summary, actionItemsSection) {
     }
   }
 
-  // Update Last Updated date
-  dashboard = dashboard.replace(
-    /\*\*Last Updated:\*\* .*/,
-    `**Last Updated:** ${new Date().toISOString().split('T')[0]}`
-  );
+  // Update Last Updated date — match case-insensitively and preserve the
+  // file's own label casing (REQ-004: the live dashboard uses `**Last updated:**`).
+  const lastUpdatedMatch = dashboard.match(/(\*\*Last [Uu]pdated:\*\*).*/);
+  if (lastUpdatedMatch) {
+    dashboard = dashboard.replace(
+      /(\*\*Last [Uu]pdated:\*\*).*/,
+      `$1 ${date}`
+    );
+  } else {
+    warnings.push('pm/DASHBOARD.md has no **Last Updated:** line — date not updated');
+  }
 
   writeFileSync(DASHBOARD_PATH, dashboard);
+
+  // Missing expected content must surface on stderr, never silently no-op
+  // (REQ-004 acceptance).
+  for (const warning of warnings) {
+    console.error(`⚠ ${warning}`);
+  }
 }
 
 /**
