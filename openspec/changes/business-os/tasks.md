@@ -331,7 +331,7 @@ Phase 1, but not the guard.
     was live; missing headings reported on stderr rather than silently no-op'd
   - Complexity: S
 
-- [ ] **T-402**: Implement `agents/heartbeat.mjs` — compose one daily message
+- [x] **T-402**: Implement `agents/heartbeat.mjs` — compose one daily message
       (timers alive vs expected, drain ticks 24h, PRs merged, open approvals,
       blocked tasks, open chore/note counts, spend, health degradation).
       Abnormal items lead; nominal days still send.
