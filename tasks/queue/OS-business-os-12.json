@@ -3,12 +3,12 @@
   "title": "T-503: Author the `sdlc-inbox` Hermes skill (source in `skills/`,",
   "description": "- [ ] **T-503**: Author the `sdlc-inbox` Hermes skill (source in `skills/`,\n      installed to `~/.hermes/skills/`) that captures a dictated item as a\n      schema-valid `chore`/`note` task against a named project or `personal`.\n  - Files: `skills/sdlc-inbox/SKILL.md`\n  - Spec: personal-task-lane/REQ-003\n  - Agent: sdlc-documentarian\n  - Test: captured item is schema-valid with kind + title + project, requiring\n    no `files[]`/`test_status`/`estimatedTokens`; unknown project falls back to\n    `personal` preserving the original text\n  - Parallel: blocked-by T-501, T-301\n  - Complexity: M",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/business-os/tasks.md",
   "createdAt": "2026-09-02T18:29:42.807Z",
-  "claimedBy": null,
+  "claimedBy": "hermes-drain",
   "testStatus": null,
   "blockedBy": [
     "OS-business-os-10"
@@ -17,5 +17,10 @@
     "business-os",
     "hermes-handoff",
     "phase-5"
-  ]
+  ],
+  "_file": "OS-business-os-12.json",
+  "claimedAt": "2026-09-04T05:19:17.662Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-09-04T05:20:27.175Z"
 }
