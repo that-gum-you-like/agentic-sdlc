@@ -9,7 +9,7 @@
  *   node agents/kanban-bridge.mjs sync [--reconcile]   # push tasks -> board
  *   node agents/kanban-bridge.mjs status               # dry-run diff, no writes
  *
- * Exports (for tests): mapStatus, mapPriority, runKanban, readTasks, sync, statusReport
+ * Exports (for tests): mapStatus, mapPriority, runKanban, readTasks, cardTitle, sync, statusReport
  */
 
 import { spawnSync } from 'node:child_process';
@@ -92,9 +92,22 @@ function saveLinks(links) {
   fs.writeFileSync(LINKS_PATH, JSON.stringify(links, null, 2) + '\n');
 }
 
+/**
+ * Card title for a task. Non-code kinds carry a visible `[chore]` / `[note]`
+ * prefix so the board distinguishes them at a glance (kanban create has no
+ * tag flag — the title prefix IS the marker). Absent/unknown kinds stay
+ * unprefixed: absence means code everywhere.
+ */
+export function cardTitle(task) {
+  const base = task.title || task.id;
+  const kind = String(task.kind || '').toLowerCase();
+  if (kind === 'chore' || kind === 'note') return `[${kind}] ${base}`;
+  return base;
+}
+
 /** Upsert one task, then reconcile its lane only if it differs. */
 function syncTask(task, links, boardById) {
-  const args = ['create', task.title || task.id, '--idempotency-key', task.id, '--json'];
+  const args = ['create', cardTitle(task), '--idempotency-key', task.id, '--json'];
   if (task.description) args.push('--body', String(task.description).slice(0, 4000));
   if (task.assignee) args.push('--assignee', String(task.assignee));
   const prio = mapPriority(task.priority);

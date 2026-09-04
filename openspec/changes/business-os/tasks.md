@@ -413,7 +413,7 @@ Phase 1, but not the guard.
   - Parallel: blocked-by T-501, T-301
   - Complexity: M
 
-- [ ] **T-504**: Surface non-code items on the board (distinguishable by kind)
+- [x] **T-504**: Surface non-code items on the board (distinguishable by kind)
       and in the heartbeat; completing a card reconciles back to the task file.
   - Files: `agents/command-center-sync.mjs`, `agents/heartbeat.mjs`
   - Spec: personal-task-lane/REQ-004

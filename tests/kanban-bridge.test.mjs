@@ -34,6 +34,7 @@ const hermesLog = join(fakeBin, 'calls.log');
 mkdirSync(join(proj, 'tasks', 'queue'), { recursive: true });
 
 // A-1: completed task, with assignee + HIGH priority.  B-1: pending, no assignee/priority.
+// C-1/D-1: non-code items (chore/note) — must sync like any other card, kind-visible.
 writeFileSync(join(proj, 'tasks', 'queue', 'A-1.json'), JSON.stringify({
   id: 'A-1', title: 'Alpha task', description: 'do alpha', assignee: 'sdlc-developer',
   priority: 'HIGH', status: 'completed',
@@ -41,9 +42,16 @@ writeFileSync(join(proj, 'tasks', 'queue', 'A-1.json'), JSON.stringify({
 writeFileSync(join(proj, 'tasks', 'queue', 'B-1.json'), JSON.stringify({
   id: 'B-1', title: 'Beta task', status: 'pending',
 }));
+writeFileSync(join(proj, 'tasks', 'queue', 'C-1.json'), JSON.stringify({
+  id: 'C-1', title: 'Chore task', status: 'pending', kind: 'chore',
+}));
+writeFileSync(join(proj, 'tasks', 'queue', 'D-1.json'), JSON.stringify({
+  id: 'D-1', title: 'Note task', status: 'pending', kind: 'note',
+}));
 writeFileSync(join(proj, 'tasks', 'queue', 'bad.json'), '{ not valid json');
 
-// fake `hermes`: logs argv, echoes {id:t_<key>} for create, [] for list, ok otherwise
+// fake `hermes`: logs argv, echoes {id:t_<key>} for create, list -> $HERMES_LIST_FILE or [],
+// ok otherwise
 const shim = `#!/usr/bin/env node
 import fs from 'fs';
 const a = process.argv.slice(2);
@@ -52,7 +60,8 @@ if (a[1] === 'create') {
   const i = a.indexOf('--idempotency-key');
   process.stdout.write(JSON.stringify({ id: 't_' + (i >= 0 ? a[i + 1] : 'x') }));
 } else if (a[1] === 'list') {
-  process.stdout.write('[]');
+  const listFile = process.env.HERMES_LIST_FILE;
+  process.stdout.write(listFile ? fs.readFileSync(listFile, 'utf8') : '[]');
 } else {
   process.stdout.write('ok');
 }
@@ -88,23 +97,23 @@ test('mapPriority: HIGH=100, MEDIUM=50, LOW=10, other=0, CRITICAL=300', () => {
 console.log('\n📋 kanban-bridge: readTasks');
 test('readTasks returns valid tasks, skips malformed', () => {
   const tasks = bridge.readTasks();
-  assertEqual(tasks.length, 2, 'should read A-1 and B-1, skip bad.json');
+  assertEqual(tasks.length, 4, 'should read A-1, B-1, C-1, D-1; skip bad.json');
   assert(tasks.some((t) => t.id === 'A-1') && tasks.some((t) => t.id === 'B-1'), 'both ids present');
 });
 
 console.log('\n📋 kanban-bridge: status (dry-run, no writes)');
 test('statusReport counts to-create against empty board', () => {
   const r = bridge.statusReport();
-  assertEqual(r.total, 2);
-  assertEqual(r.toCreate, 2, 'empty board -> both to create');
-  assert(r.laneCounts.done === 1 && r.laneCounts.todo === 1, 'lane counts by mapped status');
+  assertEqual(r.total, 4);
+  assertEqual(r.toCreate, 4, 'empty board -> all to create');
+  assert(r.laneCounts.done === 1 && r.laneCounts.todo === 3, 'lane counts by mapped status');
 });
 
 console.log('\n📋 kanban-bridge: sync (fake hermes)');
 test('Scenario 1+2: sync creates cards with idempotency-key per task', () => {
   writeFileSync(hermesLog, '');
   const r = bridge.sync({});
-  assertEqual(r.total, 2);
+  assertEqual(r.total, 4);
   const log = readFileSync(hermesLog, 'utf8');
   assert(log.includes('create Alpha task') && log.includes('--idempotency-key A-1'), 'A-1 created with its id as key');
   assert(log.includes('--idempotency-key B-1'), 'B-1 created with its id as key');
@@ -121,6 +130,56 @@ test('Scenario 5: task without assignee/priority still created', () => {
 test('link map persisted', () => {
   const links = JSON.parse(readFileSync(join(proj, 'pm', 'kanban-links.json'), 'utf8'));
   assertEqual(links['A-1'], 't_A-1'); assertEqual(links['B-1'], 't_B-1');
+});
+
+console.log('\n📋 kanban-bridge: non-code cards (personal-task-lane REQ-004)');
+test('cardTitle: chore/note get a visible [kind] prefix; code/absent stay bare', () => {
+  assertEqual(bridge.cardTitle({ id: 'X-1', title: 'Tidy mailbox', kind: 'chore' }), '[chore] Tidy mailbox');
+  assertEqual(bridge.cardTitle({ id: 'X-2', title: 'Remember coffee', kind: 'note' }), '[note] Remember coffee');
+  assertEqual(bridge.cardTitle({ id: 'X-3', title: 'Code task', kind: 'code' }), 'Code task');
+  assertEqual(bridge.cardTitle({ id: 'X-4', title: 'No kind' }), 'No kind', 'absent kind means code -> no prefix');
+  assertEqual(bridge.cardTitle({ id: 'X-5', kind: 'chore' }), '[chore] X-5', 'falls back to the task id');
+});
+test('REQ-004: non-code cards are created idempotently (same key) and kind-visible', () => {
+  writeFileSync(hermesLog, '');
+  const r = bridge.sync({});
+  assertEqual(r.total, 4);
+  const log = readFileSync(hermesLog, 'utf8');
+  const cLine = log.split('\n').find((l) => l.includes('create [chore] Chore task'));
+  const dLine = log.split('\n').find((l) => l.includes('create [note] Note task'));
+  assert(cLine && cLine.includes('--idempotency-key C-1'), `chore card carries its kind prefix, got: ${cLine || 'absent'}`);
+  assert(dLine && dLine.includes('--idempotency-key D-1'), `note card carries its kind prefix, got: ${dLine || 'absent'}`);
+});
+test('REQ-004: re-sync issues the same idempotency keys -> same card ids, no duplicates', () => {
+  // Second pass: same keys (dedup server-side), same ids in the link map.
+  const before = JSON.parse(readFileSync(join(proj, 'pm', 'kanban-links.json'), 'utf8'));
+  writeFileSync(hermesLog, '');
+  const r = bridge.sync({});
+  assertEqual(r.total, 4);
+  const log = readFileSync(hermesLog, 'utf8');
+  for (const id of ['A-1', 'B-1', 'C-1', 'D-1']) {
+    const lines = log.split('\n').filter((l) => l.includes(`--idempotency-key ${id}`));
+    assertEqual(lines.length, 1, `${id} gets exactly one create per pass (no duplicate card ids)`);
+    assert(lines[0].includes(`--idempotency-key ${id}`), `${id} re-syncs with its original key`);
+  }
+  const after = JSON.parse(readFileSync(join(proj, 'pm', 'kanban-links.json'), 'utf8'));
+  assert(JSON.stringify(after) === JSON.stringify(before), 'link map unchanged across passes -> card ids stable');
+});
+test('REQ-004: completing a non-code card reconciles status back to the task file', () => {
+  // Board says t_C-1 is done; the chore task file must flip to completed with kind intact.
+  const listFile = join(fakeBin, 'list.json');
+  writeFileSync(listFile, JSON.stringify([{ id: 't_C-1', status: 'done', completed_at: 1750000000 }]));
+  process.env.HERMES_LIST_FILE = listFile;
+  try {
+    const r = bridge.sync({ reconcile: true });
+    assert(r.reversed.some((x) => x.id === 'C-1' && x.status === 'completed'), `C-1 reversed, got: ${JSON.stringify(r.reversed)}`);
+  } finally {
+    delete process.env.HERMES_LIST_FILE;
+  }
+  const c1 = JSON.parse(readFileSync(join(proj, 'tasks', 'queue', 'C-1.json'), 'utf8'));
+  assertEqual(c1.status, 'completed', 'task JSON status reconciled from the done card');
+  assert(c1.completed_at, 'completion timestamp recorded');
+  assertEqual(c1.kind, 'chore', 'kind survives reconciliation');
 });
 
 console.log('\n📋 kanban-bridge: error handling');
