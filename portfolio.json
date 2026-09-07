@@ -8,7 +8,7 @@
       "repo": "that-gum-you-like/agentic-sdlc",
       "path": "/home/bryce/agentic-sdlc",
       "stage": "maintenance",
-      "enabled": true,
+      "enabled": false,
       "cadence": "continuous",
       "environments": [
         {
@@ -16,7 +16,8 @@
           "tier": "scratch",
           "agentWritable": true
         }
-      ]
+      ],
+      "holdReason": "On hold 2026-09-07 at Bryce’s direction so the drain supervisor gives all its time to nels-workshop. Re-enable by setting enabled: true."
     },
     {
       "name": "tally",
@@ -74,7 +75,7 @@
       "path": "/home/bryce/willtopaint",
       "liveUrl": "https://willtopaint.com",
       "stage": "live",
-      "enabled": true,
+      "enabled": false,
       "cadence": "weekly",
       "environments": [
         {
@@ -95,7 +96,8 @@
           "defaultDeploy": true
         }
       ],
-      "client": "William Inder"
+      "client": "William Inder",
+      "holdReason": "On hold 2026-09-07 at Bryce’s direction so the drain supervisor gives all its time to nels-workshop. Re-enable by setting enabled: true."
     },
     {
       "name": "personal-website",
@@ -105,7 +107,7 @@
       "path": "/home/bryce/personal-website",
       "liveUrl": "https://brycewadley.com",
       "stage": "live",
-      "enabled": true,
+      "enabled": false,
       "cadence": "continuous",
       "environments": [
         {
@@ -114,7 +116,8 @@
           "agentWritable": true,
           "defaultDeploy": true
         }
-      ]
+      ],
+      "holdReason": "On hold 2026-09-07 at Bryce’s direction so the drain supervisor gives all its time to nels-workshop. Re-enable by setting enabled: true."
     },
     {
       "name": "hermes-pilot",
@@ -123,7 +126,7 @@
       "repo": "that-gum-you-like/hermes-pilot",
       "path": "/home/bryce/hermes-pilot",
       "stage": "build",
-      "enabled": true,
+      "enabled": false,
       "cadence": "continuous",
       "environments": [
         {
@@ -132,7 +135,8 @@
           "agentWritable": true,
           "defaultDeploy": true
         }
-      ]
+      ],
+      "holdReason": "On hold 2026-09-07 at Bryce’s direction so the drain supervisor gives all its time to nels-workshop. Re-enable by setting enabled: true."
     },
     {
       "name": "component-library",
@@ -246,7 +250,8 @@
           ]
         }
       ],
-      "path": "/home/bryce/nels-workshop"
+      "path": "/home/bryce/nels-workshop",
+      "cadence": "continuous"
     }
   ]
 }
