@@ -3,55 +3,55 @@
   "emergencyFallbackModel": "deepseek/deepseek-v4-flash",
   "agents": {
     "sdlc-developer": {
-      "model": "qwen/qwen3-coder",
+      "model": "qwen/qwen3-coder-next",
       "provider": "openrouter",
       "dailyTokens": 500000,
       "permissions": "full-edit",
       "maxInstances": 1,
       "fallbackChain": [
+        "qwen/qwen3-coder-next",
         "qwen/qwen3-coder",
-        "qwen/qwen3-coder-30b-a3b-instruct",
+        "qwen/qwen3-coder-flash",
         "deepseek/deepseek-v4-flash",
-        "deepseek/deepseek-chat-v3.1",
-        "qwen/qwen3-coder:free",
         "llama-3.3-70b-versatile"
       ],
       "activeModel": null,
       "modelPreferences": {
-        "simple fix": "qwen/qwen3-coder:free",
-        "feature": "qwen/qwen3-coder",
-        "architecture": "deepseek/deepseek-chat-v3.1"
+        "simple fix": "qwen/qwen3-coder-flash",
+        "feature": "qwen/qwen3-coder-next",
+        "architecture": "qwen/qwen3.6-plus"
       }
     },
     "jony-aive": {
-      "model": "deepseek/deepseek-chat-v3.1",
+      "model": "qwen/qwen3.6-plus",
       "provider": "openrouter",
       "dailyTokens": 300000,
       "permissions": "full-edit",
       "maxInstances": 1,
       "fallbackChain": [
-        "deepseek/deepseek-chat-v3.1",
-        "deepseek/deepseek-v4-flash",
-        "qwen/qwen3-next-80b-a3b-instruct:free",
+        "qwen/qwen3.6-plus",
+        "qwen/qwen3.5-397b-a17b",
+        "z-ai/glm-5",
+        "deepseek/deepseek-v3.2",
         "llama-3.3-70b-versatile"
       ],
       "activeModel": null,
       "modelPreferences": {
-        "design critique": "deepseek/deepseek-chat-v3.1",
-        "design decision": "deepseek/deepseek-chat-v3.1",
-        "roadmap": "deepseek/deepseek-v4-flash"
+        "design critique": "qwen/qwen3.6-plus",
+        "design decision": "qwen/qwen3.6-plus",
+        "roadmap": "deepseek/deepseek-v3.2"
       }
     },
     "sdlc-reviewer": {
-      "model": "deepseek/deepseek-chat-v3.1",
+      "model": "deepseek/deepseek-v3.2",
       "provider": "openrouter",
       "dailyTokens": 200000,
       "permissions": "read-only",
       "maxInstances": 1,
       "fallbackChain": [
-        "deepseek/deepseek-chat-v3.1",
+        "deepseek/deepseek-v3.2",
+        "qwen/qwen3.6-plus",
         "deepseek/deepseek-v4-flash",
-        "meta-llama/llama-3.3-70b-instruct:free",
         "llama-3.3-70b-versatile"
       ],
       "activeModel": null,
@@ -65,8 +65,8 @@
       "maxInstances": 1,
       "fallbackChain": [
         "deepseek/deepseek-v4-flash",
-        "deepseek/deepseek-chat-v3.1",
-        "qwen/qwen3-next-80b-a3b-instruct:free",
+        "qwen/qwen3.6-flash",
+        "deepseek/deepseek-v3.2",
         "llama-3.3-70b-versatile"
       ],
       "activeModel": null,

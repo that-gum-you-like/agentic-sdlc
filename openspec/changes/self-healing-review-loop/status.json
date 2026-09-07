@@ -2,5 +2,7 @@
   "status": "implemented",
   "phase": "verify",
   "created": "2026-07-06",
-  "lastUpdated": "2026-07-06"
+  "lastUpdated": "2026-09-07",
+  "parked": true,
+  "parkedReason": "Parked to backlog 2026-09-07 at Bryce's direction: implemented and awaiting verification sign-off, not ready to work on. Its tasks.md checkboxes were generating board cards up to 63 days old. Un-park by clearing this flag when verification is picked up."
 }

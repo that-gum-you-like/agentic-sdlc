@@ -1,7 +1,7 @@
 {
   "_meta": {
     "description": "Default model intelligence catalog shipped with the framework. Runtime cache lives in model-intel.json (gitignored) and falls back to this file if missing.",
-    "lastUpdated": "2026-07-05",
+    "lastUpdated": "2026-09-07",
     "version": 1
   },
   "models": {
@@ -99,7 +99,7 @@
         "research": 3
       },
       "limitations": [
-        "Open-source model \u2014 less reliable on edge cases",
+        "Open-source model — less reliable on edge cases",
         "Groq rate limits under heavy load"
       ],
       "bestFor": [
@@ -124,7 +124,7 @@
         "research": 1
       },
       "limitations": [
-        "Small model \u2014 limited reasoning",
+        "Small model — limited reasoning",
         "Unreliable on complex tasks"
       ],
       "bestFor": [
@@ -206,7 +206,7 @@
         "research": 3
       },
       "limitations": [
-        "Lighter model \u2014 less capable than full Flash",
+        "Lighter model — less capable than full Flash",
         "Free tier only"
       ],
       "bestFor": [
@@ -233,8 +233,8 @@
         "research": 1
       },
       "limitations": [
-        "8K context window \u2014 very limited for codebase work",
-        "Small model \u2014 limited reasoning",
+        "8K context window — very limited for codebase work",
+        "Small model — limited reasoning",
         "Free tier only"
       ],
       "bestFor": [
@@ -261,7 +261,7 @@
         "research": 3
       },
       "limitations": [
-        "Newer model \u2014 less battle-tested",
+        "Newer model — less battle-tested",
         "Free tier only"
       ],
       "bestFor": [
@@ -285,7 +285,7 @@
         "research": 3
       },
       "limitations": [
-        "Free tier \u2014 rate-limited (requests/day)",
+        "Free tier — rate-limited (requests/day)",
         "Falls back to paid rungs when throttled"
       ],
       "bestFor": [
@@ -333,7 +333,7 @@
         "research": 3
       },
       "limitations": [
-        "Smaller model \u2014 weaker on architecture"
+        "Smaller model — weaker on architecture"
       ],
       "bestFor": [
         "Cheap paid coding fallback",
@@ -357,7 +357,7 @@
         "research": 4
       },
       "limitations": [
-        "Free tier \u2014 rate-limited"
+        "Free tier — rate-limited"
       ],
       "bestFor": [
         "Design/product reasoning",
@@ -405,7 +405,7 @@
         "research": 4
       },
       "limitations": [
-        "Free tier \u2014 rate-limited",
+        "Free tier — rate-limited",
         "Not coding-specialized"
       ],
       "bestFor": [
@@ -431,7 +431,7 @@
         "research": 4
       },
       "limitations": [
-        "Paid \u2014 cheapest fast large-context rung"
+        "Paid — cheapest fast large-context rung"
       ],
       "bestFor": [
         "Fast cheap coding fallback",
@@ -460,6 +460,172 @@
       "bestFor": [
         "Strong reasoning/review after cheaper rungs",
         "Design critique"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
+    },
+    "qwen/qwen3-coder-next": {
+      "provider": "openrouter",
+      "displayName": "Qwen3 Coder Next",
+      "costPer1MInput": 0.12,
+      "costPer1MOutput": 0.8,
+      "contextWindow": 262144,
+      "maxOutput": 235929,
+      "latencyTier": "medium",
+      "strengths": {
+        "coding": 5,
+        "review": 4,
+        "documentation": 4,
+        "architecture": 4,
+        "research": 4
+      },
+      "limitations": [
+        "Newer release — less field history than qwen3-coder"
+      ],
+      "bestFor": [
+        "Primary coding rung"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
+    },
+    "qwen/qwen3-coder-flash": {
+      "provider": "openrouter",
+      "displayName": "Qwen3 Coder Flash",
+      "costPer1MInput": 0.195,
+      "costPer1MOutput": 0.975,
+      "contextWindow": 1000000,
+      "maxOutput": 65536,
+      "latencyTier": "fast",
+      "strengths": {
+        "coding": 4,
+        "review": 3,
+        "documentation": 4,
+        "architecture": 3,
+        "research": 3
+      },
+      "limitations": [
+        "Speed-tuned; weaker on multi-file reasoning"
+      ],
+      "bestFor": [
+        "Simple fixes",
+        "High-volume small edits"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
+    },
+    "qwen/qwen3.6-plus": {
+      "provider": "openrouter",
+      "displayName": "Qwen3.6 Plus",
+      "costPer1MInput": 0.325,
+      "costPer1MOutput": 1.95,
+      "contextWindow": 1000000,
+      "maxOutput": 65536,
+      "latencyTier": "medium",
+      "strengths": {
+        "coding": 4,
+        "review": 4,
+        "documentation": 5,
+        "architecture": 5,
+        "research": 5
+      },
+      "limitations": [
+        "Not coding-specialised"
+      ],
+      "bestFor": [
+        "Product design judgement",
+        "Architecture and critique"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
+    },
+    "qwen/qwen3.5-397b-a17b": {
+      "provider": "openrouter",
+      "displayName": "Qwen3.5 397B A17B",
+      "costPer1MInput": 0.39,
+      "costPer1MOutput": 2.34,
+      "contextWindow": 262144,
+      "maxOutput": 65536,
+      "latencyTier": "slow",
+      "strengths": {
+        "coding": 4,
+        "review": 5,
+        "documentation": 4,
+        "architecture": 5,
+        "research": 5
+      },
+      "limitations": [
+        "Large MoE — slower first token"
+      ],
+      "bestFor": [
+        "Deep critique",
+        "Long-form reasoning"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
+    },
+    "z-ai/glm-5": {
+      "provider": "openrouter",
+      "displayName": "GLM-5",
+      "costPer1MInput": 0.6,
+      "costPer1MOutput": 1.92,
+      "contextWindow": 204800,
+      "maxOutput": 128000,
+      "latencyTier": "medium",
+      "strengths": {
+        "coding": 4,
+        "review": 5,
+        "documentation": 4,
+        "architecture": 4,
+        "research": 4
+      },
+      "limitations": [
+        "Less field history in this framework"
+      ],
+      "bestFor": [
+        "Reasoning-heavy review"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
+    },
+    "deepseek/deepseek-v3.2": {
+      "provider": "openrouter",
+      "displayName": "DeepSeek V3.2",
+      "costPer1MInput": 0.269,
+      "costPer1MOutput": 0.4,
+      "contextWindow": 163840,
+      "maxOutput": 65536,
+      "latencyTier": "medium",
+      "strengths": {
+        "coding": 4,
+        "review": 4,
+        "documentation": 4,
+        "architecture": 4,
+        "research": 4
+      },
+      "limitations": [
+        "General model — not coding-specialised"
+      ],
+      "bestFor": [
+        "Code review",
+        "Cost-efficient general work"
+      ],
+      "pricingUrl": "https://openrouter.ai/models"
+    },
+    "qwen/qwen3.6-flash": {
+      "provider": "openrouter",
+      "displayName": "Qwen3.6 Flash",
+      "costPer1MInput": 0.1875,
+      "costPer1MOutput": 1.125,
+      "contextWindow": 1000000,
+      "maxOutput": 65536,
+      "latencyTier": "fast",
+      "strengths": {
+        "coding": 3,
+        "review": 3,
+        "documentation": 4,
+        "architecture": 3,
+        "research": 3
+      },
+      "limitations": [
+        "Speed-tuned"
+      ],
+      "bestFor": [
+        "Documentation",
+        "Cheap high-volume work"
       ],
       "pricingUrl": "https://openrouter.ai/models"
     }

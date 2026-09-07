@@ -11,7 +11,11 @@
       "enabled": true,
       "cadence": "continuous",
       "environments": [
-        { "name": "local", "tier": "scratch", "agentWritable": true }
+        {
+          "name": "local",
+          "tier": "scratch",
+          "agentWritable": true
+        }
       ]
     },
     {
@@ -30,7 +34,10 @@
           "name": "production",
           "tier": "customer-production",
           "provider": "supabase",
-          "credentialVars": ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
+          "credentialVars": [
+            "NEXT_PUBLIC_SUPABASE_URL",
+            "SUPABASE_SERVICE_ROLE_KEY"
+          ],
           "agentWritable": false,
           "defaultDeploy": true
         }
@@ -50,7 +57,10 @@
           "name": "production",
           "tier": "internal-production",
           "provider": "supabase",
-          "credentialVars": ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
+          "credentialVars": [
+            "NEXT_PUBLIC_SUPABASE_URL",
+            "SUPABASE_SERVICE_ROLE_KEY"
+          ],
           "agentWritable": false,
           "defaultDeploy": true
         }
@@ -59,16 +69,33 @@
     {
       "name": "willtopaint",
       "description": "Gallery and store for the artist William Inder. Live at willtopaint.com.",
-      "owner": "self",
+      "owner": "client",
       "repo": "that-gum-you-like/WilltoPaint",
       "path": "/home/bryce/willtopaint",
       "liveUrl": "https://willtopaint.com",
       "stage": "live",
-      "enabled": false,
-      "cadence": "monthly",
+      "enabled": true,
+      "cadence": "weekly",
       "environments": [
-        { "name": "production", "tier": "internal-production", "agentWritable": false, "defaultDeploy": true }
-      ]
+        {
+          "name": "staging",
+          "tier": "scratch",
+          "provider": "supabase",
+          "credentialVars": [
+            "NEXT_PUBLIC_SUPABASE_URL",
+            "SUPABASE_SERVICE_ROLE_KEY"
+          ],
+          "agentWritable": true,
+          "note": "Supabase ref cdghcvgjhxehzknwhyye, Will's org. Placeholder content only — never real visitor data."
+        },
+        {
+          "name": "production",
+          "tier": "customer-production",
+          "agentWritable": false,
+          "defaultDeploy": true
+        }
+      ],
+      "client": "William Inder"
     },
     {
       "name": "personal-website",
@@ -81,7 +108,12 @@
       "enabled": true,
       "cadence": "continuous",
       "environments": [
-        { "name": "production", "tier": "internal-production", "agentWritable": true, "defaultDeploy": true }
+        {
+          "name": "production",
+          "tier": "internal-production",
+          "agentWritable": true,
+          "defaultDeploy": true
+        }
       ]
     },
     {
@@ -94,7 +126,12 @@
       "enabled": true,
       "cadence": "continuous",
       "environments": [
-        { "name": "production", "tier": "scratch", "agentWritable": true, "defaultDeploy": true }
+        {
+          "name": "production",
+          "tier": "scratch",
+          "agentWritable": true,
+          "defaultDeploy": true
+        }
       ]
     },
     {
@@ -118,7 +155,11 @@
       "enabled": false,
       "cadence": "as-needed",
       "environments": [
-        { "name": "local", "tier": "scratch", "agentWritable": true }
+        {
+          "name": "local",
+          "tier": "scratch",
+          "agentWritable": true
+        }
       ]
     },
     {
@@ -131,7 +172,12 @@
       "enabled": false,
       "cadence": "as-needed",
       "environments": [
-        { "name": "production", "tier": "internal-production", "agentWritable": false, "defaultDeploy": true }
+        {
+          "name": "production",
+          "tier": "customer-production",
+          "agentWritable": false,
+          "defaultDeploy": true
+        }
       ]
     },
     {
@@ -174,6 +220,32 @@
       "enabled": false,
       "cadence": "continuous",
       "environments": []
+    },
+    {
+      "name": "nels-workshop",
+      "description": "Nels Workshop OS — the console for running the business. Holds client records and discovery recordings, so production is customer-production.",
+      "owner": "self",
+      "stage": "idea",
+      "enabled": true,
+      "environments": [
+        {
+          "name": "staging",
+          "tier": "scratch",
+          "agentWritable": true
+        },
+        {
+          "name": "production",
+          "tier": "customer-production",
+          "agentWritable": false,
+          "defaultDeploy": true,
+          "provider": "supabase",
+          "credentialVars": [
+            "NEXT_PUBLIC_SUPABASE_URL",
+            "SUPABASE_SERVICE_ROLE_KEY",
+            "GROQ_API_KEY"
+          ]
+        }
+      ]
     }
   ]
 }

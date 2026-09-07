@@ -2,6 +2,8 @@
   "status": "implemented",
   "phase": "verify",
   "created": "2026-07-06",
-  "lastUpdated": "2026-07-06",
-  "notes": "Helper + allowlist + tests shipped (PR pending). Deferred: drain wiring (T7) and branch-protection backstop (T8) until Bryce swaps the broad GITHUB_TOKEN for a fine-grained PAT (GITHUB_WRITE_TOKEN)."
+  "lastUpdated": "2026-09-07",
+  "notes": "Helper + allowlist + tests shipped (PR pending). Deferred: drain wiring (T7) and branch-protection backstop (T8) until Bryce swaps the broad GITHUB_TOKEN for a fine-grained PAT (GITHUB_WRITE_TOKEN).",
+  "parked": true,
+  "parkedReason": "Parked to backlog 2026-09-07 at Bryce's direction: implemented and awaiting verification sign-off, not ready to work on. Its tasks.md checkboxes were generating board cards up to 63 days old. Un-park by clearing this flag when verification is picked up."
 }

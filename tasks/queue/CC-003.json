@@ -1,0 +1,23 @@
+{
+  "id": "CC-003",
+  "title": "Sync every project in the portfolio, not only the framework repo",
+  "description": "kanban-bridge.mjs resolves QUEUE_DIR from a single PROJECT_DIR, so `command-center-sync sync` only ever walks ~/agentic-sdlc/tasks/queue. A bootstrapped mission's queue is invisible to the board no matter how many timers run — nels-workshop's 11 tasks were absent until a bespoke second timer was added on 2026-09-07 passing SDLC_PROJECT_DIR. Every future mission needs that same manual timer, which is a trap.\n\nWork: add a `sync --all` mode that reads portfolio.json, and for each project with `enabled: true` and an existing `path` containing tasks/queue, syncs that project's queue and openspec changes with the project name namespaced into the idempotency key so cards never collide across projects. Projects whose path is missing are skipped with a warning, never an abort. Tests: two fixture projects sync without key collision; a missing path warns and continues; a project absent from the portfolio is not synced.\n\nWhen this lands, the bespoke nels-workshop-kanban-sync entry in agents/cron-schedule.json should be removed in the same PR. Definition of done: `npm test` passes, branch pushed, draft PR opened. Do NOT deploy.",
+  "assignee": "sdlc-developer",
+  "priority": "HIGH",
+  "estimatedTokens": 24000,
+  "files": [
+    "agents/command-center-sync.mjs",
+    "agents/kanban-bridge.mjs",
+    "agents/cron-schedule.json",
+    "agents/__tests__/command-center-sync.test.mjs"
+  ],
+  "blockedBy": [
+    "CC-002"
+  ],
+  "status": "pending",
+  "created": "2026-09-07T20:06:15.264Z",
+  "tags": [
+    "command-center",
+    "board-hygiene"
+  ]
+}
