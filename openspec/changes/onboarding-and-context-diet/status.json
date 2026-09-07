@@ -2,7 +2,12 @@
   "status": "proposed",
   "phase": "design",
   "created": "2026-05-27",
-  "lastUpdated": "2026-05-27",
-  "supersedes": ["onboarding-maturity", "claude-md-token-diet"],
-  "notes": "Merged from two prior proposals that targeted the same root cause from different angles. Onboarding clarity and CLAUDE.md token-tax are the same job: make the framework approachable + cheap on every request. Both predecessors archived 2026-05-27 with 'superseded' status; their proposals/designs preserved for historical context."
+  "lastUpdated": "2026-09-07",
+  "supersedes": [
+    "onboarding-maturity",
+    "claude-md-token-diet"
+  ],
+  "notes": "Merged from two prior proposals that targeted the same root cause from different angles. Onboarding clarity and CLAUDE.md token-tax are the same job: make the framework approachable + cheap on every request. Both predecessors archived 2026-05-27 with 'superseded' status; their proposals/designs preserved for historical context.",
+  "parked": true,
+  "parkedReason": "Parked to backlog 2026-09-07: untouched since 2026-05-27 (103 days) and still at proposal/design. Un-park by clearing this flag."
 }

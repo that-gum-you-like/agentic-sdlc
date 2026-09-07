@@ -2,7 +2,9 @@
   "status": "ready-to-implement",
   "phase": "tasks",
   "created": "2026-05-21",
-  "lastUpdated": "2026-09-02",
+  "lastUpdated": "2026-09-07",
   "readiness": "draft",
-  "readinessReason": "parked: 3/46, maturity-score work; T-103/T-104 superseded by business-os portfolio.json"
+  "readinessReason": "parked: 3/46, maturity-score work; T-103/T-104 superseded by business-os portfolio.json",
+  "parked": true,
+  "parkedReason": "Parked 2026-09-07. The readinessReason already said 'parked: 3/46 ... T-103/T-104 superseded by business-os portfolio.json', but the parked FLAG was never set, so the sync kept its 43 unchecked tasks live on the board as ready work — the single largest source of stale cards. This makes the flag agree with the stated intent. Un-park by clearing it when the remaining maturity-score work is picked up."
 }

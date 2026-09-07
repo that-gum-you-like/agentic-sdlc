@@ -2,5 +2,7 @@
   "status": "proposed",
   "phase": "design",
   "created": "2026-05-27",
-  "lastUpdated": "2026-05-27"
+  "lastUpdated": "2026-09-07",
+  "parked": true,
+  "parkedReason": "Parked to backlog 2026-09-07: untouched since 2026-05-27 (103 days) and still at proposal/design. OpenTelemetry cost tracing is not on the critical path while the Workshop OS is being built; the existing cost-tracker already records spend. Un-park by clearing this flag."
 }
