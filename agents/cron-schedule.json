@@ -182,8 +182,8 @@
     {
       "name": "willtopaint-drain",
       "cron": "5,35 * * * *",
-      "script": "/usr/bin/env SDLC_REPO=/home/bryce/willtopaint /home/bryce/agentic-sdlc/agents/hermes-drain.sh",
-      "description": "Autonomous drain for willtopaint (staging environment work)",
+      "script": "/usr/bin/env SDLC_REPO=/home/bryce/willtopaint SDLC_BASE_BRANCH=staging /home/bryce/agentic-sdlc/agents/hermes-drain.sh",
+      "description": "Autonomous drain for willtopaint. SDLC_BASE_BRANCH=staging because the drain otherwise detects the base from origin/HEAD (main) and ignores project.json deploy.baseBranch — agent work must land on staging, never production.",
       "session": "isolated"
     },
     {
