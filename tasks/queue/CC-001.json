@@ -1,0 +1,19 @@
+{
+  "id": "CC-001",
+  "title": "Stop turning completion criteria into board cards",
+  "description": "ROOT CAUSE of a board carrying 100+ stale cards. `parseSubtasks` in agents/command-center-sync.mjs turns EVERY markdown checkbox in a change's tasks.md into a kanban card, including the ones under a `## Completion Criteria` heading. Those are verification statements, not work items — which is why the board shows cards reading `Auto-memory updated`, `Backup file openclaw.json.bak.5 exists` and `All Phase 1 tasks checked off`. 428 subtasks exist across 29 changes; a large share are this.\n\nWork: `parseSubtasks` must skip checkboxes under a heading matching /completion criteria|acceptance criteria|definition of done/i, resuming at the next heading of the same or higher level. Add tests in agents/__tests__/command-center-sync.test.mjs: a tasks.md with an Implementation Tasks section and a Completion Criteria section yields only the implementation items; a criteria section at the END of the file yields none; a change with ONLY criteria yields zero subtasks rather than throwing. Verify against the real openspec/changes/business-os/tasks.md, which has both shapes. Definition of done: `npm test` passes, branch pushed, draft PR opened. Do NOT deploy.",
+  "assignee": "sdlc-developer",
+  "priority": "HIGH",
+  "estimatedTokens": 20000,
+  "files": [
+    "agents/command-center-sync.mjs",
+    "agents/__tests__/command-center-sync.test.mjs"
+  ],
+  "blockedBy": [],
+  "status": "pending",
+  "created": "2026-09-07T20:06:15.264Z",
+  "tags": [
+    "command-center",
+    "board-hygiene"
+  ]
+}

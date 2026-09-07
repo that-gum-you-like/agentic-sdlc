@@ -178,6 +178,27 @@
       "script": "/usr/bin/env SDLC_PROJECT_DIR=/home/bryce/nels-workshop node /home/bryce/agentic-sdlc/agents/command-center-sync.mjs sync",
       "description": "Command-center sync for nels-workshop — its queue, OpenSpec change and sub-cards into the board the dashboard reads. The base kanban-sync only ever walks the framework repo.",
       "session": "isolated"
+    },
+    {
+      "name": "willtopaint-drain",
+      "cron": "5,35 * * * *",
+      "script": "/usr/bin/env SDLC_REPO=/home/bryce/willtopaint /home/bryce/agentic-sdlc/agents/hermes-drain.sh",
+      "description": "Autonomous drain for willtopaint (staging environment work)",
+      "session": "isolated"
+    },
+    {
+      "name": "willtopaint-review",
+      "cron": "24,54 * * * *",
+      "script": "/usr/bin/env SDLC_PROJECT_DIR=/home/bryce/willtopaint node /home/bryce/agentic-sdlc/agents/pr-auto-review.mjs",
+      "description": "PR auto-review for willtopaint",
+      "session": "isolated"
+    },
+    {
+      "name": "willtopaint-kanban-sync",
+      "cron": "39 * * * *",
+      "script": "/usr/bin/env SDLC_PROJECT_DIR=/home/bryce/willtopaint node /home/bryce/agentic-sdlc/agents/command-center-sync.mjs sync",
+      "description": "Command-center sync for willtopaint — remove once CC-003 lands",
+      "session": "isolated"
     }
   ]
 }

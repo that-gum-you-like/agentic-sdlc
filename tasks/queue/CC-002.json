@@ -1,0 +1,21 @@
+{
+  "id": "CC-002",
+  "title": "Parking a change must park its sub-cards too",
+  "description": "When a change's status.json carries `parked: true`, the sync parks the parent card but leaves its child sub-cards sitting in the active lanes. Proven live 2026-09-07: parking 14 implemented/verify changes parked 14 parents and only 4 children — 37 open sub-cards had to be archived by hand through `hermes kanban archive`.\n\nWork: make `syncChanges`/`parkCard` cascade to every child recorded in pm/command-center-links.json for that change, and cascade the un-park when the flag is cleared. Cascading must be idempotent — re-running parks nothing new. Tests: a parked change with three children parks all four cards; re-running reports parked=0; clearing the flag restores all four. Definition of done: `npm test` passes, branch pushed, draft PR opened. Do NOT deploy.",
+  "assignee": "sdlc-developer",
+  "priority": "HIGH",
+  "estimatedTokens": 20000,
+  "files": [
+    "agents/command-center-sync.mjs",
+    "agents/__tests__/command-center-sync.test.mjs"
+  ],
+  "blockedBy": [
+    "CC-001"
+  ],
+  "status": "pending",
+  "created": "2026-09-07T20:06:15.264Z",
+  "tags": [
+    "command-center",
+    "board-hygiene"
+  ]
+}

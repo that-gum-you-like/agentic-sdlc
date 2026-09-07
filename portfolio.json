@@ -74,9 +74,20 @@
       "path": "/home/bryce/willtopaint",
       "liveUrl": "https://willtopaint.com",
       "stage": "live",
-      "enabled": false,
-      "cadence": "monthly",
+      "enabled": true,
+      "cadence": "weekly",
       "environments": [
+        {
+          "name": "staging",
+          "tier": "scratch",
+          "provider": "supabase",
+          "credentialVars": [
+            "NEXT_PUBLIC_SUPABASE_URL",
+            "SUPABASE_SERVICE_ROLE_KEY"
+          ],
+          "agentWritable": true,
+          "note": "Supabase ref cdghcvgjhxehzknwhyye, Will's org. Placeholder content only — never real visitor data."
+        },
         {
           "name": "production",
           "tier": "customer-production",
