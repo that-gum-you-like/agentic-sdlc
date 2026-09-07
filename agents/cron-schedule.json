@@ -160,14 +160,14 @@
     },
     {
       "name": "nels-workshop-drain",
-      "cron": "1,16,31,46 * * * *",
+      "cron": "11,26,41,56 * * * *",
       "script": "/usr/bin/env SDLC_REPO=/home/bryce/nels-workshop /home/bryce/agentic-sdlc/agents/hermes-drain.sh",
       "description": "Autonomous drain for nels-workshop (mission-bootstrap)",
       "session": "isolated"
     },
     {
       "name": "nels-workshop-review",
-      "cron": "16,36,56 * * * *",
+      "cron": "21,51 * * * *",
       "script": "/usr/bin/env SDLC_PROJECT_DIR=/home/bryce/nels-workshop node /home/bryce/agentic-sdlc/agents/pr-auto-review.mjs",
       "description": "PR auto-review for nels-workshop (mission-bootstrap)",
       "session": "isolated"
