@@ -10,7 +10,7 @@
     "agents/__tests__/command-center-sync.test.mjs"
   ],
   "blockedBy": [],
-  "status": "pending",
+  "status": "completed",
   "created": "2026-09-07T20:06:15.264Z",
   "tags": [
     "command-center",
@@ -18,5 +18,8 @@
   ],
   "_file": "CC-001.json",
   "claimedBy": "hermes-drain",
-  "claimedAt": "2026-09-07T20:49:59.653Z"
+  "claimedAt": "2026-09-07T20:49:59.653Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-09-07T22:47:57.729Z"
 }
