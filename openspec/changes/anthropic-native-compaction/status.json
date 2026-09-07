@@ -2,5 +2,7 @@
   "status": "proposed",
   "phase": "design",
   "created": "2026-05-27",
-  "lastUpdated": "2026-05-27"
+  "lastUpdated": "2026-09-07",
+  "parked": true,
+  "parkedReason": "Parked 2026-09-07: the framework has no Anthropic API key and routes everything through OpenRouter (openspec: openrouter-provider). Anthropic-native in-flight compaction is unreachable from here. Proposal untouched since 2026-05-27."
 }
