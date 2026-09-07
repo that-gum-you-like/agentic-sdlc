@@ -212,7 +212,7 @@
     },
     {
       "name": "nels-workshop",
-      "description": "Nels Workshop OS — the console for running the business: clients, statuses, agents, models, approvals.",
+      "description": "Nels Workshop OS — the console for running the business. Holds client records and discovery recordings, so production is customer-production.",
       "owner": "self",
       "stage": "idea",
       "enabled": true,
@@ -224,9 +224,15 @@
         },
         {
           "name": "production",
-          "tier": "internal-production",
+          "tier": "customer-production",
           "agentWritable": false,
-          "defaultDeploy": true
+          "defaultDeploy": true,
+          "provider": "supabase",
+          "credentialVars": [
+            "NEXT_PUBLIC_SUPABASE_URL",
+            "SUPABASE_SERVICE_ROLE_KEY",
+            "GROQ_API_KEY"
+          ]
         }
       ]
     }
