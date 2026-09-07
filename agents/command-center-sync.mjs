@@ -24,7 +24,11 @@
  *
  * Parked lane: lanes are fixed, so the kanban `scheduled` lane is repurposed
  * as **Parked** — a change with `"parked": true` in its status.json has its
- * parent card AND all open sub-task cards driven there (never todo). See
+ * parent card AND every child card recorded in state (`subtask:<name>:<n>`)
+ * driven there (never todo); clearing the flag cascades the un-park back.
+ * The cascade uses the RECORDED children, not just the ones the current
+ * tasks.md parse yields, so children with stale keys, renumbered items, or a
+ * missing tasks.md still follow their parent. See
  * docs/hermes-backlog-bridge.md "Parked changes".
  *
  * Exports (for tests): mapChangePhase, scanChanges, parseSubtasks,
@@ -146,6 +150,19 @@ export function unparkCard(kid, boardById, state) {
   return true;
 }
 
+/**
+ * Child cards recorded for a change — `subtask:<name>:<n>` keys in state.
+ * These are the REAL board cards; the current tasks.md parse may no longer
+ * yield them (tasks.md missing, items renumbered), but a parked change's
+ * children must follow their parent regardless.
+ */
+function recordedSubtasks(state, name) {
+  const prefix = `subtask:${name}:`;
+  return Object.entries(state.subtasks)
+    .filter(([k]) => k.startsWith(prefix))
+    .map(([k, kid]) => ({ n: Number(k.slice(prefix.length)) || 0, kid }));
+}
+
 // ---------------------------------------------------------------------------
 // openspec changes -> parent cards
 // ---------------------------------------------------------------------------
@@ -232,8 +249,21 @@ export function syncChanges(state, boardById) {
 
     if (c.parked) {
       if (parkCard(kid, boardById, state, `PARKED — "parked": true in openspec/changes/${c.name}/status.json; deferred, not deleted. Un-park by removing the flag.`)) parked++;
+      // CC-002: parking cascades to every child RECORDED for this change, not
+      // just the ones the current tasks.md parse yields — stale keys,
+      // renumbered items, or a missing tasks.md used to leave children
+      // sitting active under a parked parent. Checked items stay for
+      // completeCard in syncSubtasks: finished work stays finished.
+      const checked = new Set(parseSubtasks(c.tasksMd).filter((it) => it.checked).map((it) => it.n));
+      for (const { n, kid: childKid } of recordedSubtasks(state, c.name)) {
+        if (checked.has(n)) continue;
+        if (parkCard(childKid, boardById, state, `parked with change ${c.name}`)) parked++;
+      }
     } else {
       unparkCard(kid, boardById, state); // no-op unless this sync parked it earlier
+      // CC-002: clearing the flag cascades the un-park to the same recorded
+      // children (only cards THIS sync parked are ever unblocked).
+      for (const { kid: childKid } of recordedSubtasks(state, c.name)) unparkCard(childKid, boardById, state);
       if (target.verb === 'complete' && completeCard(kid, boardById, state)) completed++;
     }
   }

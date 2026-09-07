@@ -411,6 +411,66 @@ test('PARKED REQ-004: parkedCards cache emptied; second pass unblocks nothing', 
 });
 delete process.env.HERMES_LIST_FILE;
 
+console.log('\n📋 command-center-sync: CC-002 parked cascade uses RECORDED children');
+// gamma: a parked change whose three children are recorded in state but whose
+// tasks.md is gone — the pre-fix code only parked children the current
+// tasks.md parse yielded, so these three sat active under a parked parent.
+mkdirSync(join(proj, 'openspec', 'changes', 'gamma'), { recursive: true });
+writeFileSync(join(proj, 'openspec', 'changes', 'gamma', 'status.json'),
+  JSON.stringify({ status: 'proposed', phase: 'design', created: '2026-07-06', lastUpdated: '2026-07-06', parked: true }));
+const stG = JSON.parse(readFileSync(join(proj, 'pm', 'command-center-links.json'), 'utf8'));
+stG.changes.gamma = 't_openspec:gamma';
+stG.subtasks['subtask:gamma:1'] = 't_subtask:gamma:1';
+stG.subtasks['subtask:gamma:2'] = 't_subtask:gamma:2';
+stG.subtasks['subtask:gamma:3'] = 't_subtask:gamma:3';
+writeFileSync(join(proj, 'pm', 'command-center-links.json'), JSON.stringify(stG, null, 2));
+writeFileSync(listFile, JSON.stringify([
+  { id: 't_openspec:gamma', title: 'OpenSpec: gamma', status: 'ready' },
+  { id: 't_subtask:gamma:1', title: 'G1 open task', status: 'todo' },
+  { id: 't_subtask:gamma:2', title: 'G2 open task', status: 'todo' },
+  { id: 't_subtask:gamma:3', title: 'G3 open task', status: 'todo' },
+]));
+process.env.HERMES_LIST_FILE = listFile;
+writeFileSync(hermesLog, '');
+const rg = cc.fullSync({});
+test('CC-002: parked change cascades to all three RECORDED children (no tasks.md parse needed)', () => {
+  assert(rg.changes.ok && rg.subtasks.ok, `sections failed: ${rg.changes.error || ''} ${rg.subtasks.error || ''}`);
+  assertEqual(rg.changes.parked, 4, 'parked counter counts the cascade (parent + 3 children)');
+  assertEqual(rg.subtasks.parked, 0, 'syncSubtasks has no parse to park from');
+  const sched = logLines().filter((a) => a[1] === 'schedule').map((a) => a[2]).sort();
+  assertEqual(sched.join(','), 't_openspec:gamma,t_subtask:gamma:1,t_subtask:gamma:2,t_subtask:gamma:3', 'all four cards driven to Parked');
+  assertEqual(createsFor(logLines(), 'subtask:gamma:1').length, 0, 'no duplicate child cards created');
+});
+test('CC-002: re-run reports parked=0 — zero redundant schedule calls', () => {
+  writeFileSync(hermesLog, '');
+  const r2g = cc.fullSync({});
+  assertEqual(r2g.changes.parked, 0, 'cascade is idempotent across passes');
+  assertEqual(logLines().filter((a) => a[1] === 'schedule').length, 0, 'no repeat schedule calls');
+});
+test('CC-002: clearing the flag cascades the un-park back to all four', () => {
+  writeFileSync(join(proj, 'openspec', 'changes', 'gamma', 'status.json'),
+    JSON.stringify({ status: 'proposed', phase: 'design', created: '2026-07-06', lastUpdated: '2026-07-06' }));
+  writeFileSync(listFile, JSON.stringify([
+    { id: 't_openspec:gamma', title: 'OpenSpec: gamma', status: 'scheduled' },
+    { id: 't_subtask:gamma:1', title: 'G1 open task', status: 'scheduled' },
+    { id: 't_subtask:gamma:2', title: 'G2 open task', status: 'scheduled' },
+    { id: 't_subtask:gamma:3', title: 'G3 open task', status: 'scheduled' },
+  ]));
+  writeFileSync(hermesLog, '');
+  cc.fullSync({});
+  const unblocked = logLines().filter((a) => a[1] === 'unblock').map((a) => a[2]).sort();
+  assertEqual(unblocked.join(','), 't_openspec:gamma,t_subtask:gamma:1,t_subtask:gamma:2,t_subtask:gamma:3', 'flag cleared restores all four');
+});
+delete process.env.HERMES_LIST_FILE;
+rmSync(join(proj, 'openspec', 'changes', 'gamma'), { recursive: true, force: true });
+// purge gamma from state so the later fixture sections start clean (the
+// sync's own retired-change purge is covered by the delta deletion test)
+const stC = JSON.parse(readFileSync(join(proj, 'pm', 'command-center-links.json'), 'utf8'));
+delete stC.changes.gamma;
+delete stC.phases.gamma;
+for (const k of Object.keys(stC.subtasks)) if (k.startsWith('subtask:gamma:')) delete stC.subtasks[k];
+writeFileSync(join(proj, 'pm', 'command-center-links.json'), JSON.stringify(stC, null, 2));
+
 console.log('\n📋 command-center-sync: vanished change dirs (archived vs deleted)');
 mkdirSync(join(proj, 'openspec', 'changes', 'archive'), { recursive: true });
 renameSync(join(proj, 'openspec', 'changes', 'beta'), join(proj, 'openspec', 'changes', 'archive', 'beta'));
