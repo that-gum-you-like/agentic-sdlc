@@ -272,7 +272,7 @@ Phase 1, but not the guard.
     billable engagement. An empty registry satisfies every other spec while
     delivering nothing.
 
-- [ ] **T-302**: With Bryce, confirm which environments genuinely hold customer
+- [x] **T-302**: With Bryce, confirm which environments genuinely hold customer
       data and set those to `customer-production` / `agentWritable: false`.
       Tally production is expected to be among them (Texas Olive Ranch).
   - Files: `portfolio.json`
@@ -320,7 +320,7 @@ Phase 1, but not the guard.
 
 ### Phase 4: Liveness (parallel with Phase 2)
 
-- [ ] **T-401**: Fix `agents/cycles/daily-review.mjs` — case-insensitive
+- [x] **T-401**: Fix `agents/cycles/daily-review.mjs` — case-insensitive
       `Last updated` match, and insert the activity row into a heading that
       actually exists in `pm/DASHBOARD.md`.
   - Files: `agents/cycles/daily-review.mjs`

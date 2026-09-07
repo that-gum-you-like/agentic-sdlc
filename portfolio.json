@@ -11,7 +11,11 @@
       "enabled": true,
       "cadence": "continuous",
       "environments": [
-        { "name": "local", "tier": "scratch", "agentWritable": true }
+        {
+          "name": "local",
+          "tier": "scratch",
+          "agentWritable": true
+        }
       ]
     },
     {
@@ -30,7 +34,10 @@
           "name": "production",
           "tier": "customer-production",
           "provider": "supabase",
-          "credentialVars": ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
+          "credentialVars": [
+            "NEXT_PUBLIC_SUPABASE_URL",
+            "SUPABASE_SERVICE_ROLE_KEY"
+          ],
           "agentWritable": false,
           "defaultDeploy": true
         }
@@ -50,7 +57,10 @@
           "name": "production",
           "tier": "internal-production",
           "provider": "supabase",
-          "credentialVars": ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
+          "credentialVars": [
+            "NEXT_PUBLIC_SUPABASE_URL",
+            "SUPABASE_SERVICE_ROLE_KEY"
+          ],
           "agentWritable": false,
           "defaultDeploy": true
         }
@@ -59,7 +69,7 @@
     {
       "name": "willtopaint",
       "description": "Gallery and store for the artist William Inder. Live at willtopaint.com.",
-      "owner": "self",
+      "owner": "client",
       "repo": "that-gum-you-like/WilltoPaint",
       "path": "/home/bryce/willtopaint",
       "liveUrl": "https://willtopaint.com",
@@ -67,8 +77,14 @@
       "enabled": false,
       "cadence": "monthly",
       "environments": [
-        { "name": "production", "tier": "internal-production", "agentWritable": false, "defaultDeploy": true }
-      ]
+        {
+          "name": "production",
+          "tier": "customer-production",
+          "agentWritable": false,
+          "defaultDeploy": true
+        }
+      ],
+      "client": "William Inder"
     },
     {
       "name": "personal-website",
@@ -81,7 +97,12 @@
       "enabled": true,
       "cadence": "continuous",
       "environments": [
-        { "name": "production", "tier": "internal-production", "agentWritable": true, "defaultDeploy": true }
+        {
+          "name": "production",
+          "tier": "internal-production",
+          "agentWritable": true,
+          "defaultDeploy": true
+        }
       ]
     },
     {
@@ -94,7 +115,12 @@
       "enabled": true,
       "cadence": "continuous",
       "environments": [
-        { "name": "production", "tier": "scratch", "agentWritable": true, "defaultDeploy": true }
+        {
+          "name": "production",
+          "tier": "scratch",
+          "agentWritable": true,
+          "defaultDeploy": true
+        }
       ]
     },
     {
@@ -118,7 +144,11 @@
       "enabled": false,
       "cadence": "as-needed",
       "environments": [
-        { "name": "local", "tier": "scratch", "agentWritable": true }
+        {
+          "name": "local",
+          "tier": "scratch",
+          "agentWritable": true
+        }
       ]
     },
     {
@@ -131,7 +161,12 @@
       "enabled": false,
       "cadence": "as-needed",
       "environments": [
-        { "name": "production", "tier": "internal-production", "agentWritable": false, "defaultDeploy": true }
+        {
+          "name": "production",
+          "tier": "customer-production",
+          "agentWritable": false,
+          "defaultDeploy": true
+        }
       ]
     },
     {
