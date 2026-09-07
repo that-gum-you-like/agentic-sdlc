@@ -209,6 +209,26 @@
       "enabled": false,
       "cadence": "continuous",
       "environments": []
+    },
+    {
+      "name": "nels-workshop",
+      "description": "Nels Workshop OS — the console for running the business: clients, statuses, agents, models, approvals.",
+      "owner": "self",
+      "stage": "idea",
+      "enabled": true,
+      "environments": [
+        {
+          "name": "staging",
+          "tier": "scratch",
+          "agentWritable": true
+        },
+        {
+          "name": "production",
+          "tier": "internal-production",
+          "agentWritable": false,
+          "defaultDeploy": true
+        }
+      ]
     }
   ]
 }
