@@ -13,7 +13,15 @@
  *                               back into the change's status.json + pm/approvals.json
  *
  *   node agents/command-center-sync.mjs sync [--reconcile]   # full pass
- *   node agents/command-center-sync.mjs status               # dry-run counts, no writes
+ *   node agents/command-center-sync.mjs sync --all            # every enabled portfolio project
+ *   node agents/command-center-sync.mjs status                # dry-run counts, no writes
+ *
+ * `sync --all` reads portfolio.json and runs one full pass per enabled
+ * project whose path exists and contains tasks/queue, in a child process
+ * scoped by SDLC_PROJECT_DIR + SDLC_PROJECT_NAMESPACE. The namespace
+ * prefixes every kanban idempotency key (`<project>:<key>`) so identical
+ * task ids / change names across projects never collide on the shared
+ * board. Missing paths warn and skip — never an abort.
  *
  * Approving a change from the board: open the "OpenSpec: <name>" card in the
  * dashboard (or `hermes kanban comment <id> approve`) and comment `approve`.
@@ -34,13 +42,14 @@
  * Exports (for tests): mapChangePhase, scanChanges, parseSubtasks,
  * parseBacklog, collectRuns, syncChanges, syncBacklog, syncRuns,
  * reconcileApprovals, linkQueueTasks, fullSync, statusReport,
- * parkCard, unparkCard, completeCard
+ * parkCard, unparkCard, completeCard, nsKey, syncAllProjects
  */
 
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import { runKanban, sync as bridgeSync, readTasks } from './kanban-bridge.mjs';
+import { runKanban, sync as bridgeSync, readTasks, nsKey } from './kanban-bridge.mjs';
 import { buildRegistry } from './agent-registry.mjs';
 import * as portfolioModule from './portfolio.mjs';
 
@@ -231,7 +240,7 @@ export function syncChanges(state, boardById) {
     // re-upserting each pass costs minutes of CPU for zero board change.
     let kid = state.changes[c.name];
     if (!kid) {
-      const args = ['create', `OpenSpec${c.parked ? ' (Parked)' : ''}: ${c.name}`, '--idempotency-key', `openspec:${c.name}`, '--json',
+      const args = ['create', `OpenSpec${c.parked ? ' (Parked)' : ''}: ${c.name}`, '--idempotency-key', nsKey(`openspec:${c.name}`), '--json',
         '--body', changeCardBody(c), '--priority', '200', '--created-by', SYNC_AUTHOR];
       if (target.initial) args.push('--initial-status', target.initial);
       kid = kanbanId(runKanban(args, { json: true }));
@@ -370,7 +379,7 @@ export function syncSubtasks(state, boardById, changeList) {
       const key = `subtask:${c.name}:${item.n}`;
       let kid = state.subtasks[key];
       if (!kid) {
-        kid = kanbanId(runKanban(['create', item.text, '--idempotency-key', key, '--json',
+        kid = kanbanId(runKanban(['create', item.text, '--idempotency-key', nsKey(key), '--json',
           '--parent', parentKid, '--created-by', SYNC_AUTHOR], { json: true }));
         if (!kid) continue;
         created++;
@@ -418,7 +427,7 @@ export function syncBacklog(state, boardById) {
   let rootKid = state.backlog.root;
   if (!rootKid) {
     rootKid = kanbanId(runKanban(['create', 'OpenSpec Backlog (ideas — not yet proposed)',
-      '--idempotency-key', 'backlog:root', '--json', '--priority', '150', '--created-by', SYNC_AUTHOR,
+      '--idempotency-key', nsKey('backlog:root'), '--json', '--priority', '150', '--created-by', SYNC_AUTHOR,
       '--body', 'Ideas from openspec/BACKLOG.md. Each child card is one idea. Promote via the openspec-new-change skill; this catalog is read-only from the board side.'],
       { json: true }));
     if (!rootKid) return { backlog: 0, created: 0, completed: 0 };
@@ -429,7 +438,7 @@ export function syncBacklog(state, boardById) {
   for (const idea of ideas) {
     let kid = state.backlog[idea.id];
     if (!kid) {
-      kid = kanbanId(runKanban(['create', `#${idea.id} ${idea.title}`, '--idempotency-key', `backlog:${idea.id}`,
+      kid = kanbanId(runKanban(['create', `#${idea.id} ${idea.title}`, '--idempotency-key', nsKey(`backlog:${idea.id}`),
         '--json', '--parent', rootKid, '--created-by', SYNC_AUTHOR], { json: true }));
       if (!kid) continue;
       created++;
@@ -481,7 +490,7 @@ export function syncRuns(state) {
   let rootKid = state.runsRoot;
   if (!rootKid) {
     rootKid = kanbanId(runKanban(['create', 'Agent run history (scheduler · drain · reviews · cycles)',
-      '--idempotency-key', 'runs:root', '--json', '--priority', '150', '--created-by', SYNC_AUTHOR,
+      '--idempotency-key', nsKey('runs:root'), '--json', '--priority', '150', '--created-by', SYNC_AUTHOR,
       '--body', 'Run log for the autonomous SDLC: sdlc-sched-* scheduler jobs, hermes drain passes, pr-auto-review merges, daily/weekly cycles. Each run arrives as a comment (newest last). Full normalized ledger: pm/runs.json. Sources: pm/cycle-history.json · pm/pr-auto-review.log · pm/drain-logs/.'],
       { json: true }));
     if (!rootKid) return { runs: runs.length, commented: 0 };
@@ -552,7 +561,7 @@ export function linkQueueTasks(state, changeList) {
   const names = changeList.map((c) => c.name);
   let linked = 0;
   for (const task of readTasks()) {
-    const taskKid = links[task.id];
+    const taskKid = links[nsKey(task.id)];
     if (!taskKid) continue;
     const tags = (task.tags || []).map(String);
     const hay = `${tags.join(' ')} ${task.description || ''}`;
@@ -619,7 +628,7 @@ export function syncPortfolio(state, boardById) {
 
     let kid = state.portfolio[p.name];
     if (!kid) {
-      const args = ['create', `Project: ${p.name}`, '--idempotency-key', `portfolio:${p.name}`, '--json',
+      const args = ['create', `Project: ${p.name}`, '--idempotency-key', nsKey(`portfolio:${p.name}`), '--json',
         '--body', body, '--priority', '150', '--created-by', SYNC_AUTHOR];
       kid = kanbanId(runKanban(args, { json: true }));
       if (!kid) continue;
@@ -634,6 +643,63 @@ export function syncPortfolio(state, boardById) {
     }
   }
   return { projects: projects.length, created, parked };
+}
+
+// Re-exported for tests; the namespace is read once at import from the env.
+export { nsKey };
+
+/**
+ * sync --all: one full sync pass per enabled portfolio project.
+ *
+ * Reads portfolio.json and, for each project with `enabled: true` and an
+ * existing `<path>/tasks/queue`, runs `command-center-sync.mjs sync` in a
+ * child process scoped by SDLC_PROJECT_DIR=<path> and
+ * SDLC_PROJECT_NAMESPACE=<name>. The namespace prefixes every kanban
+ * idempotency key the child mints, so identical task ids / change names
+ * across projects never collide on the shared board.
+ *
+ * A missing or unusable path warns and skips — never an abort. `PORTFOLIO_PATH`
+ * is dropped from the child env so each child resolves its OWN portfolio.json
+ * relative to its project dir (same scoping as every other path constant).
+ */
+export function syncAllProjects() {
+  const out = { projects: 0, synced: [], skipped: [], warnings: [] };
+  let doc;
+  try {
+    if (!fs.existsSync(PORTFOLIO_PATH)) {
+      out.warnings.push(`sync --all: no portfolio.json at ${PORTFOLIO_PATH}`);
+      return out;
+    }
+    doc = portfolioModule.load(PORTFOLIO_PATH);
+  } catch (e) {
+    out.warnings.push(`sync --all: ${e.message}`);
+    return out;
+  }
+  for (const p of doc.projects || []) {
+    out.projects++;
+    if (!p.enabled) { out.skipped.push(`${p.name} (disabled)`); continue; }
+    const queueDir = p.path ? join(p.path, 'tasks', 'queue') : null;
+    if (!queueDir || !fs.existsSync(queueDir)) {
+      const w = `sync --all: skipping "${p.name}" — ${p.path ? `no tasks/queue at ${p.path}` : 'no path in portfolio.json'}`;
+      console.warn(`⚠ ${w}`);
+      out.warnings.push(w);
+      out.skipped.push(p.name);
+      continue;
+    }
+    const childEnv = { ...process.env, SDLC_PROJECT_DIR: p.path, SDLC_PROJECT_NAMESPACE: p.name };
+    delete childEnv.PORTFOLIO_PATH;
+    const r = spawnSync(process.execPath, [__filename, 'sync'], {
+      env: childEnv, encoding: 'utf8', timeout: 300000,
+    });
+    const ok = r.status === 0;
+    out.synced.push({ name: p.name, ok });
+    if (!ok) {
+      const w = `sync --all: "${p.name}" sync failed (exit ${r.status}): ${(r.stderr || r.stdout || '').slice(0, 300)}`;
+      console.warn(`⚠ ${w}`);
+      out.warnings.push(w);
+    }
+  }
+  return out;
 }
 
 export function fullSync({ reconcile = false } = {}) {
@@ -688,19 +754,29 @@ if (__isMainModule) {
   const cmd = process.argv[2] || 'status';
   try {
     if (cmd === 'sync') {
-      const r = fullSync({ reconcile: process.argv.includes('--reconcile') });
-      for (const [name, res] of Object.entries(r)) {
-        if (!res.ok) { console.error(`✗ ${name}: ${res.error}`); continue; }
-        const detail = Object.entries(res).filter(([k]) => k !== 'ok')
-          .map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' ');
-        console.log(`✅ ${name}: ${detail}`);
+      if (process.argv.includes('--all')) {
+        const r = syncAllProjects();
+        const failed = r.synced.filter((s) => !s.ok);
+        for (const w of r.warnings) console.error(`⚠ ${w}`);
+        for (const s of r.synced) console.log(`${s.ok ? '✅' : '❌'} ${s.name}: ${s.ok ? 'synced' : 'FAILED'}`);
+        if (r.skipped.length) console.log(`   skipped: ${r.skipped.join(', ')}`);
+        console.log(`🌍 sync --all: ${r.projects} portfolio project(s) · ${r.synced.length} synced · ${r.skipped.length} skipped · ${r.warnings.length} warning(s)`);
+        if (failed.length) process.exit(1);
+      } else {
+        const r = fullSync({ reconcile: process.argv.includes('--reconcile') });
+        for (const [name, res] of Object.entries(r)) {
+          if (!res.ok) { console.error(`✗ ${name}: ${res.error}`); continue; }
+          const detail = Object.entries(res).filter(([k]) => k !== 'ok')
+            .map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' ');
+          console.log(`✅ ${name}: ${detail}`);
+        }
+        if (Object.values(r).some((res) => !res.ok)) process.exit(1);
       }
-      if (Object.values(r).some((res) => !res.ok)) process.exit(1);
     } else if (cmd === 'status') {
       const r = statusReport();
       console.log(`📋 command center: ${r.changes} changes (${r.changesOnBoard} on board, ${r.parked} parked) · ${r.subtasks} sub-tasks · ${r.backlog} backlog ideas · ${r.queueTasks} queue tasks · ${r.runs} runs (${r.runsPendingComment} pending comment)`);
     } else {
-      console.error('Usage: command-center-sync.mjs <sync [--reconcile] | status>');
+      console.error('Usage: command-center-sync.mjs <sync [--reconcile | --all] | status>');
       process.exit(1);
     }
   } catch (e) {
