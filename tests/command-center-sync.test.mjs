@@ -155,6 +155,51 @@ test('parseSubtasks: falls back to all items when no task heading', () => {
   const items = cc.parseSubtasks('## Whatever\n- [ ] loose item\n');
   assertEqual(items.length, 1);
 });
+test('parseSubtasks (CC-001): completion-criteria items never become cards', () => {
+  const md = ['## Implementation Tasks', '', '- [ ] T1 real work', '- [x] T2 done work', '',
+    '## Completion Criteria', '', '- [ ] All implementation tasks are checked off', '- [ ] `npm test` passes', ''].join('\n');
+  const items = cc.parseSubtasks(md);
+  assertEqual(items.length, 2, 'only the implementation items count');
+  assert(!items.some((it) => /checked off|npm test/.test(it.text)), 'criteria text leaked into cards');
+});
+test('parseSubtasks (CC-001): criteria section at the END of the file yields none', () => {
+  const md = ['## Notes', '', 'Some prose with no checkboxes.', '',
+    '## Completion Criteria', '', '- [ ] All implementation tasks are checked off', '- [ ] No regressions', ''].join('\n');
+  assertEqual(cc.parseSubtasks(md).length, 0);
+});
+test('parseSubtasks (CC-001): a change with ONLY criteria yields zero subtasks, never a throw', () => {
+  const md = ['## Completion Criteria', '', '- [ ] Only criteria here', '- [x] Nothing else', ''].join('\n');
+  assertEqual(cc.parseSubtasks(md).length, 0);
+});
+test('parseSubtasks (CC-001): acceptance criteria + definition of done skipped; parsing resumes at next task heading', () => {
+  const md = ['## Implementation Tasks', '', '- [ ] T1 work', '',
+    '### Acceptance Criteria', '', '- [ ] Criterion A', '',
+    '## Definition of Done', '', '- [ ] DoD item', '',
+    '## More Tasks', '', '- [ ] T2 more work', ''].join('\n');
+  const items = cc.parseSubtasks(md);
+  assertEqual(items.length, 2);
+  assertEqual(items[0].text, 'T1 work');
+  assertEqual(items[1].text, 'T2 more work');
+});
+test('parseSubtasks (CC-001): nested phase sub-headings inherit the implementation-tasks section', () => {
+  const md = ['## Prerequisites', '', '- [ ] Design approved (NOT a sub-task)', '',
+    '## Implementation Tasks', '', '### Phase 1', '', '- [ ] T1 phase work', '',
+    '### Phase 2', '', '- [x] T2 phase work', '', '## Completion Criteria', '', '- [ ] Done when all green', ''].join('\n');
+  const items = cc.parseSubtasks(md);
+  assertEqual(items.length, 2, 'phase items count, prereq + criteria excluded');
+  assertEqual(items[0].text, 'T1 phase work');
+  assertEqual(items[1].checked, true, 'checked state preserved under nested heading');
+});
+test('parseSubtasks (CC-001): real business-os tasks.md yields exactly its T-xxx items', () => {
+  const md = readFileSync(join(SDLC_ROOT, 'openspec/changes/business-os/tasks.md'), 'utf8');
+  const items = cc.parseSubtasks(md);
+  assert(items.length > 0, 'implementation items parsed');
+  assert(!items.some((it) => /checked off|regressions|heartbeat has arrived/.test(it.text)), 'no criteria phrase on the board');
+  const mdIds = [...md.matchAll(/-\s+\[[ xX]\]\s+\*\*(T-\d+)\*\*/g)].map((m) => m[1]);
+  assert(mdIds.length > 0, 'real file carries T-xxx items');
+  const itemIds = items.map((it) => (it.text.match(/^(T-\d+)/) || [])[1]).filter(Boolean);
+  assertEqual(itemIds.sort().join(','), mdIds.sort().join(','), 'exactly the T-xxx items, criteria never leaked');
+});
 test('parseBacklog: live + shipped kept, rejected R-xx skipped, done flagged', () => {
   const ideas = cc.parseBacklog(readFileSync(join(proj, 'openspec', 'BACKLOG.md'), 'utf8'));
   assertEqual(ideas.length, 2);

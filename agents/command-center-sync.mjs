@@ -269,19 +269,53 @@ export function syncChanges(state, boardById) {
 
 /**
  * Parse checklist items from a change's tasks.md. Only items under a heading
- * matching /task/i (e.g. "## Implementation Tasks") count; if no such heading
- * has items, fall back to every checklist item in the file.
+ * matching /task/i (e.g. "## Implementation Tasks") count — nested sub-headings
+ * (`### Phase 1`) inherit their parent section, and a new section starts only
+ * at a heading of the same or higher level. If no such heading has items, fall
+ * back to every checklist item in the file.
+ *
+ * Checkboxes under a heading matching /completion criteria|acceptance
+ * criteria|definition of done/i are verification statements, not work items:
+ * they are skipped entirely (never part of the fallback either), resuming
+ * normal parsing at the next heading of the same or higher level.
  */
 export function parseSubtasks(tasksMd) {
   const lines = String(tasksMd || '').split('\n');
   const inTaskSection = [];
   const all = [];
+  const CRITERIA_RE = /completion criteria|acceptance criteria|definition of done/i;
   let underTasks = false;
+  let sectionLevel = 0;
+  let inCriteria = false;
+  let criteriaLevel = 0;
   for (const line of lines) {
-    const h = line.match(/^#{2,3}\s+(.*)$/);
-    if (h) { underTasks = /task/i.test(h[1]); continue; }
+    const h = line.match(/^(#{2,3})\s+(.*)$/);
+    if (h) {
+      const level = h[1].length;
+      const title = h[2];
+      // A criteria section ends at the next heading of the same or higher
+      // level; deeper sub-headings remain inside it.
+      if (inCriteria) {
+        if (level <= criteriaLevel) inCriteria = false;
+        else continue;
+      }
+      if (CRITERIA_RE.test(title)) {
+        inCriteria = true;
+        criteriaLevel = level;
+        underTasks = false;
+        continue;
+      }
+      // A deeper sub-heading belongs to the current section; only a heading
+      // at the same or higher level starts a new one.
+      if (level <= sectionLevel || sectionLevel === 0) {
+        underTasks = /task/i.test(title);
+        sectionLevel = level;
+      }
+      continue;
+    }
     const m = line.match(/^\s*[-*]\s+\[( |x|X)\]\s+(.+)$/);
     if (!m) continue;
+    if (inCriteria) continue; // verification statements, not work items
     const item = { checked: m[1].toLowerCase() === 'x', text: cleanTitle(m[2]) };
     all.push(item);
     if (underTasks) inTaskSection.push(item);
