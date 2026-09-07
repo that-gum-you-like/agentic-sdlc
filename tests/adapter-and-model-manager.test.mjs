@@ -695,7 +695,11 @@ test('resolveProviderKey prefers env over env file', () => {
 
 test('every fallback rung resolves to a known model', () => {
   const budget = mm.loadBudget();
-  const intel = mm.loadModelIntel();
+  // Validate against the SHIPPED default catalog, not the runtime cache:
+  // model-intel.json is gitignored and machine-specific (see the comment near
+  // INTEL_DEFAULT_PATH), so a stale local cache must not decide whether the
+  // suite passes or fails.
+  const intel = JSON.parse(readFileSync(INTEL_DEFAULT_PATH, 'utf8'));
   const bad = [];
   for (const [name, cfg] of Object.entries(budget.agents || {})) {
     for (const model of cfg.fallbackChain || []) {
@@ -707,7 +711,9 @@ test('every fallback rung resolves to a known model', () => {
 
 test('every agent has a cross-provider fallback rung', () => {
   const budget = mm.loadBudget();
-  const intel = mm.loadModelIntel();
+  // Same rationale as above: pin to the shipped default catalog so a stale
+  // gitignored runtime cache cannot change the test's outcome.
+  const intel = JSON.parse(readFileSync(INTEL_DEFAULT_PATH, 'utf8'));
   const stranded = [];
   for (const [name, cfg] of Object.entries(budget.agents || {})) {
     const primary = cfg.provider || intel.models?.[cfg.model]?.provider;
