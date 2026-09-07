@@ -449,14 +449,14 @@ Phase 1, but not the guard.
   - Parallel: blocked-by T-601
   - Complexity: S
 
-- [ ] **T-603**: Rewrite `docs/MISSION_PLAYBOOK.md` — insert the design step as
+- [x] **T-603**: Rewrite `docs/MISSION_PLAYBOOK.md` — insert the design step as
       §4 (component-library search, then wireframe, then stop for approval),
       renumber task-seeding to §5 and report to §6.
-  - Files: `docs/MISSION_PLAYBOOK.md`
+  - Files: `docs/MISSION_PLAYBOOK.md`, `tests/mission-playbook.test.mjs`
   - Spec: wireframe-gate/REQ-001, REQ-002
   - Agent: jony-aive (design step content) + sdlc-documentarian (structure)
   - Test: search step precedes the wireframe step and is non-optional; §
-    renumbering is internally consistent
+    renumbering is internally consistent; all 9 guardrail checks pass
   - Parallel: blocked-by T-602
   - Complexity: M
 
