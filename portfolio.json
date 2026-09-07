@@ -8,7 +8,7 @@
       "repo": "that-gum-you-like/agentic-sdlc",
       "path": "/home/bryce/agentic-sdlc",
       "stage": "maintenance",
-      "enabled": false,
+      "enabled": true,
       "cadence": "continuous",
       "environments": [
         {
@@ -16,8 +16,7 @@
           "tier": "scratch",
           "agentWritable": true
         }
-      ],
-      "holdReason": "On hold 2026-09-07 at Bryce’s direction so the drain supervisor gives all its time to nels-workshop. Re-enable by setting enabled: true."
+      ]
     },
     {
       "name": "tally",
