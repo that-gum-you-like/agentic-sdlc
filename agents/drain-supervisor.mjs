@@ -39,9 +39,11 @@ const BETWEEN_MS = Number(process.env.SUPERVISOR_GAP_MS || 5_000);
 const BUSY_SLEEP_MS = Number(process.env.SUPERVISOR_BUSY_MS || 30_000);
 const DRAIN_TIMEOUT_MS = Number(process.env.SUPERVISOR_DRAIN_TIMEOUT_MS || 3_900_000);
 
-const argv = process.argv.slice(2);
-const ONCE = argv.includes('--once');
-const DRY = argv.includes('--dry-run');
+// CLI flags are resolved inside main(), never at import time: this module also
+// exports functions, and reading process.argv on import would make a test that
+// imports it pick up the test runner's own flags.
+let ONCE = false;
+let DRY = false;
 
 const log = (...a) => console.log('[supervisor]', ...a);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -139,7 +141,9 @@ export async function pass() {
   return drained;
 }
 
-async function main() {
+async function main(argv = process.argv.slice(2)) {
+  ONCE = argv.includes('--once');
+  DRY = argv.includes('--dry-run');
   log(`starting (once=${ONCE} dry-run=${DRY})`);
   for (;;) {
     const drained = await pass();
