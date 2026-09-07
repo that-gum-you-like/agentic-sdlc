@@ -12,10 +12,14 @@
   "blockedBy": [
     "CC-001"
   ],
-  "status": "pending",
+  "status": "completed",
   "created": "2026-09-07T20:06:15.264Z",
   "tags": [
     "command-center",
     "board-hygiene"
-  ]
+  ],
+  "_file": "CC-002.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-09-07T23:07:44.940Z"
 }
