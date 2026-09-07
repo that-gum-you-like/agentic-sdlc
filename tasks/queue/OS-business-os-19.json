@@ -3,7 +3,7 @@
   "title": "T-701: Full suite green — `npm test`,",
   "description": "- [ ] **T-701**: Full suite green — `npm test`,\n      `node agents/four-layer-validate.mjs`, `node agents/test-behavior.mjs`.\n  - Command: `npm test && node agents/four-layer-validate.mjs && node agents/test-behavior.mjs`\n  - Expected: all passing, zero new npm dependencies\n  - Parallel: blocked-by all implementation tasks",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/business-os/tasks.md",
@@ -11,5 +11,8 @@
   "claimedBy": "hermes-drain",
   "testStatus": null,
   "_file": "OS-business-os-19.json",
-  "claimedAt": "2026-09-07T22:04:05.784Z"
+  "claimedAt": "2026-09-07T22:04:05.784Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-09-07T22:17:35.501Z"
 }
