@@ -1,4 +1,4 @@
-# Mission Playbook — idea → deployed product, autonomously
+|# Mission Playbook — idea → deployed product, autonomously
 
 Audience: **the Hermes mission agent** (Telegram/CLI). When Bryce describes a
 project idea, this is your procedure. The heavy machinery (drain, review,
@@ -47,7 +47,16 @@ committed or pasted into chat/tasks/PRs.** Tasks reference env var NAMES only.
 Schema changes go through `supabase/migrations/` files committed to the repo,
 applied with `npx supabase db push` (document this in the relevant task).
 
-## 4. Author the work (in `~/<name>`)
+## 4. Design (stop for approval before seeding tasks)
+
+1. **Search the component library** — run `node ~/component-library/bin/search.mjs <keywords>` to discover existing components. Record hits and misses in the task file.
+2. **Produce a wireframe** — create a `.dc.html`-compatible wireframe artifact and commit it to the new repo under `design/`.
+3. **Deliver to Telegram** — send the wireframe as an image via `telegram-notify.mjs sendDocument`.
+4. **Stop and wait for approval** — do NOT seed any build tasks yet. Only after Bryce replies with approval should you proceed.
+
+Only after approval, continue to task seeding.
+
+## 5. Author the work (in `~/<name>`)
 
 1. **OpenSpec artifacts** — `openspec/changes/<name>-v1/`: proposal.md (with
    Value Analysis), design.md, specs/ (REQ-xxx with acceptance), tasks.md.
@@ -61,14 +70,14 @@ applied with `npx supabase db push` (document this in the relevant task).
      pushed, draft PR opened, "Do NOT deploy — the pipeline owns deploys."
 3. `git add -A && git commit -m "feat: v1 openspec + task seed" && git push`.
 
-## 5. Report back to Bryce (one Telegram message)
+## 6. Report back to Bryce (one Telegram message)
 
 Project name + repo URL; scope bullets + assumptions; how many tasks were
 seeded; "first drain tick within 15 min; each merge and every deploy request
 will arrive here; deploys wait for your `APPROVE <sha8>` to
 @Nels_hermes_deploy_bot"; the smoke URL where v1 will appear.
 
-## 6. Guardrails (hard rules)
+## 7. Guardrails (hard rules)
 
 - NEVER create `hermes cron` jobs (or any other scheduler entries). ALL
   scheduling already exists: mission-bootstrap installs the drain/review
@@ -81,7 +90,7 @@ will arrive here; deploys wait for your `APPROVE <sha8>` to
   `scripts/`, `docs/`, or `logs/` at the HOME directory root or `/workspace`.
   (Live incident 2026-07-27: `$HOME` got scaffolded as a fake "/workspace"
   project, as root.)
-- NEVER use `sudo` or `docker`. Everything you legitimately need runs as the
+- NEVER use `sudo` or `docker`. Everything you legitimately needs runs as the
   normal user. A permission error means STOP and report, not escalate.
 - NEVER reference a script path you have not verified exists (`ls` it first).
 - NEVER push to `main` directly, run `vercel`/`supabase db push` deploy
