@@ -85,12 +85,19 @@ export const MISSION_ENVIRONMENTS = Object.freeze([
  * is still born staging (scratch) + production (internal-production), never
  * customer-production.
  */
-export function buildPortfolioEntry(name, { description = '', client = '' } = {}) {
+export function buildPortfolioEntry(name, { description = '', client = '', home = homedir() } = {}) {
   return {
     name,
     description,
     owner: client ? 'client' : 'self',
     ...(client ? { client } : {}),
+    // `path` is not decoration: everything that walks the portfolio by
+    // filesystem — the drain supervisor, heartbeat drift detection, the
+    // command-center sync — silently SKIPS an entry without one. Omitting it
+    // made every bootstrapped mission invisible to those tools while looking
+    // perfectly healthy in `portfolio.mjs list` (found 2026-09-07: the Workshop
+    // OS itself had been registered with no path).
+    path: join(home, name),
     stage: 'idea',
     enabled: true,
     environments: MISSION_ENVIRONMENTS.map((e) => ({ ...e })),
@@ -271,7 +278,7 @@ export async function bootstrap({ name, description = '', deploy = true, dryRun 
   // client name (REQ-004) but never touches the tiers. Idempotent: a re-run
   // finds the name already present and changes nothing.
   step(`portfolio: register ${name}${client ? ` — owner client (${client})` : ''} — ${MISSION_ENVIRONMENTS.map((e) => `${e.name} (${e.tier})`).join(' + ')} in ${portfolioPath}`, () => {
-    const { doc, status } = registerInPortfolio(loadPortfolio(portfolioPath), name, { description, client });
+    const { doc, status } = registerInPortfolio(loadPortfolio(portfolioPath), name, { description, client, home });
     if (status === 'added') {
       writeFileSync(portfolioPath, JSON.stringify(doc, null, 2) + '\n');
       log(`  portfolio: ${name} registered${client ? ` for client ${client}` : ''} — staging (scratch) + production (internal-production)`);

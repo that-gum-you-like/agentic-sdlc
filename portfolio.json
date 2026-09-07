@@ -225,7 +225,7 @@
       "name": "nels-workshop",
       "description": "Nels Workshop OS — the console for running the business. Holds client records and discovery recordings, so production is customer-production.",
       "owner": "self",
-      "stage": "idea",
+      "stage": "build",
       "enabled": true,
       "environments": [
         {
@@ -245,7 +245,8 @@
             "GROQ_API_KEY"
           ]
         }
-      ]
+      ],
+      "path": "/home/bryce/nels-workshop"
     }
   ]
 }
