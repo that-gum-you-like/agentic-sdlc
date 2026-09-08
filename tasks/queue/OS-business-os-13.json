@@ -3,12 +3,12 @@
   "title": "T-504: Surface non-code items on the board (distinguishable by kind)",
   "description": "- [ ] **T-504**: Surface non-code items on the board (distinguishable by kind)\n      and in the heartbeat; completing a card reconciles back to the task file.\n  - Files: `agents/command-center-sync.mjs`, `agents/heartbeat.mjs`\n  - Spec: personal-task-lane/REQ-004\n  - Agent: sdlc-developer\n  - Test: idempotent card creation; kind visible on the card; heartbeat reports\n    open counts; card completion reconciles task `status`\n  - Parallel: blocked-by T-502, T-402\n  - Complexity: S\n\n### Phase 6: Wireframe gate",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/business-os/tasks.md",
   "createdAt": "2026-09-02T18:29:42.807Z",
-  "claimedBy": null,
+  "claimedBy": "hermes-drain",
   "testStatus": null,
   "blockedBy": [
     "OS-business-os-11"
@@ -17,5 +17,10 @@
     "business-os",
     "hermes-handoff",
     "phase-5"
-  ]
+  ],
+  "_file": "OS-business-os-13.json",
+  "claimedAt": "2026-09-08T22:44:40.297Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-09-08T22:44:40.545Z"
 }
