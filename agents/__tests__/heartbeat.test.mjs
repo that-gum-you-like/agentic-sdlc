@@ -28,6 +28,7 @@ import {
   collectOpenKinds,
   collectSpend,
   collectHealth,
+  runHeartbeat,
 } from '../heartbeat.mjs';
 
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
@@ -121,9 +122,9 @@ describe('composeMessage (REQ-001)', () => {
     const msg = composeMessage(nominalReport());
     assert.equal(typeof msg, 'string');
     assert.equal((msg.match(/📡 Daily heartbeat/g) || []).length, 1, 'exactly one message header');
-    // The CLI composes once and sends once: a single sendNotification call.
+    // The CLI composes once and sends once: a single delivery call site.
     const src = readFileSync(resolve(MODULE_DIR, '../heartbeat.mjs'), 'utf8');
-    assert.equal((src.match(/sendNotification\(/g) || []).length, 1);
+    assert.equal((src.match(/deliver\(message\)/g) || []).length, 1);
   });
 
   it('marks an unavailable data source as abnormal instead of aborting', () => {
@@ -226,5 +227,46 @@ describe('collectors (fixture-driven, no network)', () => {
     assert.deepEqual(collectHealth({ shell: badShell }), { status: 'degraded', detail: '[degraded] queue: depth 55 exceeds 50' });
 
     assert.throws(() => collectHealth({ shell: () => 'garbage output' }), /unparseable/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// runHeartbeat — REQ-002 acceptance (CLI exit behavior)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('runHeartbeat (REQ-002)', () => {
+
+  const minimalConfig = {
+    name: 'test-project',
+    notification: { provider: 'test' },
+  };
+
+  it('returns 0 on successful delivery', () => {
+    const notify = () => true;
+    const shell = () => 'Health: ok (2026-09-02T10:00:00Z)\n  [ok] queue: depth 12';
+    const exitCode = runHeartbeat(minimalConfig, { now: new Date('2026-09-02T12:00:00Z'), shell, notify });
+    assert.equal(exitCode, 0, 'successful delivery must exit 0');
+  });
+
+  it('returns 1 on delivery failure', () => {
+    const notify = () => false;
+    const shell = () => 'Health: ok (2026-09-02T10:00:00Z)\n  [ok] queue: depth 12';
+    const exitCode = runHeartbeat(minimalConfig, { now: new Date('2026-09-02T12:00:00Z'), shell, notify });
+    assert.equal(exitCode, 1, 'delivery failure must exit 1');
+  });
+
+  it('handles gh unavailable by marking that section unavailable in the message', () => {
+    // Simulate gh failing — collectMergedPRs will throw when shell throws
+    const failingShell = (cmd) => {
+      if (Array.isArray(cmd) && cmd[0] === 'gh') throw new Error('gh not found');
+      return 'Health: ok (2026-09-02T10:00:00Z)\n  [ok] queue: depth 12';
+    };
+    const notify = (msg) => {
+      assert.match(msg, /⚠️ PRs merged \(24h\) \(data unavailable\)/,
+        'gh failure must produce an unavailable section in the message');
+      return true;
+    };
+    const exitCode = runHeartbeat(minimalConfig, { now: new Date('2026-09-02T12:00:00Z'), shell: failingShell, notify });
+    assert.equal(exitCode, 0, 'partial collection failure must still deliver the message');
   });
 });
