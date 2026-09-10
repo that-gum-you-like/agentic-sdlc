@@ -24,6 +24,8 @@ This skill is a way of *thinking*, not a checklist to rush through. It is the de
 
 It is **distinct from UI/visual design.** Visual design asks "how should this look." This skill asks "what should this *be*, what is it *for*, and how should it *work*." Get this right and the surface design becomes almost obvious. Get it wrong and no amount of polish will save it.
 
+> **This skill cannot settle an argument about a shade of blue.** It does not decide colour values, type scales, spacing, radii, component APIs, icon sets or animation durations. See **`references/boundaries.md`** for what is and is not in scope, and where the excluded decisions actually live.
+
 Use this whenever you are: designing a new product, feature, or experience from scratch · improving or simplifying an existing one · shaping a future roadmap · running a design critique · or making any product-design decision from first principles.
 
 ---
@@ -205,6 +207,11 @@ Load these for depth when a task calls for it:
 - **`references/design-language.md`** — the portable "standard look & feel": the through-line that makes every product feel like family regardless of stack, plus a feel-checklist.
 - **`references/critique-checklist.md`** — a full evaluation rubric, red-flag catalog, and a copy-paste design-review template.
 - **`references/case-studies.md`** — iMac, iPod, iPhone, MacBook unibody, MacBook Air, Mac mini — what each teaches and how to translate the lesson to your own work.
+- **`references/decision-rules.md`** — the rules, in trigger → consequence → boundary → evidence-grade form. Reach for this when you need to *settle* something, not just think about it.
+- **`references/dense-and-operator-tools.md`** — information-dense screens and expert daily users: the operator/client register split, and what to do when "default to roomy" is wrong. Apple's material does not cover this; this file does.
+- **`references/ux-laws-and-evidence.md`** — the twenty circulating "UX laws," graded. Which are replicated research, which are stretched past their evidence, and which are folklore. **Check a law's grade here before citing it.**
+- **`references/critique-operator-tools.md`** — the critique checklist sharpened for dense data and operator screens, with a review template.
+- **`references/boundaries.md`** — what this methodology does **not** decide, and where those decisions live instead.
 
 ---
 
