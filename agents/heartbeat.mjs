@@ -228,19 +228,22 @@ function __isMainModule() {
   return process.argv[1] && resolve(process.argv[1]) === __filename;
 }
 
-if (__isMainModule()) {
-  const config = loadConfig();
-  const now = new Date();
+/**
+ * Run the heartbeat: collect data, compose message, and deliver.
+ * Returns 0 on success, 1 on delivery failure. Injectable dependencies
+ * make this testable without spawning a child process.
+ */
+export function runHeartbeat(config, { now = new Date(), shell, notify } = {}) {
   const report = { project: config.name, date: todayIso(now), unavailable: [] };
   const collectors = [
-    ['timers', () => collectTimers(config)],
+    ['timers', () => collectTimers(config, { shell })],
     ['drainTicks', () => collectDrainTicks(config, now)],
-    ['prsMerged', () => collectMergedPRs({ now })],
+    ['prsMerged', () => collectMergedPRs({ shell, now })],
     ['approvals', () => collectApprovals(config)],
     ['blockedTasks', () => collectBlockedTasks(config)],
     ['kinds', () => collectOpenKinds(config)],
     ['spend', () => collectSpend(config, now)],
-    ['health', () => collectHealth()],
+    ['health', () => collectHealth({ shell })],
   ];
   for (const [key, collect] of collectors) {
     try {
@@ -250,10 +253,18 @@ if (__isMainModule()) {
     }
   }
   const message = composeMessage(report);
-  const sent = sendNotification(message);
+  const deliver = notify || sendNotification;
+  const sent = deliver(message);
   if (!sent) {
     console.error(`❌ heartbeat delivery failed (provider: ${config.notification.provider})`);
-    process.exit(1);
+    return 1;
   }
   console.log('📡 heartbeat sent');
+  return 0;
+}
+
+if (__isMainModule()) {
+  const config = loadConfig();
+  const exitCode = runHeartbeat(config);
+  process.exit(exitCode);
 }
