@@ -61,17 +61,19 @@ Token budget for Phase 1: covered by Bryce's Max subscription via this Claude Co
   - Complexity: M
   - Notes: Substitutes `$AGENTIC_SDLC_HOME`. Reads templates, writes to `~/.config/systemd/user/`, runs `daemon-reload` + `enable --now`.
 
-- [ ] **T-103**: Initial `projects.json` at repo root with agentic-sdlc enabled and linguaflow disabled
+- [s] **T-103**: Initial `projects.json` at repo root with agentic-sdlc enabled and linguaflow disabled
   - Files: `projects.json`
   - Spec: multi-project-orchestration/REQ-001, REQ-006
   - Agent: Claude (interactive)
   - Complexity: S
+  - **Superseded by** `portfolio.json` + `portfolio.mjs` (business-os change, Decision 2)
 
-- [ ] **T-104**: Implement `agents/projects.mjs` CLI (list/enable/disable/add/remove/status)
+- [s] **T-104**: Implement `agents/projects.mjs` CLI (list/enable/disable/add/remove/status)
   - Files: `agents/projects.mjs`
   - Spec: multi-project-orchestration/REQ-002
   - Agent: Claude (interactive)
   - Complexity: M
+  - **Superseded by** `portfolio.json` + `portfolio.mjs` (business-os change, Decision 2)
 
 - [ ] **T-105**: Implement `agents/multi-project-orchestrator.mjs` (iteration, lock, debounce, isolation)
   - Files: `agents/multi-project-orchestrator.mjs`, `agents/orchestrator-cycles.json`
