@@ -49,6 +49,11 @@ When you do reach implementation, these defaults express the language. They are 
 - **Contrast & accessibility:** high legibility, AA+ contrast, keyboard/screen-reader honesty — accessibility *is* respect for the user, a core value, not a checkbox.
 - **Shape & depth:** subtle, consistent radii and elevation; no heavy skeuomorphism without a functional reason.
 - **Density:** default to roomy; increase density only where the task genuinely demands it (and then deliberately).
+  > ⚠️ **Exception — operator tools.** This default is correct for consumer and
+  > client-facing surfaces and **wrong for information-dense screens used daily by an
+  > expert**, where density is a feature rather than a concession. See
+  > `dense-and-operator-tools.md`, which assigns the register first and cites the
+  > evidence. The two files disagree deliberately; the register decides which applies.
 
 ---
 
