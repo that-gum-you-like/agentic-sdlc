@@ -509,7 +509,7 @@ Phase 1, but not the guard.
   - Agent: sdlc-documentarian
   - Parallel: blocked-by T-103
 
-- [ ] **T-705**: Update agent memory and `openspec/BACKLOG.md`; unblock
+- [x] **T-705**: Update agent memory and `openspec/BACKLOG.md`; unblock
       BACKLOG #29 (Nels Workshop hub) now that B and C have landed.
   - Files: `agents/*/memory/*.json`, `openspec/BACKLOG.md`
   - Agent: sdlc-documentarian
