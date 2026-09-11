@@ -1,3 +1,10 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "id": "M-1789139893298",
+      "content": "BACKLOG #29 (Nels Workshop hub) UNBLOCKED 2026-09-11 (T-705): business-os workstreams B (portfolio foundation, T-101..T-105) and C (environment tiering, T-201..T-206) have both landed — every task checked off in openspec/changes/business-os/tasks.md. Entry #29 in openspec/BACKLOG.md was updated to reflect this; the hub can now be promoted to an OpenSpec change and built as mission #1 through the pipeline. Do not re-check whether B/C landed; the blocker line is struck through with the date.",
+      "date": "2026-09-11",
+      "timestamp": "2026-09-11T15:18:13.298Z"
+    }
+  ]
 }

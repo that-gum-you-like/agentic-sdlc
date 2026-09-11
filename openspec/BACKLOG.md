@@ -69,7 +69,10 @@ per-project stage and health, live URLs, open approvals, drain activity, spend.
 - **Sequencing:** starts after `business-os` workstreams B (portfolio) and C
   (environment tiering) land, and is built as **mission #1 through the new
   pipeline** — dogfooding the wireframe gate on Bryce's own project rather than
-  discovering its rough edges on a client.
+  discovering its rough edges on a client. **Both blockers have landed
+  (2026-09-11):** B = portfolio foundation (T-101..T-105, checked off) and
+  C = environment tiering (T-201..T-206, checked off) in `business-os`. The hub
+  is unblocked and can be promoted to a change / seeded as mission #1.
 - Out of scope for v1: invoicing, contracts, money, client logins.
 
 **UI — reuse Granary, do not reinvent (Bryce, 2026-09-02).** The hub is built on
@@ -105,7 +108,10 @@ The one requirement this places on `business-os` is that the hub's portfolio
 entry and task cards actually appear on the board — covered by
 `portfolio-registry/REQ-004` (T-105) and T-605.
 
-**Complexity:** L. **Blocked on:** `business-os` B + C.
+**Complexity:** L. **Blocked on:** ~~`business-os` B + C~~ — **UNBLOCKED
+(2026-09-11)**: B (portfolio, T-101..T-105) and C (environment tiering,
+T-201..T-206) have landed in `business-os`. Ready to promote to a change;
+build as mission #1 through the pipeline per the sequencing note above.
 
 
 ### 11. Agent-to-Agent Direct Communication Protocol
