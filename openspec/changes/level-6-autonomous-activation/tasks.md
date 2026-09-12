@@ -61,19 +61,15 @@ Token budget for Phase 1: covered by Bryce's Max subscription via this Claude Co
   - Complexity: M
   - Notes: Substitutes `$AGENTIC_SDLC_HOME`. Reads templates, writes to `~/.config/systemd/user/`, runs `daemon-reload` + `enable --now`.
 
-- [s] **T-103**: Initial `projects.json` at repo root with agentic-sdlc enabled and linguaflow disabled
-  - Files: `projects.json`
-  - Spec: multi-project-orchestration/REQ-001, REQ-006
-  - Agent: Claude (interactive)
+- [x] ~~**T-103**: Initial `projects.json` at repo root with agentic-sdlc enabled and linguaflow disabled~~ **SUPERSEDED**
+  - **Superseded by**: `portfolio.json` (business-os change) — the `enabled` toggle is carried forward per Decision 2
+  - Original spec: multi-project-orchestration/REQ-001, REQ-006
   - Complexity: S
-  - **Superseded by** `portfolio.json` + `portfolio.mjs` (business-os change, Decision 2)
 
-- [s] **T-104**: Implement `agents/projects.mjs` CLI (list/enable/disable/add/remove/status)
-  - Files: `agents/projects.mjs`
-  - Spec: multi-project-orchestration/REQ-002
-  - Agent: Claude (interactive)
+- [x] ~~**T-104**: Implement `agents/projects.mjs` CLI (list/enable/disable/add/remove/status)~~ **SUPERSEDED**
+  - **Superseded by**: `agents/portfolio.mjs` (business-os change) — the registry CLI was built as `portfolio.mjs list|show|add|set|status|validate` per Decision 2
+  - Original spec: multi-project-orchestration/REQ-002
   - Complexity: M
-  - **Superseded by** `portfolio.json` + `portfolio.mjs` (business-os change, Decision 2)
 
 - [ ] **T-105**: Implement `agents/multi-project-orchestrator.mjs` (iteration, lock, debounce, isolation)
   - Files: `agents/multi-project-orchestrator.mjs`, `agents/orchestrator-cycles.json`
