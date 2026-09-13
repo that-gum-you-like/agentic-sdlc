@@ -1,14 +1,14 @@
 {
   "id": "OS-business-os-8",
-  "title": "T-404: Add portfolio drift detection to the heartbeat \u2014 missing",
-  "description": "- [ ] **T-404**: Add portfolio drift detection to the heartbeat \u2014 missing\n      `path`, `stage: build` with a git HEAD unmoved for N days, `enabled: true`\n      with no drain activity. Capped list with an overflow count.\n  - Files: `agents/heartbeat.mjs`\n  - Spec: liveness-heartbeat/REQ-003\n  - Agent: sdlc-developer\n  - Test: each drift condition against a fixture; a clean portfolio produces no\n    drift section at all\n  - Parallel: blocked-by T-402, T-301\n  - Complexity: M\n  - Notes: This is the mitigation for the highest-likelihood risk in the design\n    \u2014 the portfolio becoming another lying dashboard.",
+  "title": "T-404: Add portfolio drift detection to the heartbeat — missing",
+  "description": "- [ ] **T-404**: Add portfolio drift detection to the heartbeat — missing\n      `path`, `stage: build` with a git HEAD unmoved for N days, `enabled: true`\n      with no drain activity. Capped list with an overflow count.\n  - Files: `agents/heartbeat.mjs`\n  - Spec: liveness-heartbeat/REQ-003\n  - Agent: sdlc-developer\n  - Test: each drift condition against a fixture; a clean portfolio produces no\n    drift section at all\n  - Parallel: blocked-by T-402, T-301\n  - Complexity: M\n  - Notes: This is the mitigation for the highest-likelihood risk in the design\n    — the portfolio becoming another lying dashboard.",
   "priority": "MEDIUM",
   "status": "pending",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/business-os/tasks.md",
   "createdAt": "2026-09-02T18:29:42.806Z",
-  "claimedBy": null,
+  "claimedBy": "hermes-drain",
   "testStatus": null,
   "blockedBy": [
     "OS-business-os-6"
@@ -17,5 +17,7 @@
     "business-os",
     "hermes-handoff",
     "phase-4"
-  ]
+  ],
+  "_file": "OS-business-os-8.json",
+  "claimedAt": "2026-09-13T03:37:20.069Z"
 }

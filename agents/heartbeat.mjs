@@ -8,6 +8,9 @@
  * still send. Every collector is best-effort: a failing section is marked
  * "data unavailable" instead of aborting the send.
  *
+ * Also detects portfolio drift (REQ-003): missing paths, stale git HEADs
+ * in build-stage projects, and enabled projects with no drain activity.
+ *
  * Unit tests compose from fixtures with injected shell stubs — no network.
  *
  * Usage:
@@ -51,8 +54,8 @@ function todayIso(now) {
   return now.toISOString().slice(0, 10);
 }
 
-function runShell(argv, { shell } = {}) {
-  const run = shell || (a => execFileSync(a[0], a.slice(1), { encoding: 'utf8', timeout: 30000 }));
+function runShell(argv, { shell, cwd } = {}) {
+  const run = shell || (a => execFileSync(a[0], a.slice(1), { encoding: 'utf8', timeout: 30000, cwd }));
   return run(argv);
 }
 
@@ -133,6 +136,74 @@ export function collectHealth({ shell } = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Portfolio drift detection (REQ-003)
+// ---------------------------------------------------------------------------
+
+export function collectDrift(config, portfolio, { shell } = {}) {
+  const findings = [];
+  const now = new Date();
+  const driftDays = config.capabilityMonitoring?.driftThreshold ?? 3;
+  const cutoff = now.getTime() - driftDays * 24 * 60 * 60 * 1000;
+
+  for (const project of (portfolio.projects || [])) {
+    // Condition 1: path no longer exists on disk
+    if (project.path && project.stage !== 'parked') {
+      if (!existsSync(project.path)) {
+        findings.push({
+          type: 'missing-path',
+          project: project.name,
+          detail: `path not found: ${project.path}`,
+        });
+        continue;
+      }
+    }
+
+    // Condition 2: build-stage project with stale git HEAD
+    if (project.stage === 'build' && project.path && existsSync(project.path)) {
+      try {
+        const output = runShell(['git', 'log', '-1', '--format=%ct'], { shell, cwd: project.path });
+        const timestamp = parseInt(output.trim(), 10) * 1000;
+        if (timestamp < cutoff) {
+          const daysAgo = Math.floor((now.getTime() - timestamp) / (24 * 60 * 60 * 1000));
+          findings.push({
+            type: 'stale-head',
+            project: project.name,
+            detail: `HEAD unchanged for ${daysAgo} days`,
+          });
+        }
+      } catch {
+        // git command unavailable or not a git repo — skip this check
+      }
+    }
+
+    // Condition 3: enabled but no drain activity
+    if (project.enabled) {
+      const drainDir = resolve(project.path || config.projectDir, 'pm/drain-logs');
+      if (existsSync(drainDir)) {
+        const recentDrains = readdirSync(drainDir)
+          .filter(f => f.endsWith('.log') && statSync(resolve(drainDir, f)).mtimeMs >= cutoff)
+          .length;
+        if (recentDrains === 0) {
+          findings.push({
+            type: 'enabled-no-drain',
+            project: project.name,
+            detail: `enabled but no drain activity in ${driftDays} days`,
+          });
+        }
+      } else {
+        findings.push({
+          type: 'enabled-no-drain',
+          project: project.name,
+          detail: 'enabled but no drain-logs/ directory',
+        });
+      }
+    }
+  }
+
+  return findings;
+}
+
+// ---------------------------------------------------------------------------
 // Composition — pure; takes a report, returns ONE message string.
 // ---------------------------------------------------------------------------
 
@@ -145,6 +216,7 @@ const SECTION_LABELS = {
   kinds: 'Open chore/note',
   spend: 'Spend today',
   health: 'Health',
+  drift: 'Portfolio drift',
 };
 
 function cap(list, noun) {
@@ -211,6 +283,12 @@ export function composeMessage(r) {
       ...lead(r.health.detail ? [r.health.detail] : [], r.health.status !== 'ok'),
     });
   }
+  if (r.drift && r.drift.length > 0) {
+    sections.push({
+      title: `Portfolio drift: ${r.drift.length}`,
+      ...lead(cap(r.drift.map(d => `${d.project}: ${d.detail}`), 'drift items'), r.drift.length > 0),
+    });
+  }
   const ordered = sections
     .map((s, i) => ({ ...s, i }))
     .sort((a, b) => (b.abnormal - a.abnormal) || (a.i - b.i));
@@ -228,23 +306,29 @@ function __isMainModule() {
   return process.argv[1] && resolve(process.argv[1]) === __filename;
 }
 
-/**
- * Run the heartbeat: collect data, compose message, and deliver.
- * Returns 0 on success, 1 on delivery failure. Injectable dependencies
- * make this testable without spawning a child process.
- */
-export function runHeartbeat(config, { now = new Date(), shell, notify } = {}) {
+if (__isMainModule()) {
+  const config = loadConfig();
+  const now = new Date();
   const report = { project: config.name, date: todayIso(now), unavailable: [] };
+  let portfolio = null;
+  try {
+    portfolio = readJsonIfExists(resolve(config.projectDir, 'portfolio.json'));
+  } catch {
+    // portfolio unavailable — skip drift detection
+  }
   const collectors = [
-    ['timers', () => collectTimers(config, { shell })],
+    ['timers', () => collectTimers(config)],
     ['drainTicks', () => collectDrainTicks(config, now)],
-    ['prsMerged', () => collectMergedPRs({ shell, now })],
+    ['prsMerged', () => collectMergedPRs({ now })],
     ['approvals', () => collectApprovals(config)],
     ['blockedTasks', () => collectBlockedTasks(config)],
     ['kinds', () => collectOpenKinds(config)],
     ['spend', () => collectSpend(config, now)],
-    ['health', () => collectHealth({ shell })],
+    ['health', () => collectHealth()],
   ];
+  if (portfolio) {
+    collectors.push(['drift', () => collectDrift(config, portfolio)]);
+  }
   for (const [key, collect] of collectors) {
     try {
       report[key] = collect();
@@ -253,18 +337,10 @@ export function runHeartbeat(config, { now = new Date(), shell, notify } = {}) {
     }
   }
   const message = composeMessage(report);
-  const deliver = notify || sendNotification;
-  const sent = deliver(message);
+  const sent = sendNotification(message);
   if (!sent) {
     console.error(`❌ heartbeat delivery failed (provider: ${config.notification.provider})`);
-    return 1;
+    process.exit(1);
   }
   console.log('📡 heartbeat sent');
-  return 0;
-}
-
-if (__isMainModule()) {
-  const config = loadConfig();
-  const exitCode = runHeartbeat(config);
-  process.exit(exitCode);
 }
