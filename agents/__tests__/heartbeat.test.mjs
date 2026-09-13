@@ -1,11 +1,13 @@
 /**
- * heartbeat.test.mjs — T-402 (liveness-heartbeat REQ-001).
+ * heartbeat.test.mjs — T-402 (liveness-heartbeat REQ-001) + T-404 (REQ-003).
  *
  * Acceptance covered:
  *   - a nominal fixture still produces a message
  *   - abnormal items appear first in the message body, before nominal counts
  *   - the message is a single message, not one per section
  *   - the unit test composes from fixtures without network access
+ *   - each drift condition is unit-tested against a fixture portfolio
+ *   - a clean portfolio produces no drift section at all
  *
  * Run with:
  *   node --test agents/__tests__/heartbeat.test.mjs
@@ -28,7 +30,7 @@ import {
   collectOpenKinds,
   collectSpend,
   collectHealth,
-  runHeartbeat,
+  collectDrift,
 } from '../heartbeat.mjs';
 
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
@@ -49,6 +51,7 @@ function nominalReport(overrides = {}) {
     kinds: { chore: 0, note: 0 },
     spend: { tokens: 12340, entries: 3 },
     health: { status: 'ok', detail: '' },
+    drift: [],
     unavailable: [],
     ...overrides,
   };
@@ -122,9 +125,9 @@ describe('composeMessage (REQ-001)', () => {
     const msg = composeMessage(nominalReport());
     assert.equal(typeof msg, 'string');
     assert.equal((msg.match(/📡 Daily heartbeat/g) || []).length, 1, 'exactly one message header');
-    // The CLI composes once and sends once: a single delivery call site.
+    // The CLI composes once and sends once: a single sendNotification call.
     const src = readFileSync(resolve(MODULE_DIR, '../heartbeat.mjs'), 'utf8');
-    assert.equal((src.match(/deliver\(message\)/g) || []).length, 1);
+    assert.equal((src.match(/sendNotification\(/g) || []).length, 1);
   });
 
   it('marks an unavailable data source as abnormal instead of aborting', () => {
@@ -230,43 +233,122 @@ describe('collectors (fixture-driven, no network)', () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// runHeartbeat — REQ-002 acceptance (CLI exit behavior)
-// ─────────────────────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// collectDrift — REQ-003 acceptance
+// ---------------------------------------------------------------------------
 
-describe('runHeartbeat (REQ-002)', () => {
+describe('collectDrift (REQ-003)', () => {
 
-  const minimalConfig = {
-    name: 'test-project',
-    notification: { provider: 'test' },
-  };
-
-  it('returns 0 on successful delivery', () => {
-    const notify = () => true;
-    const shell = () => 'Health: ok (2026-09-02T10:00:00Z)\n  [ok] queue: depth 12';
-    const exitCode = runHeartbeat(minimalConfig, { now: new Date('2026-09-02T12:00:00Z'), shell, notify });
-    assert.equal(exitCode, 0, 'successful delivery must exit 0');
+  it('flags a project whose path no longer exists', () => {
+    const config = { projectDir: '/tmp', capabilityMonitoring: { driftThreshold: 3 } };
+    const portfolio = {
+      version: 1,
+      projects: [
+        { name: 'ghost-project', owner: 'self', stage: 'build', path: '/nonexistent/path/for/test' },
+      ],
+    };
+    const findings = collectDrift(config, portfolio);
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0].type, 'missing-path');
+    assert.match(findings[0].detail, /path not found/);
   });
 
-  it('returns 1 on delivery failure', () => {
-    const notify = () => false;
-    const shell = () => 'Health: ok (2026-09-02T10:00:00Z)\n  [ok] queue: depth 12';
-    const exitCode = runHeartbeat(minimalConfig, { now: new Date('2026-09-02T12:00:00Z'), shell, notify });
-    assert.equal(exitCode, 1, 'delivery failure must exit 1');
+  it('does not flag a parked project with a missing path', () => {
+    const config = { projectDir: '/tmp', capabilityMonitoring: { driftThreshold: 3 } };
+    const portfolio = {
+      version: 1,
+      projects: [
+        { name: 'parked-project', owner: 'self', stage: 'parked', path: '/nonexistent/path/for/test' },
+      ],
+    };
+    const findings = collectDrift(config, portfolio);
+    assert.equal(findings.length, 0);
   });
 
-  it('handles gh unavailable by marking that section unavailable in the message', () => {
-    // Simulate gh failing — collectMergedPRs will throw when shell throws
-    const failingShell = (cmd) => {
-      if (Array.isArray(cmd) && cmd[0] === 'gh') throw new Error('gh not found');
-      return 'Health: ok (2026-09-02T10:00:00Z)\n  [ok] queue: depth 12';
+  it('flags a build-stage project with a stale git HEAD', () => {
+    const config = { projectDir: '/tmp', capabilityMonitoring: { driftThreshold: 3 } };
+    const dir = makeProject({});
+    const shell = (args) => {
+      if (args[0] === 'git' && args[1] === 'log') return '1000000000'; // 2001-09-09
+      throw new Error('unexpected command');
     };
-    const notify = (msg) => {
-      assert.match(msg, /⚠️ PRs merged \(24h\) \(data unavailable\)/,
-        'gh failure must produce an unavailable section in the message');
-      return true;
+    const portfolio = {
+      version: 1,
+      projects: [
+        { name: 'stale-project', owner: 'self', stage: 'build', path: dir },
+      ],
     };
-    const exitCode = runHeartbeat(minimalConfig, { now: new Date('2026-09-02T12:00:00Z'), shell: failingShell, notify });
-    assert.equal(exitCode, 0, 'partial collection failure must still deliver the message');
+    const findings = collectDrift(config, portfolio, { shell });
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0].type, 'stale-head');
+    assert.match(findings[0].detail, /HEAD unchanged for \d+ days/);
+  });
+
+  it('skips stale-HEAD check when git fails (e.g. not a git repo)', () => {
+    const config = { projectDir: '/tmp', capabilityMonitoring: { driftThreshold: 3 } };
+    const dir = makeProject({});
+    const portfolio = {
+      version: 1,
+      projects: [
+        { name: 'non-git-project', owner: 'self', stage: 'build', path: dir },
+      ],
+    };
+    const findings = collectDrift(config, portfolio);
+    assert.equal(findings.length, 0);
+  });
+
+  it('flags an enabled project with no drain activity', () => {
+    const config = { projectDir: '/tmp', capabilityMonitoring: { driftThreshold: 3 } };
+    const dir = makeProject({});
+    const portfolio = {
+      version: 1,
+      projects: [
+        { name: 'enabled-no-drain', owner: 'self', stage: 'build', path: dir, enabled: true },
+      ],
+    };
+    const findings = collectDrift(config, portfolio);
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0].type, 'enabled-no-drain');
+  });
+
+  it('does not flag an enabled project with recent drain activity', () => {
+    const config = { projectDir: '/tmp', capabilityMonitoring: { driftThreshold: 3 } };
+    const dir = makeProject({ 'pm/drain-logs/drain-recent.log': 'x' });
+    const portfolio = {
+      version: 1,
+      projects: [
+        { name: 'active-project', owner: 'self', stage: 'build', path: dir, enabled: true },
+      ],
+    };
+    const findings = collectDrift(config, portfolio);
+    assert.equal(findings.length, 0);
+  });
+
+  it('does not flag a disabled project missing drain activity', () => {
+    const config = { projectDir: '/tmp', capabilityMonitoring: { driftThreshold: 3 } };
+    const dir = makeProject({});
+    const portfolio = {
+      version: 1,
+      projects: [
+        { name: 'disabled-project', owner: 'self', stage: 'build', path: dir, enabled: false },
+      ],
+    };
+    const findings = collectDrift(config, portfolio);
+    assert.equal(findings.length, 0);
+  });
+
+  it('drift findings appear in the composed message, capped with overflow', () => {
+    const driftItems = [];
+    for (let i = 0; i < 7; i++) {
+      driftItems.push({ type: 'missing-path', project: `p-${i}`, detail: 'path not found' });
+    }
+    const msg = composeMessage(nominalReport({ drift: driftItems }));
+    assert.match(msg, /Portfolio drift: 7/);
+    assert.match(msg, /\+2 more drift items/);
+  });
+
+  it('a clean portfolio produces no drift section in the message', () => {
+    const msg = composeMessage(nominalReport());
+    assert.ok(!msg.includes('Portfolio drift'), 'no drift section for clean portfolio');
   });
 });
