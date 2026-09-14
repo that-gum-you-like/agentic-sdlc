@@ -19,6 +19,25 @@
 <!-- Numbered requirements with testable statements. Each requirement should be implementable in 1-3 days.
      See framework/requirements-guide.md for the 5-component structure and quality checklist. -->
 
+
+<!-- REQUIREMENT IDS — read `openspec/REQUIREMENT-PREFIXES.md` (one ledger per project; create it on the first change) and claim your prefix there BEFORE
+     you write REQ-001, in the same commit as this file.
+
+     Ids are written `<PREFIX>-REQ-nnn`, and the prefix belongs to THE CHANGE, not to the capability.
+     One change, one prefix, across as many capability files as it has. Within the change, each
+     capability file takes a disjoint band of ten — 001-009, 010-019, 020-029 — so the id names its
+     file without a lookup and each file can grow without renumbering its neighbours.
+
+     Prefer two letters to one. Every one-letter prefix measured so far has collided; no two-letter
+     one has, except by reuse. `REQ-001` bare, as the boilerplate below writes it, is the worst case:
+     it belongs to everybody.
+
+     Your tasks.md uses the same letters (`CI-001` against `CI-REQ-001`), never a different set.
+
+     An id is not a filename. It is what a code comment, a test name, a browser-gate route note and a
+     commit message say INSTEAD of a filename, and none of those carries the directory that would
+     have disambiguated it. A commit message cannot be edited afterwards. Pick once. -->
+
 ### REQ-001: {{REQ_1_SHORT_NAME}}
 
 **Statement:** The system shall {{REQ_1_SPECIFIC_TESTABLE_BEHAVIOR}}

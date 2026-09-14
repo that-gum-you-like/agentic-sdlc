@@ -41,6 +41,17 @@
 
 Tasks are ordered by dependency. Complete them in sequence unless noted otherwise.
 
+
+<!-- TASK IDS — use the same letters your requirements use. A change whose tasks read `WD-001` and
+     whose requirements read `W-REQ-001` is telling the reader two different things about itself, and
+     one of them is wrong. Claim the prefix in `openspec/REQUIREMENT-PREFIXES.md` (one ledger per project; create it on the first change).
+
+     When a task's `Spec:` line cites a requirement from ANOTHER change, write that change's name
+     beside it. Same rule applies to the code you write: an id cited outside its own change directory
+     names its change, once per file, at the top. -->
+
+<!-- Cite as: Spec: <PREFIX>-REQ-nnn  (own change)  ·  <PREFIX>-REQ-nnn (other-change-name) -->
+
 ### Phase 1: {{PHASE_1_NAME}}
 
 - [ ] **{{TASK_1_ID}}**: {{TASK_1_DESCRIPTION}}
