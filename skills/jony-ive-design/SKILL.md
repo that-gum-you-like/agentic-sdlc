@@ -146,6 +146,33 @@ These are the standards every decision is measured against. When stuck, ask whic
 
 ---
 
+## The Labour Question
+
+*Added 2026-09-14, at Bryce's direct request, after two operator notes on the Nels Workshop console. Authored there, upstreamed here, where every session loads it. This is a standing design distinction, not a page fix.*
+
+The principles above are all about how a thing **reads**. This one is about what it **costs** — and they are different axes. A screen can be calm, honest, well-ranked and quietly confident, and still make a person do forty minutes of typing it could have heard in one. The Workshop has exactly such a screen; it measured as the calmest page in the product on the same week its operator called it *"a huge manual labor and nothing a human would want to do."*
+
+In his words:
+
+> "We should always have the ability to do things manually but where a user can talk to an agent or talk out loud with their voice and the system process that, is a better more future-oriented user experience."
+
+Which is:
+
+1. **The manual path is always available.** Every state a spoken or agent-driven path can reach, a person can reach by hand, on the same screen. Unconditional. It does not weaken because the spoken path is faster or better liked. *Removing the form is never the answer.*
+2. **The manual path is not the default labour.** Where a person could speak — to an agent, or out loud into a recording the system processes — that is the primary affordance, and the page leads with it. The fields stay, in their real role: guides, and the occasional hand-entered exception.
+3. **Fewest clicks to make the required update is the measure.** Counted against a rendered page, twice — manual and spoken — never estimated, and never capped by an invented threshold.
+4. **Voice-friendly means field-level.** Not "a microphone exists on this screen," but every updatable unit individually addressable by a spoken or agent-driven update: a stable id and the label a person actually reads.
+
+This belongs in this methodology, and not in a style guide, for a Phase 3 reason. The skill already holds that in software the material is *interaction, time, attention* — and that honest form follows the honest nature of the material. Speech is now part of that material. A screen that makes a person hand-type what it could have heard is designing in an older material than the one it is standing in, and the person does not experience that as a technical limitation. They experience it as the product not respecting their afternoon.
+
+**The two over-corrections, both refused.** Deleting the form because voice now covers it is reduction as amputation (Phase 2 warns about it by name), and it fails rule 1 outright. Bolting a microphone onto a Gate, a Statement or a one-button transition is decoration, and the red-flag list below already names it under another costume. If the required update is one click, the page has already won.
+
+**How to apply it in a review:** run the Page Test — all ten questions — what is the required update, what does it cost by each path, and does a spoken path exist while the manual one survives. The mechanical form is the Page Test itself at `~/component-library/web/design-system/page-formats/the-page-test.md`, where Q8–Q10 and the one merged scorecard now live; the binding requirements are `IX-REQ-001`…`IX-REQ-008` in Nels Workshop's `openspec/specs/console-shell/spec.md` (project-specific, cited as provenance); the long form, with the evidence and the review template, is **`references/interaction-doctrine.md`**.
+
+---
+
+---
+
 ## The Critique Process
 
 Use this to evaluate any design — yours or someone else's, a new concept or a shipped product. Critique is not about taste or opinion; it is about holding work against the philosophy and finding where it falls short. Be rigorous and kind: hard on the work, respectful of the maker.
@@ -212,6 +239,7 @@ Load these for depth when a task calls for it:
 - **`references/ux-laws-and-evidence.md`** — the twenty circulating "UX laws," graded. Which are replicated research, which are stretched past their evidence, and which are folklore. **Check a law's grade here before citing it.**
 - **`references/critique-operator-tools.md`** — the critique checklist sharpened for dense data and operator screens, with a review template.
 - **`references/boundaries.md`** — what this methodology does **not** decide, and where those decisions live instead.
+- **`references/interaction-doctrine.md`** — the long form of *The Labour Question*: manual is the floor and never the default, how to count a required update's cost twice, and what makes a screen addressable by a spoken path. Reach for it when a page is calm to read and expensive to use.
 
 ---
 
