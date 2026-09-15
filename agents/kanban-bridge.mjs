@@ -9,7 +9,11 @@
  *   node agents/kanban-bridge.mjs sync [--reconcile]   # push tasks -> board
  *   node agents/kanban-bridge.mjs status               # dry-run diff, no writes
  *
- * Exports (for tests): mapStatus, mapPriority, runKanban, readTasks, cardTitle, sync, statusReport
+ * Under `command-center-sync sync --all`, SDLC_PROJECT_NAMESPACE=<project>
+ * namespaces every idempotency key so identical task ids across portfolio
+ * projects never collide on the shared board (see nsKey).
+ *
+ * Exports (for tests): mapStatus, mapPriority, runKanban, readTasks, cardTitle, sync, statusReport, nsKey
  */
 
 import { spawnSync } from 'node:child_process';
@@ -19,10 +23,21 @@ import fs from 'node:fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const PROJECT_DIR = process.env.SDLC_PROJECT_DIR || resolve(dirname(__filename), '..');
+const PROJECT_NAMESPACE = process.env.SDLC_PROJECT_NAMESPACE || null;
 const QUEUE_DIR = join(PROJECT_DIR, 'tasks', 'queue');
 const COMPLETED_DIR = join(PROJECT_DIR, 'tasks', 'completed');
 const PM_DIR = join(PROJECT_DIR, 'pm');
 const LINKS_PATH = join(PM_DIR, 'kanban-links.json');
+
+/**
+ * Namespace a kanban idempotency key with the synced project's name. Under
+ * `command-center-sync sync --all` each portfolio project runs with
+ * SDLC_PROJECT_NAMESPACE set, so identical task ids across projects mint
+ * distinct board cards. Unset (default `sync` path) -> keys unchanged.
+ */
+export function nsKey(key) {
+  return PROJECT_NAMESPACE ? `${PROJECT_NAMESPACE}:${key}` : key;
+}
 
 // SDLC status -> kanban lane. `verb` is the CLI verb used to move an existing
 // card into that lane; `initial` is the --initial-status value valid at create.
@@ -107,7 +122,8 @@ export function cardTitle(task) {
 
 /** Upsert one task, then reconcile its lane only if it differs. */
 function syncTask(task, links, boardById) {
-  const args = ['create', cardTitle(task), '--idempotency-key', task.id, '--json'];
+  const key = nsKey(task.id);
+  const args = ['create', cardTitle(task), '--idempotency-key', key, '--json'];
   if (task.description) args.push('--body', String(task.description).slice(0, 4000));
   if (task.assignee) args.push('--assignee', String(task.assignee));
   const prio = mapPriority(task.priority);
@@ -118,7 +134,7 @@ function syncTask(task, links, boardById) {
   const created = runKanban(args, { json: true });
   const kid = kanbanId(created);
   if (!kid) throw new Error(`no kanban id returned for ${task.id}`);
-  links[task.id] = kid;
+  links[key] = kid;
 
   const currentLane = boardById[kid] && boardById[kid].status;
   let moved = false;
@@ -142,15 +158,19 @@ function reverseReconcile(links, boardById) {
     if (lane === 'done') newStatus = 'completed';
     else if (lane === 'blocked') newStatus = 'blocked';
     if (!newStatus) continue;
+    // Link-map keys are namespaced under sync --all; the task FILE is always
+    // `<bare-task-id>.json` in the synced project's own queue/completed dirs.
+    const bareId = PROJECT_NAMESPACE && sid.startsWith(`${PROJECT_NAMESPACE}:`)
+      ? sid.slice(PROJECT_NAMESPACE.length + 1) : sid;
     for (const dir of [QUEUE_DIR, COMPLETED_DIR]) {
-      const p = join(dir, `${sid}.json`);
+      const p = join(dir, `${bareId}.json`);
       if (!fs.existsSync(p)) continue;
       const t = JSON.parse(fs.readFileSync(p, 'utf8'));
       if (t.status === newStatus) break;
       t.status = newStatus;
       if (newStatus === 'completed' && !t.completed_at) t.completed_at = new Date(card.completed_at ? card.completed_at * 1000 : Date.now()).toISOString();
       fs.writeFileSync(p, JSON.stringify(t, null, 2) + '\n');
-      changed.push({ id: sid, status: newStatus });
+      changed.push({ id: bareId, status: newStatus });
       break;
     }
   }
@@ -182,7 +202,7 @@ export function statusReport() {
   for (const t of tasks) {
     const target = mapStatus(t.status);
     laneCounts[target.lane] = (laneCounts[target.lane] || 0) + 1;
-    const kid = links[t.id];
+    const kid = links[nsKey(t.id)];
     if (!kid || !boardById[kid]) toCreate++;
     else if (boardById[kid].status !== target.lane) toUpdate++;
   }

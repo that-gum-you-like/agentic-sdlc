@@ -500,6 +500,92 @@ test('PARKED REQ-005: state purged; next pass issues nothing for the deleted cha
   assert(!logLines().some((a) => a[1] === 'archive' || String(a[2] || '').includes('delta')), 'silent no-op');
 });
 
+console.log('\n📋 command-center-sync: CC-003 sync --all (portfolio-wide)');
+// Fixture portfolio: projA + projB are enabled with REAL paths and IDENTICAL
+// change names (alpha) and task ids (A-1) — the collision case. projMissing
+// is enabled with a path that does not exist; projDisabled is off. A stray
+// project dir with a real tasks/queue exists on disk but is NOT in the
+// portfolio — it must never be synced.
+const allFixtures = mkdtempSync(join(tmpdir(), 'cc-sync-all-'));
+const stray = join(allFixtures, 'stray');
+for (const name of ['projA', 'projB']) {
+  const dir = join(allFixtures, name);
+  mkdirSync(join(dir, 'tasks', 'queue'), { recursive: true });
+  mkdirSync(join(dir, 'openspec', 'changes', 'alpha'), { recursive: true });
+  writeFileSync(join(dir, 'tasks', 'queue', 'A-1.json'), JSON.stringify({
+    id: 'A-1', title: `${name} queue task`, description: 'work for openspec/changes/alpha',
+    assignee: 'sdlc-developer', priority: 'HIGH', status: 'pending', tags: ['alpha'],
+  }));
+  writeFileSync(join(dir, 'openspec', 'changes', 'alpha', 'status.json'),
+    JSON.stringify({ status: 'proposed', phase: 'specs', created: '2026-09-07', lastUpdated: '2026-09-07' }));
+  writeFileSync(join(dir, 'openspec', 'changes', 'alpha', 'tasks.md'),
+    ['# Tasks: alpha', '', '## Implementation Tasks', '', '- [ ] A1 work item', ''].join('\n'));
+}
+mkdirSync(join(stray, 'tasks', 'queue'), { recursive: true });
+writeFileSync(join(stray, 'tasks', 'queue', 'S-1.json'), JSON.stringify({
+  id: 'S-1', title: 'Stray task', status: 'pending',
+}));
+writeFileSync(join(proj, 'portfolio.json'), JSON.stringify({
+  version: 1,
+  projects: [
+    { name: 'projA', owner: 'self', stage: 'build', enabled: true, path: join(allFixtures, 'projA') },
+    { name: 'projB', owner: 'self', stage: 'build', enabled: true, path: join(allFixtures, 'projB') },
+    { name: 'projMissing', owner: 'self', stage: 'build', enabled: true, path: join(allFixtures, 'does-not-exist') },
+    { name: 'projDisabled', owner: 'self', stage: 'build', enabled: false, path: join(allFixtures, 'projB') },
+  ],
+}));
+writeFileSync(hermesLog, '');
+const rAll = cc.syncAllProjects();
+test('CC-003 REQ-001: the two enabled fixture projects both sync; disabled and missing-path are skipped', () => {
+  assertEqual(rAll.projects, 4);
+  assertEqual(rAll.synced.length, 2, `synced: ${JSON.stringify(rAll.synced)}`);
+  assert(rAll.synced.every((s) => s.ok), `both children exited 0: ${JSON.stringify(rAll.synced)}`);
+  assert(rAll.synced.some((s) => s.name === 'projA') && rAll.synced.some((s) => s.name === 'projB'), 'both enabled projects synced');
+  assertEqual(rAll.skipped.length, 2, 'projMissing + projDisabled skipped');
+});
+test('CC-003 REQ-002: identical change names and task ids get distinct namespaced keys', () => {
+  const lines = logLines();
+  const keys = lines.filter((a) => a[1] === 'create').map((a) => a[a.indexOf('--idempotency-key') + 1]);
+  assert(keys.includes('projA:openspec:alpha') && keys.includes('projB:openspec:alpha'), `change cards namespaced, got: ${keys.join(' ')}`);
+  assert(!keys.includes('openspec:alpha'), 'no bare unnamespaced change card');
+  assert(keys.includes('projA:A-1') && keys.includes('projB:A-1'), `queue cards namespaced, got: ${keys.join(' ')}`);
+  assert(!keys.includes('A-1'), 'no bare unnamespaced task card');
+  assert(keys.includes('projA:subtask:alpha:1') && keys.includes('projB:subtask:alpha:1'), `subtask cards namespaced, got: ${keys.join(' ')}`);
+});
+test('CC-003 REQ-002: subtask cards are parented to THEIR project\'s change card', () => {
+  const lines = logLines();
+  const sa = lines.find((a) => a[1] === 'create' && a.includes('projA:subtask:alpha:1'));
+  const sb = lines.find((a) => a[1] === 'create' && a.includes('projB:subtask:alpha:1'));
+  assertEqual(sa[sa.indexOf('--parent') + 1], 't_projA:openspec:alpha');
+  assertEqual(sb[sb.indexOf('--parent') + 1], 't_projB:openspec:alpha');
+});
+test('CC-003 REQ-003: a missing path warns (by name) and never aborts the run', () => {
+  assert(rAll.warnings.some((w) => w.includes('projMissing')), `warning names the project: ${rAll.warnings.join(' | ')}`);
+  assertEqual(rAll.warnings.length, 1, 'only the missing-path project warns');
+});
+test('CC-003 REQ-003/REQ-001: disabled project is skipped silently; stray project absent from the portfolio never syncs', () => {
+  assert(!rAll.warnings.some((w) => w.includes('projDisabled')), 'disabled project does not warn');
+  const allLog = logLines().map((a) => a.join(' ')).join('\n');
+  assert(!allLog.includes('S-1'), 'stray project task never reaches the board');
+  assert(!rAll.synced.some((s) => s.name === 'stray'), 'stray not in the synced list');
+});
+test('CC-003 REQ-004: each project\'s state and link map live in its own pm/', () => {
+  for (const name of ['projA', 'projB']) {
+    const st = JSON.parse(readFileSync(join(allFixtures, name, 'pm', 'command-center-links.json'), 'utf8'));
+    assertEqual(st.changes.alpha, `t_${name}:openspec:alpha`, `${name} keeps its own change card id`);
+  }
+  const linksA = JSON.parse(readFileSync(join(allFixtures, 'projA', 'pm', 'kanban-links.json'), 'utf8'));
+  assertEqual(linksA['projA:A-1'], 't_projA:A-1', 'link map keyed by the namespaced key');
+  assertEqual(Object.keys(linksA).length, 1, 'no foreign task ids leak into projA\'s link map');
+});
+test('CC-003 REQ-005: bespoke nels-workshop-kanban-sync removed; kanban-sync runs sync --all', () => {
+  const cron = JSON.parse(readFileSync(join(SDLC_ROOT, 'agents', 'cron-schedule.json'), 'utf8'));
+  assert(!cron.schedules.some((s) => s.name === 'nels-workshop-kanban-sync'), 'bespoke timer removed');
+  const ks = cron.schedules.find((s) => s.name === 'kanban-sync');
+  assert(ks && ks.script.includes('sync --all'), `kanban-sync runs --all, got: ${ks && ks.script}`);
+});
+rmSync(allFixtures, { recursive: true, force: true });
+
 console.log('\n📋 command-center-sync: status (dry-run) + degradation');
 test('statusReport counts without any mutating kanban calls', () => {
   writeFileSync(hermesLog, '');

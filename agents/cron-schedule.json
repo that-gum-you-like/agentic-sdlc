@@ -105,8 +105,8 @@
     {
       "name": "kanban-sync",
       "cron": "*/15 * * * *",
-      "script": "node ~/agentic-sdlc/agents/command-center-sync.mjs sync",
-      "description": "Full command-center sync: task queue, agent registry, OpenSpec changes + tasks.md sub-cards, BACKLOG.md ideas, run history, and board-side approvals into the Hermes kanban the dashboard reads. Idempotent single command (systemd ExecStart cannot shell-chain).",
+      "script": "node ~/agentic-sdlc/agents/command-center-sync.mjs sync --all",
+      "description": "Full command-center sync --all: queue, agent registry, OpenSpec changes + tasks.md sub-cards, BACKLOG.md ideas, run history, and board-side approvals for EVERY enabled portfolio project — namespaced per project so cards never collide on the shared board. Idempotent single command (systemd ExecStart cannot shell-chain).",
       "session": "isolated"
     },
     {
@@ -170,13 +170,6 @@
       "cron": "21,51 * * * *",
       "script": "/usr/bin/env SDLC_PROJECT_DIR=/home/bryce/nels-workshop node /home/bryce/agentic-sdlc/agents/pr-auto-review.mjs",
       "description": "PR auto-review for nels-workshop (mission-bootstrap)",
-      "session": "isolated"
-    },
-    {
-      "name": "nels-workshop-kanban-sync",
-      "cron": "8,38 * * * *",
-      "script": "/usr/bin/env SDLC_PROJECT_DIR=/home/bryce/nels-workshop node /home/bryce/agentic-sdlc/agents/command-center-sync.mjs sync",
-      "description": "Command-center sync for nels-workshop — its queue, OpenSpec change and sub-cards into the board the dashboard reads. The base kanban-sync only ever walks the framework repo.",
       "session": "isolated"
     },
     {
