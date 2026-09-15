@@ -5,6 +5,12 @@
       "content": "BACKLOG #29 (Nels Workshop hub) UNBLOCKED 2026-09-11 (T-705): business-os workstreams B (portfolio foundation, T-101..T-105) and C (environment tiering, T-201..T-206) have both landed — every task checked off in openspec/changes/business-os/tasks.md. Entry #29 in openspec/BACKLOG.md was updated to reflect this; the hub can now be promoted to an OpenSpec change and built as mission #1 through the pipeline. Do not re-check whether B/C landed; the blocker line is struck through with the date.",
       "date": "2026-09-11",
       "timestamp": "2026-09-11T15:18:13.298Z"
+    },
+    {
+      "id": "M-1789500754001",
+      "content": "BACKLOG #29 (Nels Workshop Hub) promoted from backlog to active change on 2026-09-11 (T-705). Unblocked because business-os workstreams B (portfolio foundation) and C (environment tiering) have landed. The hub is a separate repo (nels-workshop-hub), uses Granary UI components, v1 is read + light-actions. BACKLOG.md updated — removed from Remaining Ideas, added row to Promoted to Changes table.",
+      "date": "2026-09-11",
+      "timestamp": "2026-09-11T12:00:00.000Z"
     }
   ]
 }
