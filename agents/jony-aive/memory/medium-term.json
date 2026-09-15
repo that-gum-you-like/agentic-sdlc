@@ -1,10 +1,22 @@
 {
   "entries": [
     {
+      "id": "M-1789139893505",
+      "content": "BACKLOG #29 (Nels Workshop hub) UNBLOCKED 2026-09-11 (T-705): business-os B (portfolio foundation) and C (environment tiering) have landed, so the Nels Workshop hub is no longer blocked on business-os. BACKLOG.md entry #29 reflects the unblock; hub design/rollout can proceed as mission #1 through the pipeline when the queue picks it up.",
+      "date": "2026-09-11",
+      "timestamp": "2026-09-11T15:18:13.505Z"
+    },
+    {
+      "id": "M-1789139893506",
+      "content": "T-705 completed: promoted BACKLOG #29 (Nels Workshop hub) from 'Remaining Ideas' to 'Promoted to Changes' in openspec/BACKLOG.md. Hub unblocked now that business-os B and C have landed. Memory updated in all agent directories.",
+      "date": "2026-09-15",
+      "timestamp": "2026-09-15T13:05:29.000Z"
+    },
+    {
       "id": "M-1789500754002",
       "content": "BACKLOG #29 (Nels Workshop Hub) promoted from backlog to active change on 2026-09-11 (T-705). Unblocked because business-os workstreams B (portfolio foundation) and C (environment tiering) have landed. The hub is a separate repo (nels-workshop-hub), uses Granary UI components, v1 is read + light-actions. Scope decisions: no invoicing/contracts for v1, not a source of truth, writes go through existing scripts. Build as mission #1 through the pipeline — dogfooding the wireframe gate.",
-      "date": "2026-09-15",
-      "timestamp": "2026-09-15T12:00:00.000Z"
+      "date": "2026-09-11",
+      "timestamp": "2026-09-11T12:00:00.000Z"
     }
   ]
 }
