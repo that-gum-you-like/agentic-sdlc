@@ -21,7 +21,7 @@
  * timers run without an active login session (already on for this host).
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync, realpathSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
@@ -146,6 +146,86 @@ export function extraPathDirs({ home, whichFn } = {}) {
   return [...new Set(dirs)];
 }
 
+/**
+ * Resolve a version-STABLE absolute path to the running node interpreter.
+ *
+ * `process.execPath` is the realpath of the interpreter, so on a Homebrew host
+ * it resolves *through* `<prefix>/bin/node` down to
+ * `<prefix>/Cellar/node/<version>/bin/node`. Baking that into a unit pins the
+ * unit to a node version: the next `brew upgrade node` deletes the Cellar
+ * directory and every timer dies with rc=127, silently.
+ *
+ * So: look for a path on PATH that points at the SAME binary but carries no
+ * version in its name, and prefer it. Deliberately generic — nvm, asdf, and
+ * distro layouts all benefit, and nothing here special-cases Homebrew.
+ *
+ * Falls back to `execPath` when no stable alias resolves to the same binary,
+ * which is the correct answer for a node that was never behind a shim.
+ *
+ * @returns {string} absolute path to node, preferring a non-versioned alias
+ */
+export function resolveStableNodeBin({
+  execPath = process.execPath,
+  pathEnv = process.env.PATH || '',
+  realpathFn,
+  existsFn,
+} = {}) {
+  const real = realpathFn || ((p) => realpathSync(p));
+  const exists = existsFn || ((p) => existsSync(p));
+
+  // A path segment that looks like a version (25.6.1, v20, 18.x) makes the
+  // path upgrade-fragile. This is the whole property we are selecting for.
+  const isVersioned = (p) => p.split('/').some(seg => /(^|[^a-z])v?\d+(\.\d+)+/i.test(seg) || /^v\d+$/i.test(seg));
+
+  let target;
+  try {
+    target = real(execPath);
+  } catch {
+    return execPath; // cannot resolve our own interpreter — do not get clever
+  }
+
+  for (const dir of pathEnv.split(':')) {
+    if (!dir) continue;
+    const candidate = join(dir, 'node');
+    if (candidate === execPath) continue;
+    if (isVersioned(candidate)) continue;
+    try {
+      if (!exists(candidate)) continue;
+      if (real(candidate) === target) return candidate;
+    } catch {
+      continue; // broken symlink / unreadable dir — skip, never throw
+    }
+  }
+
+  return execPath;
+}
+
+/**
+ * Decide which timers an install may enable.
+ *
+ * `install` rewrites every unit file, but enablement is OPERATOR state, not
+ * schedule state: some timers are deliberately switched off (the wave-2 drain
+ * and deploy jobs stay disabled until their guards exist). A blanket
+ * `enable --now` silently turns them all back on — observed 2026-09-15, when a
+ * reinstall for an unrelated fix re-enabled five drain timers and started them.
+ *
+ * So: a timer already present and disabled stays disabled. Only genuinely new
+ * timers, and ones already enabled, get enabled.
+ *
+ * @param {string[]} timerNames   units this install wrote
+ * @param {(name:string)=>boolean} isDisabledFn  currently installed AND disabled?
+ * @returns {{ enable: string[], preserved: string[] }}
+ */
+export function selectTimersToEnable(timerNames, isDisabledFn) {
+  const enable = [];
+  const preserved = [];
+  for (const name of timerNames) {
+    if (isDisabledFn(name)) preserved.push(name);
+    else enable.push(name);
+  }
+  return { enable, preserved };
+}
+
 /** Render the .service + .timer unit pair for one job. */
 export function buildUnits(job, { repoDir, nodeBin, home, pathDirs }) {
   const name = `${UNIT_PREFIX}${job.name}`;
@@ -228,7 +308,7 @@ function cmdList() {
 
 function cmdInstall(dryRun) {
   const { kept, repoDir } = planInstall();
-  const nodeBin = process.execPath;
+  const nodeBin = resolveStableNodeBin();
   const home = homedir();
   const pathDirs = extraPathDirs({ home });
 
@@ -242,6 +322,19 @@ function cmdInstall(dryRun) {
   }
 
   if (!existsSync(UNIT_DIR)) mkdirSync(UNIT_DIR, { recursive: true });
+
+  // Snapshot operator intent BEFORE writing anything. Once the unit files are
+  // on disk, a brand-new timer is indistinguishable from a deliberately
+  // disabled one — both report `disabled` — so this MUST happen first.
+  const wasDisabled = new Set();
+  for (const job of kept) {
+    const timerName = `${UNIT_PREFIX}${job.name}.timer`;
+    if (!existsSync(join(UNIT_DIR, timerName))) continue;  // brand new → enable
+    if (systemctl(['is-enabled', timerName], { check: false }).trim() === 'disabled') {
+      wasDisabled.add(timerName);
+    }
+  }
+
   const installed = [];
   for (const job of kept) {
     const u = buildUnits(job, { repoDir, nodeBin, home, pathDirs });
@@ -250,12 +343,21 @@ function cmdInstall(dryRun) {
     installed.push(u);
   }
 
+  const { enable, preserved } = selectTimersToEnable(
+    installed.map(u => u.timerName),
+    (name) => wasDisabled.has(name),
+  );
+
   systemctl(['daemon-reload']);
-  for (const u of installed) systemctl(['enable', '--now', u.timerName]);
+  for (const name of enable) systemctl(['enable', '--now', name]);
 
   logCapabilityUsage('schedulerInstall', 'system', 'scheduler-install', 'scheduler-install.mjs', 'install');
-  console.log(`✅ Installed + enabled ${installed.length} timer(s) in ${UNIT_DIR}`);
+  console.log(`✅ Installed ${installed.length} timer(s) in ${UNIT_DIR} (${enable.length} enabled)`);
   for (const u of installed) console.log(`  • ${u.timerName}  (${u.onCalendar})`);
+  if (preserved.length) {
+    console.log(`\n⏸  Left disabled (deliberately off — not re-enabled by this install):`);
+    for (const name of preserved) console.log(`  • ${name}`);
+  }
   console.log(`\nVerify:  node ${resolve(__dirname, 'scheduler-install.mjs')} status`);
 }
 

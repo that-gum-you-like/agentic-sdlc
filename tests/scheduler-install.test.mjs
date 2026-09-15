@@ -14,6 +14,8 @@ import {
   buildUnits,
   loadSchedule,
   extraPathDirs,
+  resolveStableNodeBin,
+  selectTimersToEnable,
 } from '../agents/scheduler-install.mjs';
 
 let passed = 0;
@@ -137,6 +139,126 @@ test('loadSchedule returns jobs and all cron exprs translate', () => {
     const oc = cronToOnCalendar(job.cron); // throws if any expr is unsupported
     assert(oc.length > 0, `empty OnCalendar for ${job.name}`);
   }
+});
+
+
+// --- stable node path (SCS-REQ-030): units must never pin a node version ---
+// Regression: every generated unit carried
+// /home/linuxbrew/.linuxbrew/Cellar/node/25.6.1/bin/node, because
+// process.execPath resolves THROUGH the brew shim. The next `brew upgrade
+// node` would have killed all 20 timers at once with rc=127.
+
+// Fake layout: a stable shim symlinked to a versioned real binary.
+const CELLAR = '/brew/Cellar/node/25.6.1/bin/node';
+const SHIM = '/brew/bin/node';
+const fakeFs = {
+  realpathFn: (p) => (p === SHIM || p === CELLAR ? CELLAR : p),
+  existsFn: (p) => p === SHIM || p === CELLAR,
+};
+
+test('prefers stable shim when realpath matches execPath', () => {
+  const bin = resolveStableNodeBin({
+    execPath: CELLAR,
+    pathEnv: '/brew/bin:/usr/bin:/bin',
+    ...fakeFs,
+  });
+  assert(bin === SHIM, `expected the unversioned shim, got ${bin}`);
+  assert(!/\d+\.\d+\.\d+/.test(bin), 'resolved node path must carry no version');
+});
+
+test('generated unit survives version directory change', () => {
+  // The unit is rendered once; node is then upgraded behind the shim.
+  const bin = resolveStableNodeBin({ execPath: CELLAR, pathEnv: '/brew/bin', ...fakeFs });
+  const job = { name: 'sentinel-run-a', cron: '30 6 * * *', script: 'node ~/agentic-sdlc/agents/sentinel-run.mjs' };
+  const u = buildUnits(job, { repoDir: '/home/x/agentic-sdlc', nodeBin: bin, home: '/home/x' });
+  assert(!u.service.includes('25.6.1'), 'unit must not pin the node version');
+  assert(!u.service.includes('/Cellar/'), 'unit must not reference a Cellar path');
+  // After the upgrade the shim points somewhere new; the unit text still resolves.
+  const upgraded = (p) => (p === SHIM ? '/brew/Cellar/node/26.0.0/bin/node' : p);
+  assert(upgraded(bin).endsWith('/bin/node'), 'shim still resolves to a node binary post-upgrade');
+});
+
+test('falls back to execPath when no shim matches', () => {
+  const bin = resolveStableNodeBin({
+    execPath: '/usr/bin/node',
+    pathEnv: '/nowhere:/also-nowhere',
+    realpathFn: (p) => p,
+    existsFn: () => false,
+  });
+  assert(bin === '/usr/bin/node', `expected execPath fallback, got ${bin}`);
+});
+
+test('skips broken symlink candidates', () => {
+  const bin = resolveStableNodeBin({
+    execPath: CELLAR,
+    pathEnv: '/broken:/brew/bin',
+    realpathFn: (p) => {
+      if (p === '/broken/node') throw new Error('ENOENT: broken symlink');
+      return p === SHIM || p === CELLAR ? CELLAR : p;
+    },
+    existsFn: (p) => p === '/broken/node' || p === SHIM || p === CELLAR,
+  });
+  assert(bin === SHIM, 'a broken candidate must be skipped, not fatal');
+});
+
+test('does not special-case Homebrew — nvm/asdf layouts resolve too', () => {
+  const nvmReal = '/home/x/.nvm/versions/node/v20.11.0/bin/node';
+  const bin = resolveStableNodeBin({
+    execPath: nvmReal,
+    pathEnv: '/home/x/.local/bin:/usr/bin',
+    realpathFn: (p) => (p === '/home/x/.local/bin/node' ? nvmReal : p),
+    existsFn: (p) => p === '/home/x/.local/bin/node',
+  });
+  assert(bin === '/home/x/.local/bin/node', `expected the unversioned alias, got ${bin}`);
+});
+
+test('a versioned candidate is never preferred over execPath', () => {
+  // Another versioned path pointing at the same binary is no improvement.
+  const bin = resolveStableNodeBin({
+    execPath: CELLAR,
+    pathEnv: '/brew/Cellar/node/25.6.1/bin',
+    realpathFn: () => CELLAR,
+    existsFn: () => true,
+  });
+  assert(bin === CELLAR, 'must not swap one versioned path for another');
+});
+
+// --- live host: the units we are about to generate ---
+test('resolveStableNodeBin on this host yields an unversioned node path', () => {
+  const bin = resolveStableNodeBin();
+  assert(bin.endsWith('/node'), `not a node path: ${bin}`);
+  assert(!/\/Cellar\//.test(bin), `still resolving into Cellar: ${bin}`);
+});
+
+
+// --- enablement is operator state (SCS-REQ-032) ---
+// Regression: `install` blanket-ran `enable --now` on every unit, so a
+// reinstall silently switched five deliberately-disabled drain timers back on
+// and started them (observed 2026-09-15). Wave-2 timers must stay off until
+// their guards exist; an unrelated reinstall must never be what enables them.
+
+test('deliberately disabled timers are not re-enabled by a reinstall', () => {
+  const disabled = new Set(['sdlc-sched-autonomous-drain.timer', 'sdlc-sched-willtopaint-drain.timer']);
+  const { enable, preserved } = selectTimersToEnable(
+    ['sdlc-sched-daily-review.timer', 'sdlc-sched-autonomous-drain.timer', 'sdlc-sched-willtopaint-drain.timer'],
+    (n) => disabled.has(n),
+  );
+  assert(enable.length === 1 && enable[0] === 'sdlc-sched-daily-review.timer', `wrong enable set: ${enable}`);
+  assert(preserved.length === 2, `expected 2 preserved, got ${preserved.length}`);
+  assert(!enable.includes('sdlc-sched-autonomous-drain.timer'), 'a disabled drain must never be re-enabled');
+});
+
+test('brand-new timers are enabled', () => {
+  // Nothing is currently disabled, so a new timer must switch on.
+  const { enable, preserved } = selectTimersToEnable(['sdlc-sched-sentinel-run-a.timer'], () => false);
+  assert(enable.length === 1, 'a new timer must be enabled');
+  assert(preserved.length === 0, 'nothing should be preserved here');
+});
+
+test('all-disabled install enables nothing', () => {
+  const { enable, preserved } = selectTimersToEnable(['a.timer', 'b.timer'], () => true);
+  assert(enable.length === 0, 'must enable nothing');
+  assert(preserved.length === 2, 'must preserve both');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
