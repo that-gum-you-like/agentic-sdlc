@@ -1,5 +1,5 @@
 /**
- * T-303 — wave2-preflight.md exists and covers every drained repo.
+ * T-303 — the wave 2 preflight audit exists and covers every drained repo.
  *
  * Spec: openspec/changes/business-os/specs/environment-tiering.md REQ-006
  *
@@ -12,7 +12,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const PROJECT = resolve(import.meta.dirname, '..');
-const REPORT = resolve(PROJECT, 'pm', 'wave2-preflight.md');
+const REPORT = resolve(PROJECT, 'docs', 'wave2-preflight-2026-09-12.md');
 
 const DRAINED_REPOS = [
   { name: 'agentic-sdlc', base: 'main', section: 'agentic-sdlc' },
@@ -30,7 +30,7 @@ function sectionFor(content, slug) {
   return content.slice(idx, nextIdx === -1 ? undefined : nextIdx);
 }
 
-test('wave2-preflight.md exists', () => {
+test('wave 2 preflight audit exists', () => {
   assert.ok(existsSync(REPORT), `Report not found at ${REPORT}`);
 });
 

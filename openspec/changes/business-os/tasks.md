@@ -287,7 +287,7 @@ Phase 1, but not the guard.
 - [ ] **T-303**: Audit stale state left by the 32-day dormancy **before**
       arming anything: `tasks/queue/`, open PRs across all drained repos, and
       each project's `pm/.last-deployed` versus `origin`. Record findings.
-  - Files: `pm/wave2-preflight.md` (report)
+  - Files: `docs/wave2-preflight-2026-09-12.md` (report)
   - Spec: environment-tiering/REQ-006
   - Agent: sdlc-developer
   - Test: report exists and names every drained repo with its queue depth, open
@@ -298,7 +298,7 @@ Phase 1, but not the guard.
 - [x] **T-304**: Demonstrate a **live denial** — attempt a
       `customer-production` write against tally with no approval, confirm it is
       denied, and capture the evidence. Do this before any deploy timer is armed.
-  - Files: `pm/wave2-preflight.md`
+  - Files: `docs/wave2-preflight-2026-09-12.md`
   - Spec: environment-tiering/REQ-006
   - Agent: sdlc-developer, verified by Bryce
   - Test: denial reproduced and recorded with its reason string
