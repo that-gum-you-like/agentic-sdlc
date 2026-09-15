@@ -5,6 +5,12 @@
       "content": "BACKLOG #29 (Nels Workshop hub) UNBLOCKED 2026-09-11 (T-705): business-os B (portfolio foundation) and C (environment tiering) have landed, so the Nels Workshop hub is no longer blocked on business-os. BACKLOG.md entry #29 reflects the unblock; hub design/rollout can proceed as mission #1 through the pipeline when the queue picks it up.",
       "date": "2026-09-11",
       "timestamp": "2026-09-11T15:18:13.505Z"
+    },
+    {
+      "id": "M-1789139893506",
+      "content": "T-705 completed: promoted BACKLOG #29 (Nels Workshop hub) from 'Remaining Ideas' to 'Promoted to Changes' in openspec/BACKLOG.md. Hub unblocked now that business-os B and C have landed. Memory updated in all agent directories.",
+      "date": "2026-09-15",
+      "timestamp": "2026-09-15T13:05:29.000Z"
     }
   ]
 }

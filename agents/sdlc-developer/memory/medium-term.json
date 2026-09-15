@@ -11,6 +11,12 @@
       "content": "Environment lesson (2026-08-01): systemd user units do NOT inherit an interactive shell's environment. GROQ_API_KEY was exported from ~/.bashrc, so an interactive 'model-manager.mjs check' showed 'groq: up' while the scheduler journal showed 'groq: not configured' on every tick. ALWAYS verify scheduler-affecting config from 'journalctl --user -u <unit>' after a real timer run, never from an interactive shell — an interactive run is what hid this. Scheduler-visible secrets belong in ~/.hermes/.env (mode 0600), which every sdlc-sched-* unit loads via EnvironmentFile=-%h/.hermes/.env.",
       "date": "2026-08-01",
       "timestamp": "2026-08-01T23:39:27.846Z"
+    },
+    {
+      "id": "M-1789139893299",
+      "content": "BACKLOG #29 (Nels Workshop hub) UNBLOCKED 2026-09-11 (T-705): business-os workstreams B (portfolio foundation, T-101..T-105) and C (environment tiering, T-201..T-206) have both landed. Entry #29 in openspec/BACKLOG.md has been promoted to the Promoted to Changes table. The hub can now be built as mission #1 through the pipeline.",
+      "date": "2026-09-15",
+      "timestamp": "2026-09-15T13:05:29.000Z"
     }
   ]
 }

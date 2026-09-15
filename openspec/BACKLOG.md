@@ -36,83 +36,11 @@ The following ideas from the 2026-03-13 curriculum review have been implemented:
 | — | capability-monitor test coverage (backlog #26) | Q-101 (completed) — `agents/__tests__/capability-checklist.test.mjs` covering schema validation, drift-detection, and scope-creep detection, wired into `npm test` |
 | — | Cross-Provider Fallback Rungs (backlog #28) | `cross-provider-fallback-rungs` (shipped 2026-08-01) — all 15 rungs across 4 agents were OpenRouter, so one outage stopped everything. Added `GROQ_API_KEY` to `~/.hermes/.env` (systemd units never saw the `~/.bashrc` export) + `llama-3.3-70b-versatile` as the last rung for each agent + guard tests. |
 | — | voice-intake finishing touches (backlog #27 item c) | Carried forward from `voice-intake` archive — row added to promoted table; (a) setup.mjs scaffold, (b) maturity-model update, (d) manual E2E test still outstanding |
+| — | Nels Workshop Hub (backlog #29) | Promoted from backlog 2026-09-11 (T-705) — `business-os` B (portfolio foundation) and C (environment tiering) landed, unblocking the hub. Build as mission #1 through the pipeline; separate repo (`nels-workshop-hub`), Granary UI reuse, read+light-actions v1. |
 
 ---
 
 ## Remaining Ideas
-
-### 29. Nels Workshop Hub (the operations website)
-
-**Problem:** Bryce needs to see his operations *as a business*. **Nels Workshop
-is the umbrella for all client dev work** — Tally is a Texas Olive Ranch
-engagement under it, not a personal side project — but nothing renders that
-view. `hermes dashboard` (:7777) shows a dev kanban: tasks, agents, backlog. It
-answers "what is the queue doing," not "which clients do I have, what's live,
-what's stalled, what's mine vs. billable."
-
-**Idea:** A separate Next.js repo (`nels-workshop-hub`) rendering a business
-view over the `business-os` ledgers: `portfolio.json` grouped by client,
-per-project stage and health, live URLs, open approvals, drain activity, spend.
-
-**Scope decisions already made (2026-09-02):**
-- **Separate repo, not the framework.** The framework is zero-npm-dependency
-  Node stdlib by rule; a Next.js app in it breaks portability.
-- **v1 is read + light actions**: add a task, toggle a project's drain, request
-  a deploy. Every write goes through the existing scripts.
-- **It can ask for anything; it can approve nothing.** Deploy approval stays the
-  sha-bound Telegram token. See `business-os` design Decision 8 — a browser
-  button that approves a `customer-production` deploy is a second, weaker
-  approval path introduced by the least-scrutinized code in the system.
-- **Not a source of truth.** It reads the ledger and writes back only through
-  the scripts. A hub with its own store becomes `pm/DASHBOARD.md` with better
-  typography.
-- **Sequencing:** starts after `business-os` workstreams B (portfolio) and C
-  (environment tiering) land, and is built as **mission #1 through the new
-  pipeline** — dogfooding the wireframe gate on Bryce's own project rather than
-  discovering its rough edges on a client. **Both blockers have landed
-  (2026-09-11):** B = portfolio foundation (T-101..T-105, checked off) and
-  C = environment tiering (T-201..T-206, checked off) in `business-os`. The hub
-  is unblocked and can be promoted to a change / seeded as mission #1.
-- Out of scope for v1: invoicing, contracts, money, client logins.
-
-**UI — reuse Granary, do not reinvent (Bryce, 2026-09-02).** The hub is built on
-the existing Granary look and the component library, not a new design language.
-Verified available today, all `deps: none`:
-
-| Component | Path | What it gives the hub |
-|---|---|---|
-| `granary-theme` | `web/tokens/granary-theme` | Warm-paper light + green-dark CSS tokens bridged into Tailwind v4 |
-| `granary-ui-kit` | `web/layout/granary-ui-kit` | Page header, rust-banded cards, **stat tiles**, badges, sections, empty states, buttons, table primitives |
-| `collapsible-card` | `web/layout/collapsible-card` | Foldable cards flush with the kit — per-client grouping |
-| `collapsible-section` | `web/layout/collapsible-section` | Breaking a long ops page into on-demand zones |
-| `inline-edit-cell` | `web/editing/inline-edit-cell` | The "light actions" surface — click-to-edit with async save |
-| `info-button` | `web/feedback/info-button` | Plain-language definitions for tier/stage jargon |
-
-Mandatory: run `node ~/component-library/bin/search.mjs <keywords>` before
-authoring any component; on a hit, copy and adapt; on a miss, build it in the
-hub and contribute it back per the library's `AGENTS.md`. Theme integration
-(CSS variables into `globals.css` + Tailwind color mappings) follows
-`references/nextjs-integration.md` in the library.
-
-**Watching it get built (Bryce, 2026-09-02).** Bryce wants to see the hub being
-built through the Hermes portal as it happens. This needs no new machinery —
-it is what the restored stack already does, provided the hub is bootstrapped as
-a registered mission:
-- `mission-bootstrap.mjs` seeds the hub's tasks into `tasks/queue/`
-- `command-center-sync` (every 15 min, live since 2026-09-02) projects them as
-  cards onto the board `hermes dashboard` serves on :7777
-- cards move `todo → running → done` as the drain claims and completes them
-- Telegram announces each merge, and the deploy waits on `APPROVE <sha8>`
-- the wireframe gate delivers a visual checkpoint before any code is written
-The one requirement this places on `business-os` is that the hub's portfolio
-entry and task cards actually appear on the board — covered by
-`portfolio-registry/REQ-004` (T-105) and T-605.
-
-**Complexity:** L. **Blocked on:** ~~`business-os` B + C~~ — **UNBLOCKED
-(2026-09-11)**: B (portfolio, T-101..T-105) and C (environment tiering,
-T-201..T-206) have landed in `business-os`. Ready to promote to a change;
-build as mission #1 through the pipeline per the sequencing note above.
-
 
 ### 11. Agent-to-Agent Direct Communication Protocol
 
