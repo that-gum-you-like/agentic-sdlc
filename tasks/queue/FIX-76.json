@@ -12,12 +12,16 @@
     "auto-fix"
   ],
   "description": "Drain PR #76 (branch `agent/drain/OS-business-os-23-1789500754`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-business-os-23-1789500754 && git checkout agent/drain/OS-business-os-23-1789500754`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-business-os-23-1789500754` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- Deletes existing memory entries instead of adding new ones\n- Changes timestamps to earlier dates (Sep 15) than original entries (Sep 11)\n- Removes historical record of when the unblocking actually occurred",
-  "status": "pending",
+  "status": "completed",
   "fixFor": {
     "pr": 76,
     "branch": "agent/drain/OS-business-os-23-1789500754",
     "headSha": "f71a394e3da8d959a1380dee4bce4674e7de7def",
     "sourceTask": null,
     "rejectionKind": "llm-rejected"
-  }
+  },
+  "_file": "FIX-76.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-09-15T20:00:22.745Z"
 }
