@@ -1,0 +1,7 @@
+{
+  "status": "proposed",
+  "phase": "tasks",
+  "created": "2026-09-15",
+  "lastUpdated": "2026-09-15",
+  "notes": "Proposal+design+specs+tasks complete (SCS-REQ-001..031, tasks SCS-001..072). Awaiting Bryce go-ahead to implement; Phase 0 scheduler fix ships first and alone."
+}
