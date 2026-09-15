@@ -3,7 +3,7 @@
   "title": "T-704: Mark `level-6-autonomous-activation` T-103/T-104 superseded,",
   "description": "- [ ] **T-704**: Mark `level-6-autonomous-activation` T-103/T-104 superseded,\n      pointing at `portfolio.json` + `portfolio.mjs`, per design Decision 2.\n  - Files: `openspec/changes/level-6-autonomous-activation/tasks.md`\n  - Agent: sdlc-documentarian\n  - Parallel: blocked-by T-103",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "jony-aive",
   "estimatedTokens": 3500,
   "source": "openspec/business-os/tasks.md",
@@ -11,5 +11,8 @@
   "claimedBy": "hermes-drain",
   "testStatus": null,
   "_file": "OS-business-os-22.json",
-  "claimedAt": "2026-09-10T19:43:35.382Z"
+  "claimedAt": "2026-09-14T14:07:02.221Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-09-14T14:07:33.550Z"
 }
