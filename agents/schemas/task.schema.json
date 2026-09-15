@@ -20,7 +20,7 @@
     },
     "priority": {
       "type": "string",
-      "enum": ["HIGH", "MEDIUM", "LOW"],
+      "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"],
       "description": "Scheduling priority"
     },
     "status": {
