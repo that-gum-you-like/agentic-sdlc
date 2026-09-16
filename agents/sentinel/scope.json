@@ -1,0 +1,30 @@
+{
+  "_comment": "What sentinel scans, and how much a finding there matters. Tier is BLAST RADIUS, not dependency count: peach-shaker-5000 has 857 transitive packages and ships to nobody yet, while agentic-sdlc has none and its contents are executed by agents with shell access. Ranking by count sorts this exactly backwards.",
+  "tiers": {
+    "1": "Customer data, live client sites, or code executed by agents. A finding here is escalated.",
+    "2": "Live or client-facing, but without customer data at risk.",
+    "3": "Personal, pre-release, or local-only. Non-exploitable classes may be de-escalated."
+  },
+  "protectedClasses": ["secrets", "install-scripts", "slopsquat"],
+  "repos": [
+    { "name": "tally",             "path": "~/tally",             "tier": 1, "why": "Customer production data — granary.farm, Texas Olive Ranch" },
+    { "name": "agentic-sdlc",      "path": "~/agentic-sdlc",      "tier": 1, "why": "The framework itself; its contents are executed by agents. Compromise here is total." },
+    { "name": "component-library", "path": "~/component-library", "tier": 1, "why": "Copy-source pasted into every project; invisible to every SCA tool by construction" },
+    { "name": "willtopaint",       "path": "~/willtopaint",       "tier": 2, "why": "Live client site, willtopaint.com" },
+    { "name": "nels-workshop",     "path": "~/nels-workshop",     "tier": 2, "why": "Client business OS — hosted UAT, no client on it yet (corrected 2026-09-15)" },
+    { "name": "personal-website",  "path": "~/personal-website",  "tier": 2, "why": "Live, brycewadley.com" },
+    { "name": "ai-gateway",        "path": "~/ai-gateway",        "tier": 2, "why": "Holds provider credentials" },
+    { "name": "peach-shaker-5000", "path": "~/peach-shaker-5000", "tier": 3, "why": "Expo RN, pre-release" },
+    { "name": "wireframe-live",    "path": "~/wireframe-live",    "tier": 3, "why": "Superseded by the /design merge; holds unpushed Hermes commits" },
+    { "name": "personal-tools",    "path": "~/personal-tools",    "tier": 3, "why": "Local tooling monorepo" },
+    { "name": "cyberdeck",         "path": "~/cyberdeck",         "tier": 3, "why": "ESP32 firmware; radio has never been enabled" },
+    { "name": "languageapp",       "path": "~/languageapp",       "tier": 3, "why": "LinguaFlow", "readOnly": true }
+  ],
+  "extraManifests": [
+    "~/ai-gateway/ledger/package.json",
+    "~/personal-tools/screenrec/package.json",
+    "~/personal-tools/nellis-scout/package.json",
+    "~/personal-tools/nellis-scout/ebay-notify/package.json",
+    "~/component-library/package.json"
+  ]
+}

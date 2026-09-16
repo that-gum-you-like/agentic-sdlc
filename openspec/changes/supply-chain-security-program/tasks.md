@@ -127,7 +127,7 @@ requirement ids.
 Each task: the scanner plus its hermetic test with a **known-bad fixture**. A scanner never shown
 to fire is not tested.
 
-- [ ] **SCS-020**: Scope + blast-radius tiering
+- [x] **SCS-020**: Scope + blast-radius tiering
   - Files: `agents/sentinel/scope.json`, `agents/sentinel/scope.mjs`, `tests/sentinel-scope.test.mjs`
   - Spec: SCS-REQ-009
   - Agent: sdlc-developer
@@ -137,7 +137,7 @@ to fire is not tested.
     `nels-workshop` (hosted UAT, no client yet), `personal-website`; tier 3 rest. `~/languageapp`
     read-only. Include the five nested `package.json` paths with no lockfile.
 
-- [ ] **SCS-021**: `lockfile-diff.mjs`
+- [x] **SCS-021**: `lockfile-diff.mjs`
   - Files: `agents/sentinel/lockfile-diff.mjs`, `tests/sentinel-lockfile-diff.test.mjs`
   - Spec: SCS-REQ-001
   - Agent: sdlc-developer
@@ -155,7 +155,7 @@ to fire is not tested.
     package published after the commit that added it; Levenshtein-1 neighbour; unreachable registry
     producing "could not verify", never silence.
 
-- [ ] **SCS-023**: `install-scripts.mjs` + allowlist
+- [x] **SCS-023**: `install-scripts.mjs` + allowlist
   - Files: `agents/sentinel/install-scripts.mjs`, `agents/sentinel/install-script-allowlist.json`, `tests/sentinel-install-scripts.test.mjs`
   - Spec: SCS-REQ-003
   - Agent: sdlc-developer
@@ -191,7 +191,7 @@ to fire is not tested.
     `~/component-library`'s 44 components. Coordinate with the shadcn-registry-over-MCP proposal —
     that work should be designed against these controls, not retrofitted.
 
-- [ ] **SCS-027**: `mcp-inventory.mjs`
+- [x] **SCS-027**: `mcp-inventory.mjs`
   - Files: `agents/sentinel/mcp-inventory.mjs`, `tests/sentinel-mcp-inventory.test.mjs`
   - Spec: SCS-REQ-007
   - Agent: sdlc-developer

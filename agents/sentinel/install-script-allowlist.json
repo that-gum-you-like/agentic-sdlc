@@ -1,0 +1,4 @@
+{
+  "_comment": "Reviewed install scripts. Keyed name@version; each hook records a sha256 prefix of the script BODY, so an allowlisted package that changes what it runs still fires. Seeded empty on purpose: the first sentinel run writes an inventory for review rather than asserting that whatever is currently installed is safe.",
+  "entries": {}
+}
