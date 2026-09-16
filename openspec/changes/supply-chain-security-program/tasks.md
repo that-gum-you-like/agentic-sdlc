@@ -164,7 +164,7 @@ to fire is not tested.
   - Notes: First run must yield a reviewable inventory, not hundreds of HIGHs. Hash script bodies so
     an allowlisted package that changes its script still fires.
 
-- [ ] **SCS-024**: `secrets.mjs`
+- [x] **SCS-024**: `secrets.mjs`
   - Files: `agents/sentinel/secrets.mjs`, `tests/sentinel-secrets.test.mjs`
   - Spec: SCS-REQ-004
   - Agent: sdlc-developer
@@ -173,7 +173,7 @@ to fire is not tested.
   - Notes: Working tree **and** `--log-opts=--all` history. Baseline the known credential-bearing
     locations so they report drift. **Invariant: never emit a secret value** — assert this in test.
 
-- [ ] **SCS-025**: `vulns.mjs` (SBOM + offline OSV)
+- [x] **SCS-025**: `vulns.mjs` (SBOM + offline OSV)
   - Files: `agents/sentinel/vulns.mjs`, `tests/sentinel-vulns.test.mjs`
   - Spec: SCS-REQ-005
   - Agent: sdlc-developer
@@ -233,7 +233,7 @@ to fire is not tested.
   - Notes: Pull-by-ecosystem, match locally. A test asserts no package/repo name reaches an
     outbound URL.
 
-- [ ] **SCS-042**: Runtime-level advisories (Node.js, Python) beyond libraries
+- [x] **SCS-042**: Runtime-level advisories (Node.js, Python) beyond libraries
   - Files: `agents/sentinel/advisory-feed.mjs`
   - Spec: SCS-REQ-043
   - Agent: sdlc-developer
