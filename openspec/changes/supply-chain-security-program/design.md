@@ -129,10 +129,23 @@ baseline at `agents/sentinel/baseline.json`.
 
 **File(s)**: `scripts/security-toolchain-install.sh`
 
-Installs `osv-scanner`, `syft`, `grype`, `gitleaks`, `semgrep` as **SHA-256-pinned** release
-binaries into `~/.local/bin/sentinel/`, verifies each checksum before `chmod +x`, and seeds the
-offline OSV database. Never auto-updates — an upgrade is a deliberate, reviewed act, because a
-security scanner is itself a downloaded binary.
+Installs `osv-scanner`, `syft`, `grype`, and `gitleaks` as **SHA-256-verified** release binaries
+into `~/.local/bin/sentinel/`, verifies each checksum before `chmod +x`, and seeds the offline OSV
+database. Never auto-updates — an upgrade is a deliberate, reviewed act, because a security scanner
+is itself a downloaded binary.
+
+**`semgrep` is deliberately excluded** (decided during implementation, 2026-09-15). It publishes no
+release binary — it is pip-only — and `semgrep --config auto` fetches its ruleset from the semgrep
+registry at scan time, which would both break the offline requirement and put code patterns in
+front of a third-party service. `sast.mjs` implements its rules natively instead, which is what the
+one rule that actually matters here (Supabase RLS-vs-GRANT) required anyway.
+
+Pinning is **trust-on-first-use**: the first install verifies each artifact against the publisher's
+checksum file over HTTPS, then records the verified hash in `agents/sentinel/toolchain.json`. Every
+later install must reproduce that hash, and a mismatch under a fixed version aborts and is treated
+as compromise. This is weaker than a hash vendored from an out-of-band source, and the manifest
+says so; it is strong against a publisher silently re-cutting a release, which is the realistic
+attack.
 
 #### Scheduler node-path fix
 

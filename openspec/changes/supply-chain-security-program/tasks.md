@@ -93,17 +93,19 @@ requirement ids.
 
 ### Phase 1: Toolchain
 
-- [ ] **SCS-010**: SHA-256-pinned toolchain installer
+- [x] **SCS-010**: SHA-256-pinned toolchain installer
   - Files: `scripts/security-toolchain-install.sh`
   - Spec: SCS-REQ-016
   - Agent: sdlc-developer
   - Parallel: yes
   - Complexity: M
-  - Notes: `osv-scanner`, `syft`, `grype`, `gitleaks`, `semgrep` → `~/.local/bin/sentinel/`.
+  - Notes: `osv-scanner` 2.6.0, `syft` 1.51.1, `grype` 0.118.0, `gitleaks` 8.30.1 →
+    `~/.local/bin/sentinel/`. **semgrep dropped** — pip-only, and `--config auto` fetches rules from
+    their registry (breaks offline + sends code patterns to a third party).
     Verify checksum **before** `chmod +x`. No auto-update. Record resolved absolute paths and
     versions to `agents/sentinel/toolchain.json`.
 
-- [ ] **SCS-011**: Offline OSV database seed + staleness metadata
+- [x] **SCS-011**: Offline OSV database seed + staleness metadata
   - Files: `scripts/security-toolchain-install.sh`, `agents/sentinel/toolchain.json`
   - Spec: SCS-REQ-005
   - Agent: sdlc-developer
@@ -111,7 +113,7 @@ requirement ids.
   - Complexity: S
   - Notes: Record fetch date so a >7-day-old database becomes a MEDIUM finding.
 
-- [ ] **SCS-012**: Toolchain preflight module
+- [x] **SCS-012**: Toolchain preflight module
   - Files: `agents/sentinel/toolchain.mjs`, `tests/sentinel-toolchain.test.mjs`
   - Spec: SCS-REQ-016
   - Agent: sdlc-developer
