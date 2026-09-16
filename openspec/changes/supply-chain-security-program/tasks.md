@@ -215,6 +215,41 @@ to fire is not tested.
   - Complexity: M
   - Notes: Fixture — RLS enabled with no GRANT must fire. A policy is not a privilege.
 
+
+### Phase 2b: Live threat intelligence (added 2026-09-15 at Bryce's direction)
+
+- [x] **SCS-040**: `semver-lite.mjs` — dependency-free range evaluation
+  - Files: `agents/sentinel/semver-lite.mjs`
+  - Spec: SCS-REQ-041
+  - Agent: sdlc-developer
+  - Complexity: M
+  - Notes: Fail-loud — an unparseable range is unknown, never safe.
+
+- [x] **SCS-041**: `advisory-feed.mjs` — GitHub advisories by ecosystem + CISA KEV
+  - Files: `agents/sentinel/advisory-feed.mjs`, `tests/sentinel-advisory-feed.test.mjs`
+  - Spec: SCS-REQ-040, SCS-REQ-042
+  - Agent: sdlc-developer
+  - Complexity: M
+  - Notes: Pull-by-ecosystem, match locally. A test asserts no package/repo name reaches an
+    outbound URL.
+
+- [ ] **SCS-042**: Runtime-level advisories (Node.js, Python) beyond libraries
+  - Files: `agents/sentinel/advisory-feed.mjs`
+  - Spec: SCS-REQ-043
+  - Agent: sdlc-developer
+  - Complexity: M
+  - Notes: "Languages we use", not just packages. Also report any ecosystem present in the
+    portfolio but absent from the configured list.
+
+- [ ] **SCS-043**: Give the model pass read-only web search
+  - Files: `agents/sentinel-run.mjs`, `agents/sentinel/prompt.md`
+  - Spec: SCS-REQ-044
+  - Agent: sdlc-developer
+  - Parallel: blocked-by SCS-033
+  - Complexity: M
+  - Notes: Relaxes the original offline stance for Stage 2. Read but never act; retrieved content
+    is screened and every finding must still be grounded.
+
 ### Phase 3: Orchestration and model pass
 
 - [ ] **SCS-030**: Evidence bundle assembly + per-scanner isolation
