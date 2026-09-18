@@ -1,0 +1,23 @@
+{
+  "id": "FIX-80",
+  "phase": 1,
+  "title": "Fix rejected drain PR #80 (agent/drain/OS-business-os-7-174658)",
+  "assignee": "sdlc-developer",
+  "priority": "CRITICAL",
+  "estimatedTokens": 16000,
+  "files": [],
+  "blockedBy": [],
+  "created": "2026-09-18T01:47:16.460Z",
+  "tags": [
+    "auto-fix"
+  ],
+  "description": "Drain PR #80 (branch `agent/drain/OS-business-os-7-174658`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-business-os-7-174658 && git checkout agent/drain/OS-business-os-7-174658`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-business-os-7-174658` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- duplicate test_status field added\n- scope creep with unnecessary field duplication",
+  "status": "pending",
+  "fixFor": {
+    "pr": 80,
+    "branch": "agent/drain/OS-business-os-7-174658",
+    "headSha": "7626900d49c68a4cc50619d4bf82af5494e78a96",
+    "sourceTask": null,
+    "rejectionKind": "llm-rejected"
+  }
+}
