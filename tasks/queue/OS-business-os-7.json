@@ -9,7 +9,6 @@
   "source": "openspec/business-os/tasks.md",
   "createdAt": "2026-09-02T18:29:42.806Z",
   "claimedBy": "hermes-drain",
-  "testStatus": "passing",
   "test_status": "passing",
   "blockedBy": [
     "OS-business-os-6"
@@ -21,6 +20,5 @@
   ],
   "_file": "OS-business-os-7.json",
   "claimedAt": "2026-09-18T01:35:34.088Z",
-  "completed_at": "2026-09-18T01:36:00.000Z",
-  "completedBy": "hermes-drain"
+  "completed_at": "2026-09-18T01:36:00.000Z"
 }
