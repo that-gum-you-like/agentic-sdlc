@@ -1127,7 +1127,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: blocked-by CV-309
   - Complexity: S
 
-- [ ] **CV-314**: Install the pre-commit hook once in ~/agentic-sdlc (`node agents/review-hook.mjs install --pre-only`)
+- [x] **CV-314**: Install the pre-commit hook once in ~/agentic-sdlc (`node agents/review-hook.mjs install --pre-only`)
   - **Priority:** MEDIUM
   - Files: `.git/hooks/pre-commit (local, not tracked)`
   - Spec: CV-REQ-030
@@ -1193,7 +1193,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: blocked-by CV-318, CV-308, CV-317
   - Complexity: M
 
-- [ ] **CV-320**: pr-auto-review.mjs: count rejections per FIX task (`attempts`); at the third create a human task instead of another FIX task (upsertFixTaskInClone)
+- [x] **CV-320**: pr-auto-review.mjs: count rejections per FIX task (`attempts`); at the third create a human task instead of another FIX task (upsertFixTaskInClone)
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-035

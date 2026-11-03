@@ -3,7 +3,7 @@
   "title": "Install the pre-commit hook once in ~/agentic-sdlc (`node agents/review-hook.mjs install --pre-only`)",
   "description": "- [ ] **CV-314**: Install the pre-commit hook once in ~/agentic-sdlc (`node agents/review-hook.mjs install --pre-only`)\n  - **Priority:** MEDIUM\n  - Files: `.git/hooks/pre-commit (local, not tracked)`\n  - Spec: CV-REQ-030\n  - Gaps: D5-01\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: a staged `catch (e) {}` is refused by a real `git commit` in a scratch branch\n  - Parallel: blocked-by CV-310\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "blocked",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -13,5 +13,7 @@
   "blockedBy": [
     "OS-curriculum-v2-conformance-79"
   ],
-  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+  "completed_at": "2026-11-03T21:44:13.221Z",
+  "test_status": "passing",
+  "completionNote": "done interactively 2026-11-03"
 }
