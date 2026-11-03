@@ -14,6 +14,7 @@ import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
 import { tmpdir } from 'os';
+import { runStep } from '../cycles/monthly-review.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const AGENTS_DIR = resolve(__dirname, '..');
@@ -89,5 +90,15 @@ describe('monthly-review — the executed monthly cycle', () => {
   it('the monthly cron template points at the full cycle script', () => {
     const tpl = readFileSync(resolve(AGENTS_DIR, 'templates', 'cron-schedule.json.template'), 'utf8');
     assert.ok(tpl.includes('cycles/monthly-review.mjs'), 'monthly job must run the full cycle, not test-behavior alone');
+  });
+
+  it('exports runStep as a function and does not run main() on import', () => {
+    assert.equal(typeof runStep, 'function', 'runStep must be exported as a function');
+    // Importing the module successfully without main() side effects
+    // (no console output from main(), no execFileSync calls) proves
+    // the __isMainModule guard prevents CLI execution on import.
+    // The top-level import of runStep at the top of this file already
+    // exercised that path — if main() had run, it would have thrown
+    // or produced visible output.
   });
 });

@@ -25,7 +25,7 @@ const AGENTS_SCRIPTS = resolve(__dirname, '..');
 
 const COMPOST_RETENTION_DAYS = 180;
 
-function runStep(label, script, args = [], { allowFail = true } = {}) {
+export function runStep(label, script, args = [], { allowFail = true } = {}) {
   console.log(`\n▶ ${label}`);
   console.log('─'.repeat(40));
   try {
