@@ -187,3 +187,33 @@ describe('review-hook — install --pre-only (CV-309)', () => {
     assert.ok(!existsSync(join(REPO, '.git', 'hooks', 'post-commit')), 'still no post-commit hook');
   });
 });
+
+describe('review-hook — empty-catch regex (CV-310)', () => {
+  const REPO = join(tmpdir(), `sdlc-catch-test-${process.pid}`);
+  const git = (...a) => execFileSync('git', a, { cwd: REPO, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const check = () => {
+    try { execFileSync(process.execPath, [REVIEW_HOOK, 'check-staged'], { cwd: REPO, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); return 0; }
+    catch (err) { return err.status; }
+  };
+  before(() => {
+    mkdirSync(REPO, { recursive: true });
+    git('init', '-q'); git('config', 'user.email', 't@example.com'); git('config', 'user.name', 'T');
+    writeFileSync(join(REPO, 'base.txt'), 'x\n'); git('add', '.'); git('commit', '-q', '-m', 'base');
+  });
+  after(() => { rmSync(REPO, { recursive: true, force: true }); });
+
+  const cases = [
+    ['catch {}', 'try { a(); } catch {}\n', 1],
+    ['catch () {}', 'try { a(); } catch () {}\n', 1],
+    ['catch (e) {}', 'try { a(); } catch (e) {}\n', 1],
+    ['catch (e) { log(e) }', 'try { a(); } catch (e) { log(e) }\n', 0],
+  ];
+  for (const [label, src, want] of cases) {
+    it(`${label} -> exit ${want}`, () => {
+      writeFileSync(join(REPO, 'f.js'), src);
+      git('add', 'f.js');
+      assert.equal(check(), want);
+      git('reset', '-q'); rmSync(join(REPO, 'f.js'));
+    });
+  }
+});

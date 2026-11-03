@@ -91,7 +91,7 @@ const DEFAULT_CHECKLIST = [
   { id: 'atomic-commit', label: 'Commit is focused on one concern', pattern: null },
   { id: 'no-secrets', label: 'No secrets or credentials committed', pattern: /(password|secret|api_key|token)\s*[:=]\s*['"][^'"]+/i },
   { id: 'docs-updated', label: 'Relevant documentation updated', pattern: null },
-  { id: 'error-handling', label: 'Error cases handled (no silent failures)', pattern: /catch\s*\(\s*\)\s*\{?\s*\}/ },
+  { id: 'error-handling', label: 'Error cases handled (no silent failures)', pattern: /catch\s*(?:\(\s*\w*\s*\))?\s*\{\s*\}/ },
 ];
 
 function loadChecklist(config, reviewerName) {
