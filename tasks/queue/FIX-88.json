@@ -11,15 +11,16 @@
   "tags": [
     "auto-fix"
   ],
-  "description": "Drain PR #88 (branch `agent/drain/OS-curriculum-v2-conformance-19`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-19 && git checkout agent/drain/OS-curriculum-v2-conformance-19`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-19` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- regex pattern incorrectly matches content across multiple sections\n- does not handle section content that includes markdown headings\n- potential file corruption when replacing sections\n- missing proper escaping in regex replacement",
-  "attempts": 2,
-  "status": "pending",
+  "description": "Drain PR #88 (branch `agent/drain/OS-curriculum-v2-conformance-19`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-19 && git checkout agent/drain/OS-curriculum-v2-conformance-19`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-19` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- regex pattern incorrectly handles section content boundaries\n- indentation error in regex construction\n- package-lock.json and node_modules files incorrectly included in PR",
+  "attempts": 3,
+  "status": "blocked",
   "fixFor": {
     "pr": 88,
     "branch": "agent/drain/OS-curriculum-v2-conformance-19",
-    "headSha": "c7a256cbb90a29d5795d311330e3c32009be330b",
+    "headSha": "f6780e6c8fd79126dde7a4093471722572f08f1d",
     "sourceTask": "OS-curriculum-v2-conformance-19",
     "rejectionKind": "llm-rejected"
   },
-  "refreshedAt": "2026-11-03T22:34:39.837Z"
+  "refreshedAt": "2026-11-03T22:46:26.972Z",
+  "blockedReason": "needs-human: PR #88 rejected 3x (llm-rejected) — the drain will not retry it"
 }
