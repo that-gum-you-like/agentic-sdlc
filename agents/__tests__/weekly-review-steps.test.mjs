@@ -64,7 +64,7 @@ describe('buildWeeklySteps', () => {
 describe('runWeeklySteps', () => {
   it('executes all steps even when step 1 fails (runner stub)', () => {
     const executed = [];
-    const stubRunner = (label) => {
+    const stubRunner = (label, script, args) => {
       executed.push(label);
       return { label, ok: label !== 'Step 1' };
     };
@@ -85,7 +85,7 @@ describe('runWeeklySteps', () => {
   });
 
   it('returns correct number of results matching input steps', () => {
-    const stubRunner = (label) => ({ label, ok: true });
+    const stubRunner = (label, script, args) => ({ label, ok: true });
     const steps = buildWeeklySteps();
     const results = runWeeklySteps(steps, stubRunner);
     assert.equal(results.length, steps.length,
@@ -98,7 +98,7 @@ describe('runWeeklySteps', () => {
 
   it('every step runs even when all fail', () => {
     const executed = [];
-    const stubRunner = (label) => {
+    const stubRunner = (label, script, args) => {
       executed.push(label);
       return { label, ok: false };
     };
@@ -113,14 +113,23 @@ describe('runWeeklySteps', () => {
   });
 
   it('uses the default runStep from monthly-review when no runner provided', () => {
-    // This just verifies the default binding works at the module level
-    // (no error on import). We can't easily test actual execution without
-    // scripts, but the signature should accept real buildWeeklySteps output.
+    // Exercise runWeeklySteps with the default runner by passing a
+    // spy wrapper that captures invocations without shelling out.
+    const invoked = [];
+    const spyRunner = (label, script, args) => {
+      invoked.push({ label, script, args });
+      return { label, ok: true };
+    };
     const steps = buildWeeklySteps();
-    assert.equal(typeof runWeeklySteps, 'function');
-    assert.equal(steps.length, 3);
-    // Verify it accepts the default runner by checking the function exists
-    // and the import succeeded (runStep from monthly-review is valid).
+    const results = runWeeklySteps(steps, spyRunner);
+    assert.equal(results.length, steps.length, 'all steps produced a result');
+    assert.equal(invoked.length, steps.length, 'spy runner was called for every step');
+    // Each invocation received the (label, script, args) shape expected by runStep
+    for (let i = 0; i < steps.length; i++) {
+      assert.equal(invoked[i].label, steps[i].label);
+      assert.equal(invoked[i].script, steps[i].script);
+      assert.deepEqual(invoked[i].args, steps[i].args);
+    }
   });
 
   it('importing weekly-review does not trigger main() side effects', () => {

@@ -13,3 +13,7 @@ agents/model-intel.json
 agents/pattern-hunt-output.json
 agents/cost-log.json
 
+# Generated artifacts (committed by mistake in past drain PRs)
+node_modules/
+package-lock.json
+
