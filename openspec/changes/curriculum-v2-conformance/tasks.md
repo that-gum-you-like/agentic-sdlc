@@ -220,7 +220,7 @@ Items marked [x] are already done (2026-11-03). Unchecked items are Lane: intera
 
 Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.json edits and the baseline recording are interactive.
 
-- [ ] **CV-101**: Export `runStep` from monthly-review.mjs so the weekly cycle can reuse it
+- [x] **CV-101**: Export `runStep` from monthly-review.mjs so the weekly cycle can reuse it
   - **Priority:** HIGH
   - Files: `agents/cycles/monthly-review.mjs, agents/__tests__/monthly-review.test.mjs`
   - Spec: CV-REQ-010

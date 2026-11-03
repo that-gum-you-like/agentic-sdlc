@@ -3,7 +3,7 @@
   "title": "Export `runStep` from monthly-review.mjs so the weekly cycle can reuse it",
   "description": "- [ ] **CV-101**: Export `runStep` from monthly-review.mjs so the weekly cycle can reuse it\n  - **Priority:** HIGH\n  - Files: `agents/cycles/monthly-review.mjs, agents/__tests__/monthly-review.test.mjs`\n  - Spec: CV-REQ-010\n  - Gaps: D5-04, D7-03\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test imports monthly-review.mjs and asserts `typeof runStep === \"function\"` and that import does not run main()\n  - Parallel: yes\n  - Complexity: S",
   "priority": "HIGH",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -11,5 +11,8 @@
   "claimedBy": "hermes-drain",
   "testStatus": null,
   "_file": "OS-curriculum-v2-conformance-2.json",
-  "claimedAt": "2026-11-03T22:47:15.024Z"
+  "claimedAt": "2026-11-03T22:47:15.024Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-03T22:51:40.182Z"
 }
