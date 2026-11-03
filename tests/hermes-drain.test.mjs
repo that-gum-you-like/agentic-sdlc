@@ -260,5 +260,16 @@ test('a SUCCESSFUL drain is silent — only failures notify', () => {
   assert(allSends.length === 1, `expected exactly one notify send, found ${allSends.length}`);
 });
 
+test('drain installs the pre-commit hook in the clone after the sync, aborting on failure (CV-313)', () => {
+  const s = readFileSync(script, 'utf8');
+  const sync = s.indexOf('reset --hard "origin/$BASE_BRANCH"');
+  const install = s.indexOf('review-hook.mjs" install --pre-only');
+  assert(sync !== -1 && install !== -1, 'must call review-hook.mjs install --pre-only');
+  assert(install > sync, 'hook install must come AFTER the clone sync (reset would not remove it, but order documents intent)');
+  const after = s.slice(install, install + 400);
+  assert(/exit 1/.test(after) && /aborting pass/.test(after), 'a failed install must abort the pass with a logged reason');
+  assert(/cd "\$DRAIN_CLONE"/.test(s.slice(install - 80, install)), 'must install INTO the clone, not the main repo');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
