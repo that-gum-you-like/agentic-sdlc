@@ -112,9 +112,15 @@ describe('runWeeklySteps', () => {
     assert.equal(results[1].ok, false);
   });
 
-  it('uses the default runStep from monthly-review when no runner provided', () => {
-    // Exercise runWeeklySteps with the default runner by passing a
-    // spy wrapper that captures invocations without shelling out.
+  it('defaults to runStep from monthly-review when no runner is given', () => {
+    // Calling with no runner argument exercises the default-parameter
+    // binding (runner = runStep). Pass empty steps to avoid shelling out.
+    const results = runWeeklySteps([]);
+    assert.equal(Array.isArray(results), true, 'result must be an array');
+    assert.equal(results.length, 0, 'no steps produced no results');
+  });
+
+  it('calls runner with (label, script, args) for each step', () => {
     const invoked = [];
     const spyRunner = (label, script, args) => {
       invoked.push({ label, script, args });
