@@ -153,6 +153,15 @@ git -C "$DRAIN_CLONE" checkout -q -f -B "$BASE_BRANCH" "origin/$BASE_BRANCH" 2>/
 git -C "$DRAIN_CLONE" reset --hard "origin/$BASE_BRANCH" --quiet 2>/dev/null || true
 git -C "$DRAIN_CLONE" clean -fdq 2>/dev/null || true
 
+# --- enforcing pre-commit gate in the clone (openspec: curriculum-v2-conformance CV-313) ---
+# The drain commits unattended; the pre-commit hook is what refuses secrets and
+# silent error swallowing. Installed from the FRAMEWORK script into the clone.
+# If it cannot be installed, abort the pass rather than commit ungated.
+if ! ( cd "$DRAIN_CLONE" && node "$SCRIPTS_DIR/review-hook.mjs" install --pre-only ) >/dev/null 2>&1; then
+  log "pre-commit hook install FAILED in $DRAIN_CLONE — aborting pass (would commit ungated)"
+  exit 1
+fi
+
 # --- dependencies: a FRESH clone has no node_modules, so the drain prompt's
 # test step would fail for every task on a project that needs them. Install once
 # per clone (and after a lockfile change), before the LLM is invoked.
@@ -185,6 +194,7 @@ prompt_text="${prompt_text//\{\{PROJECT_NAME\}\}/$PROJECT_NAME}"
 prompt_text="${prompt_text//\{\{PROJECT_REMOTE\}\}/$PROJECT_REMOTE}"
 prompt_text="${prompt_text//\{\{TEST_CMD\}\}/$TEST_CMD}"
 prompt_text="${prompt_text//\{\{DRAINER\}\}/$DRAINER}"
+prompt_text="${prompt_text//\{\{SCRIPTS_DIR\}\}/$SCRIPTS_DIR}"
 
 # --- run the isolated, local-backend, OpenRouter Hermes drain worker IN the clone ---
 ts="$(date +%Y%m%d-%H%M%S)"
