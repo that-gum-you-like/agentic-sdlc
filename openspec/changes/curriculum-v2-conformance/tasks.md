@@ -420,7 +420,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-119**: daily-review.mjs: add pure `openspecStatusTable(changesDir)` (per active change: phase, status, readiness, tasks done/total; plus active and archived counts)
+- [x] **CV-119**: daily-review.mjs: add pure `openspecStatusTable(changesDir)` (per active change: phase, status, readiness, tasks done/total; plus active and archived counts)
   - **Priority:** HIGH
   - Files: `agents/cycles/daily-review.mjs, agents/__tests__/daily-review.test.mjs`
   - Spec: CV-REQ-020

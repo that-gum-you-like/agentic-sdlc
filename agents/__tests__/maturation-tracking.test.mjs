@@ -460,7 +460,7 @@ describe('Dashboard maturation section formatting', () => {
     };
 
     return new Function(
-      'AGENTS', 'AGENTS_DIR', 'MATURATION_LEVEL_NAMES', 'existsSync', 'readFileSync', 'resolve',
+      'AGENTS', 'AGENTS_DIR', 'MATURATION_LEVEL_NAMES', 'existsSync', 'readFileSync', 'resolve', 'getConfig',
       `return (${generateMaturationSectionFactory})`
     )(
       agents,
@@ -468,7 +468,11 @@ describe('Dashboard maturation section formatting', () => {
       MATURATION_LEVEL_NAMES,
       existsFn || defaultExistsFn,
       readFn || defaultReadFn,
-      (...parts) => parts.join('/')
+      (...parts) => parts.join('/'),
+      // daily-review.mjs resolves config lazily so importing it has no side
+      // effects; the extracted function therefore asks getConfig() for the
+      // agent roster and memory dir instead of reading module-level consts.
+      () => ({ agents, agentsDir })
     )();
   }
 
