@@ -10,6 +10,12 @@
  * Usage:
  *   node agents/cycles/monthly-review.mjs             # Run all steps
  *   node agents/cycles/monthly-review.mjs --dry-run   # Report without writing
+ *
+ * Exports:
+ *   buildMonthlySteps({dryRun}) — ordered step descriptors for the review
+ *   runStep(label, script, args) — run a single step with error tolerance
+ *   cleanCompost(config, {dryRun}) — compost cleanup logic
+ *   costReview(config) — token cost summary
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
@@ -24,6 +30,32 @@ const __dirname = dirname(__filename);
 const AGENTS_SCRIPTS = resolve(__dirname, '..');
 
 const COMPOST_RETENTION_DAYS = 180;
+
+/**
+ * buildMonthlySteps — Return the ordered list of monthly review runStep descriptors.
+ *
+ * Each entry has { label, script, args } compatible with runStep.
+ * When dryRun is true, snapshot is omitted and remaining steps get --dry-run appended.
+ *
+ * @param {{dryRun?: boolean}} opts
+ * @returns {{label: string, script: string, args: string[]}[]}
+ */
+export function buildMonthlySteps({ dryRun = false } = {}) {
+  const steps = [
+    { label: 'Behavior audit', script: 'test-behavior.mjs', args: [] },
+    { label: 'Behavior drift vs baseline', script: 'test-behavior.mjs', args: ['--drift'] },
+  ];
+  if (!dryRun) {
+    steps.push({ label: 'Agent version snapshot', script: 'version-snapshot.mjs', args: ['snapshot'] });
+  }
+  steps.push({ label: 'Memory migration check', script: 'migrate-memory.mjs', args: ['--check'] });
+  if (dryRun) {
+    for (const step of steps) {
+      step.args = [...step.args, '--dry-run'];
+    }
+  }
+  return steps;
+}
 
 export function runStep(label, script, args = [], { allowFail = true } = {}) {
   console.log(`\n▶ ${label}`);
@@ -113,13 +145,9 @@ async function main() {
   console.log(`🗓️  Monthly Review ${dryRun ? '(DRY RUN)' : ''}`);
   console.log('═'.repeat(50));
 
-  // 1. Behavior audit (full checks + drift vs baseline)
-  runStep('Behavior audit', 'test-behavior.mjs', dryRun ? ['--dry-run'] : []);
-  runStep('Behavior drift vs baseline', 'test-behavior.mjs', ['--drift', ...(dryRun ? ['--dry-run'] : [])]);
-
-  // 2. Agent versioning: snapshot + memory-migration check
-  if (!dryRun) runStep('Agent version snapshot', 'version-snapshot.mjs', ['snapshot']);
-  runStep('Memory migration check', 'migrate-memory.mjs', ['--check']);
+  for (const step of buildMonthlySteps({ dryRun })) {
+    runStep(step.label, step.script, step.args);
+  }
 
   // 3. Compost cleanup
   cleanCompost(config, { dryRun });
