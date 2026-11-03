@@ -38,6 +38,7 @@ import {
   postDeferralOnce,
   formatChangelogEntry,
   appendChangelog,
+  completeTaskInClone,
 } from '../agents/pr-auto-review.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -455,6 +456,39 @@ test('appendChangelog: same date groups under one heading; new date goes on top;
   assert(t.indexOf('## 2026-11-04') < t.indexOf('## 2026-11-03'), 'newest date first');
   assert(t.indexOf('#70 a') < t.indexOf('#7 b'), 'appended within the section');
   assert((t.match(/^- /gm) || []).length === 3, 'three entries');
+});
+
+// --- CV-407: changelog rides the completeTaskInClone commit/push ----------------
+
+test('completeTaskInClone: CHANGELOG.md is in the SAME commit as the queue completion', () => {
+  const { origin, work, d } = gateFixture();
+  const clone = join(d, 'review-clone');
+  const prevClone = process.env.SDLC_REVIEW_CLONE; process.env.SDLC_REVIEW_CLONE = clone;
+  const prevEnv = { ...process.env };
+  Object.assign(process.env, { GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' });
+  try {
+    execFileSync('mkdir', ['-p', join(work, 'tasks', 'queue')]);
+    writeFileSync(join(work, 'tasks', 'queue', 'T-1.json'), JSON.stringify({ id: 'T-1', status: 'in_progress' }));
+    git(work, 'add', '.'); git(work, 'commit', '-qm', 'task'); git(work, 'push', '-q', 'origin', 'main');
+    const cl = { date: '2026-11-03', pr: 70, subject: 'feat: t', domain: 'backend' };
+    completeTaskInClone(work, 'T-1', () => {}, cl);
+    const files = git(origin, 'show', '--name-only', '--format=', 'main').split('\n').filter(Boolean).sort();
+    assert(files.join() === 'CHANGELOG.md,tasks/queue/T-1.json', `one commit with both: ${files}`);
+    assert(/#70 feat: t \(backend\)/.test(git(origin, 'show', 'main:CHANGELOG.md')), 'entry present on origin');
+    const n = git(origin, 'rev-list', '--count', 'main').trim();
+    completeTaskInClone(work, 'T-1', () => {}, cl); // replay
+    assert(git(origin, 'rev-list', '--count', 'main').trim() === n, 'replay adds no commit');
+  } finally {
+    if (prevClone === undefined) delete process.env.SDLC_REVIEW_CLONE; else process.env.SDLC_REVIEW_CLONE = prevClone;
+    for (const k of ['GIT_AUTHOR_NAME', 'GIT_AUTHOR_EMAIL', 'GIT_COMMITTER_NAME', 'GIT_COMMITTER_EMAIL']) {
+      if (prevEnv[k] === undefined) delete process.env[k]; else process.env[k] = prevEnv[k];
+    }
+  }
+});
+
+test('merge flow passes the changelog into completeTaskInClone (no new push path)', () => {
+  assert(/completeTaskInClone\(repoDir, taskId, log, changelog\)/.test(source), 'reviewPr passes changelog');
+  assert((source.match(/'push'/g) || []).length === 2, 'still exactly two push sites');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -500,29 +500,38 @@ function ensureReviewClone(repoDir, log) {
 // Queue completion + reconcile (in the clone — never the main tree)
 // ---------------------------------------------------------------------------
 
-function completeTaskInClone(repoDir, taskId, log) {
+/**
+ * Mark the queue task completed in the review clone and push. `changelog`
+ * ({date, pr, subject, domain}, optional) rides the SAME commit/push so no new
+ * push path to main exists (CV-REQ-053).
+ */
+export function completeTaskInClone(repoDir, taskId, log, changelog = null) {
   const clone = ensureReviewClone(repoDir, log);
-  const taskFile = join(clone, 'tasks', 'queue', `${taskId}.json`);
-  if (!existsSync(taskFile)) return true; // nothing to do
-  const task = JSON.parse(readFileSync(taskFile, 'utf8'));
-  if (task.status === 'completed') return true;
-  try {
-    // SDLC_PROJECT_DIR must point at the CLONE: under systemd it is exported
-    // pointing at the main repo, and load-config.mjs prefers it over CWD —
-    // without this override the completion would be written into the MAIN
-    // working tree (single-writer violation observed live 2026-07-06).
-    run('node', [join(clone, 'agents', 'queue-drainer.mjs'), 'complete', taskId, 'passing'],
-      { cwd: clone, timeout: 120_000, env: { ...process.env, SDLC_PROJECT_DIR: clone } });
-  } catch {
-    // queue-drainer may refuse (e.g. never claimed); mark directly — the PR merged.
-    task.status = 'completed';
-    task.test_status = 'passing';
-    task.completedAt = new Date().toISOString();
-    writeFileSync(taskFile, JSON.stringify(task, null, 2) + '\n');
+  const taskFile = taskId ? join(clone, 'tasks', 'queue', `${taskId}.json`) : null;
+  const task = taskFile && existsSync(taskFile) ? JSON.parse(readFileSync(taskFile, 'utf8')) : null;
+  if (task && task.status !== 'completed') {
+    try {
+      // SDLC_PROJECT_DIR must point at the CLONE: under systemd it is exported
+      // pointing at the main repo, and load-config.mjs prefers it over CWD —
+      // without this override the completion would be written into the MAIN
+      // working tree (single-writer violation observed live 2026-07-06).
+      run('node', [join(clone, 'agents', 'queue-drainer.mjs'), 'complete', taskId, 'passing'],
+        { cwd: clone, timeout: 120_000, env: { ...process.env, SDLC_PROJECT_DIR: clone } });
+    } catch {
+      // queue-drainer may refuse (e.g. never claimed); mark directly — the PR merged.
+      task.status = 'completed';
+      task.test_status = 'passing';
+      task.completedAt = new Date().toISOString();
+      writeFileSync(taskFile, JSON.stringify(task, null, 2) + '\n');
+    }
   }
+  if (changelog) appendChangelog(join(clone, 'CHANGELOG.md'), changelog);
   if (!run('git', ['-C', clone, 'status', '--porcelain']).trim()) return true;
   run('git', ['-C', clone, 'add', 'tasks/']);
-  run('git', ['-C', clone, 'commit', '-q', '-m', `chore(queue): mark ${taskId} completed (drain PR merged by pr-auto-review)`]);
+  if (changelog) run('git', ['-C', clone, 'add', 'CHANGELOG.md']);
+  run('git', ['-C', clone, 'commit', '-q', '-m', changelog
+    ? `chore(queue): mark ${taskId || `PR #${changelog.pr}`} completed + changelog #${changelog.pr} (drain PR merged by pr-auto-review)`
+    : `chore(queue): mark ${taskId} completed (drain PR merged by pr-auto-review)`]);
   // If origin/main advanced since the refresh, the push is rejected (non-ff)
   // — never force. reconcileMerged retries on the next run.
   run('git', ['-C', clone, 'push', 'origin', 'main'], { timeout: 120_000 });
@@ -744,8 +753,14 @@ async function reviewPr(pr, ctx) {
     return record;
   }
   gh(['pr', 'merge', String(pr.number), '--squash', '--delete-branch'], { timeout: 180_000 });
-  if (taskId) {
-    try { completeTaskInClone(repoDir, taskId, log); } catch (err) { log(`task-complete ${taskId} failed (reconcile will retry): ${err.message}`); }
+  {
+    const changelog = {
+      date: new Date().toISOString().slice(0, 10),
+      pr: pr.number,
+      subject: pr.title,
+      domain: classifyDomain(pr.files),
+    };
+    try { completeTaskInClone(repoDir, taskId, log, changelog); } catch (err) { log(`task-complete ${taskId} failed (reconcile will retry): ${err.message}`); }
   }
   // Best-effort notify (openspec: telegram-activation) — the merge already
   // happened; a notification failure must not fail the run or the record.
