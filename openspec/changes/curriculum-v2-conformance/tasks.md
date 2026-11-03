@@ -1102,7 +1102,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: blocked-by CV-310, CV-307
   - Complexity: S
 
-- [ ] **CV-313**: hermes-drain.sh: after the clone sync, run `node agents/review-hook.mjs install --pre-only` in the drain clone; abort the pass with a logged reason on failure
+- [x] **CV-313**: hermes-drain.sh: after the clone sync, run `node agents/review-hook.mjs install --pre-only` in the drain clone; abort the pass with a logged reason on failure
   - **Priority:** MEDIUM
   - Files: `agents/hermes-drain.sh, tests/hermes-drain.test.mjs`
   - Spec: CV-REQ-030
@@ -1124,7 +1124,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: blocked-by CV-310
   - Complexity: S
 
-- [ ] **CV-315**: drain-prompt.md: add step before commit `node agents/review-hook.mjs check-staged`; on exit 1 fix the named violations and retry at most twice, then mark the task failing
+- [x] **CV-315**: drain-prompt.md: add step before commit `node agents/review-hook.mjs check-staged`; on exit 1 fix the named violations and retry at most twice, then mark the task failing
   - **Priority:** MEDIUM
   - Files: `agents/drain-prompt.md, tests/hermes-drain.test.mjs`
   - Spec: CV-REQ-030
@@ -1135,7 +1135,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: blocked-by CV-313
   - Complexity: S
 
-- [ ] **CV-316**: drain-prompt.md: add memory recall (`node agents/memory-manager.mjs recall <agent>`) before work and record (`record <agent> recent "<learning>"`) after, including on every failing outcome; skip without error if the agent has no memory dir
+- [x] **CV-316**: drain-prompt.md: add memory recall (`node agents/memory-manager.mjs recall <agent>`) before work and record (`record <agent> recent "<learning>"`) after, including on every failing outcome; skip without error if the agent has no memory dir
   - **Priority:** MEDIUM
   - Files: `agents/drain-prompt.md, tests/hermes-drain.test.mjs`
   - Spec: CV-REQ-033
@@ -1157,7 +1157,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: blocked-by CV-316, CV-301, CV-302
   - Complexity: S
 
-- [ ] **CV-318**: queue-drainer.mjs: add `registerFailure(task)` (retryCount+1; at 3 set status blocked, blockedReason retry-cap, call notifyHumanTask once); call it on `complete <id> failing` and on stale-claim release
+- [x] **CV-318**: queue-drainer.mjs: add `registerFailure(task)` (retryCount+1; at 3 set status blocked, blockedReason retry-cap, call notifyHumanTask once); call it on `complete <id> failing` and on stale-claim release
   - **Priority:** MEDIUM
   - Files: `agents/queue-drainer.mjs, agents/__tests__/queue-drainer-retry.test.mjs`
   - Spec: CV-REQ-035
@@ -1216,7 +1216,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
 
 Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are interactive; the cycle detector is hermes.
 
-- [ ] **CV-401**: pr-auto-review.mjs hardGate: run `git merge --no-commit --no-ff origin/<base>` in the temp worktree before the test command; conflict -> gate-failed reason `merge-conflict-with-base`; remove the worktree in every outcome
+- [x] **CV-401**: pr-auto-review.mjs hardGate: run `git merge --no-commit --no-ff origin/<base>` in the temp worktree before the test command; conflict -> gate-failed reason `merge-conflict-with-base`; remove the worktree in every outcome
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-050
@@ -1227,7 +1227,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
   - Parallel: yes
   - Complexity: M
 
-- [ ] **CV-402**: pr-auto-review.mjs: export `classifyDomain(files)` (infra: .github, scripts, *.sh, systemd, cron-schedule, package.json; backend: agents/*.mjs, lib; frontend: *.tsx, *.css, ui/web/components; docs-tests: *.md, tests) and `DOMAIN_ORDER`
+- [x] **CV-402**: pr-auto-review.mjs: export `classifyDomain(files)` (infra: .github, scripts, *.sh, systemd, cron-schedule, package.json; backend: agents/*.mjs, lib; frontend: *.tsx, *.css, ui/web/components; docs-tests: *.md, tests) and `DOMAIN_ORDER`
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-051
@@ -1238,7 +1238,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
   - Parallel: blocked-by CV-401
   - Complexity: S
 
-- [ ] **CV-403**: pr-auto-review.mjs: export `orderPrs(prs)` (domain rank, then additions+deletions ascending, then number) and replace the `sort((a,b)=>a.number-b.number)` site; fetch files/sizes with `gh pr view --json files,additions,deletions`; fetch failure -> number order + log
+- [x] **CV-403**: pr-auto-review.mjs: export `orderPrs(prs)` (domain rank, then additions+deletions ascending, then number) and replace the `sort((a,b)=>a.number-b.number)` site; fetch files/sizes with `gh pr view --json files,additions,deletions`; fetch failure -> number order + log
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-051
@@ -1249,7 +1249,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
   - Parallel: blocked-by CV-402
   - Complexity: M
 
-- [ ] **CV-404**: pr-auto-review.mjs: export `findOverlaps(prs)` returning [{later, earlier, files}] using the merge order
+- [x] **CV-404**: pr-auto-review.mjs: export `findOverlaps(prs)` returning [{later, earlier, files}] using the merge order
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-052
@@ -1260,7 +1260,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
   - Parallel: blocked-by CV-403
   - Complexity: S
 
-- [ ] **CV-405**: pr-auto-review.mjs reviewPr: for an overlapping later PR post one marker comment (idempotent), log action `deferred-overlap`, do not count as rejection or create a FIX task
+- [x] **CV-405**: pr-auto-review.mjs reviewPr: for an overlapping later PR post one marker comment (idempotent), log action `deferred-overlap`, do not count as rejection or create a FIX task
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-052
@@ -1271,7 +1271,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
   - Parallel: blocked-by CV-404
   - Complexity: M
 
-- [ ] **CV-406**: pr-auto-review.mjs: export `formatChangelogEntry({date,pr,subject,domain})` and `appendChangelog(path, entry)` (create with `# Changelog` header; group under `## <date>`; idempotent per PR number)
+- [x] **CV-406**: pr-auto-review.mjs: export `formatChangelogEntry({date,pr,subject,domain})` and `appendChangelog(path, entry)` (create with `# Changelog` header; group under `## <date>`; idempotent per PR number)
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-053
@@ -1282,7 +1282,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
   - Parallel: blocked-by CV-403
   - Complexity: S
 
-- [ ] **CV-407**: pr-auto-review.mjs: after a successful squash-merge call appendChangelog inside the existing completeTaskInClone commit/push path (no new push path)
+- [x] **CV-407**: pr-auto-review.mjs: after a successful squash-merge call appendChangelog inside the existing completeTaskInClone commit/push path (no new push path)
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-053
