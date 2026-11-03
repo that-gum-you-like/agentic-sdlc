@@ -63,7 +63,7 @@ describe('test-behavior — baselines + drift detection (curriculum Ph7)', () =>
   it('--baseline records deterministic per-agent metrics', () => {
     const out = runScript(['--baseline']);
     assert.match(out, /baselines recorded for 1 agent/i);
-    const baselines = JSON.parse(readFileSync(join(TMP_PROJECT, 'pm', 'behavior-baselines.json'), 'utf8'));
+    const baselines = JSON.parse(readFileSync(join(TMP_PROJECT, 'agents', 'behavior-baselines.json'), 'utf8'));
     const m = baselines.agents.tester;
     assert.ok(m, 'tester metrics recorded');
     assert.ok(m.prompt_lines > 0);
@@ -74,6 +74,19 @@ describe('test-behavior — baselines + drift detection (curriculum Ph7)', () =>
   });
 
   it('--drift is quiet when nothing changed (exit 0)', () => {
+    const out = runScript(['--drift']);
+    assert.match(out, /drift: none/i);
+  });
+
+  it('loads baselines from legacy pm/ path when agents/ path is absent', () => {
+    // Read the baseline that was recorded by the --baseline test
+    const baselinePath = join(TMP_PROJECT, 'agents', 'behavior-baselines.json');
+    const baselineData = JSON.parse(readFileSync(baselinePath, 'utf8'));
+    // Remove the new-format baseline
+    rmSync(baselinePath, { force: true });
+    // Write a copy to the legacy path
+    writeFileSync(join(TMP_PROJECT, 'pm', 'behavior-baselines.json'), JSON.stringify(baselineData));
+    // Drift should still work via legacy fallback (no metrics changed)
     const out = runScript(['--drift']);
     assert.match(out, /drift: none/i);
   });
