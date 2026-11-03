@@ -17,8 +17,7 @@ Mirrored 2026-11-03. This is the **authoritative spec** the framework is measure
 | w6-agent-memory-evolution-full.md | agentic-sdlc-w6-full |
 | w7-continuous-improvement.md | iTzWV6JsRKW05ZddlpC6Ig |
 | long-game-operating-agent-teams.md | wTAvKaRoQAChFEIyreN6tA |
-| prework-claude-code.md | nXaVwGZLQW6JDzVbmTNhvw |
-| prework-environment-setup.md | XkMQJNz02 |
+| prework-claude-code.md | nXaVwGZLQW6JDzVbmTNhvw (same content as `XkMQJNz02`) |
 | how-to-follow-along.md | x7uj9lD4r |
 | recordings.md | agentic-sdlc-recordings |
 | manic-episode.md | tmS2zTN2TIClTaqQqz4vag |
