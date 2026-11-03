@@ -86,6 +86,20 @@ When a deployable project's base branch advances, the bot asks:
 - `MAX_OPEN_DRAIN_PRS` (default 3) — drain back-pressure.
 - `MAX_AUTO_MERGES` (default 3) — merges per review tick.
 - Cost report: `node ~/agentic-sdlc/agents/cost-tracker.mjs report`
+- **Hard dollar stop: the OpenRouter per-key credit limit — $50/month** (decided
+  2026-11-03). Token budgets above are soft; the key limit is what actually stops a
+  runaway loop. Set it at openrouter.ai → Keys → the key in `~/.hermes-drain/.env`.
+  Check: `curl -s https://openrouter.ai/api/v1/key -H "Authorization: Bearer $KEY"`
+  (`limit` must not be null).
+- **Cross-provider fallback needs `GROQ_API_KEY`** in `~/.hermes/.env` and
+  `~/.hermes-drain/.env`. Every ladder ends in a Groq rung; without the key an
+  OpenRouter outage leaves no usable rung (model-manager now refuses keyless swaps).
+- **Agent identity:** drain PRs are pushed with Bryce's fine-grained PAT and signed
+  `Co-Authored-By: hermes-drain`; a separate bot account is optional.
+- **Cadence:** drains run 24/7 via `drain-supervisor.mjs` (the five `*-drain` timers
+  are `enabled:false` by design). No merge-only window.
+- **Claude review lane:** flagged PRs (guardrail surface) wait for an interactive
+  Claude Code session; no unattended `claude -p` (subscription-only, opt-in).
 
 ## 7. KILL SWITCH
 

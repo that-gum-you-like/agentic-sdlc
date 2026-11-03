@@ -23,8 +23,9 @@
  */
 
 import https from 'https';
-import { createReadStream, statSync } from 'fs';
-import { basename, resolve } from 'path';
+import { createReadStream, statSync, appendFileSync, mkdirSync } from 'fs';
+import { homedir } from 'os';
+import { basename, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 import { loadConfig } from './load-config.mjs';
@@ -109,14 +110,51 @@ function postToTelegram(botToken, chatId, message) {
  * @param {object} [opts] - Optional overrides (e.g. { config } for tests)
  * @returns {Promise<{ sent: boolean, reason?: string }>}
  */
+/**
+ * `node --test` sets NODE_TEST_CONTEXT in every test process (and children inherit
+ * it). A test must never reach a real phone: the review gate and drain run the suite
+ * with ~/.hermes/.env loaded, and a human-task fixture ("Provide API credentials")
+ * was paging Bryce on every test run until 2026-11-03. Tests opt back in only with
+ * an injected `opts.post`.
+ */
+export function underTest(env = process.env) {
+  return Boolean(env.NODE_TEST_CONTEXT);
+}
+
 export async function sendTelegram(message, opts = {}) {
+  if (underTest() && !opts.post) return { sent: false, reason: 'suppressed under node --test' };
   const { botToken, chatId } = resolveCredentials(opts);
 
   if (!botToken || !chatId) {
     return { sent: false, reason: 'telegram not configured' };
   }
 
-  return postToTelegram(botToken, chatId, message);
+  const result = await (opts.post || postToTelegram)(botToken, chatId, message);
+  if (result && result.sent) recordSent(message, opts);
+  return result;
+}
+
+/**
+ * The Bot API cannot read back what a bot sent, so every delivered status message
+ * is mirrored to a local JSONL log that a human or an interactive session can audit
+ * (`tail ~/.local/state/sdlc/telegram-sent.jsonl`). Only successful sends are
+ * recorded, so tests with fake credentials never write here. Best-effort: a log
+ * failure never fails the send.
+ */
+export const SENT_LOG = process.env.TELEGRAM_SENT_LOG
+  || resolve(homedir(), '.local', 'state', 'sdlc', 'telegram-sent.jsonl');
+
+export function recordSent(message, opts = {}, logPath = opts.sentLog || SENT_LOG) {
+  try {
+    mkdirSync(dirname(logPath), { recursive: true });
+    appendFileSync(logPath, JSON.stringify({
+      ts: new Date().toISOString(),
+      project: process.env.SDLC_PROJECT_DIR ? basename(process.env.SDLC_PROJECT_DIR) : basename(process.cwd()),
+      message: String(message),
+    }) + '\n');
+  } catch (err) {
+    console.error(`[telegram-notify] sent-log write failed: ${err.message}`);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -230,6 +268,7 @@ function uploadOnce(botToken, chatId, filePath, caption) {
  * @returns {Promise<{ sent: boolean, reason?: string }>}
  */
 export async function sendDocumentTelegram(filePath, opts = {}) {
+  if (underTest() && !opts.upload) return { sent: false, reason: 'suppressed under node --test' };
   const { botToken, chatId } = resolveCredentials(opts);
   if (!botToken || !chatId) return { sent: false, reason: 'telegram not configured' };
 
