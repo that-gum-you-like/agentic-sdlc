@@ -16,7 +16,7 @@
  * If not found, falls back to manual assignment.
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { resolve, join } from 'path';
 import { execSync } from 'child_process';
 import { loadConfig } from './load-config.mjs';
@@ -42,6 +42,7 @@ const COST_LOG_PATH = config.costLogPath;
 
 const PRIORITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 const STALE_CLAIM_MS = 30 * 60 * 1000; // 30 minutes
+export const RETRY_CAP = 3;
 const PERMISSION_HIERARCHY = { 'read-only': 0, 'edit-gated': 1, 'full-edit': 2, 'deploy': 3 };
 
 // Load agent domains from project's agents/domains.json
@@ -184,6 +185,42 @@ function isStaleClaim(task) {
   if (!task.claimedAt || task.status !== 'in_progress') return false;
   const elapsed = Date.now() - new Date(task.claimedAt).getTime();
   return elapsed > STALE_CLAIM_MS;
+}
+
+/**
+ * Record one failed attempt. retryCount+1; at RETRY_CAP the task becomes
+ * `blocked` (blockedReason retry-cap) and exactly one human task is raised.
+ * Below the cap the task returns to `pending`, claim cleared. A task already
+ * blocked is left alone, so replays never double count.
+ */
+export function registerFailure(task, reason = '') {
+  if (task.status === 'blocked') return task;
+  task.retryCount = (task.retryCount || 0) + 1;
+  task.claimedBy = null;
+  task.claimedAt = null;
+  if (reason) task.lastFailure = reason;
+  if (task.retryCount >= RETRY_CAP) {
+    task.status = 'blocked';
+    task.blockedReason = 'retry-cap';
+    const human = {
+      id: `HT-retry-${task.id}`,
+      title: `Task ${task.id} failed ${task.retryCount} times: triage needed`,
+      description: `"${task.title}" hit the retry cap (${RETRY_CAP} attempts) and is blocked.${task.lastFailure ? ` Last failure: ${task.lastFailure}` : ''}`,
+      requester: 'queue-drainer',
+      urgency: 'normal',
+      unblocks: [task.id],
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      _file: `HT-retry-${task.id}.json`,
+    };
+    mkdirSync(config.humanQueueDir, { recursive: true });
+    saveHumanTask(human);
+    try { notifyHumanTask(human); } catch { /* notification is best-effort */ }
+  } else {
+    task.status = 'pending';
+  }
+  saveTask(task);
+  return task;
 }
 
 function touchesSameFiles(task1, task2) {
@@ -616,9 +653,13 @@ switch (cmd) {
     const taskId = args[0];
     const task = tasks.find(t => t.id === taskId);
     if (!task) { console.error(`Task ${taskId} not found`); break; }
-    task.claimedBy = null;
-    task.claimedAt = null;
-    saveTask(task);
+    if (isStaleClaim(task)) {
+      registerFailure(task, 'stale claim released');
+    } else {
+      task.claimedBy = null;
+      task.claimedAt = null;
+      saveTask(task);
+    }
     console.log(`Released [${task.id}]`);
     break;
   }
@@ -632,6 +673,12 @@ switch (cmd) {
 
     const task = tasks.find(t => t.id === taskId);
     if (!task) { console.error(`Task ${taskId} not found`); break; }
+
+    if (testStatus === 'failing') {
+      registerFailure(task, 'tests failing');
+      console.error(`❌ [${taskId}] failing: attempt ${task.retryCount}/${RETRY_CAP}${task.status === 'blocked' ? ' — BLOCKED (retry-cap), human task raised' : ''}`);
+      break;
+    }
 
     if (testStatus !== 'passing') {
       console.error(`❌ Cannot complete ${taskId}: test_status must be 'passing' (got '${testStatus || 'none'}')`);
