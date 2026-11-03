@@ -118,6 +118,24 @@ describe('daily-review upsertDashboardSection — pattern matching (rejection 1)
     const written = readFileSync(path, 'utf8');
     assert.match(written, /## References\n\nUpdated refs/);
     assert.doesNotMatch(written, /the-ref for details/);
+    // The next section MUST be preserved — this was rejection #1 (regex
+    // matching across multiple sections when body contains mid-line ##).
+    assert.match(written, /## Other\nData/);
+  });
+
+  it('regression: section with mid-line ## must not eat the next heading boundary', () => {
+    // Previous regex [\s\S]*?(?=\n## |$) would consume past the mid-line ##
+    // reference and eat the next section's heading + content too.
+    const path = join(mkdtempSync(join(tmpdir(), 'sdlc-dashboard-')), 'test.md');
+    writeFileSync(path, '## Section A\nContent with ## mid-line ref\n## Section B\nPreserved\n## Section C\nAlso preserved\n');
+
+    upsertDashboardSection('Section A', 'Updated A', path);
+    const written = readFileSync(path, 'utf8');
+    assert.match(written, /## Section A\n\nUpdated A/);
+    assert.match(written, /## Section B\nPreserved/);
+    assert.match(written, /## Section C\nAlso preserved/);
+    const headingCount = (written.match(/^## /gm) || []).length;
+    assert.equal(headingCount, 3, 'all three headings must be preserved');
   });
 
 });
@@ -304,6 +322,9 @@ describe('daily-review upsertDashboardSection — edge cases (rejection 4)', () 
     // The mid-line ## reference must not be treated as a heading
     assert.match(written, /Refer to ## Section/);
     assert.match(written, /## Footer\n\nUpdated footer/);
+    // The ## Heading section must be preserved and its body must still
+    // contain the mid-line ## reference
+    assert.match(written, /## Heading\nRefer to ## Section/);
   });
 
 });

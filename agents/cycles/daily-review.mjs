@@ -202,9 +202,12 @@ export function upsertDashboardSection(title, body, path) {
   const content = readFileSync(path, 'utf8');
   const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-  // Match heading line plus everything until next `## ` or EOF.
-  // Leading (^|\n) handles both start-of-file and mid-file sections.
-  const regex = new RegExp(`(^|\\n)## ${escapedTitle}\\n[\\s\\S]*?(?=\\n## |$)`);
+  // Match heading line plus content until the next `## ` at start of a line,
+    // or EOF.  Leading (^|\n) handles both start-of-file and mid-file sections.
+    // (?:[^\n]|\n(?!# )) matches any character or a newline NOT followed by
+    // `## ` — this stops at real heading boundaries even when the body contains
+    // `## ` mid-line (e.g. inline refs or code examples).
+    const regex = new RegExp('(^|\\n)## ' + escapedTitle + '\\n((?:[^\\n]|\\n(?!## ))*)');
   const newSection = `## ${title}\n\n${body}`;
 
   if (regex.test(content)) {
