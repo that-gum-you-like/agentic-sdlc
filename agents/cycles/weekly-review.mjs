@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
 
 import { loadConfig } from '../load-config.mjs';
+import { runStep } from './monthly-review.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -221,6 +222,28 @@ export function buildWeeklySteps({ dryRun = false } = {}) {
   return steps;
 }
 
+/**
+ * runWeeklySteps — Execute an ordered list of weekly review steps.
+ *
+ * Each step is run via the provided runner (default: runStep from monthly-review.mjs).
+ * A failing step does NOT stop subsequent steps.
+ * Prints "<label>: PASS|FAIL" for each step result.
+ *
+ * @param {{label: string, script: string, args: string[]}[]} steps
+ * @param {Function} [runner=runStep] - (label, script, args) => {{label, ok}}
+ * @returns {{label: string, ok: boolean}[]}
+ */
+export function runWeeklySteps(steps, runner = runStep) {
+  const results = [];
+  for (const step of steps) {
+    const result = runner(step.label, step.script, step.args);
+    results.push(result);
+    const status = result.ok ? 'PASS' : 'FAIL';
+    console.log(`${step.label}: ${status}`);
+  }
+  return results;
+}
+
 async function main() {
   console.log('═'.repeat(50));
   console.log('  Weekly Review — ' + new Date().toISOString().split('T')[0]);
@@ -277,6 +300,14 @@ async function main() {
     });
     writeFileSync(historyPath, JSON.stringify(history, null, 2));
   }
+
+  // Run weekly review steps after all existing sections
+  console.log('\n🔄 Weekly Review Steps');
+  console.log('═'.repeat(50));
+  const stepResults = runWeeklySteps(buildWeeklySteps());
+  const passed = stepResults.filter(r => r.ok).length;
+  const failed = stepResults.length - passed;
+  console.log(`\n  Results: ${passed} passed, ${failed} failed`);
 
   console.log('\n' + '═'.repeat(50));
   console.log('  Weekly review complete.');
