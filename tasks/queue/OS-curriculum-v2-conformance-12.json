@@ -3,7 +3,7 @@
   "title": "health-check.mjs: add `checkCycles(config, history)` returning name `cycles`, status degraded with detail `process-erosion: weekly overdue` when overdue; add it to the `checks` array in runHealthCheck (opts.cycleHistory overrides the file read); missing file -> degraded `no cycle history`, never throws",
   "description": "- [ ] **CV-111**: health-check.mjs: add `checkCycles(config, history)` returning name `cycles`, status degraded with detail `process-erosion: weekly overdue` when overdue; add it to the `checks` array in runHealthCheck (opts.cycleHistory overrides the file read); missing file -> degraded `no cycle history`, never throws\n  - **Priority:** HIGH\n  - Files: `agents/health-check.mjs, tests/health-check.test.mjs`\n  - Spec: CV-REQ-012\n  - Gaps: D7-06\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: runHealthCheck({cycleHistory: stale}) has a cycles check with status degraded; missing history does not throw\n  - Parallel: blocked-by CV-110\n  - Complexity: S",
   "priority": "HIGH",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-11"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-12.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-03T22:10:34.064Z"
 }
