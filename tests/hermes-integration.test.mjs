@@ -126,7 +126,7 @@ async function main() {
   await test('sendTelegram no-ops when unconfigured (no network)', async () => {
     const r = await sendTelegram('test message', { config: { notification: {} } });
     assert(r && r.sent === false, 'expected sent:false when unconfigured');
-    assert(typeof r.reason === 'string' && /configur/i.test(r.reason), `expected a "not configured" reason, got: ${r.reason}`);
+    assert(typeof r.reason === 'string' && /configur|suppressed under node --test/i.test(r.reason), `expected a "not configured" (or test-suppressed) reason, got: ${r.reason}`);
   });
 
   // --- notify.mjs telegram provider registration (REQ-010) ---

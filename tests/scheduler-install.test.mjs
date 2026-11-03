@@ -14,6 +14,7 @@ import {
   buildUnits,
   loadSchedule,
   extraPathDirs,
+  applyInstall,
 } from '../agents/scheduler-install.mjs';
 
 let passed = 0;
@@ -36,6 +37,10 @@ function test(name, fn) {
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
+
+import { readFileSync, mkdtempSync, writeFileSync, existsSync, readdirSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 console.log('scheduler-install tests');
 
@@ -146,7 +151,49 @@ test('loadSchedule returns jobs and all cron exprs translate', () => {
   }
 });
 
-console.log(`\n${passed} passed, ${failed} failed`);
+// --- supersededBy / enabled:false (CV-114) ---
+test('selectJobs routes supersededBy entries away from kept', () => {
+  const jobs = [
+    { name: 'a', cron: '0 6 * * *', script: 'node x' },
+    { name: 'old', cron: '0 6 * * *', script: 'node y', supersededBy: 'a' },
+  ];
+  const { kept, superseded } = selectJobs(jobs, {});
+  assert(kept.length === 1 && kept[0].name === 'a', 'superseded entry must not be kept');
+  assert(superseded.length === 1 && superseded[0].name === 'old', 'superseded entry reported');
+});
+
+test('applyInstall: superseded -> disable + unit removal, no install; enabled:false -> installed, not enabled', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sched-'));
+  try {
+    writeFileSync(join(dir, 'sdlc-sched-old.timer'), 'x');
+    writeFileSync(join(dir, 'sdlc-sched-old.service'), 'x');
+    const calls = [];
+    const kept = [
+      { name: 'on', cron: '0 6 * * *', script: 'node x' },
+      { name: 'off', cron: '0 7 * * *', script: 'node x', enabled: false },
+    ];
+    const superseded = [{ name: 'old', cron: '0 6 * * *', script: 'node y', supersededBy: 'on' }];
+    applyInstall({ kept, superseded, repoDir: '/r', nodeBin: '/n/node', home: '/h', pathDirs: [], unitDir: dir,
+      systemctlFn: (args) => { calls.push(args.join(' ')); return ''; } });
+    assert(calls.includes('disable --now sdlc-sched-old.timer'), `no disable call: ${calls}`);
+    assert(!existsSync(join(dir, 'sdlc-sched-old.timer')) && !existsSync(join(dir, 'sdlc-sched-old.service')), 'old units removed');
+    assert(calls.includes('enable --now sdlc-sched-on.timer'), 'enabled job is enabled');
+    assert(!calls.some(c => c.includes('enable') && c.includes('sdlc-sched-off')), 'enabled:false must not be enabled');
+    assert(existsSync(join(dir, 'sdlc-sched-off.timer')) && existsSync(join(dir, 'sdlc-sched-off.service')), 'enabled:false unit still written');
+    assert(!readdirSync(dir).some(f => f.includes('old')), 'superseded installs nothing');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+// --- paperclip retired: no orchestration-sync entry (CV-602) ---
+test('cron-schedule.json and its template carry no paperclip / orchestration-sync entry', () => {
+  for (const p of ['../agents/cron-schedule.json', '../agents/templates/cron-schedule.json.template']) {
+    const raw = readFileSync(new URL(p, import.meta.url), 'utf8');
+    assert(!/paperclip/i.test(raw), `${p} still mentions paperclip`);
+    assert(!JSON.parse(raw).schedules.some(j => j.name === 'orchestration-sync'), `${p} still has orchestration-sync`);
+  }
+});
+
+console.log(`\n${passed} passed,${failed} failed`);
 if (failed > 0) {
   for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`);
   process.exit(1);

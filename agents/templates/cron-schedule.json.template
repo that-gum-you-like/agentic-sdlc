@@ -37,14 +37,6 @@
       "session": "isolated"
     },
     {
-      "name": "orchestration-sync",
-      "cron": "17 */6 * * *",
-      "script": "node ~/agentic-sdlc/agents/paperclip-sync.mjs --status",
-      "description": "Sync SDLC agent config to orchestration platform. Uses paperclip-sync.mjs when Paperclip adapter is configured; skip if using file-based adapter.",
-      "session": "isolated",
-      "adapterRequired": "paperclip"
-    },
-    {
       "name": "model-manager-check",
       "cron": "*/15 * * * *",
       "script": "node ~/agentic-sdlc/agents/model-manager.mjs check",

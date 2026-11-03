@@ -2,7 +2,7 @@
   "name": "agentic-sdlc",
   "projectDir": "/home/bryce/agentic-sdlc",
   "appDir": ".",
-  "testCmd": "node tests/adapter-and-model-manager.test.mjs",
+  "testCmd": "node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs'",
   "agents": [
     "sdlc-developer",
     "jony-aive",
@@ -28,7 +28,10 @@
     }
   },
   "humanWellness": {
-    "enabled": false
+    "enabled": true,
+    "dailyMaxHours": 10,
+    "nightCutoff": "23:00",
+    "breakIntervalHours": 3
   },
   "capabilityMonitoring": {
     "enabled": true,

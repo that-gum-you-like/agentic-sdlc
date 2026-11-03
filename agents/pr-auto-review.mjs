@@ -229,12 +229,34 @@ function ghJson(args) {
 // HARD GATE — clean-worktree test run. No pass, no merge.
 // ---------------------------------------------------------------------------
 
-function hardGate(cloneDir, headRef, testCmd = 'npm test') {
+/** Base branch of the review clone (origin/HEAD), falling back to `main`. */
+export function detectBaseBranch(cloneDir) {
+  try {
+    const b = run('git', ['-C', cloneDir, 'symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD'])
+      .trim().replace(/^origin\//, '');
+    if (b) return b;
+  } catch { /* fall through */ }
+  return 'main';
+}
+
+export function hardGate(cloneDir, headRef, testCmd = 'npm test') {
   const wt = mkdtempSync(join(tmpdir(), 'pr-review-'));
   const result = { passed: false, step: null, tail: '' };
   try {
     run('git', ['-C', cloneDir, 'fetch', 'origin', headRef], { timeout: 120_000 });
     run('git', ['-C', cloneDir, 'worktree', 'add', '--detach', wt, 'FETCH_HEAD'], { timeout: 120_000 });
+    // CV-REQ-050: test the head MERGED with current base, so a stale branch
+    // that passes alone but breaks main fails here. Fail closed: a conflict or
+    // any merge error means "not mergeable" and no tests run.
+    const base = detectBaseBranch(cloneDir);
+    try { run('git', ['-C', cloneDir, 'fetch', 'origin', base], { timeout: 120_000 }); } catch { /* use the clone's last-fetched base */ }
+    try {
+      run('git', ['merge', '--no-commit', '--no-ff', `origin/${base}`], { cwd: wt, timeout: 120_000 });
+    } catch (err) {
+      result.step = 'merge-conflict-with-base';
+      result.tail = `merging origin/${base} into the PR head failed:\n${`${err.stdout || ''}\n${err.stderr || err.message || ''}`.slice(-1500)}`;
+      return result;
+    }
     // The gate runs the PROJECT's own test command, not a hardcoded framework
     // one — hermes-pilot's gate is `node tests/smoke.test.mjs`, tally's is
     // vitest (observed live 2026-07-26: hardcoded npm test failed the pilot).
@@ -273,6 +295,158 @@ function hardGate(cloneDir, headRef, testCmd = 'npm test') {
     try { rmSync(wt, { recursive: true, force: true }); } catch { /* best effort */ }
     try { run('git', ['-C', cloneDir, 'worktree', 'prune'], { timeout: 60_000 }); } catch { /* best effort */ }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Merge order (CV-REQ-051): infra, backend, frontend, docs-tests; small first
+// ---------------------------------------------------------------------------
+
+/** Merge-order rank: earlier entries merge first. */
+export const DOMAIN_ORDER = ['infra', 'backend', 'frontend', 'docs-tests'];
+
+function pathOf(f) { return typeof f === 'string' ? f : (f && f.path) || ''; }
+
+/** Domain of ONE path. Unknown paths rank last (docs-tests). */
+function classifyPath(path) {
+  const p = String(path).replace(/^\.\//, '');
+  const base = p.split('/').pop();
+  if (/^\.github\//.test(p) || /^scripts\//.test(p) || /\.sh$/.test(p) || /(^|\/)systemd(\/|$)/.test(p)
+    || /cron-schedule/.test(base) || base === 'package.json') return 'infra';
+  if (/(^|\/)(tests?|__tests__)\//.test(p) || /\.test\.[cm]?[jt]sx?$/.test(p) || /\.md$/i.test(p)) return 'docs-tests';
+  if (/\.(tsx|css)$/.test(p) || /(^|\/)ui\/web\/components\//.test(p)) return 'frontend';
+  if (/^agents\/[^/]+\.mjs$/.test(p) || /^lib\//.test(p) || /(^|\/)lib\//.test(p) || /^agents\//.test(p)) return 'backend';
+  return 'docs-tests';
+}
+
+/** Domain of a PR: the highest-rank (earliest in DOMAIN_ORDER) domain among its files. */
+export function classifyDomain(files) {
+  let best = DOMAIN_ORDER.length - 1;
+  for (const f of files || []) {
+    const idx = DOMAIN_ORDER.indexOf(classifyPath(pathOf(f)));
+    if (idx >= 0 && idx < best) best = idx;
+  }
+  return DOMAIN_ORDER[best];
+}
+
+/** Pure ordering: domain rank, then additions+deletions ascending, then PR number. */
+export function orderPrs(prs) {
+  const key = (pr) => ({
+    rank: DOMAIN_ORDER.indexOf(classifyDomain(pr.files)),
+    size: (Number(pr.additions) || 0) + (Number(pr.deletions) || 0),
+    n: pr.number,
+  });
+  return [...prs].sort((a, b) => {
+    const ka = key(a), kb = key(b);
+    return ka.rank - kb.rank || ka.size - kb.size || ka.n - kb.n;
+  });
+}
+
+/**
+ * Order PRs for merging, fetching files/sizes per PR via `fetchDetails(number)`
+ * (gh pr view --json files,additions,deletions). Any fetch failure falls back
+ * to plain number order and says so via `log` — ordering must never block a run.
+ */
+export function orderPrsWithFetch(prs, fetchDetails, log = () => {}) {
+  try {
+    const detailed = prs.map(pr => ({ ...pr, ...fetchDetails(pr.number) }));
+    return orderPrs(detailed);
+  } catch (err) {
+    log(`merge-order fetch failed (${err.message}) — falling back to PR number order`);
+    return [...prs].sort((a, b) => a.number - b.number);
+  }
+}
+
+/**
+ * Pairs of open PRs that change a common file (CV-REQ-052). `later` is the PR
+ * that comes later in merge order (orderPrs); it is the one to defer.
+ * Returns [{later, earlier, files}] with PR numbers; disjoint PRs yield [].
+ */
+export function findOverlaps(prs) {
+  const ordered = orderPrs(prs);
+  const sets = ordered.map(pr => new Set((pr.files || []).map(pathOf).filter(Boolean)));
+  const out = [];
+  for (let i = 1; i < ordered.length; i++) {
+    for (let j = 0; j < i; j++) {
+      const files = [...sets[i]].filter(f => sets[j].has(f)).sort();
+      if (files.length) out.push({ later: ordered[i].number, earlier: ordered[j].number, files });
+    }
+  }
+  return out;
+}
+
+const DEFERRED_MARKER = '<!-- pr-auto-review-deferred';
+
+/**
+ * Is `prNumber` the LATER side of an overlap with a PR that MERGED earlier in
+ * this run? Then defer it one run, so its gate runs against the new base.
+ * An overlapping earlier PR that did NOT merge (flagged, rejected, errored)
+ * never blocks: it may never merge, and deferring behind it would wedge this
+ * PR forever — the hardGate already tests head merged with the current base.
+ * `mergedThisRun` holds PR numbers merged this run. Returns {earlier, files} or null.
+ */
+export function deferralFor(prNumber, overlaps, mergedThisRun = new Set()) {
+  const hits = (overlaps || []).filter(o => o.later === prNumber && mergedThisRun.has(o.earlier));
+  if (!hits.length) return null;
+  const earlier = [...new Set(hits.map(h => h.earlier))].sort((a, b) => a - b);
+  const files = [...new Set(hits.flatMap(h => h.files))].sort();
+  return { earlier, files };
+}
+
+export function buildDeferralComment({ earlier, files }) {
+  return `${DEFERRED_MARKER} earlier:${earlier.join(',')} -->\n## Deferred (pr-auto-review)\n\n`
+    + `This PR changes files that ${earlier.map(n => `#${n}`).join(', ')} just merged:\n`
+    + `${files.map(f => `- \`${f}\``).join('\n')}\n\n`
+    + '_No action needed: this is not a rejection. The next run gates this PR against the new base._';
+}
+
+/** Post the deferral comment once per (PR, earlier set). Best-effort; returns true if posted. */
+export function postDeferralOnce(prNumber, deferral, dryRun, deps = { ghJson, gh }) {
+  const body = buildDeferralComment(deferral);
+  const marker = body.split('\n')[0];
+  try {
+    const { comments } = deps.ghJson(['pr', 'view', String(prNumber), '--json', 'comments']);
+    if ((comments || []).some(c => (c.body || '').includes(marker))) return false;
+  } catch { /* cannot tell: fall through and risk one duplicate rather than none */ }
+  if (dryRun) return false;
+  try { deps.gh(['pr', 'comment', String(prNumber), '--body', body]); return true; } catch { return false; }
+}
+
+// ---------------------------------------------------------------------------
+// CHANGELOG (CV-REQ-053)
+// ---------------------------------------------------------------------------
+
+/** One changelog line: `- <date> #<pr> <subject> (<domain>)`. */
+export function formatChangelogEntry({ date, pr, subject, domain }) {
+  return `- ${date} #${pr} ${String(subject || '').replace(/\s+/g, ' ').trim()} (${domain})`;
+}
+
+/**
+ * Append an entry object ({date, pr, subject, domain}) to a CHANGELOG file.
+ * Creates the file with a `# Changelog` header; groups lines under a
+ * `## <date>` heading (newest date first); idempotent per PR number.
+ * Returns true when the file changed.
+ */
+export function appendChangelog(path, entry) {
+  const line = formatChangelogEntry(entry);
+  let text = existsSync(path) ? readFileSync(path, 'utf8') : '# Changelog\n';
+  if (new RegExp(`^- \\S+ #${entry.pr} `, 'm').test(text)) return false;
+  const heading = `## ${entry.date}`;
+  const lines = text.replace(/\s+$/, '').split('\n');
+  const hIdx = lines.indexOf(heading);
+  if (hIdx >= 0) {
+    // after the last line of this date's section (up to the next heading)
+    let end = hIdx + 1;
+    while (end < lines.length && !/^## /.test(lines[end])) end++;
+    while (end > hIdx + 1 && lines[end - 1].trim() === '') end--;
+    lines.splice(end, 0, line);
+  } else {
+    // newest date goes right below the title
+    const titleIdx = lines.findIndex(l => /^# /.test(l));
+    lines.splice(titleIdx + 1, 0, '', heading, '', line);
+  }
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, lines.join('\n').replace(/\n{3,}/g, '\n\n') + '\n');
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -329,29 +503,38 @@ function ensureReviewClone(repoDir, log) {
 // Queue completion + reconcile (in the clone — never the main tree)
 // ---------------------------------------------------------------------------
 
-function completeTaskInClone(repoDir, taskId, log) {
+/**
+ * Mark the queue task completed in the review clone and push. `changelog`
+ * ({date, pr, subject, domain}, optional) rides the SAME commit/push so no new
+ * push path to main exists (CV-REQ-053).
+ */
+export function completeTaskInClone(repoDir, taskId, log, changelog = null) {
   const clone = ensureReviewClone(repoDir, log);
-  const taskFile = join(clone, 'tasks', 'queue', `${taskId}.json`);
-  if (!existsSync(taskFile)) return true; // nothing to do
-  const task = JSON.parse(readFileSync(taskFile, 'utf8'));
-  if (task.status === 'completed') return true;
-  try {
-    // SDLC_PROJECT_DIR must point at the CLONE: under systemd it is exported
-    // pointing at the main repo, and load-config.mjs prefers it over CWD —
-    // without this override the completion would be written into the MAIN
-    // working tree (single-writer violation observed live 2026-07-06).
-    run('node', [join(clone, 'agents', 'queue-drainer.mjs'), 'complete', taskId, 'passing'],
-      { cwd: clone, timeout: 120_000, env: { ...process.env, SDLC_PROJECT_DIR: clone } });
-  } catch {
-    // queue-drainer may refuse (e.g. never claimed); mark directly — the PR merged.
-    task.status = 'completed';
-    task.test_status = 'passing';
-    task.completedAt = new Date().toISOString();
-    writeFileSync(taskFile, JSON.stringify(task, null, 2) + '\n');
+  const taskFile = taskId ? join(clone, 'tasks', 'queue', `${taskId}.json`) : null;
+  const task = taskFile && existsSync(taskFile) ? JSON.parse(readFileSync(taskFile, 'utf8')) : null;
+  if (task && task.status !== 'completed') {
+    try {
+      // SDLC_PROJECT_DIR must point at the CLONE: under systemd it is exported
+      // pointing at the main repo, and load-config.mjs prefers it over CWD —
+      // without this override the completion would be written into the MAIN
+      // working tree (single-writer violation observed live 2026-07-06).
+      run('node', [join(clone, 'agents', 'queue-drainer.mjs'), 'complete', taskId, 'passing'],
+        { cwd: clone, timeout: 120_000, env: { ...process.env, SDLC_PROJECT_DIR: clone } });
+    } catch {
+      // queue-drainer may refuse (e.g. never claimed); mark directly — the PR merged.
+      task.status = 'completed';
+      task.test_status = 'passing';
+      task.completedAt = new Date().toISOString();
+      writeFileSync(taskFile, JSON.stringify(task, null, 2) + '\n');
+    }
   }
+  if (changelog) appendChangelog(join(clone, 'CHANGELOG.md'), changelog);
   if (!run('git', ['-C', clone, 'status', '--porcelain']).trim()) return true;
   run('git', ['-C', clone, 'add', 'tasks/']);
-  run('git', ['-C', clone, 'commit', '-q', '-m', `chore(queue): mark ${taskId} completed (drain PR merged by pr-auto-review)`]);
+  if (changelog) run('git', ['-C', clone, 'add', 'CHANGELOG.md']);
+  run('git', ['-C', clone, 'commit', '-q', '-m', changelog
+    ? `chore(queue): mark ${taskId || `PR #${changelog.pr}`} completed + changelog #${changelog.pr} (drain PR merged by pr-auto-review)`
+    : `chore(queue): mark ${taskId} completed (drain PR merged by pr-auto-review)`]);
   // If origin/main advanced since the refresh, the push is rejected (non-ff)
   // — never force. reconcileMerged retries on the next run.
   run('git', ['-C', clone, 'push', 'origin', 'main'], { timeout: 120_000 });
@@ -494,6 +677,16 @@ async function reviewPr(pr, ctx) {
     return record;
   }
 
+  // 0) Overlap with an earlier open PR (CV-REQ-052): defer, never reject —
+  // no rejection count, no FIX task; reviewed normally once the earlier one lands.
+  const deferral = deferralFor(pr.number, ctx.overlaps, ctx.mergedThisRun);
+  if (deferral) {
+    record.action = 'deferred-overlap';
+    record.detail = `overlaps ${deferral.earlier.map(n => `#${n}`).join(', ')}: ${deferral.files.join(', ')}`;
+    postDeferralOnce(pr.number, deferral, dryRun);
+    return record;
+  }
+
   // 1) Deterministic scope scan first — cheapest, and gates the guardrail surface.
   const paths = (pr.files || []).map(f => f.path);
   const scope = scanScope(paths);
@@ -563,8 +756,14 @@ async function reviewPr(pr, ctx) {
     return record;
   }
   gh(['pr', 'merge', String(pr.number), '--squash', '--delete-branch'], { timeout: 180_000 });
-  if (taskId) {
-    try { completeTaskInClone(repoDir, taskId, log); } catch (err) { log(`task-complete ${taskId} failed (reconcile will retry): ${err.message}`); }
+  {
+    const changelog = {
+      date: new Date().toISOString().slice(0, 10),
+      pr: pr.number,
+      subject: pr.title,
+      domain: classifyDomain(pr.files),
+    };
+    try { completeTaskInClone(repoDir, taskId, log, changelog); } catch (err) { log(`task-complete ${taskId} failed (reconcile will retry): ${err.message}`); }
   }
   // Best-effort notify (openspec: telegram-activation) — the merge already
   // happened; a notification failure must not fail the run or the record.
@@ -647,15 +846,19 @@ export async function runAutoReview({ dryRun = false } = {}) {
     log(`${prs.length} open drain PR(s)`);
 
     let merges = 0;
-    for (const pr of prs.sort((a, b) => a.number - b.number)) {
+    const ordered = orderPrsWithFetch(prs,
+      (n) => ghJson(['pr', 'view', String(n), '--json', 'files,additions,deletions']), log);
+    const overlaps = findOverlaps(ordered);
+    const mergedThisRun = new Set();
+    for (const pr of ordered) {
       if (merges >= MAX_AUTO_MERGES) { log(`merge rate limit (${MAX_AUTO_MERGES}) reached — deferring the rest`); break; }
       let res;
       try {
-        res = await reviewPr(pr, { repoDir, cloneDir, log, dryRun, testCmd });
+        res = await reviewPr(pr, { repoDir, cloneDir, log, dryRun, testCmd, overlaps, mergedThisRun });
       } catch (err) {
         res = { ts: new Date().toISOString(), pr: pr.number, branch: pr.headRefName, action: 'error', detail: err.message };
       }
-      if (res.action === 'merged') merges++;
+      if (res.action === 'merged') { merges++; mergedThisRun.add(pr.number); }
       log(`PR #${res.pr}: ${res.action}${res.detail ? ` — ${res.detail}` : ''}`);
       record(res);
       results.push(res);

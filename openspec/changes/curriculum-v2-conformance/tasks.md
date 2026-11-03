@@ -51,14 +51,14 @@ None of these block the hermes lane. Each names the gap and the task it unblocks
 
 | # | Decision | Gap | Unblocks |
 |---|---|---|---|
-| 1 | Enable `humanWellness` in agents/project.json (advisory alerts; currently dormant) | D7-09 | one-line config change, no task yet |
-| 2 | Matrix homeserver vs. Telegram as the documented L4 substitute | D3-05 | `matrix-cli` rooms/test, or a doc line in SHARED_PROTOCOL |
-| 3 | Set an OpenRouter per-key credit limit (key currently has none; usage $30.44) and add a health-check probe | D1-19, D7-12 | RUNBOOK line + probe task |
-| 4 | Create a separate GitHub bot account for the agent PAT, or document the current identity | D1-11 | RUNBOOK line |
-| 5 | Active-hours and merge-only windows for the drain (24/7 may be intentional) | D1-08 | `portfolio.json` fields read by drain-supervisor |
+| 1 | Enable `humanWellness` in agents/project.json (advisory alerts; currently dormant) | D7-09 | one-line config change, no task yet — **DECIDED 2026-11-03 (default):** ON, advisory only — `agents/project.json` humanWellness.enabled=true. |
+| 2 | Matrix homeserver vs. Telegram as the documented L4 substitute | D3-05 | `matrix-cli` rooms/test, or a doc line in SHARED_PROTOCOL — **DECIDED:** keep Telegram as the L4 substitute; CoffeeTalk.md for agent-to-agent; no Matrix homeserver. |
+| 3 | Set an OpenRouter per-key credit limit (key currently has none; usage $30.44) and add a health-check probe | D1-19, D7-12 | RUNBOOK line + probe task — **DECIDED:** $50/month per-key cap — Bryce sets it in the OpenRouter dashboard (human step); RUNBOOK documents it. |
+| 4 | Create a separate GitHub bot account for the agent PAT, or document the current identity | D1-11 | RUNBOOK line — **DECIDED:** keep the current identity (Bryce PAT + `Co-Authored-By: hermes-drain`); bot account optional later; RUNBOOK documents it. |
+| 5 | Active-hours and merge-only windows for the drain (24/7 may be intentional) | D1-08 | `portfolio.json` fields read by drain-supervisor — **DECIDED:** 24/7, no merge-only window. |
 | 6 | ~~Production error source~~ DECIDED 2026-11-03: any and all sources → Phase 7 | D1-04 | CV-703..705 |
-| 7 | Turn on the optional `claude -p` headless review timer? Cost: each review spends subscription tokens in a background session; Bryce's plan is small. Default OFF, max 2/day if on | CV-REQ-104 | CV-511, CV-512 |
-| 8 | Values for values-driven agent goals (bottom-ranked values) | D3-03 | a "Values" section in AGENT.md.template |
+| 7 | Turn on the optional `claude -p` headless review timer? Cost: each review spends subscription tokens in a background session; Bryce's plan is small. Default OFF, max 2/day if on | CV-REQ-104 | CV-511, CV-512 — **DECIDED:** OFF — Claude reviews the flagged queue only in interactive sessions (CV-511/512 stay parked). |
+| 8 | Values for values-driven agent goals (bottom-ranked values) | D3-03 | a "Values" section in AGENT.md.template — **DECIDED:** Claude drafted `framework/values.md` from Bryce's standing rules (top + bottom-ranked); Bryce edits at leisure. Wired into AGENT.md.template and drain-prompt.md. |
 
 ---
 
@@ -201,6 +201,13 @@ Items marked [x] are already done (2026-11-03). Unchecked items are Lane: intera
   - Test: `node agents/seed-queue-from-openspec.mjs --dry-run` lists no task whose block has `Lane: interactive`
   - Parallel: blocked-by CV-006, CV-011
   - Complexity: S
+
+- [x] **CV-013**: Drain trespass guard — the worker never touches a human checkout (done 2026-11-03, incident-driven)
+  - **Priority:** CRITICAL
+  - Files: `agents/drain-trespass-guard.sh` (new), `agents/hermes-drain.sh`, `agents/drain-prompt.md`, `tests/drain-trespass-guard.test.mjs` (new)
+  - Lane: interactive
+  - Test: 5 guard scenarios (untouched, switched branch restored, drain commit backed-up never reset, human commit ignored, dirty tree not switched); hermes-drain suite 18/18
+  - Notes: 2026-11-03 13:14 a worker `cd`'d into ~/agentic-sdlc (prompt + CLAUDE.md name that absolute path), committed on main, reset it, and switched the checkout to its branch. Fix: the prompt never names the human checkout (framework drains use the clone's own scripts) + rule 0 + before/after guard (rc=97, outbox + notify). Follow-up worth considering: run the worker in a bubblewrap sandbox with human checkouts bind-mounted read-only.
 
 ### Phase 1: Cycles wired
 
@@ -351,7 +358,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-108, CV-112
   - Complexity: S
 
-- [ ] **CV-114**: scheduler-install.mjs: honour `supersededBy` (skip entry, disable and remove an existing user unit of that name) and `enabled:false` (install the unit, do not enable)
+- [x] **CV-114**: scheduler-install.mjs: honour `supersededBy` (skip entry, disable and remove an existing user unit of that name) and `enabled:false` (install the unit, do not enable)
   - **Priority:** HIGH
   - Files: `agents/scheduler-install.mjs, tests/scheduler-install.test.mjs`
   - Spec: CV-REQ-014
@@ -1058,7 +1065,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: yes
   - Complexity: M
 
-- [ ] **CV-309**: review-hook.mjs: `install --pre-only` installs only the pre-commit hook, idempotently
+- [x] **CV-309**: review-hook.mjs: `install --pre-only` installs only the pre-commit hook, idempotently
   - **Priority:** MEDIUM
   - Files: `agents/review-hook.mjs, agents/__tests__/gates-enforce.test.mjs`
   - Spec: CV-REQ-030
@@ -1069,7 +1076,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-310**: review-hook.mjs DEFAULT_CHECKLIST: empty-catch regex matches `catch {}`, `catch () {}`, `catch (e) {}`; does not match `catch (e) { log(e) }`
+- [x] **CV-310**: review-hook.mjs DEFAULT_CHECKLIST: empty-catch regex matches `catch {}`, `catch () {}`, `catch (e) {}`; does not match `catch (e) { log(e) }`
   - **Priority:** MEDIUM
   - Files: `agents/review-hook.mjs, agents/__tests__/gates-enforce.test.mjs`
   - Spec: CV-REQ-031
@@ -1102,7 +1109,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: blocked-by CV-310, CV-307
   - Complexity: S
 
-- [ ] **CV-313**: hermes-drain.sh: after the clone sync, run `node agents/review-hook.mjs install --pre-only` in the drain clone; abort the pass with a logged reason on failure
+- [x] **CV-313**: hermes-drain.sh: after the clone sync, run `node agents/review-hook.mjs install --pre-only` in the drain clone; abort the pass with a logged reason on failure
   - **Priority:** MEDIUM
   - Files: `agents/hermes-drain.sh, tests/hermes-drain.test.mjs`
   - Spec: CV-REQ-030
@@ -1124,7 +1131,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: blocked-by CV-310
   - Complexity: S
 
-- [ ] **CV-315**: drain-prompt.md: add step before commit `node agents/review-hook.mjs check-staged`; on exit 1 fix the named violations and retry at most twice, then mark the task failing
+- [x] **CV-315**: drain-prompt.md: add step before commit `node agents/review-hook.mjs check-staged`; on exit 1 fix the named violations and retry at most twice, then mark the task failing
   - **Priority:** MEDIUM
   - Files: `agents/drain-prompt.md, tests/hermes-drain.test.mjs`
   - Spec: CV-REQ-030
@@ -1135,7 +1142,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: blocked-by CV-313
   - Complexity: S
 
-- [ ] **CV-316**: drain-prompt.md: add memory recall (`node agents/memory-manager.mjs recall <agent>`) before work and record (`record <agent> recent "<learning>"`) after, including on every failing outcome; skip without error if the agent has no memory dir
+- [x] **CV-316**: drain-prompt.md: add memory recall (`node agents/memory-manager.mjs recall <agent>`) before work and record (`record <agent> recent "<learning>"`) after, including on every failing outcome; skip without error if the agent has no memory dir
   - **Priority:** MEDIUM
   - Files: `agents/drain-prompt.md, tests/hermes-drain.test.mjs`
   - Spec: CV-REQ-033
@@ -1157,7 +1164,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: blocked-by CV-316, CV-301, CV-302
   - Complexity: S
 
-- [ ] **CV-318**: queue-drainer.mjs: add `registerFailure(task)` (retryCount+1; at 3 set status blocked, blockedReason retry-cap, call notifyHumanTask once); call it on `complete <id> failing` and on stale-claim release
+- [x] **CV-318**: queue-drainer.mjs: add `registerFailure(task)` (retryCount+1; at 3 set status blocked, blockedReason retry-cap, call notifyHumanTask once); call it on `complete <id> failing` and on stale-claim release
   - **Priority:** MEDIUM
   - Files: `agents/queue-drainer.mjs, agents/__tests__/queue-drainer-retry.test.mjs`
   - Spec: CV-REQ-035
@@ -1216,7 +1223,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
 
 Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are interactive; the cycle detector is hermes.
 
-- [ ] **CV-401**: pr-auto-review.mjs hardGate: run `git merge --no-commit --no-ff origin/<base>` in the temp worktree before the test command; conflict -> gate-failed reason `merge-conflict-with-base`; remove the worktree in every outcome
+- [x] **CV-401**: pr-auto-review.mjs hardGate: run `git merge --no-commit --no-ff origin/<base>` in the temp worktree before the test command; conflict -> gate-failed reason `merge-conflict-with-base`; remove the worktree in every outcome
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-050
@@ -1227,7 +1234,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
   - Parallel: yes
   - Complexity: M
 
-- [ ] **CV-402**: pr-auto-review.mjs: export `classifyDomain(files)` (infra: .github, scripts, *.sh, systemd, cron-schedule, package.json; backend: agents/*.mjs, lib; frontend: *.tsx, *.css, ui/web/components; docs-tests: *.md, tests) and `DOMAIN_ORDER`
+- [x] **CV-402**: pr-auto-review.mjs: export `classifyDomain(files)` (infra: .github, scripts, *.sh, systemd, cron-schedule, package.json; backend: agents/*.mjs, lib; frontend: *.tsx, *.css, ui/web/components; docs-tests: *.md, tests) and `DOMAIN_ORDER`
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-051
@@ -1238,7 +1245,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
   - Parallel: blocked-by CV-401
   - Complexity: S
 
-- [ ] **CV-403**: pr-auto-review.mjs: export `orderPrs(prs)` (domain rank, then additions+deletions ascending, then number) and replace the `sort((a,b)=>a.number-b.number)` site; fetch files/sizes with `gh pr view --json files,additions,deletions`; fetch failure -> number order + log
+- [x] **CV-403**: pr-auto-review.mjs: export `orderPrs(prs)` (domain rank, then additions+deletions ascending, then number) and replace the `sort((a,b)=>a.number-b.number)` site; fetch files/sizes with `gh pr view --json files,additions,deletions`; fetch failure -> number order + log
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-051
@@ -1249,7 +1256,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
   - Parallel: blocked-by CV-402
   - Complexity: M
 
-- [ ] **CV-404**: pr-auto-review.mjs: export `findOverlaps(prs)` returning [{later, earlier, files}] using the merge order
+- [x] **CV-404**: pr-auto-review.mjs: export `findOverlaps(prs)` returning [{later, earlier, files}] using the merge order
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-052
@@ -1260,7 +1267,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
   - Parallel: blocked-by CV-403
   - Complexity: S
 
-- [ ] **CV-405**: pr-auto-review.mjs reviewPr: for an overlapping later PR post one marker comment (idempotent), log action `deferred-overlap`, do not count as rejection or create a FIX task
+- [x] **CV-405**: pr-auto-review.mjs reviewPr: for an overlapping later PR post one marker comment (idempotent), log action `deferred-overlap`, do not count as rejection or create a FIX task
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-052
@@ -1271,7 +1278,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
   - Parallel: blocked-by CV-404
   - Complexity: M
 
-- [ ] **CV-406**: pr-auto-review.mjs: export `formatChangelogEntry({date,pr,subject,domain})` and `appendChangelog(path, entry)` (create with `# Changelog` header; group under `## <date>`; idempotent per PR number)
+- [x] **CV-406**: pr-auto-review.mjs: export `formatChangelogEntry({date,pr,subject,domain})` and `appendChangelog(path, entry)` (create with `# Changelog` header; group under `## <date>`; idempotent per PR number)
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-053
@@ -1282,7 +1289,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
   - Parallel: blocked-by CV-403
   - Complexity: S
 
-- [ ] **CV-407**: pr-auto-review.mjs: after a successful squash-merge call appendChangelog inside the existing completeTaskInClone commit/push path (no new push path)
+- [x] **CV-407**: pr-auto-review.mjs: after a successful squash-merge call appendChangelog inside the existing completeTaskInClone commit/push path (no new push path)
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-053
@@ -1480,7 +1487,7 @@ Hygiene tasks cite gap ids and carry no spec. Conformance rows are downgraded fi
   - Complexity: M
   - Notes: Keep azure-foundry-claude.mjs (Claude on Azure, not OpenAI).
 
-- [ ] **CV-602**: cron-schedule.json (+ template): remove the `orchestration-sync` entry (paperclip retired 2026-09-07); disable its timer via scheduler-install
+- [x] **CV-602**: cron-schedule.json (+ template): remove the `orchestration-sync` entry (paperclip retired 2026-09-07); disable its timer via scheduler-install
   - **Priority:** LOW
   - Files: `agents/cron-schedule.json, agents/templates/cron-schedule.json.template`
   - Spec: hygiene (paperclip retired)
