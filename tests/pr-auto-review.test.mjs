@@ -33,6 +33,9 @@ import {
   orderPrs,
   orderPrsWithFetch,
   findOverlaps,
+  deferralFor,
+  buildDeferralComment,
+  postDeferralOnce,
 } from '../agents/pr-auto-review.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -390,6 +393,39 @@ test('findOverlaps: shared file lists the later PR (merge order); disjoint -> []
   assert(o2[0].later === 1 && o2[0].earlier === 2, 'later follows merge order, not number');
   assert(findOverlaps([pr(1, 1, 'a.mjs'), pr(2, 1, 'b.mjs')]).length === 0, 'disjoint');
   assert(findOverlaps([]).length === 0, 'empty');
+});
+
+// --- CV-405: overlap deferral ------------------------------------------------
+
+test('deferralFor: later PR deferred; earlier PR and settled (merged) earlier are not', () => {
+  const overlaps = [{ later: 6, earlier: 5, files: ['agents/health-check.mjs'] }];
+  const d = deferralFor(6, overlaps);
+  assert(d && d.earlier.join() === '5' && d.files[0] === 'agents/health-check.mjs', 'later deferred');
+  assert(deferralFor(5, overlaps) === null, 'earlier is reviewed normally');
+  assert(deferralFor(6, overlaps, new Set([5])) === null, 'after earlier merges, later is reviewed');
+  assert(deferralFor(7, overlaps) === null, 'unrelated PR');
+});
+
+test('postDeferralOnce: second pass posts no second comment; dry run posts none', () => {
+  const posted = [];
+  let comments = [];
+  const deps = {
+    ghJson: () => ({ comments }),
+    gh: (args) => { posted.push(args); comments = [{ body: args[args.indexOf('--body') + 1] }]; },
+  };
+  const d = { earlier: [5], files: ['a.mjs'] };
+  assert(postDeferralOnce(6, d, false, deps) === true, 'first pass posts');
+  assert(postDeferralOnce(6, d, false, deps) === false, 'second pass is idempotent');
+  assert(posted.length === 1, 'exactly one comment');
+  assert(buildDeferralComment(d).includes('<!-- pr-auto-review-deferred earlier:5 -->'), 'marker');
+  assert(postDeferralOnce(9, d, true, { ghJson: () => ({ comments: [] }), gh: () => { throw new Error('no writes in dry-run'); } }) === false, 'dry run');
+});
+
+test('reviewPr defers before the gate/LLM, files no FIX task, and is not an alreadyReviewed marker', () => {
+  const block = source.slice(source.indexOf('// 0) Overlap'), source.indexOf('// 1) Deterministic scope scan'));
+  assert(/record\.action = 'deferred-overlap'/.test(block), 'action logged');
+  assert(!/fileFixTask|hardGate|llmReview/.test(block), 'deferral never gates, reviews, or files a FIX task');
+  assert(!buildDeferralComment({ earlier: [1], files: [] }).includes('<!-- pr-auto-review sha:'), 'must not look like a reviewed-sha marker');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

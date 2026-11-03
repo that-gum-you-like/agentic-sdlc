@@ -374,6 +374,40 @@ export function findOverlaps(prs) {
   return out;
 }
 
+const DEFERRED_MARKER = '<!-- pr-auto-review-deferred';
+
+/**
+ * Is `prNumber` the LATER side of an overlap with a still-open earlier PR?
+ * `settled` holds PR numbers already merged this run (their base change is in,
+ * so they no longer block). Returns {earlier, files} or null.
+ */
+export function deferralFor(prNumber, overlaps, settled = new Set()) {
+  const hits = (overlaps || []).filter(o => o.later === prNumber && !settled.has(o.earlier));
+  if (!hits.length) return null;
+  const earlier = [...new Set(hits.map(h => h.earlier))].sort((a, b) => a - b);
+  const files = [...new Set(hits.flatMap(h => h.files))].sort();
+  return { earlier, files };
+}
+
+export function buildDeferralComment({ earlier, files }) {
+  return `${DEFERRED_MARKER} earlier:${earlier.join(',')} -->\n## Deferred (pr-auto-review)\n\n`
+    + `This PR changes files that open PR(s) ${earlier.map(n => `#${n}`).join(', ')} also change, and those merge first:\n`
+    + `${files.map(f => `- \`${f}\``).join('\n')}\n\n`
+    + '_No action needed: this is not a rejection. Once they merge or close, this PR is gated against the new base._';
+}
+
+/** Post the deferral comment once per (PR, earlier set). Best-effort; returns true if posted. */
+export function postDeferralOnce(prNumber, deferral, dryRun, deps = { ghJson, gh }) {
+  const body = buildDeferralComment(deferral);
+  const marker = body.split('\n')[0];
+  try {
+    const { comments } = deps.ghJson(['pr', 'view', String(prNumber), '--json', 'comments']);
+    if ((comments || []).some(c => (c.body || '').includes(marker))) return false;
+  } catch { /* cannot tell: fall through and risk one duplicate rather than none */ }
+  if (dryRun) return false;
+  try { deps.gh(['pr', 'comment', String(prNumber), '--body', body]); return true; } catch { return false; }
+}
+
 // ---------------------------------------------------------------------------
 // Dedicated review clone (TOTAL isolation from the main working tree)
 // ---------------------------------------------------------------------------
@@ -593,6 +627,16 @@ async function reviewPr(pr, ctx) {
     return record;
   }
 
+  // 0) Overlap with an earlier open PR (CV-REQ-052): defer, never reject —
+  // no rejection count, no FIX task; reviewed normally once the earlier one lands.
+  const deferral = deferralFor(pr.number, ctx.overlaps, ctx.settled);
+  if (deferral) {
+    record.action = 'deferred-overlap';
+    record.detail = `overlaps ${deferral.earlier.map(n => `#${n}`).join(', ')}: ${deferral.files.join(', ')}`;
+    postDeferralOnce(pr.number, deferral, dryRun);
+    return record;
+  }
+
   // 1) Deterministic scope scan first — cheapest, and gates the guardrail surface.
   const paths = (pr.files || []).map(f => f.path);
   const scope = scanScope(paths);
@@ -748,15 +792,17 @@ export async function runAutoReview({ dryRun = false } = {}) {
     let merges = 0;
     const ordered = orderPrsWithFetch(prs,
       (n) => ghJson(['pr', 'view', String(n), '--json', 'files,additions,deletions']), log);
+    const overlaps = findOverlaps(ordered);
+    const settled = new Set();
     for (const pr of ordered) {
       if (merges >= MAX_AUTO_MERGES) { log(`merge rate limit (${MAX_AUTO_MERGES}) reached — deferring the rest`); break; }
       let res;
       try {
-        res = await reviewPr(pr, { repoDir, cloneDir, log, dryRun, testCmd });
+        res = await reviewPr(pr, { repoDir, cloneDir, log, dryRun, testCmd, overlaps, settled });
       } catch (err) {
         res = { ts: new Date().toISOString(), pr: pr.number, branch: pr.headRefName, action: 'error', detail: err.message };
       }
-      if (res.action === 'merged') merges++;
+      if (res.action === 'merged') { merges++; settled.add(pr.number); }
       log(`PR #${res.pr}: ${res.action}${res.detail ? ` — ${res.detail}` : ''}`);
       record(res);
       results.push(res);
