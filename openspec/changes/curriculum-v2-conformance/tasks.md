@@ -231,7 +231,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-102**: Add exported `buildWeeklySteps({dryRun})` to weekly-review.mjs returning, in order: pattern-hunt.mjs; rem-sleep.mjs --similarity; test-behavior.mjs --drift (each with --dry-run when dryRun)
+- [x] **CV-102**: Add exported `buildWeeklySteps({dryRun})` to weekly-review.mjs returning, in order: pattern-hunt.mjs; rem-sleep.mjs --similarity; test-behavior.mjs --drift (each with --dry-run when dryRun)
   - **Priority:** HIGH
   - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/weekly-review-steps.test.mjs`
   - Spec: CV-REQ-010

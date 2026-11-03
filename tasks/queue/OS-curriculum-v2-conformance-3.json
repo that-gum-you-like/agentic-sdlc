@@ -3,7 +3,7 @@
   "title": "Add exported `buildWeeklySteps({dryRun})` to weekly-review.mjs returning, in order: pattern-hunt.mjs; rem-sleep.mjs --similarity; test-behavior.mjs --drift (each with --dry-run when dryRun)",
   "description": "- [ ] **CV-102**: Add exported `buildWeeklySteps({dryRun})` to weekly-review.mjs returning, in order: pattern-hunt.mjs; rem-sleep.mjs --similarity; test-behavior.mjs --drift (each with --dry-run when dryRun)\n  - **Priority:** HIGH\n  - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/weekly-review-steps.test.mjs`\n  - Spec: CV-REQ-010\n  - Gaps: D5-04, D7-03\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: new test: names and order of the three steps; dryRun appends --dry-run to each\n  - Parallel: blocked-by CV-101\n  - Complexity: S",
   "priority": "HIGH",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-2"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-3.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-03T23:15:01.563Z"
 }
