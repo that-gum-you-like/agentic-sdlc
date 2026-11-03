@@ -3,16 +3,18 @@
  * Platform Maturity Assessment — Automated project health scanner.
  *
  * Evaluates a project across 8 dimensions and produces a scored report.
- * Read-only — never modifies project files.
+ * Read-only, with one exception: --report writes pm/maturity-reports/<date>.md
+ * into the assessed project. Nothing else is ever written.
  *
  * Usage:
  *   node agents/maturity-assess.mjs                    # Full assessment
  *   node agents/maturity-assess.mjs --dimension testing # Single dimension
  *   node agents/maturity-assess.mjs --json              # JSON output
  *   node agents/maturity-assess.mjs --dir /path         # Assess a different project
+ *   node agents/maturity-assess.mjs --report            # Also write pm/maturity-reports/<YYYY-MM-DD>.md
  */
 
-import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'fs';
 import { resolve, join, dirname } from 'path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -23,6 +25,7 @@ const __dirname = dirname(__filename);
 
 const args = process.argv.slice(2);
 const jsonMode = args.includes('--json');
+const reportMode = args.includes('--report');
 const dirIdx = args.indexOf('--dir');
 const dimIdx = args.indexOf('--dimension');
 const singleDimension = dimIdx >= 0 ? args[dimIdx + 1] : null;
@@ -604,6 +607,89 @@ function maturityLabel(avg) {
   return 'Critical';
 }
 
+/**
+ * Render the human-readable assessment (CV-REQ-013). Pure: no I/O.
+ *
+ * Pulled out of run() so `--report` writes exactly the table the console
+ * shows — a second, hand-copied renderer would drift from this one.
+ *
+ * @param {{projectName: string, date: string, results: object[], avgScore: number, label: string}} r
+ * @returns {string} markdown report, no trailing newline
+ */
+export function renderReport({ projectName, date, results, avgScore, label }) {
+  const lines = [];
+  lines.push(`# Platform Maturity Assessment — ${projectName}`);
+  lines.push(`**Date**: ${date}`);
+  lines.push('**Assessed by**: platform-maturity-sentinel');
+  lines.push('');
+
+  lines.push('## Summary');
+  lines.push(`Overall Score: **${avgScore.toFixed(1)}/5.0** (${label})`);
+  lines.push('');
+
+  lines.push('## Dimension Scores');
+  lines.push('| Dimension | Score | Bar |');
+  lines.push('|-----------|-------|-----|');
+  for (const r of results) {
+    const bar = '█'.repeat(Math.round(r.score)) + '░'.repeat(5 - Math.round(r.score));
+    lines.push(`| ${r.dimension.padEnd(22)} | ${r.score.toFixed(1)}/5 | ${bar} |`);
+  }
+
+  // Top recommendations
+  const weakest = [...results].sort((a, b) => a.score - b.score).slice(0, 3);
+  lines.push('');
+  lines.push('## Top 3 Recommendations');
+  for (let i = 0; i < weakest.length; i++) {
+    const r = weakest[i];
+    // Only actual gaps can be recommendations. The previous keyword filter let
+    // passing lines through, so the top recommendation was sometimes a success.
+    const gaps = r.evidence.filter(e => evidenceOk(e) === false).map(evidenceText);
+    lines.push(`${i + 1}. **${r.dimension}** (${r.score.toFixed(1)}/5): ${gaps[0] || 'Room for improvement'}`);
+  }
+
+  // Detailed findings
+  lines.push('');
+  lines.push('## Detailed Findings');
+  lines.push('');
+  for (const r of results) {
+    lines.push(`### ${r.dimension} — ${r.score.toFixed(1)}/5`);
+    for (const e of r.evidence) {
+      lines.push(`  ${evidenceIcon(e)} ${evidenceText(e)}`);
+    }
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Write a rendered report to <projectDir>/pm/maturity-reports/<date>.md,
+ * creating the directory if absent. Same-day runs overwrite that day's file.
+ *
+ * A failed write is loud and sets a nonzero exit code: `monthly-review` counts
+ * the report as a delivered artifact, so silently exiting 0 after an EACCES or
+ * ENOSPC would report success for a cycle that produced nothing.
+ *
+ * @param {string} text rendered report
+ * @param {string} date YYYY-MM-DD, also the file name
+ * @param {string} [projectDir] assessed project (defaults to PROJECT_DIR)
+ * @returns {string} absolute path of the report file
+ */
+export function writeMaturityReport(text, date, projectDir = PROJECT_DIR) {
+  const dir = join(projectDir, 'pm', 'maturity-reports');
+  const file = join(dir, `${date}.md`);
+  try {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(file, text.endsWith('\n') ? text : `${text}\n`, 'utf8');
+  } catch (err) {
+    console.error(`Could not write maturity report to ${file}: ${err.message}`);
+    process.exitCode = 1;
+    return file;
+  }
+  console.log(`\nReport written to ${file}`);
+  return file;
+}
+
 function run() {
   const dimensions = singleDimension
     ? { [singleDimension]: ASSESSORS[singleDimension] }
@@ -623,48 +709,24 @@ function run() {
   const totalScore = results.reduce((sum, r) => sum + r.score, 0);
   const avgScore = results.length > 0 ? totalScore / results.length : 0;
   const label = maturityLabel(avgScore);
+  // One date for both the header and the file name — otherwise a run that
+  // straddles UTC midnight would file today's table under tomorrow's name.
+  const today = new Date().toISOString().split('T')[0];
+  const text = renderReport({
+    projectName: PROJECT_DIR.split('/').pop() || PROJECT_DIR,
+    date: today,
+    results,
+    avgScore,
+    label,
+  });
 
   if (jsonMode) {
-    console.log(JSON.stringify({ project: PROJECT_DIR, date: new Date().toISOString().split('T')[0], overallScore: Math.round(avgScore * 10) / 10, label, dimensions: results }, null, 2));
-    return;
+    console.log(JSON.stringify({ project: PROJECT_DIR, date: today, overallScore: Math.round(avgScore * 10) / 10, label, dimensions: results }, null, 2));
+  } else {
+    console.log(`\n${text}`);
   }
 
-  // Human-readable report
-  console.log(`\n# Platform Maturity Assessment — ${PROJECT_DIR.split('/').pop()}`);
-  console.log(`**Date**: ${new Date().toISOString().split('T')[0]}`);
-  console.log(`**Assessed by**: platform-maturity-sentinel\n`);
-
-  console.log(`## Summary`);
-  console.log(`Overall Score: **${avgScore.toFixed(1)}/5.0** (${label})\n`);
-
-  console.log(`## Dimension Scores`);
-  console.log('| Dimension | Score | Bar |');
-  console.log('|-----------|-------|-----|');
-  for (const r of results) {
-    const bar = '█'.repeat(Math.round(r.score)) + '░'.repeat(5 - Math.round(r.score));
-    console.log(`| ${r.dimension.padEnd(22)} | ${r.score.toFixed(1)}/5 | ${bar} |`);
-  }
-
-  // Top recommendations
-  const weakest = [...results].sort((a, b) => a.score - b.score).slice(0, 3);
-  console.log(`\n## Top 3 Recommendations`);
-  for (let i = 0; i < weakest.length; i++) {
-    const r = weakest[i];
-    // Only actual gaps can be recommendations. The previous keyword filter let
-    // passing lines through, so the top recommendation was sometimes a success.
-    const gaps = r.evidence.filter(e => evidenceOk(e) === false).map(evidenceText);
-    console.log(`${i + 1}. **${r.dimension}** (${r.score.toFixed(1)}/5): ${gaps[0] || 'Room for improvement'}`);
-  }
-
-  // Detailed findings
-  console.log(`\n## Detailed Findings\n`);
-  for (const r of results) {
-    console.log(`### ${r.dimension} — ${r.score.toFixed(1)}/5`);
-    for (const e of r.evidence) {
-      console.log(`  ${evidenceIcon(e)} ${evidenceText(e)}`);
-    }
-    console.log('');
-  }
+  if (reportMode) writeMaturityReport(text, today);
 }
 
 // This module now exports helpers, so the CLI must not fire on import

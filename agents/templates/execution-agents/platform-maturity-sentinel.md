@@ -173,4 +173,7 @@ Run monthly or on-demand:
 node ~/agentic-sdlc/agents/maturity-assess.mjs              # Full assessment
 node ~/agentic-sdlc/agents/maturity-assess.mjs --dimension testing  # Single dimension
 node ~/agentic-sdlc/agents/maturity-assess.mjs --json        # JSON output
+node ~/agentic-sdlc/agents/maturity-assess.mjs --report      # Also write pm/maturity-reports/<YYYY-MM-DD>.md
 ```
+`--report` creates `pm/maturity-reports/` if needed and overwrites the same day's file, so
+`monthly-review.mjs` can file one dated report per month without accumulating duplicates.
