@@ -3,11 +3,14 @@
   "title": "T-701: Full suite green — `npm test`,",
   "description": "- [ ] **T-701**: Full suite green — `npm test`,\n      `node agents/four-layer-validate.mjs`, `node agents/test-behavior.mjs`.\n  - Command: `npm test && node agents/four-layer-validate.mjs && node agents/test-behavior.mjs`\n  - Expected: all passing, zero new npm dependencies\n  - Parallel: blocked-by all implementation tasks",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/business-os/tasks.md",
   "createdAt": "2026-09-02T18:29:42.808Z",
   "claimedBy": null,
-  "testStatus": null
+  "testStatus": null,
+  "completed_at": "2026-11-03T19:48:57Z",
+  "test_status": "passing",
+  "completionNote": "suite green verified interactively 2026-11-03 (PR #63 fixes applied on main)"
 }

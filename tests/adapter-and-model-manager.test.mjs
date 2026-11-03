@@ -695,7 +695,7 @@ test('resolveProviderKey prefers env over env file', () => {
 
 test('every fallback rung resolves to a known model', () => {
   const budget = mm.loadBudget();
-  const intel = mm.loadModelIntel();
+  const intel = JSON.parse(readFileSync(INTEL_DEFAULT_PATH, 'utf8')) // shipped catalog, not the gitignored runtime cache (PR #63);
   const bad = [];
   for (const [name, cfg] of Object.entries(budget.agents || {})) {
     for (const model of cfg.fallbackChain || []) {
@@ -707,7 +707,7 @@ test('every fallback rung resolves to a known model', () => {
 
 test('every agent has a cross-provider fallback rung', () => {
   const budget = mm.loadBudget();
-  const intel = mm.loadModelIntel();
+  const intel = JSON.parse(readFileSync(INTEL_DEFAULT_PATH, 'utf8')) // shipped catalog, not the gitignored runtime cache (PR #63);
   const stranded = [];
   for (const [name, cfg] of Object.entries(budget.agents || {})) {
     const primary = cfg.provider || intel.models?.[cfg.model]?.provider;

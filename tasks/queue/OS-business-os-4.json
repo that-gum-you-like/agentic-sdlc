@@ -3,7 +3,7 @@
   "title": "T-303: Audit stale state left by the 32-day dormancy **before**",
   "description": "- [ ] **T-303**: Audit stale state left by the 32-day dormancy **before**\n      arming anything: `tasks/queue/`, open PRs across all drained repos, and\n      each project's `pm/.last-deployed` versus `origin`. Record findings.\n  - Files: `docs/wave2-preflight-2026-09-12.md` (report)\n  - Spec: environment-tiering/REQ-006\n  - Agent: sdlc-developer\n  - Test: report exists and names every drained repo with its queue depth, open\n    PR count, and last-deployed sha versus `origin/<base>`\n  - Parallel: blocked-by T-302\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/business-os/tasks.md",
@@ -11,5 +11,8 @@
   "claimedBy": "hermes-drain",
   "testStatus": null,
   "_file": "OS-business-os-4.json",
-  "claimedAt": "2026-09-12T19:49:37.036Z"
+  "claimedAt": "2026-09-12T19:49:37.036Z",
+  "completed_at": "2026-11-03T19:48:57Z",
+  "test_status": "passing",
+  "completionNote": "merged in PR #71/#81"
 }

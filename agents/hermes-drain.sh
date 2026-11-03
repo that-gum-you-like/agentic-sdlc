@@ -69,7 +69,10 @@ echo "drain $$" > "$LOCKDIR/holder"
 trap 'rm -rf "$LOCKDIR"' EXIT   # clone persists (reused); nothing on main to clean
 
 # --- backstop: never run if another drain worker is already alive ---
-if pgrep -f 'timeout 3600 hermes' >/dev/null 2>&1; then
+# A --dry-run probe is exempt: it never invokes the LLM and never touches the
+# clone, so it cannot collide with a live worker's clone writes. It still takes
+# the shared mutex above, so two dry-runs still exclude each other (PR #63).
+if [ "$DRY_RUN" -eq 0 ] && pgrep -f 'timeout 3600 hermes' >/dev/null 2>&1; then
   log "a drain worker is already running — skip"; exit 0
 fi
 
