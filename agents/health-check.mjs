@@ -36,6 +36,84 @@ function worst(a, b) {
 }
 
 // ---------------------------------------------------------------------------
+// evaluateCycleCadence — pure function for cycle erosion detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Evaluate cycle cadence against expected limits.
+ * Pure function — no side effects, no I/O.
+ *
+ * @param {Array<{type: string, timestamp: string}>} history - Cycle history entries
+ *   from pm/cycle-history.json (same shape as recordCycleHistory writes).
+ * @param {Date|string} now - "Current" time for age calculations.
+ * @param {Object} [limits] - Per-type cadence limits in days.
+ * @param {number} [limits.daily=2]
+ * @param {number} [limits.weekly=8]
+ * @param {number} [limits.monthly=32]
+ * @returns {Array<{type: string, status: string, detail: string}>}
+ *   One entry per cycle type. status is 'ok' or 'degraded'. A type with zero
+ *   entries is 'degraded' only when the oldest entry in the *whole* history
+ *   is older than that type's limit.
+ */
+export function evaluateCycleCadence(history, now, limits = {}) {
+  const { daily = 2, weekly = 8, monthly = 32 } = limits;
+  const nowDate = now instanceof Date ? now : new Date(now);
+  const msPerDay = 24 * 60 * 60 * 1000;
+
+  const typeLimits = { daily, weekly, monthly };
+
+  // Find the oldest entry across ALL types by building a sorted copy.
+  const sorted = [...history].sort((a, b) =>
+    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+  const oldestEntry = sorted.length > 0 ? sorted[0] : null;
+  const oldestDate = oldestEntry ? new Date(oldestEntry.timestamp) : null;
+
+  return Object.keys(typeLimits).map(type => {
+    const limitDays = typeLimits[type];
+    const typeEntries = history.filter(e => e.type === type);
+
+    if (typeEntries.length === 0) {
+      // No entries for this cycle type — defer to the oldest entry in the
+      // whole history. If the system was set up recently we should not flag
+      // a cycle that hasn't had a chance to run yet.
+      if (oldestDate) {
+        const ageDays = (nowDate.getTime() - oldestDate.getTime()) / msPerDay;
+        if (ageDays > limitDays) {
+          return {
+            type,
+            status: 'degraded',
+            detail: `never-run: oldest entry ${Math.floor(ageDays)} days old`,
+          };
+        }
+      }
+      return { type, status: 'ok', detail: 'never-run' };
+    }
+
+    // Newest entry of this type via a single pass through the filtered list.
+    const newest = typeEntries.reduce((a, b) =>
+      new Date(a.timestamp).getTime() > new Date(b.timestamp).getTime() ? a : b,
+    );
+    const newestDate = new Date(newest.timestamp);
+    const ageDays = (nowDate.getTime() - newestDate.getTime()) / msPerDay;
+
+    if (ageDays > limitDays) {
+      return {
+        type,
+        status: 'degraded',
+        detail: `overdue: ${Math.floor(ageDays)} days since last ${type}`,
+      };
+    }
+
+    return {
+      type,
+      status: 'ok',
+      detail: `${Math.floor(ageDays)} days since last ${type}`,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Individual checks
 // ---------------------------------------------------------------------------
 

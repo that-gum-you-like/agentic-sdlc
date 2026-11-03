@@ -9,7 +9,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { runHealthCheck } from '../agents/health-check.mjs';
+import { runHealthCheck, evaluateCycleCadence } from '../agents/health-check.mjs';
 
 /** Build an egress probe that returns a fixed finding set. */
 const probeReturning = (findings) => async () => ({ ok: !findings.some(f => f.severity === 'critical'), findings, checkedAt: new Date().toISOString() });
@@ -88,4 +88,88 @@ test('a probe returning a malformed payload does not throw', async () => {
     const result = await runHealthCheck({ egress: async () => payload });
     assert.equal(egressCheck(result).status, 'ok', `payload ${JSON.stringify(payload)}`);
   }
+});
+
+// ---------------------------------------------------------------------------
+// evaluateCycleCadence — pure function tests
+// ---------------------------------------------------------------------------
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Build a cycle history entry. */
+function entry(type, daysAgo) {
+  return { type, timestamp: new Date(NOW.getTime() - daysAgo * ONE_DAY_MS).toISOString(), success: true };
+}
+
+/** Shorthand to look up one type's result from evaluateCycleCadence. */
+const byType = (results, type) => results.find(r => r.type === type);
+
+// Pin "now" so the tests are deterministic.
+const NOW = new Date('2026-11-03T12:00:00Z');
+
+test('evaluateCycleCadence: weekly entry 9 days old is overdue weekly', () => {
+  const history = [entry('daily', 1), entry('weekly', 9)];
+  const results = evaluateCycleCadence(history, NOW);
+  const w = byType(results, 'weekly');
+  assert.equal(w.status, 'degraded');
+  assert.match(w.detail, /overdue.*9 days since last weekly/);
+});
+
+test('evaluateCycleCadence: all fresh entries are ok', () => {
+  const history = [
+    entry('daily', 0),
+    entry('weekly', 5),
+    entry('monthly', 20),
+  ];
+  const results = evaluateCycleCadence(history, NOW);
+  for (const r of results) {
+    assert.equal(r.status, 'ok', `${r.type} should be ok, got ${r.status}`);
+  }
+});
+
+test('evaluateCycleCadence: zero monthly entries, oldest entry < 32d is not flagged', () => {
+  const history = [entry('daily', 1), entry('weekly', 1)];
+  // oldest entry is 1 day old, monthly limit is 32 — not flagged
+  const results = evaluateCycleCadence(history, NOW);
+  assert.equal(byType(results, 'monthly').status, 'ok');
+  assert.match(byType(results, 'monthly').detail, /never-run/);
+});
+
+test('evaluateCycleCadence: zero monthly entries, oldest entry > 32d is degraded', () => {
+  const history = [entry('daily', 40)];
+  // oldest entry is 40 days old, monthly limit is 32 — flagged
+  const results = evaluateCycleCadence(history, NOW);
+  assert.equal(byType(results, 'monthly').status, 'degraded');
+  assert.match(byType(results, 'monthly').detail, /never-run.*40 days old/);
+});
+
+test('evaluateCycleCadence: empty history yields all ok', () => {
+  const results = evaluateCycleCadence([], NOW);
+  assert.equal(results.length, 3);
+  for (const r of results) {
+    assert.equal(r.status, 'ok');
+    assert.match(r.detail, /never-run/);
+  }
+});
+
+test('evaluateCycleCadence: accepts string now param', () => {
+  const history = [entry('daily', 3)];
+  const results = evaluateCycleCadence(history, '2026-11-03T12:00:00Z');
+  // daily limit is 2, so 3 days is overdue
+  assert.equal(byType(results, 'daily').status, 'degraded');
+});
+
+test('evaluateCycleCadence: custom limits override defaults', () => {
+  const history = [entry('daily', 3)];
+  // Override daily to 5 — 3 days is fine
+  const results = evaluateCycleCadence(history, NOW, { daily: 5 });
+  assert.equal(byType(results, 'daily').status, 'ok');
+});
+
+test('evaluateCycleCadence: only one type with entries does not break others', () => {
+  const history = [entry('daily', 0), entry('daily', 1)];
+  const results = evaluateCycleCadence(history, NOW);
+  assert.equal(byType(results, 'daily').status, 'ok');
+  assert.match(byType(results, 'weekly').detail, /never-run/);
+  assert.match(byType(results, 'monthly').detail, /never-run/);
 });
