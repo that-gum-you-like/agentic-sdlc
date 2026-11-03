@@ -53,34 +53,103 @@ function runReview(projectDir) {
   });
 }
 
-describe('daily-review upsertDashboardSection (CV-118)', () => {
-  it('replaces an existing section body', () => {
+// ---------------------------------------------------------------------------
+// upsertDashboardSection tests (CV-118)
+// ---------------------------------------------------------------------------
+// These target the four rejection points from PR#88 review:
+//   1. regex matching sections with content
+//   2. section content replacement correctness
+//   3. special characters in body / replacement
+//   4. edge case coverage
+// ---------------------------------------------------------------------------
+
+describe('daily-review upsertDashboardSection — pattern matching (rejection 1)', () => {
+
+  it('replaces an existing section with multiline content', () => {
     const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
     const path = join(dir, 'test.md');
-    writeFileSync(path, '# Dashboard\n\n## Status\nOld status text\n\n## Metrics\nOld metrics\n');
+    writeFileSync(path, [
+      '# Dashboard',
+      '',
+      '## Status',
+      'Line one',
+      'Line two',
+      '',
+      '## Metrics',
+      '- Completed: 5',
+      '- Blocked: 2',
+      '',
+    ].join('\n'));
 
     upsertDashboardSection('Metrics', 'New metrics report', path);
-
     const written = readFileSync(path, 'utf8');
     assert.match(written, /## Metrics\n\nNew metrics report/);
-    assert.doesNotMatch(written, /Old metrics/);
-    // Other sections intact
-    assert.match(written, /## Status\nOld status text/);
   });
 
-  it('appends a new section when the title does not exist', () => {
+  it('replaces a section at file start with content following it', () => {
     const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
     const path = join(dir, 'test.md');
-    writeFileSync(path, '# Dashboard\n\n## Status\nAll good\n');
+    writeFileSync(path, '## Metrics\nOld\n\n## Status\nOK\n');
 
-    upsertDashboardSection('OpenSpec status', '| Change | Phase |\n|--------|-------|\n| CV-118 | tasks |', path);
-
+    upsertDashboardSection('Metrics', 'New', path);
     const written = readFileSync(path, 'utf8');
-    assert.match(written, /## OpenSpec status\n\n\| Change \| Phase \|/);
-    assert.match(written, /## Status\nAll good/);
+    assert.match(written, /^## Metrics\n\nNew/);
+    assert.match(written, /## Status\nOK/);
   });
 
-  it('calling twice with different bodies leaves exactly one section with the second body; other sections untouched', () => {
+  it('handles section with no blank line between heading and content', () => {
+    // The content immediately follows the heading line (no blank line).
+    const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
+    const path = join(dir, 'test.md');
+    writeFileSync(path, '## A\nContent here\n## B\nMore here\n');
+
+    upsertDashboardSection('A', 'Replaced', path);
+    const written = readFileSync(path, 'utf8');
+    assert.match(written, /## A\n\nReplaced/);
+    assert.match(written, /## B\nMore here/);
+  });
+
+  it('handles section with `## ` mid-line (not a heading boundary)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
+    const path = join(dir, 'test.md');
+    writeFileSync(path, '## References\nSee ## the-ref for details\n## Other\nData\n');
+
+    upsertDashboardSection('References', 'Updated refs', path);
+    const written = readFileSync(path, 'utf8');
+    assert.match(written, /## References\n\nUpdated refs/);
+    assert.doesNotMatch(written, /the-ref for details/);
+  });
+
+});
+
+describe('daily-review upsertDashboardSection — content replacement (rejection 2)', () => {
+
+  it('replaces body and leaves other sections intact', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
+    const path = join(dir, 'test.md');
+    writeFileSync(path, '## Status\nFirst\n\n## Metrics\nSecond\n\n## Action\nThird\n');
+
+    upsertDashboardSection('Metrics', 'Updated metrics', path);
+    const written = readFileSync(path, 'utf8');
+    assert.match(written, /## Metrics\n\nUpdated metrics/);
+    assert.match(written, /## Status\nFirst/);
+    assert.match(written, /## Action\nThird/);
+    const headings = written.match(/^## /gm);
+    assert.equal(headings?.length, 3, 'must have exactly 3 section headings');
+  });
+
+  it('replaces with empty body', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
+    const path = join(dir, 'test.md');
+    writeFileSync(path, '## Section\nOld\n\n## Other\nData\n');
+
+    upsertDashboardSection('Section', '', path);
+    const written = readFileSync(path, 'utf8');
+    assert.match(written, /## Section\n\n/);
+    assert.doesNotMatch(written, /Old/);
+  });
+
+  it('calling twice with different bodies leaves exactly one section with the second body', () => {
     const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
     const path = join(dir, 'test.md');
     writeFileSync(path, '# Dashboard\n\n## Status\nAll good\n');
@@ -89,49 +158,154 @@ describe('daily-review upsertDashboardSection (CV-118)', () => {
     upsertDashboardSection('Metrics', 'Version 2', path);
 
     const written = readFileSync(path, 'utf8');
-    // Exactly one Metrics section
-    const matches = written.match(/## Metrics/g);
-    assert.equal(matches?.length, 1, 'must have exactly one Metrics section');
-    // Must carry the second body
+    assert.equal(written.match(/## Metrics/g)?.length, 1, 'exactly one Metrics section');
     assert.match(written, /## Metrics\n\nVersion 2/);
     assert.doesNotMatch(written, /Version 1/);
-    // Other sections untouched
     assert.match(written, /## Status\nAll good/);
   });
 
-  it('handles section at the very start of the file', () => {
+  it('returns true when replacing and false when appending', () => {
     const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
     const path = join(dir, 'test.md');
-    writeFileSync(path, '## Metrics\nOld\n\n## Status\nAll good\n');
+    writeFileSync(path, '## Target\nContent\n');
 
-    upsertDashboardSection('Metrics', 'New version', path);
+    assert.equal(upsertDashboardSection('Target', 'Updated', path), true);
+    assert.equal(upsertDashboardSection('Missing', 'Appended', path), false);
+  });
 
+});
+
+describe('daily-review upsertDashboardSection — special chars (rejection 3)', () => {
+
+  it('body with dollar signs ($&, $1, $`)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
+    const path = join(dir, 'test.md');
+    writeFileSync(path, '## Section\nOld\n\n## Other\nData\n');
+
+    upsertDashboardSection('Section', 'Cost: $500, plus $& and $1 and $`', path);
     const written = readFileSync(path, 'utf8');
-    assert.match(written, /^## Metrics\n\nNew version/);
+    assert.match(written, /\$500/);
+    assert.match(written, /\$&/);
+    assert.match(written, /\$1/);
   });
 
-  it('returns true when replacing, false when appending', () => {
+  it('body with backslashes', () => {
     const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
     const path = join(dir, 'test.md');
-    writeFileSync(path, '## Existing\nContent\n');
+    writeFileSync(path, '## Path\nOld\n\n## Other\nData\n');
 
-    const resultReplace = upsertDashboardSection('Existing', 'Updated', path);
-    assert.equal(resultReplace, true);
-
-    const resultAppend = upsertDashboardSection('NewSection', 'Fresh', path);
-    assert.equal(resultAppend, false);
-  });
-
-  it('handles special regex characters in title', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
-    const path = join(dir, 'test.md');
-    writeFileSync(path, '# Dashboard\n## Status (v1.0)\nData\n');
-
-    upsertDashboardSection('Status (v1.0)', 'Updated data', path);
-
+    upsertDashboardSection('Path', 'C:\\Users\\test\\file.txt', path);
     const written = readFileSync(path, 'utf8');
-    assert.match(written, /## Status \(v1\.0\)\n\nUpdated data/);
+    assert.match(written, /C:\\Users/);
+    assert.match(written, /\\file\.txt/);
   });
+
+  it('body with regex special characters', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
+    const path = join(dir, 'test.md');
+    writeFileSync(path, '## Config\nOld\n\n## Other\nData\n');
+
+    upsertDashboardSection('Config', 'value={a+b} (test) [list] ^.*$', path);
+    const written = readFileSync(path, 'utf8');
+    assert.match(written, /\{a\+b\}/);
+    assert.match(written, /\[list\]/);
+  });
+
+  it('title with dollars, brackets, pipe, and parens', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
+    const path = join(dir, 'test.md');
+    writeFileSync(path, '## Status (v1.0) [alpha]\nOld\n\n## Other\nData\n');
+
+    upsertDashboardSection('Status (v1.0) [alpha]', 'Updated', path);
+    const written = readFileSync(path, 'utf8');
+    assert.match(written, /## Status \(v1\.0\) \[alpha\]\n\nUpdated/);
+  });
+
+  it('title with dollar sign $', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
+    const path = join(dir, 'test.md');
+    writeFileSync(path, '## $price\nOld\n\n## Other\nData\n');
+
+    upsertDashboardSection('$price', 'Updated', path);
+    const written = readFileSync(path, 'utf8');
+    assert.match(written, /## \$price\n\nUpdated/);
+    assert.doesNotMatch(written, /Old/);
+  });
+
+});
+
+describe('daily-review upsertDashboardSection — edge cases (rejection 4)', () => {
+
+  it('appends to an empty file without leading newlines', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
+    const path = join(dir, 'test.md');
+    writeFileSync(path, '');
+
+    upsertDashboardSection('New', 'Content', path);
+    const written = readFileSync(path, 'utf8');
+    assert.match(written, /^## New\n\nContent/);
+  });
+
+  it('replaces the only section in a single-section file', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
+    const path = join(dir, 'test.md');
+    writeFileSync(path, '## Solo\nOriginal\n');
+
+    upsertDashboardSection('Solo', 'Replaced', path);
+    const written = readFileSync(path, 'utf8');
+    assert.match(written, /^## Solo\n\nReplaced/);
+  });
+
+  it('section at EOF without trailing newline', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
+    const path = join(dir, 'test.md');
+    writeFileSync(path, '## Status\nOK\n## Metrics\nOld');
+
+    upsertDashboardSection('Metrics', 'New', path);
+    const written = readFileSync(path, 'utf8');
+    assert.match(written, /## Metrics\n\nNew/);
+  });
+
+  it('body with blank line and indentation', () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'sdlc-dashboard-')), 'test.md');
+    writeFileSync(path, '## Section\nOld\n');
+
+    upsertDashboardSection('Section', 'First\n\n\tIndented\nLast', path);
+    const written = readFileSync(path, 'utf8');
+    assert.match(written, /## Section\n\nFirst\n\n\tIndented\nLast/);
+  });
+
+  it('body with triple-backtick code fence', () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'sdlc-dashboard-')), 'test.md');
+    writeFileSync(path, '## Section\nOld\n\n## Other\nData\n');
+
+    upsertDashboardSection('Section', '```\ncode\n```', path);
+    const written = readFileSync(path, 'utf8');
+    assert.match(written, /```/);
+  });
+
+  it('appends with pipe table body containing newlines', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sdlc-dashboard-'));
+    const path = join(dir, 'test.md');
+    writeFileSync(path, '# Dashboard\n\n## Status\nAll good\n');
+
+    upsertDashboardSection('OpenSpec status', '| Change | Phase |\n|--------|-------|\n| CV-118 | tasks |', path);
+    const written = readFileSync(path, 'utf8');
+    assert.match(written, /## OpenSpec status\n\n\| Change \| Phase \|/);
+    assert.match(written, /## Status\nAll good/);
+  });
+
+  it('does not mutate content when section title appears mid-line', () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'sdlc-dashboard-')), 'test.md');
+    writeFileSync(path, '## Heading\nRefer to ## Section in docs\n## Footer\nEnd\n');
+
+    upsertDashboardSection('Footer', 'Updated footer', path);
+    const written = readFileSync(path, 'utf8');
+    // The mid-line ## reference must not be treated as a heading
+    assert.match(written, /Refer to ## Section/);
+    assert.match(written, /## Footer\n\nUpdated footer/);
+  });
+
 });
 
 describe('daily-review dashboard update (REQ-004)', () => {

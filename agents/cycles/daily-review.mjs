@@ -213,8 +213,12 @@ export function upsertDashboardSection(title, body, path) {
   }
 
   // Append at end of file
-  const separator = content.endsWith('\n') ? '' : '\n';
-  writeFileSync(path, content + separator + '\n' + newSection + '\n');
+  if (content.length === 0) {
+    writeFileSync(path, newSection + '\n');
+  } else {
+    const separator = content.endsWith('\n') ? '' : '\n';
+    writeFileSync(path, content + separator + '\n' + newSection + '\n');
+  }
   return false;
 }
 
