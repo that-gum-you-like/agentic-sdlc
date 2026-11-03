@@ -13,12 +13,16 @@
   ],
   "description": "Drain PR #93 (branch `agent/drain/OS-curriculum-v2-conformance-4`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-4 && git checkout agent/drain/OS-curriculum-v2-conformance-4`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-4` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- package-lock.json and node_modules/.sdlc-drain-deps files incorrectly included in diff\n- runWeeklySteps function signature mismatch - runner expects (label, script, args) but runStep from monthly-review.mjs has different signature\n- test 'uses the default runStep from monthly-review when no runner provided' is incomplete - doesn't actually test default runner functionality",
   "attempts": 1,
-  "status": "pending",
+  "status": "completed",
   "fixFor": {
     "pr": 93,
     "branch": "agent/drain/OS-curriculum-v2-conformance-4",
     "headSha": "ff1951ae488e2a81ea5e42f6cfc457d15a41159d",
     "sourceTask": "OS-curriculum-v2-conformance-4",
     "rejectionKind": "llm-rejected"
-  }
+  },
+  "_file": "FIX-93.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-03T23:34:42.432Z"
 }
