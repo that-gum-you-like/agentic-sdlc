@@ -4,7 +4,7 @@
  *
  * 1. Pattern review: what anti-patterns recurred?
  * 2. Memory cleanup: run REM Sleep consolidation for all agents
- * 3. Checklist update: suggest new items for Richmond's checklist
+ * 3. Checklist update: suggest new items for the reviewer's checklist
  * 4. Post summary
  *
  * Usage:
@@ -24,8 +24,27 @@ const __dirname = dirname(__filename);
 const config = loadConfig();
 const ROOT = config.projectDir;
 const AGENTS_DIR = config.agentsDir;
-const REVIEWS_DIR = resolve(AGENTS_DIR, 'richmond/reviews');
 const TASKS_DIR = config.tasksDir;
+
+// The reviewer agent whose review records feed pattern analysis and maturation
+// metrics. Review records are written by the automated review pipeline
+// (pr-auto-review.mjs) under `agents/<reviewer>/reviews`, so the path must be
+// derived from the reviewer's agent directory — never hard-coded to one
+// project's persona name.
+export const REVIEWER_AGENT = 'sdlc-reviewer';
+
+/**
+ * Resolve the reviewer's review-records directory.
+ *
+ * @param {string} agentsDir - absolute path to the project's `agents/` dir
+ * @param {string} [reviewer=REVIEWER_AGENT] - reviewer agent directory name
+ * @returns {string} `<agentsDir>/<reviewer>/reviews`
+ */
+export function resolveReviewsDir(agentsDir, reviewer = REVIEWER_AGENT) {
+  return resolve(agentsDir, reviewer, 'reviews');
+}
+
+const REVIEWS_DIR = resolveReviewsDir(AGENTS_DIR);
 
 const AGENTS = config.agents;
 
@@ -33,7 +52,7 @@ function analyzePatterns() {
   console.log('\n📊 Pattern Analysis');
   console.log('─'.repeat(40));
 
-  // Analyze Richmond's reviews for recurring issues
+  // Analyze the reviewer's reviews for recurring issues
   if (!existsSync(REVIEWS_DIR)) {
     console.log('  No reviews found yet.');
     return;
@@ -127,7 +146,7 @@ function taskSummary() {
  * Metrics collected:
  *   - correctionsReceived: count of entries tagged [correction] in recent + medium-term
  *   - selfCorrections:     count of entries tagged [self-correction] in recent + medium-term
- *   - reviewSeverity:      { critical, major, minor } counts from Richmond's reviews
+ *   - reviewSeverity:      { critical, major, minor } counts from the reviewer's reviews
  */
 function computeMaturationMetrics() {
   console.log('\n🎓 Agent Maturation Metrics');
@@ -139,7 +158,7 @@ function computeMaturationMetrics() {
   const weekNum = Math.ceil(((now - jan4) / 86400000 + jan4.getDay() + 1) / 7);
   const isoWeek = `${now.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
 
-  // Pre-scan Richmond's reviews for severity counts per author
+  // Pre-scan the reviewer's reviews for severity counts per author
   const severityByAgent = {};
   if (existsSync(REVIEWS_DIR)) {
     const reviewFiles = readdirSync(REVIEWS_DIR).filter(f => f.endsWith('.md'));
