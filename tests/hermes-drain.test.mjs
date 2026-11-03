@@ -293,5 +293,12 @@ test('drain prompt recalls memory before work and records after, even on failure
   assert(/\\?\{\\?\{SCRIPTS_DIR\\?\}\\?\}/.test(s), 'script must substitute {{SCRIPTS_DIR}}');
 });
 
+test('framework project.json testCmd runs the full suite, and the script still reads testCmd per project', () => {
+  const cfg = JSON.parse(readFileSync(resolve(root, 'agents/project.json'), 'utf8'));
+  assert(cfg.testCmd === "node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs'", `testCmd must be the full suite, got: ${cfg.testCmd}`);
+  const s = readFileSync(script, 'utf8');
+  assert(/c\.testCmd\|\|"npm test"/.test(s), 'per-project testCmd override (default npm test) must remain');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
