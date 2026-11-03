@@ -409,6 +409,44 @@ export function postDeferralOnce(prNumber, deferral, dryRun, deps = { ghJson, gh
 }
 
 // ---------------------------------------------------------------------------
+// CHANGELOG (CV-REQ-053)
+// ---------------------------------------------------------------------------
+
+/** One changelog line: `- <date> #<pr> <subject> (<domain>)`. */
+export function formatChangelogEntry({ date, pr, subject, domain }) {
+  return `- ${date} #${pr} ${String(subject || '').replace(/\s+/g, ' ').trim()} (${domain})`;
+}
+
+/**
+ * Append an entry object ({date, pr, subject, domain}) to a CHANGELOG file.
+ * Creates the file with a `# Changelog` header; groups lines under a
+ * `## <date>` heading (newest date first); idempotent per PR number.
+ * Returns true when the file changed.
+ */
+export function appendChangelog(path, entry) {
+  const line = formatChangelogEntry(entry);
+  let text = existsSync(path) ? readFileSync(path, 'utf8') : '# Changelog\n';
+  if (new RegExp(`^- \\S+ #${entry.pr} `, 'm').test(text)) return false;
+  const heading = `## ${entry.date}`;
+  const lines = text.replace(/\s+$/, '').split('\n');
+  const hIdx = lines.indexOf(heading);
+  if (hIdx >= 0) {
+    // after the last line of this date's section (up to the next heading)
+    let end = hIdx + 1;
+    while (end < lines.length && !/^## /.test(lines[end])) end++;
+    while (end > hIdx + 1 && lines[end - 1].trim() === '') end--;
+    lines.splice(end, 0, line);
+  } else {
+    // newest date goes right below the title
+    const titleIdx = lines.findIndex(l => /^# /.test(l));
+    lines.splice(titleIdx + 1, 0, '', heading, '', line);
+  }
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, lines.join('\n').replace(/\n{3,}/g, '\n\n') + '\n');
+  return true;
+}
+
+// ---------------------------------------------------------------------------
 // Dedicated review clone (TOTAL isolation from the main working tree)
 // ---------------------------------------------------------------------------
 //

@@ -36,6 +36,8 @@ import {
   deferralFor,
   buildDeferralComment,
   postDeferralOnce,
+  formatChangelogEntry,
+  appendChangelog,
 } from '../agents/pr-auto-review.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -426,6 +428,33 @@ test('reviewPr defers before the gate/LLM, files no FIX task, and is not an alre
   assert(/record\.action = 'deferred-overlap'/.test(block), 'action logged');
   assert(!/fileFixTask|hardGate|llmReview/.test(block), 'deferral never gates, reviews, or files a FIX task');
   assert(!buildDeferralComment({ earlier: [1], files: [] }).includes('<!-- pr-auto-review sha:'), 'must not look like a reviewed-sha marker');
+});
+
+// --- CV-406: changelog helpers -------------------------------------------------
+
+test('formatChangelogEntry renders `- <date> #<pr> <subject> (<domain>)`', () => {
+  assert(formatChangelogEntry({ date: '2026-11-03', pr: 70, subject: 'feat: x\n y', domain: 'backend' }) === '- 2026-11-03 #70 feat: x y (backend)', 'format');
+});
+
+test('appendChangelog: creates header + date group; identical second call adds nothing', () => {
+  const f = join(mkdtempSync(join(tmpdir(), 'par-cl-')), 'CHANGELOG.md');
+  const e = { date: '2026-11-03', pr: 70, subject: 'feat: a', domain: 'backend' };
+  assert(appendChangelog(f, e) === true, 'first call writes');
+  assert(readFileSync(f, 'utf8') === '# Changelog\n\n## 2026-11-03\n\n- 2026-11-03 #70 feat: a (backend)\n', `got ${JSON.stringify(readFileSync(f, 'utf8'))}`);
+  const before = readFileSync(f, 'utf8');
+  assert(appendChangelog(f, e) === false && readFileSync(f, 'utf8') === before, 'idempotent per PR number');
+});
+
+test('appendChangelog: same date groups under one heading; new date goes on top; #7 is not #70', () => {
+  const f = join(mkdtempSync(join(tmpdir(), 'par-cl-')), 'CHANGELOG.md');
+  appendChangelog(f, { date: '2026-11-03', pr: 70, subject: 'a', domain: 'infra' });
+  appendChangelog(f, { date: '2026-11-03', pr: 7, subject: 'b', domain: 'backend' });
+  appendChangelog(f, { date: '2026-11-04', pr: 71, subject: 'c', domain: 'docs-tests' });
+  const t = readFileSync(f, 'utf8');
+  assert((t.match(/^## 2026-11-03$/gm) || []).length === 1, 'one heading per date');
+  assert(t.indexOf('## 2026-11-04') < t.indexOf('## 2026-11-03'), 'newest date first');
+  assert(t.indexOf('#70 a') < t.indexOf('#7 b'), 'appended within the section');
+  assert((t.match(/^- /gm) || []).length === 3, 'three entries');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
