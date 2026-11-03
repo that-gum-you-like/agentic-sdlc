@@ -264,7 +264,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-103
   - Complexity: S
 
-- [ ] **CV-105**: test-behavior.mjs: move BASELINES_PATH to tracked `agents/behavior-baselines.json`; read legacy `pm/behavior-baselines.json` only when the new file is absent
+- [x] **CV-105**: test-behavior.mjs: move BASELINES_PATH to tracked `agents/behavior-baselines.json`; read legacy `pm/behavior-baselines.json` only when the new file is absent
   - **Priority:** HIGH
   - Files: `agents/test-behavior.mjs, agents/__tests__/behavior-baselines.test.mjs`
   - Spec: CV-REQ-011
