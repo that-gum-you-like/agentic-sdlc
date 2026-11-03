@@ -88,7 +88,7 @@ cd "$REPO" || { log "repo not found: $REPO"; exit 1; }
 # "no ready tasks — skip" — indistinguishable from a genuinely empty queue, and
 # therefore invisible for as long as you cared to look. Failure must exit
 # NON-ZERO so systemd records it instead of reporting a healthy no-op forever.
-status_out="$(node "$SCRIPTS_DIR/queue-drainer.mjs" status --project-dir "$REPO" 2>&1)"; status_rc=$?
+status_out="$(SDLC_PROJECT_DIR="$REPO" node "$SCRIPTS_DIR/queue-drainer.mjs" status --project-dir "$REPO" 2>&1)"; status_rc=$?
 if [ "$status_rc" -ne 0 ]; then
   log "queue-drainer status FAILED (rc=$status_rc) for project: $REPO"
   printf '%s\n' "$status_out" | sed 's/^/[hermes-drain]   /' >&2
@@ -112,10 +112,44 @@ if [ "${open_prs:-0}" -ge "$MAX_OPEN_DRAIN_PRS" ] && [ "${pending_fixes:-0}" -eq
 fi
 [ "${pending_fixes:-0}" -gt 0 ] && log "$pending_fixes pending FIX task(s) — cap bypass allowed"
 
+PROMPT_SCRIPTS_DIR="$SCRIPTS_DIR"
+[ "$(cd "$REPO" && pwd)" = "$FRAMEWORK_REPO" ] && PROMPT_SCRIPTS_DIR="$DRAIN_CLONE/agents"
+
+# --- the SCRIPT selects the task, not the model (openspec: curriculum-v2-conformance CV-REQ-120) ---
+# Exclude NON-FIX tasks whose agent/drain/<id> PR is already open (a task stays
+# `pending` on the base branch until its PR merges). FIX-* tasks are never excluded.
+open_heads="$(gh pr list --search 'head:agent/drain/' --state open --json headRefName -q '.[].headRefName' 2>/dev/null || true)"
+# Skip ledger: a task the worker gave up on ("DRAIN: skipped <id>" / "DRAIN: blocked <id>")
+# only records that in the CLONE's queue, which the next reset wipes — and selection is
+# deterministic, so without this the same task is re-picked every run, forever.
+SKIP_LEDGER="${SDLC_DRAIN_SKIPS:-$FRAMEWORK_REPO/pm/drain-skips-$PROJECT_NAME.txt}"
+skipped_ids="$(cat "$SKIP_LEDGER" 2>/dev/null | paste -sd, -)"
+exclude_ids="$(printf '%s\n' "$open_heads" | sed -n 's#^agent/drain/##p' | grep -v '^FIX-' | paste -sd, -)"
+exclude_ids="$(printf '%s,%s' "$exclude_ids" "$skipped_ids" | tr ',' '\n' | grep -v '^$' | sort -u | paste -sd, -)"
+
+# select_task <project-dir> — sets TASK_ID and AGENT (empty TASK_ID = nothing selectable).
+select_task() {   # $1 = project dir, $2 = dir holding queue-drainer.mjs
+  local out parsed
+  TASK_ID=""; AGENT=""
+  if [ -n "$exclude_ids" ]; then
+    out="$(SDLC_PROJECT_DIR="$1" node "$2/queue-drainer.mjs" next --exclude "$exclude_ids" 2>/dev/null)" || out=""
+  else
+    out="$(SDLC_PROJECT_DIR="$1" node "$2/queue-drainer.mjs" next 2>/dev/null)" || out=""
+  fi
+  [ -z "$out" ] && return 0
+  # agent = task.agent || task.assignee || sdlc-developer, restricted to a safe path component
+  parsed="$(printf '%s' "$out" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const t=JSON.parse(s);let a=t.agent||t.assignee||"sdlc-developer";if(!/^[A-Za-z0-9._-]+$/.test(a))a="sdlc-developer";console.log(t.id+" "+a)}catch(e){process.exitCode=1}})' 2>/dev/null)"
+  [ -z "$parsed" ] && return 0
+  TASK_ID="${parsed%% *}"; AGENT="${parsed#* }"
+}
+
 if [ ! -f "$DRAIN_HOME/config.yaml" ]; then log "drain profile missing: $DRAIN_HOME"; exit 1; fi
 
 if [ "$DRY_RUN" -eq 1 ]; then
   log "DRY RUN — project: $PROJECT_NAME ($REPO)"
+  select_task "$REPO" "$SCRIPTS_DIR"
+  if [ -z "$TASK_ID" ]; then log "DRY RUN — nothing selectable — skip (no LLM call)"; exit 0; fi
+  log "DRY RUN — selected task: $TASK_ID (agent $AGENT)"
   log "DRY RUN — would drain: $ready ready task(s), $open_prs open drain PR(s), clone $DRAIN_CLONE"
   log "DRY RUN — prompt: $PROMPT_FILE"; exit 0
 fi
@@ -152,6 +186,27 @@ git -C "$DRAIN_CLONE" checkout -q -f -B "$BASE_BRANCH" "origin/$BASE_BRANCH" 2>/
   || { log "clone checkout failed for origin/$BASE_BRANCH"; exit 1; }
 git -C "$DRAIN_CLONE" reset --hard "origin/$BASE_BRANCH" --quiet 2>/dev/null || true
 git -C "$DRAIN_CLONE" clean -fdq 2>/dev/null || true
+
+# --- select the task from the FRESH clone; nothing selectable = no LLM call ---
+select_task "$DRAIN_CLONE" "$PROMPT_SCRIPTS_DIR"
+if [ -z "$TASK_ID" ]; then log "nothing selectable — skip (no LLM call)"; exit 0; fi
+log "selected task: $TASK_ID (agent $AGENT)"
+
+# --- the agent's identity: its AGENT.md from the clone (CV-REQ-121) ---
+AGENT_IDENTITY=""
+if [ -f "$DRAIN_CLONE/agents/$AGENT/AGENT.md" ]; then
+  AGENT_IDENTITY="$(cat "$DRAIN_CLONE/agents/$AGENT/AGENT.md")"
+elif [ -f "$DRAIN_CLONE/agents/sdlc-developer/AGENT.md" ]; then
+  log "no AGENT.md for $AGENT — falling back to sdlc-developer identity"
+  AGENT_IDENTITY="$(cat "$DRAIN_CLONE/agents/sdlc-developer/AGENT.md")"
+else
+  log "no AGENT.md for $AGENT or sdlc-developer — empty identity"
+fi
+
+# --- optional per-agent drain model (CV-REQ-122): opt-in; absent = the profile's own ladder ---
+DRAIN_MODEL="$(node -e 'try{const b=JSON.parse(require("fs").readFileSync(process.argv[1]+"/agents/budget.json","utf8"));const m=(b.agents||{})[process.argv[2]];process.stdout.write((m&&typeof m.drainModel==="string"?m.drainModel:"").trim())}catch(e){process.stdout.write("")}' "$DRAIN_CLONE" "$AGENT" 2>/dev/null)"
+MODEL_ARGS=()
+if [ -n "$DRAIN_MODEL" ]; then MODEL_ARGS=(-m "$DRAIN_MODEL"); log "drainModel for $AGENT: $DRAIN_MODEL"; fi
 
 # --- enforcing pre-commit gate in the clone (openspec: curriculum-v2-conformance CV-313) ---
 # The drain commits unattended; the pre-commit hook is what refuses secrets and
@@ -190,8 +245,6 @@ TEST_CMD="${TEST_CMD:-npm test}"
 # `cd` into any absolute path they are shown, and on 2026-11-03 a worker committed on
 # the human's main and switched its branch. When draining the framework itself,
 # point the prompt at the clone's own identical scripts instead.
-PROMPT_SCRIPTS_DIR="$SCRIPTS_DIR"
-[ "$(cd "$REPO" && pwd)" = "$FRAMEWORK_REPO" ] && PROMPT_SCRIPTS_DIR="$DRAIN_CLONE/agents"
 DRAINER="node \"$PROMPT_SCRIPTS_DIR/queue-drainer.mjs\""
 
 prompt_text="$(cat "$PROMPT_FILE")"
@@ -201,6 +254,12 @@ prompt_text="${prompt_text//\{\{PROJECT_REMOTE\}\}/$PROJECT_REMOTE}"
 prompt_text="${prompt_text//\{\{TEST_CMD\}\}/$TEST_CMD}"
 prompt_text="${prompt_text//\{\{DRAINER\}\}/$DRAINER}"
 prompt_text="${prompt_text//\{\{SCRIPTS_DIR\}\}/$PROMPT_SCRIPTS_DIR}"
+# AGENT.md is free text: bash 5.2 treats & in a ${var//pat/repl} replacement as the
+# matched text — turn that off so &, \ and / in the identity survive verbatim.
+shopt -u patsub_replacement 2>/dev/null || true
+prompt_text="${prompt_text//\{\{TASK_ID\}\}/$TASK_ID}"
+prompt_text="${prompt_text//\{\{AGENT_IDENTITY\}\}/$AGENT_IDENTITY}"
+prompt_text="${prompt_text//\{\{AGENT\}\}/$AGENT}"
 prompt_text="${prompt_text//\{\{HUMAN_CHECKOUTS\}\}/$FRAMEWORK_REPO$( [ "$REPO" != "$FRAMEWORK_REPO" ] && echo " and $REPO")}"
 
 # --- run the isolated, local-backend, OpenRouter Hermes drain worker IN the clone ---
@@ -217,9 +276,15 @@ guard_snapshot "$FRAMEWORK_REPO" "$REPO"
 
 ( cd "$DRAIN_CLONE" && HERMES_HOME="$DRAIN_HOME" TERMINAL_ENV=local TERMINAL_CWD="$DRAIN_CLONE" \
   SDLC_PROJECT_DIR="$DRAIN_CLONE" \
-  timeout 3600 hermes -z "$prompt_text" --cli --yolo ) > "$logfile" 2>&1
+  timeout 3600 hermes -z "$prompt_text" --cli --yolo ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} ) > "$logfile" 2>&1
 rc=$?
 tail -3 "$logfile" 2>/dev/null | sed 's/^/[hermes-drain]   /'
+
+if grep -qE "DRAIN: (skipped|blocked) $TASK_ID\b" "$logfile" 2>/dev/null; then
+  mkdir -p "$(dirname "$SKIP_LEDGER")" && echo "$TASK_ID" >> "$SKIP_LEDGER"
+  log "worker gave up on $TASK_ID — added to skip ledger $SKIP_LEDGER (remove the line to retry)"
+  [ "$rc" -eq 0 ] && rc=96   # surface it: the failure path notifies once with the log tail
+fi
 
 trespass="$(guard_check "drain-trespass-$ts")"
 if [ -n "$trespass" ]; then

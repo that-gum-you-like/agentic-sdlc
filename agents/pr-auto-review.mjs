@@ -127,7 +127,50 @@ export function queueTaskIdFromBranch(repoDir, branch) {
 // LLM review
 // ---------------------------------------------------------------------------
 
-export function buildReviewPrompt({ task, title, body, diff }) {
+const IDENTITY_CHAR_LIMIT = 6000;
+const RECALL_CHAR_LIMIT = 3000;
+
+/** budget.json agents[REVIEW_AGENT].reviewModel overrides REVIEW_MODEL when set (CV-REQ-123). */
+export function reviewModelFor(repoDir) {
+  if (!repoDir) return REVIEW_MODEL;
+  try {
+    const budget = JSON.parse(readFileSync(join(repoDir, 'agents', 'budget.json'), 'utf8'));
+    const m = budget?.agents?.[REVIEW_AGENT]?.reviewModel;
+    return typeof m === 'string' && m.trim() ? m.trim() : REVIEW_MODEL;
+  } catch (err) {
+    return REVIEW_MODEL; // no/unreadable budget.json: the default model, by design
+  }
+}
+
+/**
+ * The reviewer's identity block (AGENT.md + memory recall), or '' when the
+ * reviewed repo has no AGENT.md. Best-effort: never throws (CV-REQ-123).
+ */
+export function reviewerIdentityBlock(repoDir) {
+  if (!repoDir) return '';
+  let identity;
+  try {
+    identity = readFileSync(join(repoDir, 'agents', REVIEW_AGENT, 'AGENT.md'), 'utf8').trim();
+  } catch (err) {
+    return '';
+  }
+  if (!identity) return '';
+  if (identity.length > IDENTITY_CHAR_LIMIT) identity = identity.slice(0, IDENTITY_CHAR_LIMIT) + '\n... [identity truncated]';
+  let block = `## Your identity (${REVIEW_AGENT})\n${identity}\n\n`;
+  try {
+    const recalled = execFileSync('node', [join(__dirname, 'memory-manager.mjs'), 'recall', REVIEW_AGENT], {
+      cwd: repoDir, encoding: 'utf8', timeout: 15000, stdio: ['ignore', 'pipe', 'ignore'],
+      env: { ...process.env, SDLC_PROJECT_DIR: repoDir },
+    }).trim();
+    if (recalled) {
+      block += `## Your memory (recalled)\n${recalled.length > RECALL_CHAR_LIMIT ? recalled.slice(0, RECALL_CHAR_LIMIT) + '\n... [memory truncated]' : recalled}\n\n`;
+    }
+  } catch (err) { /* memory is optional context; a recall failure never fails a review */ }
+  return block;
+}
+
+export function buildReviewPrompt({ task, title, body, diff, repoDir }) {
+  const identityBlock = reviewerIdentityBlock(repoDir);
   const taskBlock = task
     ? `## Queue task this PR claims to implement\n${JSON.stringify(task, null, 2)}`
     : '## Queue task\n(no matching queue task found — judge against the PR description alone)';
@@ -136,7 +179,7 @@ export function buildReviewPrompt({ task, title, body, diff }) {
     : (diff || '');
   return `You are the automated code reviewer for the agentic-sdlc framework. Review this pull request produced by an autonomous agent. The full test suite ALREADY PASSED in a clean worktree, and a deterministic safety scan already ran — your job is judgment: correctness, scope fidelity, and safety.
 
-${taskBlock}
+${identityBlock}${taskBlock}
 
 ## PR title
 ${title}
@@ -187,7 +230,7 @@ function ensureOpenRouterKey() {
   return true;
 }
 
-async function llmReview({ task, title, body, diff }) {
+async function llmReview({ task, title, body, diff, repoDir }) {
   if (!ensureOpenRouterKey()) return { verdict: null, reasons: ['OPENROUTER_API_KEY unavailable'] };
   let adapter;
   try {
@@ -210,8 +253,8 @@ async function llmReview({ task, title, body, diff }) {
     }
   } catch { /* screening unavailable must not approve anything by accident — continue with raw text */ }
   try {
-    const res = await adapter.complete(buildReviewPrompt({ task, title, body, diff }), {
-      model: REVIEW_MODEL,
+    const res = await adapter.complete(buildReviewPrompt({ task, title, body, diff, repoDir }), {
+      model: reviewModelFor(repoDir),
       maxTokens: 1500,
       temperature: 0,
     });
@@ -627,14 +670,22 @@ export function buildFixTask({ pr, branch, headSha, reasons, kind, existing }) {
     created: new Date().toISOString(),
     tags: ['auto-fix'],
   };
+  // CV-REQ-035: count rejections; the third hands the PR to a human instead of
+  // re-queuing a repair the cheap model has already failed twice (no endless loop).
+  const attempts = (existing?.attempts || 0) + 1;
+  const exhausted = attempts >= MAX_FIX_ATTEMPTS;
   return {
     ...base,
     description,
-    status: 'pending',
+    attempts,
+    status: exhausted ? 'blocked' : 'pending',
+    ...(exhausted ? { blockedReason: `needs-human: PR #${pr} rejected ${attempts}x (${kind}) — the drain will not retry it` } : {}),
     fixFor: { pr, branch, headSha, sourceTask, rejectionKind: kind },
     ...(existing ? { refreshedAt: new Date().toISOString() } : {}),
   };
 }
+
+export const MAX_FIX_ATTEMPTS = 3;
 
 /** Upsert FIX-<pr> in the review clone and push to main (REQ-SH-1). */
 function upsertFixTaskInClone(repoDir, prInfo, log) {
@@ -653,6 +704,11 @@ function upsertFixTaskInClone(repoDir, prInfo, log) {
     `chore(queue): file ${task.id} — drain PR #${prInfo.pr} ${prInfo.kind} (self-healing loop)`]);
   // Non-ff push fails safe; the next run retries (same semantics as completion).
   run('git', ['-C', clone, 'push', 'origin', 'main'], { timeout: 120_000 });
+  if (task.status === 'blocked') {
+    log(`${task.id} exhausted (${task.attempts} rejections) — blocked for a human`);
+    try { triggerNotification('blocker', `🙋 PR #${prInfo.pr} rejected ${task.attempts}x — the drain stopped retrying. Needs a human (or an interactive Claude session).`); } catch { /* best-effort */ }
+    return true;
+  }
   log(`filed ${task.id} (${prInfo.kind}) — the drain will repair PR #${prInfo.pr} on its existing branch`);
   return true;
 }
@@ -780,7 +836,7 @@ async function reviewPr(pr, ctx) {
   const task = taskFile && existsSync(taskFile) ? JSON.parse(readFileSync(taskFile, 'utf8')) : null;
   let diff = '';
   try { diff = gh(['pr', 'diff', String(pr.number)], { maxBuffer: 16 * 1024 * 1024 }); } catch { /* reviewed without diff = soft fail below */ }
-  const review = await llmReview({ task, title: pr.title, body: pr.body, diff });
+  const review = await llmReview({ task, title: pr.title, body: pr.body, diff, repoDir: ctx.cloneDir || repoDir });
 
   if (review.verdict !== 'approve') {
     record.action = review.verdict === 'reject' ? 'llm-rejected' : 'llm-unavailable';

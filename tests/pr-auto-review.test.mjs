@@ -8,7 +8,7 @@
  * Run: node tests/pr-auto-review.test.mjs
  */
 
-import { readFileSync, mkdtempSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, mkdtempSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -19,6 +19,9 @@ import {
   scanScope,
   taskIdFromBranch,
   buildReviewPrompt,
+  reviewModelFor,
+  REVIEW_MODEL,
+  REVIEW_AGENT,
   parseVerdict,
   runAutoReview,
   buildFixTask,
@@ -178,6 +181,37 @@ test('buildReviewPrompt truncates oversized diffs and tolerates a missing task',
   const p = buildReviewPrompt({ task: null, title: 't', body: '', diff: 'x'.repeat(DIFF_CHAR_LIMIT + 500) });
   assert(p.includes('[diff truncated]'), 'must truncate');
   assert(/no matching queue task/.test(p), 'missing-task fallback');
+});
+
+// --- reviewer identity (curriculum-v2-conformance CV-REQ-123) ------------------
+
+test('buildReviewPrompt embeds the reviewer AGENT.md when it exists (CV-803)', () => {
+  const repo = mkdtempSync(join(tmpdir(), 'rev-id-'));
+  mkdirSync(join(repo, 'agents', REVIEW_AGENT), { recursive: true });
+  writeFileSync(join(repo, 'agents', REVIEW_AGENT, 'AGENT.md'), 'I AM THE REVIEWER & I never rubber-stamp.\n' + 'z'.repeat(9000));
+  const args = { task: null, title: 't', body: '', diff: 'd' };
+  const p = buildReviewPrompt({ ...args, repoDir: repo });
+  assert(p.includes(`## Your identity (${REVIEW_AGENT})`), 'identity header');
+  assert(p.includes('I AM THE REVIEWER & I never rubber-stamp.'), 'AGENT.md content');
+  assert(p.includes('[identity truncated]') && !p.includes('z'.repeat(7000)), 'trimmed to ~6000 chars');
+  assert(p.includes('Safety checklist') && p.includes('"verdict"'), 'rest of the prompt intact');
+});
+
+test('buildReviewPrompt is identical to before when the identity file is missing (CV-803)', () => {
+  const repo = mkdtempSync(join(tmpdir(), 'rev-noid-'));
+  const args = { task: { id: 'X' }, title: 't', body: 'b', diff: 'd' };
+  assert(buildReviewPrompt({ ...args, repoDir: repo }) === buildReviewPrompt(args), 'no AGENT.md -> unchanged prompt');
+  assert(!buildReviewPrompt(args).includes('Your identity'), 'no identity section');
+});
+
+test('reviewModelFor honours budget.json reviewModel, else REVIEW_MODEL (CV-803)', () => {
+  const repo = mkdtempSync(join(tmpdir(), 'rev-model-'));
+  assert(reviewModelFor(repo) === REVIEW_MODEL, 'no budget.json -> default');
+  mkdirSync(join(repo, 'agents'), { recursive: true });
+  writeFileSync(join(repo, 'agents', 'budget.json'), JSON.stringify({ agents: { [REVIEW_AGENT]: {} } }));
+  assert(reviewModelFor(repo) === REVIEW_MODEL, 'unset -> default');
+  writeFileSync(join(repo, 'agents', 'budget.json'), JSON.stringify({ agents: { [REVIEW_AGENT]: { reviewModel: 'x/custom' } } }));
+  assert(reviewModelFor(repo) === 'x/custom', 'reviewModel overrides');
 });
 
 // --- structural guards (REQ-001, REQ-004) --------------------------------------
@@ -542,4 +576,14 @@ test('tickTaskInSpec ticks the merged task in its OpenSpec tasks.md', async () =
   assert(readFileSync(f, 'utf8') === '- [x] **CV-116**: one\n- [ ] **CV-1160**: other\n', 'only the exact id');
   assert(tickTaskInSpec(root, task) === false, 'idempotent');
   assert(tickTaskInSpec(root, { description: 'no id', source: 'openspec/cv/tasks.md' }) === false, 'no id: no-op');
+});
+
+test('buildFixTask counts attempts; the third rejection blocks for a human (CV-REQ-035)', () => {
+  const info = { pr: 9, branch: 'agent/drain/H-009', headSha: 'a', reasons: ['x'], kind: 'gate-failed' };
+  const t1 = buildFixTask({ ...info, existing: null });
+  assert(t1.attempts === 1 && t1.status === 'pending', 'first: pending');
+  const t2 = buildFixTask({ ...info, existing: t1 });
+  assert(t2.attempts === 2 && t2.status === 'pending', 'second: pending');
+  const t3 = buildFixTask({ ...info, existing: t2 });
+  assert(t3.attempts === 3 && t3.status === 'blocked' && /needs-human/.test(t3.blockedReason), 'third: blocked for a human');
 });
