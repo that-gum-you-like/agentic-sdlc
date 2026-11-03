@@ -19,6 +19,7 @@ import { resolve, join } from 'path';
 import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { REVIEWER_AGENT, resolveReviewsDir } from '../cycles/weekly-review.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -432,7 +433,181 @@ describe('Metrics written to core.json', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4. Dashboard section formatting
+// 4. Reviewer reviews directory (CV-104)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Reviewer reviews directory', () => {
+  // The review records live under the reviewer agent's own directory
+  // (agents/sdlc-reviewer/reviews), never a hard-coded persona name.
+  let computeMaturationMetricsFactory;
+  let analyzePatternsFactory;
+
+  before(() => {
+    const src = readFileSync(resolve(AGENTS_DIR, 'cycles/weekly-review.mjs'), 'utf8');
+
+    const metricsMatch = src.match(/(function computeMaturationMetrics\(\)[\s\S]*?\n\})/);
+    assert.ok(metricsMatch, 'Could not find computeMaturationMetrics in weekly-review.mjs');
+    computeMaturationMetricsFactory = metricsMatch[1];
+
+    const patternsMatch = src.match(/(function analyzePatterns\(\)[\s\S]*?\n\})/);
+    assert.ok(patternsMatch, 'Could not find analyzePatterns in weekly-review.mjs');
+    analyzePatternsFactory = patternsMatch[1];
+  });
+
+  /**
+   * Build a temp agents root containing the reviewer's reviews directory plus
+   * a decoy legacy `richmond/reviews` directory that must be ignored.
+   * Returns { tmpRoot, reviewsDir }.
+   */
+  function makeReviewsFixture(reviewBody, { legacyBody = null } = {}) {
+    const tmpRoot = mkdtempSync(join(tmpdir(), 'reviews-dir-test-'));
+    const reviewsDir = resolveReviewsDir(tmpRoot);
+    mkdirSync(reviewsDir, { recursive: true });
+    writeFileSync(join(reviewsDir, '2026-03-10-testbot-null-check.md'), reviewBody);
+
+    if (legacyBody !== null) {
+      const legacyDir = join(tmpRoot, 'richmond', 'reviews');
+      mkdirSync(legacyDir, { recursive: true });
+      writeFileSync(join(legacyDir, '2026-03-10-testbot-legacy.md'), legacyBody);
+    }
+
+    return { tmpRoot, reviewsDir };
+  }
+
+  function makeMetricsAgent(tmpRoot, agentName = 'testbot') {
+    const memDir = join(tmpRoot, agentName, 'memory');
+    mkdirSync(memDir, { recursive: true });
+    writeFileSync(
+      join(memDir, 'core.json'),
+      JSON.stringify({ maturation: { level: 0, weekStarted: '', milestonesHit: [], metrics: {} } }, null, 2)
+    );
+    writeFileSync(join(memDir, 'recent.json'), JSON.stringify({ entries: [] }, null, 2));
+    return join(memDir, 'core.json');
+  }
+
+  function readMetrics(corePath) {
+    const core = JSON.parse(readFileSync(corePath, 'utf8'));
+    const weekKey = Object.keys(core.maturation.metrics)[0];
+    return core.maturation.metrics[weekKey];
+  }
+
+  it('resolves the reviewer directory to agents/<reviewer>/reviews', () => {
+    assert.equal(REVIEWER_AGENT, 'sdlc-reviewer', 'reviewer must be sdlc-reviewer');
+    assert.equal(
+      resolveReviewsDir('/tmp/agents-root'),
+      resolve('/tmp/agents-root', 'sdlc-reviewer', 'reviews'),
+      'resolveReviewsDir must build <agentsDir>/<reviewer>/reviews'
+    );
+    assert.equal(
+      resolveReviewsDir('/tmp/agents-root', 'custom-reviewer'),
+      resolve('/tmp/agents-root', 'custom-reviewer', 'reviews'),
+      'reviewer name must be overridable'
+    );
+  });
+
+  it('weekly-review.mjs no longer hard-codes a richmond reviews path', () => {
+    const src = readFileSync(resolve(AGENTS_DIR, 'cycles/weekly-review.mjs'), 'utf8');
+    assert.ok(!/richmond/i.test(src), 'weekly-review.mjs must not reference the legacy richmond reviewer');
+    assert.match(
+      src,
+      /const REVIEWS_DIR = resolveReviewsDir\(AGENTS_DIR\)/,
+      'module-level reviews dir must come from resolveReviewsDir()'
+    );
+  });
+
+  it('computeMaturationMetrics reads severity counts from agents/sdlc-reviewer/reviews', () => {
+    const reviewBody = [
+      '# Review',
+      '- [critical] null deref in parser',
+      '- [critical] missing auth check',
+      '- [major] no test for empty input',
+    ].join('\n');
+    const { tmpRoot, reviewsDir } = makeReviewsFixture(reviewBody, {
+      legacyBody: '- [minor] legacy richmond review that must be ignored',
+    });
+    const corePath = makeMetricsAgent(tmpRoot);
+
+    assert.equal(reviewsDir, resolve(tmpRoot, 'sdlc-reviewer', 'reviews'));
+
+    const fn = new Function(
+      'AGENTS', 'AGENTS_DIR', 'REVIEWS_DIR', 'existsSync', 'readdirSync', 'readFileSync', 'writeFileSync', 'resolve',
+      `return (${computeMaturationMetricsFactory})`
+    )(
+      ['testbot'],
+      tmpRoot,
+      reviewsDir,
+      existsSync,
+      readdirSync,
+      readFileSync,
+      writeFileSync,
+      resolve
+    );
+
+    fn();
+
+    const weekData = readMetrics(corePath);
+    assert.deepEqual(
+      weekData.reviewSeverity,
+      { critical: 2, major: 1, minor: 0 },
+      'severity must be counted from the reviewer reviews dir only (legacy richmond dir ignored)'
+    );
+
+    rmSync(tmpRoot, { recursive: true, force: true });
+  });
+
+  it('analyzePatterns reads reviews from agents/sdlc-reviewer/reviews', () => {
+    const reviewBody = [
+      '# Review',
+      '- [critical] null deref in parser',
+      '- [critical] missing auth check',
+      '- [major] no test for empty input',
+    ].join('\n');
+    const { tmpRoot, reviewsDir } = makeReviewsFixture(reviewBody, {
+      legacyBody: '- [minor] legacy richmond review that must be ignored',
+    });
+
+    const logs = [];
+    const stubConsole = { log: (msg) => logs.push(String(msg)) };
+
+    const fn = new Function(
+      'AGENTS', 'AGENTS_DIR', 'REVIEWS_DIR', 'existsSync', 'readdirSync', 'readFileSync', 'resolve', 'console',
+      `return (${analyzePatternsFactory})`
+    )(
+      ['testbot'],
+      tmpRoot,
+      reviewsDir,
+      existsSync,
+      readdirSync,
+      readFileSync,
+      resolve,
+      stubConsole
+    );
+
+    fn();
+
+    assert.ok(
+      logs.some(l => l.includes('Reviews analyzed: 1')),
+      `expected one review analyzed, got: ${logs.join(' | ')}`
+    );
+    assert.ok(
+      logs.some(l => l.includes('[critical]: 2 occurrences')),
+      `expected 2 critical issues, got: ${logs.join(' | ')}`
+    );
+    assert.ok(
+      logs.some(l => l.includes('[major]: 1 occurrences')),
+      `expected 1 major issue, got: ${logs.join(' | ')}`
+    );
+    assert.ok(
+      !logs.some(l => l.includes('[minor]')),
+      'legacy richmond/reviews must not be read'
+    );
+
+    rmSync(tmpRoot, { recursive: true, force: true });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. Dashboard section formatting
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('Dashboard maturation section formatting', () => {

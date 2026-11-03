@@ -253,7 +253,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-102
   - Complexity: S
 
-- [ ] **CV-104**: weekly-review `analyzePatterns()` and `computeMaturationMetrics()`: replace hard-coded `richmond/reviews` with `agents/<reviewer>/reviews` where reviewer is `sdlc-reviewer`
+- [x] **CV-104**: weekly-review `analyzePatterns()` and `computeMaturationMetrics()`: replace hard-coded `richmond/reviews` with `agents/<reviewer>/reviews` where reviewer is `sdlc-reviewer`
   - **Priority:** HIGH
   - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/maturation-tracking.test.mjs`
   - Spec: CV-REQ-010
