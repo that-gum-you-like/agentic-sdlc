@@ -42,7 +42,7 @@ const COST_LOG_PATH = config.costLogPath;
 
 const PRIORITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 const STALE_CLAIM_MS = 30 * 60 * 1000; // 30 minutes
-export const RETRY_CAP = 3;
+const RETRY_CAP = 3;
 const PERMISSION_HIERARCHY = { 'read-only': 0, 'edit-gated': 1, 'full-edit': 2, 'deploy': 3 };
 
 // Load agent domains from project's agents/domains.json
@@ -193,7 +193,7 @@ function isStaleClaim(task) {
  * Below the cap the task returns to `pending`, claim cleared. A task already
  * blocked is left alone, so replays never double count.
  */
-export function registerFailure(task, reason = '') {
+function registerFailure(task, reason = '') {
   if (task.status === 'blocked') return task;
   task.retryCount = (task.retryCount || 0) + 1;
   task.claimedBy = null;
