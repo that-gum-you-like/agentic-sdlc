@@ -3,7 +3,7 @@
   "title": "weekly-review `analyzePatterns()` and `computeMaturationMetrics()`: replace hard-coded `richmond/reviews` with `agents/<reviewer>/reviews` where reviewer is `sdlc-reviewer`",
   "description": "- [ ] **CV-104**: weekly-review `analyzePatterns()` and `computeMaturationMetrics()`: replace hard-coded `richmond/reviews` with `agents/<reviewer>/reviews` where reviewer is `sdlc-reviewer`\n  - **Priority:** HIGH\n  - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/maturation-tracking.test.mjs`\n  - Spec: CV-REQ-010\n  - Gaps: D5-04, D5-03\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: maturation-tracking tests still pass; new case reads a fixture reviews dir under agents/sdlc-reviewer\n  - Parallel: blocked-by CV-103\n  - Complexity: S",
   "priority": "HIGH",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-4"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-5.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-03T23:41:55.586Z"
 }
