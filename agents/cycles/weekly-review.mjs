@@ -198,63 +198,94 @@ function computeMaturationMetrics() {
   }
 }
 
-// Main
-console.log('═'.repeat(50));
-console.log('  Weekly Review — ' + new Date().toISOString().split('T')[0]);
-console.log('═'.repeat(50));
-
-analyzePatterns();
-consolidateMemories();
-taskSummary();
-computeMaturationMetrics();
-
-// Capability Usage Trends (5.2)
-try {
-  const { generateCapabilityReport } = await import('../capability-monitor.mjs');
-  const report = await generateCapabilityReport();
-  if (report && report.rows && report.rows.length > 0) {
-    console.log('\n📋 Capability Usage Trends');
-    console.log('─'.repeat(40));
-    console.log('  Agent          | Capability       | Usage Rate');
-    console.log('  ' + '─'.repeat(50));
-    for (const row of report.rows) {
-      const agent = (row.agent || '').padEnd(14);
-      const cap = (row.capability || '').padEnd(16);
-      const rate = typeof row.usageRate === 'number' ? `${Math.round(row.usageRate * 100)}%` : 'n/a';
-      console.log(`  ${agent} | ${cap} | ${rate}`);
+/**
+ * buildWeeklySteps — Return the ordered list of weekly review steps.
+ *
+ * Each entry has { label, script, args } compatible with monthly-review's runStep.
+ * When dryRun is true each step gets --dry-run appended to its args.
+ *
+ * @param {{dryRun?: boolean}} opts
+ * @returns {{label: string, script: string, args: string[]}[]}
+ */
+export function buildWeeklySteps({ dryRun = false } = {}) {
+  const steps = [
+    { label: 'Pattern hunt', script: 'pattern-hunt.mjs', args: [] },
+    { label: 'REM sleep similarity', script: 'rem-sleep.mjs', args: ['--similarity'] },
+    { label: 'Behavior drift', script: 'test-behavior.mjs', args: ['--drift'] },
+  ];
+  if (dryRun) {
+    for (const step of steps) {
+      step.args = [...step.args, '--dry-run'];
     }
-  } else {
-    console.log('\n📋 Capability Usage Trends: No data available yet.');
   }
-} catch {
-  // capability-monitor not yet installed — skip silently
+  return steps;
 }
 
-// Record cycle history
-{
-  const pmDir = resolve(ROOT, 'pm');
-  if (!existsSync(pmDir)) mkdirSync(pmDir, { recursive: true });
-  const historyPath = resolve(pmDir, 'cycle-history.json');
-  let history = [];
-  if (existsSync(historyPath)) {
-    try { history = JSON.parse(readFileSync(historyPath, 'utf8')); } catch { history = []; }
+async function main() {
+  console.log('═'.repeat(50));
+  console.log('  Weekly Review — ' + new Date().toISOString().split('T')[0]);
+  console.log('═'.repeat(50));
+
+  analyzePatterns();
+  consolidateMemories();
+  taskSummary();
+  computeMaturationMetrics();
+
+  // Capability Usage Trends (5.2)
+  try {
+    const { generateCapabilityReport } = await import('../capability-monitor.mjs');
+    const report = await generateCapabilityReport();
+    if (report && report.rows && report.rows.length > 0) {
+      console.log('\n📋 Capability Usage Trends');
+      console.log('─'.repeat(40));
+      console.log('  Agent          | Capability       | Usage Rate');
+      console.log('  ' + '─'.repeat(50));
+      for (const row of report.rows) {
+        const agent = (row.agent || '').padEnd(14);
+        const cap = (row.capability || '').padEnd(16);
+        const rate = typeof row.usageRate === 'number' ? `${Math.round(row.usageRate * 100)}%` : 'n/a';
+        console.log(`  ${agent} | ${cap} | ${rate}`);
+      }
+    } else {
+      console.log('\n📋 Capability Usage Trends: No data available yet.');
+    }
+  } catch {
+    // capability-monitor not yet installed — skip silently
   }
-  const files = existsSync(TASKS_DIR) ? readdirSync(TASKS_DIR).filter(f => f.endsWith('.json')) : [];
-  let completed = 0, pending = 0;
-  for (const file of files) {
-    const task = JSON.parse(readFileSync(resolve(TASKS_DIR, file), 'utf8'));
-    if (task.status === 'completed') completed++;
-    else if (task.status === 'pending') pending++;
+
+  // Record cycle history
+  {
+    const pmDir = resolve(ROOT, 'pm');
+    if (!existsSync(pmDir)) mkdirSync(pmDir, { recursive: true });
+    const historyPath = resolve(pmDir, 'cycle-history.json');
+    let history = [];
+    if (existsSync(historyPath)) {
+      try { history = JSON.parse(readFileSync(historyPath, 'utf8')); } catch { history = []; }
+    }
+    const files = existsSync(TASKS_DIR) ? readdirSync(TASKS_DIR).filter(f => f.endsWith('.json')) : [];
+    let completed = 0, pending = 0;
+    for (const file of files) {
+      const task = JSON.parse(readFileSync(resolve(TASKS_DIR, file), 'utf8'));
+      if (task.status === 'completed') completed++;
+      else if (task.status === 'pending') pending++;
+    }
+    history.push({
+      type: 'weekly-review',
+      timestamp: new Date().toISOString(),
+      success: true,
+      stats: { completed, pending, agentsConsolidated: AGENTS.length },
+    });
+    writeFileSync(historyPath, JSON.stringify(history, null, 2));
   }
-  history.push({
-    type: 'weekly-review',
-    timestamp: new Date().toISOString(),
-    success: true,
-    stats: { completed, pending, agentsConsolidated: AGENTS.length },
-  });
-  writeFileSync(historyPath, JSON.stringify(history, null, 2));
+
+  console.log('\n' + '═'.repeat(50));
+  console.log('  Weekly review complete.');
+  console.log('═'.repeat(50));
 }
 
-console.log('\n' + '═'.repeat(50));
-console.log('  Weekly review complete.');
-console.log('═'.repeat(50));
+// --- CLI ---
+const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
+
+if (__isMainModule) {
+  await main();
+}
