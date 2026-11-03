@@ -209,6 +209,13 @@ Items marked [x] are already done (2026-11-03). Unchecked items are Lane: intera
   - Test: 5 guard scenarios (untouched, switched branch restored, drain commit backed-up never reset, human commit ignored, dirty tree not switched); hermes-drain suite 18/18
   - Notes: 2026-11-03 13:14 a worker `cd`'d into ~/agentic-sdlc (prompt + CLAUDE.md name that absolute path), committed on main, reset it, and switched the checkout to its branch. Fix: the prompt never names the human checkout (framework drains use the clone's own scripts) + rule 0 + before/after guard (rc=97, outbox + notify). Follow-up worth considering: run the worker in a bubblewrap sandbox with human checkouts bind-mounted read-only.
 
+- [ ] **CV-014**: De-flake `tests/hermes-drain.test.mjs` under the review gate
+  - **Priority:** HIGH
+  - Files: `tests/hermes-drain.test.mjs`, `agents/hermes-drain.sh`
+  - Lane: interactive
+  - Test: the file passes 10/10 inside `hardGate` while the full suite runs in parallel
+  - Notes: failed the gate for #85 and #86 but passes alone through the same `hardGate` (2026-11-03). Suspects: the script's network `gh pr list` / `git fetch` inside a 30s execFileSync timeout under CPU load; the tests must stub `gh` (PATH shim) so they never touch the network.
+
 ### Phase 1: Cycles wired
 
 Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.json edits and the baseline recording are interactive.

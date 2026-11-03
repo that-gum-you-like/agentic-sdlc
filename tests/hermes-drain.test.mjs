@@ -41,7 +41,7 @@ test('drain script carries the core safety guards', () => {
   assert(/Ready \\?\(unblocked\\?\)/.test(s), 'must cost-gate on ready-task count');
   assert(/head:agent\/drain\//.test(s) && /MAX_OPEN_DRAIN_PRS/.test(s), 'must cap unreviewed drain PRs');
   assert(/mkdir "\$LOCKDIR"/.test(s) && /\.sdlc-autonomous\.lock/.test(s), 'must use the SHARED atomic (mkdir) mutex (mutually exclusive with pr-auto-review)');
-  assert(/pgrep -f 'timeout 3600 hermes'/.test(s), 'must have a pgrep backstop against a live concurrent worker');
+  assert(/pgrep -f '\^timeout 3600 hermes'/.test(s), 'must have a pgrep backstop against a live concurrent worker, ANCHORED — unanchored, any shell containing the text blocked every drain (2026-11-03)');
   assert(/HERMES_HOME="\$DRAIN_HOME"/.test(s) && /TERMINAL_ENV=local/.test(s), 'must use the isolated local-backend profile');
   assert(/checkout -q -f -B "\$BASE_BRANCH" "origin\/\$BASE_BRANCH"/.test(s), 'clone refresh must FORCE checkout the RESOLVED base branch — the previous worker legitimately leaves the clone dirty (regression: 2026-07-06 "clone checkout failed")');
   assert(/SDLC_PROJECT_DIR="\$DRAIN_CLONE"/.test(s), 'worker invocation must pin SDLC_PROJECT_DIR to the clone — the systemd unit exports it pointing at the main repo, which made workers dirty the MAIN tree (regression: 2026-07-06)');
