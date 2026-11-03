@@ -14,7 +14,7 @@ import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
 import { tmpdir } from 'os';
-import { runStep } from '../cycles/monthly-review.mjs';
+import { runStep, buildMonthlySteps } from '../cycles/monthly-review.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const AGENTS_DIR = resolve(__dirname, '..');
@@ -100,5 +100,32 @@ describe('monthly-review — the executed monthly cycle', () => {
     // The top-level import of runStep at the top of this file already
     // exercised that path — if main() had run, it would have thrown
     // or produced visible output.
+  });
+
+  it('exports buildMonthlySteps returning the correct steps (dryRun: false)', () => {
+    const steps = buildMonthlySteps({ dryRun: false });
+    assert.equal(steps.length, 4, '4 steps in normal mode');
+    assert.equal(steps[0].label, 'Behavior audit');
+    assert.equal(steps[0].script, 'test-behavior.mjs');
+    assert.deepEqual(steps[0].args, [], 'no --dry-run in normal mode');
+    assert.equal(steps[1].label, 'Behavior drift vs baseline');
+    assert.ok(steps[1].args.includes('--drift'));
+    assert.equal(steps[2].label, 'Agent version snapshot');
+    assert.equal(steps[2].script, 'version-snapshot.mjs');
+    assert.deepEqual(steps[2].args, ['snapshot']);
+    assert.equal(steps[3].label, 'Memory migration check');
+    assert.equal(steps[3].script, 'migrate-memory.mjs');
+    assert.deepEqual(steps[3].args, ['--check']);
+  });
+
+  it('buildMonthlySteps({dryRun: true}) omits snapshot and appends --dry-run', () => {
+    const steps = buildMonthlySteps({ dryRun: true });
+    assert.equal(steps.length, 3, '3 steps in dry-run mode (snapshot omitted)');
+    assert.equal(steps[0].label, 'Behavior audit');
+    assert.deepEqual(steps[0].args, ['--dry-run']);
+    assert.equal(steps[1].label, 'Behavior drift vs baseline');
+    assert.deepEqual(steps[1].args, ['--drift', '--dry-run']);
+    assert.equal(steps[2].label, 'Memory migration check');
+    assert.deepEqual(steps[2].args, ['--check', '--dry-run']);
   });
 });
