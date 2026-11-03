@@ -543,3 +543,13 @@ test('tickTaskInSpec ticks the merged task in its OpenSpec tasks.md', async () =
   assert(tickTaskInSpec(root, task) === false, 'idempotent');
   assert(tickTaskInSpec(root, { description: 'no id', source: 'openspec/cv/tasks.md' }) === false, 'no id: no-op');
 });
+
+test('buildFixTask counts attempts; the third rejection blocks for a human (CV-REQ-035)', () => {
+  const info = { pr: 9, branch: 'agent/drain/H-009', headSha: 'a', reasons: ['x'], kind: 'gate-failed' };
+  const t1 = buildFixTask({ ...info, existing: null });
+  assert(t1.attempts === 1 && t1.status === 'pending', 'first: pending');
+  const t2 = buildFixTask({ ...info, existing: t1 });
+  assert(t2.attempts === 2 && t2.status === 'pending', 'second: pending');
+  const t3 = buildFixTask({ ...info, existing: t2 });
+  assert(t3.attempts === 3 && t3.status === 'blocked' && /needs-human/.test(t3.blockedReason), 'third: blocked for a human');
+});

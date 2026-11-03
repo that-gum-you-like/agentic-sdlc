@@ -627,14 +627,22 @@ export function buildFixTask({ pr, branch, headSha, reasons, kind, existing }) {
     created: new Date().toISOString(),
     tags: ['auto-fix'],
   };
+  // CV-REQ-035: count rejections; the third hands the PR to a human instead of
+  // re-queuing a repair the cheap model has already failed twice (no endless loop).
+  const attempts = (existing?.attempts || 0) + 1;
+  const exhausted = attempts >= MAX_FIX_ATTEMPTS;
   return {
     ...base,
     description,
-    status: 'pending',
+    attempts,
+    status: exhausted ? 'blocked' : 'pending',
+    ...(exhausted ? { blockedReason: `needs-human: PR #${pr} rejected ${attempts}x (${kind}) — the drain will not retry it` } : {}),
     fixFor: { pr, branch, headSha, sourceTask, rejectionKind: kind },
     ...(existing ? { refreshedAt: new Date().toISOString() } : {}),
   };
 }
+
+export const MAX_FIX_ATTEMPTS = 3;
 
 /** Upsert FIX-<pr> in the review clone and push to main (REQ-SH-1). */
 function upsertFixTaskInClone(repoDir, prInfo, log) {
@@ -653,6 +661,11 @@ function upsertFixTaskInClone(repoDir, prInfo, log) {
     `chore(queue): file ${task.id} — drain PR #${prInfo.pr} ${prInfo.kind} (self-healing loop)`]);
   // Non-ff push fails safe; the next run retries (same semantics as completion).
   run('git', ['-C', clone, 'push', 'origin', 'main'], { timeout: 120_000 });
+  if (task.status === 'blocked') {
+    log(`${task.id} exhausted (${task.attempts} rejections) — blocked for a human`);
+    try { triggerNotification('blocker', `🙋 PR #${prInfo.pr} rejected ${task.attempts}x — the drain stopped retrying. Needs a human (or an interactive Claude session).`); } catch { /* best-effort */ }
+    return true;
+  }
   log(`filed ${task.id} (${prInfo.kind}) — the drain will repair PR #${prInfo.pr} on its existing branch`);
   return true;
 }
