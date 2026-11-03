@@ -16,7 +16,9 @@ import json
 
 def get_model():
     from sentence_transformers import SentenceTransformer
-    return SentenceTransformer('all-MiniLM-L6-v2')
+    # Pin to CPU as documented: auto-selecting CUDA crashes on GPUs older than
+    # the installed PyTorch supports (e.g. sm_61 GTX 1070: "no kernel image").
+    return SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
 
 def embed_texts(texts):
     model = get_model()

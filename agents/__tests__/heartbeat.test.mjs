@@ -1,11 +1,13 @@
 /**
- * heartbeat.test.mjs — T-402 (liveness-heartbeat REQ-001) + T-404 (REQ-003).
+ * heartbeat.test.mjs — T-402 (liveness-heartbeat REQ-001) + T-403 (REQ-002)
+ * + T-404 (REQ-003).
  *
  * Acceptance covered:
  *   - a nominal fixture still produces a message
  *   - abnormal items appear first in the message body, before nominal counts
  *   - the message is a single message, not one per section
  *   - the unit test composes from fixtures without network access
+ *   - delivery failure → non-zero exit; success → 0 (REQ-002)
  *   - each drift condition is unit-tested against a fixture portfolio
  *   - a clean portfolio produces no drift section at all
  *
@@ -15,6 +17,7 @@
 
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync, utimesSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, resolve, dirname } from 'path';
@@ -233,9 +236,9 @@ describe('collectors (fixture-driven, no network)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // collectDrift — REQ-003 acceptance
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 
 describe('collectDrift (REQ-003)', () => {
 
@@ -350,5 +353,52 @@ describe('collectDrift (REQ-003)', () => {
   it('a clean portfolio produces no drift section in the message', () => {
     const msg = composeMessage(nominalReport());
     assert.ok(!msg.includes('Portfolio drift'), 'no drift section for clean portfolio');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CLI exit codes — REQ-002 acceptance
+// ---------------------------------------------------------------------------
+
+describe('CLI exit codes (REQ-002)', () => {
+
+  it('exits 0 when delivery succeeds', () => {
+    const dir = makeProject({
+      'agents/project.json': JSON.stringify({
+        name: 'test-project',
+        notification: { provider: 'none' },
+      }),
+    });
+    const result = spawnSync('node', [resolve(MODULE_DIR, '../heartbeat.mjs')], {
+      cwd: dir,
+      env: { ...process.env, SDLC_PROJECT_DIR: dir },
+      timeout: 15000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    assert.equal(result.status, 0, `exit code must be 0, got ${result.status}`);
+    assert.ok(result.stdout.includes('📡 heartbeat sent'), 'stdout must confirm delivery');
+  });
+
+  it('exits non-zero on delivery failure with stderr naming the provider', () => {
+    const dir = makeProject({
+      'agents/project.json': JSON.stringify({
+        name: 'test-project',
+        notification: { provider: 'telegram' },
+      }),
+    });
+    const result = spawnSync('node', [resolve(MODULE_DIR, '../heartbeat.mjs')], {
+      cwd: dir,
+      env: { ...process.env, SDLC_PROJECT_DIR: dir },
+      timeout: 15000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    assert.notEqual(result.status, 0, `exit code must be non-zero, got ${result.status}`);
+    assert.ok(result.stderr.includes('delivery failed'), 'stderr must mention delivery failure');
+  });
+
+  it('no Restart= in the generated service template', () => {
+    const src = readFileSync(resolve(MODULE_DIR, '../scheduler-install.mjs'), 'utf8');
+    // The buildUnits template must not include a Restart= directive
+    assert.ok(!src.includes('Restart='), 'service template must not contain Restart=');
   });
 });
