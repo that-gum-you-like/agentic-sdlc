@@ -20,13 +20,15 @@ const MATURATION_LEVEL_NAMES = ['New', 'Corrected', 'Remembering', 'Teaching', '
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const config = loadConfig();
-const ROOT = config.projectDir;
-const TASKS_DIR = config.tasksDir;
-const DASHBOARD_PATH = config.dashboardPath;
-const REVIEWS_DIR = resolve(config.agentsDir, 'richmond/reviews');
-const AGENTS_DIR = config.agentsDir;
-const AGENTS = config.agents;
+
+// Config is resolved lazily so importing this module — for its pure helpers —
+// never reads project.json, never depends on the importer's cwd, and never
+// runs CLI side effects. The entry point at the bottom calls getConfig().
+let _config = null;
+function getConfig() {
+  if (!_config) _config = loadConfig();
+  return _config;
+}
 
 /**
  * Build the "Agent Maturation" section for the PM Dashboard.
@@ -37,9 +39,10 @@ const AGENTS = config.agents;
  *   - Trend: improving / stable / regressing (based on last 2 weeks of metrics)
  */
 function generateMaturationSection() {
+  const { agentsDir, agents } = getConfig();
   const rows = [];
-  for (const agent of AGENTS) {
-    const corePath = resolve(AGENTS_DIR, agent, 'memory/core.json');
+  for (const agent of agents) {
+    const corePath = resolve(agentsDir, agent, 'memory/core.json');
     if (!existsSync(corePath)) continue;
 
     let core;
@@ -86,18 +89,85 @@ ${rows.join('\n')}
 `;
 }
 
+/**
+ * Build the body of the dashboard's `## OpenSpec status` section (CV-119).
+ *
+ * Pure with respect to the running daily review: it reads only the tree under
+ * the `changesDir` it is given — no config, no dashboard write, no globals — so
+ * callers and tests can point it at any OpenSpec directory.
+ *
+ * A change missing `status.json` or `tasks.md` renders `-` in the affected
+ * columns and never throws: "could not measure" must not look like "zero".
+ *
+ * @param {string} changesDir path to `openspec/changes`
+ * @returns {string} markdown counts line + one table row per active change
+ */
+export function openspecStatusTable(changesDir) {
+  const active = [];
+  if (existsSync(changesDir)) {
+    for (const entry of readdirSync(changesDir, { withFileTypes: true })) {
+      if (!entry.isDirectory() || entry.name === 'archive') continue;
+      active.push(entry.name);
+    }
+  }
+  active.sort();
+
+  let archived = 0;
+  const archiveDir = resolve(changesDir, 'archive');
+  if (existsSync(archiveDir)) {
+    archived = readdirSync(archiveDir, { withFileTypes: true }).filter(e => e.isDirectory()).length;
+  }
+
+  const rows = active.map(name => {
+    const changeDir = resolve(changesDir, name);
+
+    let phase = '-';
+    let status = '-';
+    let readiness = '-';
+    const statusPath = resolve(changeDir, 'status.json');
+    if (existsSync(statusPath)) {
+      try {
+        const s = JSON.parse(readFileSync(statusPath, 'utf8'));
+        phase = s.phase ? String(s.phase) : '-';
+        status = s.status ? String(s.status) : '-';
+        readiness = s.readiness ? String(s.readiness) : '-';
+      } catch { /* malformed status.json — render '-' rather than throw */ }
+    }
+
+    let tasks = '-';
+    const tasksPath = resolve(changeDir, 'tasks.md');
+    if (existsSync(tasksPath)) {
+      const md = readFileSync(tasksPath, 'utf8');
+      const total = (md.match(/^\s*-\s+\[[ xX]\]/gm) || []).length;
+      const done = (md.match(/^\s*-\s+\[[xX]\]/gm) || []).length;
+      tasks = `${done}/${total}`;
+    }
+
+    return `| ${name} | ${phase} | ${status} | ${readiness} | ${tasks} |`;
+  });
+
+  return [
+    `Active changes: ${active.length} | Archived: ${archived}`,
+    '',
+    '| Change | Phase | Status | Readiness | Tasks |',
+    '|--------|-------|--------|-----------|-------|',
+    ...rows,
+  ].join('\n');
+}
+
 function loadTasks() {
+  const tasksDir = getConfig().tasksDir;
   const tasks = [];
-  if (!existsSync(TASKS_DIR)) return tasks;
-  const files = readdirSync(TASKS_DIR).filter(f => f.endsWith('.json')).sort();
+  if (!existsSync(tasksDir)) return tasks;
+  const files = readdirSync(tasksDir).filter(f => f.endsWith('.json')).sort();
   for (const file of files) {
-    tasks.push(JSON.parse(readFileSync(resolve(TASKS_DIR, file), 'utf8')));
+    tasks.push(JSON.parse(readFileSync(resolve(tasksDir, file), 'utf8')));
   }
   return tasks;
 }
 
 function loadHumanTasks() {
-  const humanQueueDir = config.humanQueueDir;
+  const humanQueueDir = getConfig().humanQueueDir;
   if (!existsSync(humanQueueDir)) return [];
   const files = readdirSync(humanQueueDir).filter(f => f.endsWith('.json')).sort();
   const tasks = [];
@@ -132,11 +202,12 @@ function generateActionItemsSection(humanTasks) {
 }
 
 function getRecentReviews() {
-  if (!existsSync(REVIEWS_DIR)) return [];
-  const files = readdirSync(REVIEWS_DIR).filter(f => f.endsWith('.md'));
+  const reviewsDir = resolve(getConfig().agentsDir, 'richmond/reviews');
+  if (!existsSync(reviewsDir)) return [];
+  const files = readdirSync(reviewsDir).filter(f => f.endsWith('.md'));
   return files.map(f => ({
     file: f,
-    content: readFileSync(resolve(REVIEWS_DIR, f), 'utf8'),
+    content: readFileSync(resolve(reviewsDir, f), 'utf8'),
   }));
 }
 
@@ -193,12 +264,13 @@ ${matSection}`;
 const ACTIVITY_HEADERS = ['## Recent Activity', '## Recent Changes (OpenSpec)'];
 
 function updateDashboard(summary, actionItemsSection) {
-  if (!existsSync(DASHBOARD_PATH)) {
-    console.error('Dashboard not found at', DASHBOARD_PATH);
+  const dashboardPath = getConfig().dashboardPath;
+  if (!existsSync(dashboardPath)) {
+    console.error('Dashboard not found at', dashboardPath);
     return;
   }
 
-  let dashboard = readFileSync(DASHBOARD_PATH, 'utf8');
+  let dashboard = readFileSync(dashboardPath, 'utf8');
   const warnings = [];
 
   const date = new Date().toISOString().split('T')[0];
@@ -259,7 +331,7 @@ function updateDashboard(summary, actionItemsSection) {
     warnings.push('pm/DASHBOARD.md has no **Last Updated:** line — date not updated');
   }
 
-  writeFileSync(DASHBOARD_PATH, dashboard);
+  writeFileSync(dashboardPath, dashboard);
 
   // Missing expected content must surface on stderr, never silently no-op
   // (REQ-004 acceptance).
@@ -272,7 +344,7 @@ function updateDashboard(summary, actionItemsSection) {
  * Append a cycle history entry to pm/cycle-history.json
  */
 function recordCycleHistory(type, stats) {
-  const pmDir = resolve(ROOT, 'pm');
+  const pmDir = resolve(getConfig().projectDir, 'pm');
   if (!existsSync(pmDir)) mkdirSync(pmDir, { recursive: true });
   const historyPath = resolve(pmDir, 'cycle-history.json');
 
@@ -291,110 +363,118 @@ function recordCycleHistory(type, stats) {
   writeFileSync(historyPath, JSON.stringify(history, null, 2));
 }
 
-// Main
-const tasks = loadTasks();
-const summary = generateSummary(tasks);
+async function main() {
+  const tasks = loadTasks();
+  const summary = generateSummary(tasks);
 
-console.log(summary);
+  console.log(summary);
 
-// Generate action items from pending human tasks
-const humanTasks = loadHumanTasks();
-const actionItemsSection = generateActionItemsSection(humanTasks);
-if (actionItemsSection) console.log(actionItemsSection);
+  // Generate action items from pending human tasks
+  const humanTasks = loadHumanTasks();
+  const actionItemsSection = generateActionItemsSection(humanTasks);
+  if (actionItemsSection) console.log(actionItemsSection);
 
-updateDashboard(summary, actionItemsSection);
-console.log('Dashboard updated.');
+  updateDashboard(summary, actionItemsSection);
+  console.log('Dashboard updated.');
 
-// Bottleneck detection (15.1-15.2)
-const completedCount = tasks.filter(t => t.status === 'completed').length;
-const inProgressCount = tasks.filter(t => t.status === 'in_progress').length;
-const blockedTasks = tasks.filter(t => t.status === 'pending' && t.blockedBy?.length > 0);
-const blockedCount = blockedTasks.length;
+  // Bottleneck detection (15.1-15.2)
+  const completedCount = tasks.filter(t => t.status === 'completed').length;
+  const inProgressCount = tasks.filter(t => t.status === 'in_progress').length;
+  const blockedTasks = tasks.filter(t => t.status === 'pending' && t.blockedBy?.length > 0);
+  const blockedCount = blockedTasks.length;
 
-// Check if human tasks are the bottleneck
-const pendingHumanTasks = humanTasks.filter(ht => ht.status === 'pending');
-const staleHumanTasks = pendingHumanTasks.filter(ht => {
-  if (!ht.createdAt) return false;
-  const ageMs = Date.now() - new Date(ht.createdAt).getTime();
-  return ageMs > 24 * 60 * 60 * 1000; // > 24 hours
-});
+  // Check if human tasks are the bottleneck
+  const pendingHumanTasks = humanTasks.filter(ht => ht.status === 'pending');
+  const staleHumanTasks = pendingHumanTasks.filter(ht => {
+    if (!ht.createdAt) return false;
+    const ageMs = Date.now() - new Date(ht.createdAt).getTime();
+    return ageMs > 24 * 60 * 60 * 1000; // > 24 hours
+  });
 
-if (staleHumanTasks.length > 0) {
-  const totalBlocked = blockedTasks.length + pendingHumanTasks.reduce((sum, ht) => sum + (ht.unblocks?.length || 0), 0);
-  const humanBlockedCount = pendingHumanTasks.reduce((sum, ht) => sum + (ht.unblocks?.length || 0), 0);
-  const isBottleneck = totalBlocked > 0 && humanBlockedCount / totalBlocked > 0.5;
+  if (staleHumanTasks.length > 0) {
+    const totalBlocked = blockedTasks.length + pendingHumanTasks.reduce((sum, ht) => sum + (ht.unblocks?.length || 0), 0);
+    const humanBlockedCount = pendingHumanTasks.reduce((sum, ht) => sum + (ht.unblocks?.length || 0), 0);
+    const isBottleneck = totalBlocked > 0 && humanBlockedCount / totalBlocked > 0.5;
 
-  if (isBottleneck) {
-    console.log(`\n⚠ BOTTLENECK: ${staleHumanTasks.length} human task(s) pending > 24h. Agent work is blocked on human action.`);
-    triggerNotification('blocker', `⚠ Bottleneck alert: ${staleHumanTasks.length} human tasks pending > 24h. Agent work is blocked on human action.`);
+    if (isBottleneck) {
+      console.log(`\n⚠ BOTTLENECK: ${staleHumanTasks.length} human task(s) pending > 24h. Agent work is blocked on human action.`);
+      triggerNotification('blocker', `⚠ Bottleneck alert: ${staleHumanTasks.length} human tasks pending > 24h. Agent work is blocked on human action.`);
+    }
   }
-}
 
-// Agent Capability Health (5.1)
-try {
-  const { checkCapabilityHealth } = await import('../capability-monitor.mjs');
-  const health = await checkCapabilityHealth();
-  if (health && health.alerts && health.alerts.length > 0) {
-    for (const alert of health.alerts) {
-      if (alert.type === 'drift') {
-        console.log(`\nAgent Capability Health: DRIFT ALERT — ${alert.agent}: ${alert.capability} skipped ${alert.consecutiveSkips}x consecutive`);
-      } else if (alert.type === 'scopeCreep') {
-        console.log(`\nAgent Capability Health: SCOPE CREEP — ${alert.agent}: unexpected capability ${alert.capability} was used`);
+  // Agent Capability Health (5.1)
+  try {
+    const { checkCapabilityHealth } = await import('../capability-monitor.mjs');
+    const health = await checkCapabilityHealth();
+    if (health && health.alerts && health.alerts.length > 0) {
+      for (const alert of health.alerts) {
+        if (alert.type === 'drift') {
+          console.log(`\nAgent Capability Health: DRIFT ALERT — ${alert.agent}: ${alert.capability} skipped ${alert.consecutiveSkips}x consecutive`);
+        } else if (alert.type === 'scopeCreep') {
+          console.log(`\nAgent Capability Health: SCOPE CREEP — ${alert.agent}: unexpected capability ${alert.capability} was used`);
+        }
+      }
+    } else {
+      console.log('\nAgent Capability Health: All agents nominal. No drift alerts.');
+    }
+  } catch {
+    // capability-monitor not yet installed — skip silently
+  }
+
+  // OpenSpec Hygiene Check — flag stale changes and unarchived shipped changes
+  try {
+    const openspecDir = resolve(getConfig().projectDir, 'openspec/changes');
+    if (existsSync(openspecDir)) {
+      const changeDirs = readdirSync(openspecDir, { withFileTypes: true }).filter(d => d.isDirectory() && d.name !== 'archive');
+      const now = Date.now();
+      for (const dir of changeDirs) {
+        const statusPath = resolve(openspecDir, dir.name, 'status.json');
+        if (!existsSync(statusPath)) continue;
+        try {
+          const status = JSON.parse(readFileSync(statusPath, 'utf8'));
+          const updatedAt = status.updatedAt ? new Date(status.updatedAt).getTime() : 0;
+          const ageDays = Math.round((now - updatedAt) / (1000 * 60 * 60 * 24));
+
+          if ((status.phase === 'proposal' || status.phase === 'design') && ageDays > 14) {
+            console.log(`\n⚠ STALE: openspec "${dir.name}" has been in ${status.phase} for ${ageDays} days`);
+          }
+          if (status.phase === 'shipped' && ageDays > 7) {
+            console.log(`\n📦 ARCHIVE: openspec "${dir.name}" shipped ${ageDays} days ago, needs archiving`);
+          }
+        } catch { /* malformed status.json — skip */ }
       }
     }
-  } else {
-    console.log('\nAgent Capability Health: All agents nominal. No drift alerts.');
-  }
-} catch {
-  // capability-monitor not yet installed — skip silently
-}
+  } catch { /* openspec dir not found — skip */ }
 
-// OpenSpec Hygiene Check — flag stale changes and unarchived shipped changes
-try {
-  const openspecDir = resolve(config.projectDir, 'openspec/changes');
-  if (existsSync(openspecDir)) {
-    const changeDirs = readdirSync(openspecDir, { withFileTypes: true }).filter(d => d.isDirectory() && d.name !== 'archive');
-    const now = Date.now();
-    for (const dir of changeDirs) {
-      const statusPath = resolve(openspecDir, dir.name, 'status.json');
-      if (!existsSync(statusPath)) continue;
-      try {
-        const status = JSON.parse(readFileSync(statusPath, 'utf8'));
-        const updatedAt = status.updatedAt ? new Date(status.updatedAt).getTime() : 0;
-        const ageDays = Math.round((now - updatedAt) / (1000 * 60 * 60 * 24));
+  // Model Manager Health Summary (if performance ledger exists)
+  try {
+    const ledgerPath = getConfig().performanceLedgerPath;
+    if (existsSync(ledgerPath)) {
+      const lines = readFileSync(ledgerPath, 'utf8').split('\n').filter(l => l.trim());
+      const recentSwaps = lines
+        .map(l => { try { return JSON.parse(l); } catch { return null; } })
+        .filter(e => e && e.event === 'model-swap')
+        .filter(e => Date.now() - new Date(e.ts).getTime() < 24 * 60 * 60 * 1000);
 
-        if ((status.phase === 'proposal' || status.phase === 'design') && ageDays > 14) {
-          console.log(`\n⚠ STALE: openspec "${dir.name}" has been in ${status.phase} for ${ageDays} days`);
+      if (recentSwaps.length > 0) {
+        console.log(`\n🔄 Model Manager: ${recentSwaps.length} model swap(s) in last 24h`);
+        for (const s of recentSwaps) {
+          console.log(`   ${s.agent}: ${s.fromModel} → ${s.toModel} (${s.reason})`);
         }
-        if (status.phase === 'shipped' && ageDays > 7) {
-          console.log(`\n📦 ARCHIVE: openspec "${dir.name}" shipped ${ageDays} days ago, needs archiving`);
-        }
-      } catch { /* malformed status.json — skip */ }
-    }
-  }
-} catch { /* openspec dir not found — skip */ }
-
-// Model Manager Health Summary (if performance ledger exists)
-try {
-  const ledgerPath = config.performanceLedgerPath;
-  if (existsSync(ledgerPath)) {
-    const lines = readFileSync(ledgerPath, 'utf8').split('\n').filter(l => l.trim());
-    const recentSwaps = lines
-      .map(l => { try { return JSON.parse(l); } catch { return null; } })
-      .filter(e => e && e.event === 'model-swap')
-      .filter(e => Date.now() - new Date(e.ts).getTime() < 24 * 60 * 60 * 1000);
-
-    if (recentSwaps.length > 0) {
-      console.log(`\n🔄 Model Manager: ${recentSwaps.length} model swap(s) in last 24h`);
-      for (const s of recentSwaps) {
-        console.log(`   ${s.agent}: ${s.fromModel} → ${s.toModel} (${s.reason})`);
       }
     }
-  }
-} catch { /* model-manager not configured — skip */ }
+  } catch { /* model-manager not configured — skip */ }
 
-// Record cycle history
-recordCycleHistory('daily-review', { completed: completedCount, inProgress: inProgressCount, blocked: blockedCount, total: tasks.length });
+  // Record cycle history
+  recordCycleHistory('daily-review', { completed: completedCount, inProgress: inProgressCount, blocked: blockedCount, total: tasks.length });
 
-// Notify human with daily summary
-triggerNotification('dailySummary', `📊 Daily Summary: ${completedCount} completed, ${inProgressCount} in progress, ${blockedCount} blocked`);
+  // Notify human with daily summary
+  triggerNotification('dailySummary', `📊 Daily Summary: ${completedCount} completed, ${inProgressCount} in progress, ${blockedCount} blocked`);
+}
+
+// --- CLI ---
+const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
+
+if (__isMainModule) {
+  await main();
+}

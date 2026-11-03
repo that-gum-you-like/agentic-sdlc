@@ -25,6 +25,8 @@ import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
 
+import { openspecStatusTable } from '../cycles/daily-review.mjs';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(__dirname, '..', '..');
 const SCRIPT = resolve(REPO, 'agents/cycles/daily-review.mjs');
@@ -163,5 +165,97 @@ _No date line, no activity heading here._
     const written = readFileSync(join(dir, 'pm/DASHBOARD.md'), 'utf8');
     assert.notEqual(written, original, 'dashboard content must actually change');
     assert.ok(written.includes(TODAY), 'written dashboard must carry today\'s date');
+  });
+});
+
+
+/**
+ * CV-119 / CV-REQ-020: the OpenSpec status table.
+ *
+ * The table is built from what is on disk and nothing else, so the fixture is
+ * a real `openspec/changes` tree: two active changes, one archived change, one
+ * change with neither status.json nor tasks.md, and a stray file at the root.
+ */
+function fixtureChangesDir() {
+  const dir = mkdtempSync(join(tmpdir(), 'sdlc-openspec-status-'));
+
+  // Active change with a full status.json and a part-done tasks.md.
+  mkdirSync(join(dir, 'alpha'));
+  writeFileSync(join(dir, 'alpha/status.json'), JSON.stringify({
+    status: 'proposed', phase: 'tasks', readiness: 'ready-for-dev',
+  }));
+  writeFileSync(join(dir, 'alpha/tasks.md'), [
+    '- [x] **A-1**: done one',
+    '- [x] **A-2**: done two',
+    '- [ ] **A-3**: pending three',
+    '- [ ] **A-4**: pending four',
+    '- [ ] **A-5**: pending five',
+  ].join('\n'));
+
+  // Active change with no readiness field and one of two tasks done.
+  mkdirSync(join(dir, 'beta'));
+  writeFileSync(join(dir, 'beta/status.json'), JSON.stringify({
+    status: 'implemented', phase: 'verify',
+  }));
+  writeFileSync(join(dir, 'beta/tasks.md'), '- [x] **B-1**: done\n- [ ] **B-2**: pending\n');
+
+  // Active change with nothing measurable on disk.
+  mkdirSync(join(dir, 'zeta'));
+
+  // Archived change — counted, never listed as a row.
+  mkdirSync(join(dir, 'archive/2026-01-01-gamma'), { recursive: true });
+  writeFileSync(join(dir, 'archive/2026-01-01-gamma/status.json'), JSON.stringify({
+    status: 'implemented', phase: 'verify', readiness: 'done',
+  }));
+
+  // Stray file at the root of the changes dir — not a change.
+  writeFileSync(join(dir, 'NOTES.md'), 'not a change directory\n');
+
+  return dir;
+}
+
+describe('openspecStatusTable (CV-REQ-020)', () => {
+  it('lists each active change with phase/status/readiness/tasks and both counts', () => {
+    const table = openspecStatusTable(fixtureChangesDir());
+
+    assert.match(table, /Active changes: 3 \| Archived: 1/,
+      'three active change dirs and one archived dir must be counted');
+    assert.ok(table.includes('| alpha | tasks | proposed | ready-for-dev | 2/5 |'),
+      `alpha row wrong:\n${table}`);
+    assert.ok(table.includes('| beta | verify | implemented | - | 1/2 |'),
+      `beta row wrong (missing readiness renders '-', 1 of 2 tasks done):\n${table}`);
+    assert.ok(table.includes('| zeta | - | - | - | - |'),
+      `zeta row wrong (no status.json / tasks.md renders '-'):\n${table}`);
+    assert.ok(!table.includes('gamma'),
+      'archived changes are counted, not listed as active rows');
+    assert.ok(!table.includes('NOTES.md'),
+      'a file at the changes-dir root is not a change');
+  });
+
+  it('renders rows alphabetically so the dashboard does not churn between runs', () => {
+    const table = openspecStatusTable(fixtureChangesDir());
+    const alpha = table.indexOf('| alpha |');
+    const beta = table.indexOf('| beta |');
+    const zeta = table.indexOf('| zeta |');
+    assert.ok(alpha >= 0 && beta > alpha && zeta > beta,
+      `rows must be alpha, beta, zeta in that order:\n${table}`);
+  });
+
+  it('does not throw and counts zero when the changes dir is missing', () => {
+    const table = openspecStatusTable(join(tmpdir(), 'does-not-exist-openspec-changes'));
+    assert.match(table, /Active changes: 0 \| Archived: 0/);
+    assert.match(table, /\| Change \| Phase \| Status \| Readiness \| Tasks \|/,
+      'the header must still be present for an empty tree');
+  });
+
+  it('distinguishes an empty tasks.md (0/0) from a missing one (-)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sdlc-openspec-empty-'));
+    mkdirSync(join(dir, 'delta'));
+    writeFileSync(join(dir, 'delta/status.json'), JSON.stringify({ status: 'draft', phase: 'design', readiness: 'draft' }));
+    writeFileSync(join(dir, 'delta/tasks.md'), '# Tasks\n\n_None authored yet._\n');
+
+    const table = openspecStatusTable(dir);
+    assert.ok(table.includes('| delta | design | draft | draft | 0/0 |'),
+      `a present-but-empty tasks.md is measured as 0/0, not '-' (missing):\n${table}`);
   });
 });
