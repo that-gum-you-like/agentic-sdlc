@@ -269,6 +269,8 @@ async function checkAllProviderHealth() {
       results[provider] = { status: 'up', lastChecked: now, consecutiveFailures: 0, latencyMs: result.latencyMs };
       if (wasDown) {
         appendLedger({ event: 'provider-recovered', provider, latencyMs: result.latencyMs });
+        const rb = loadBudget();
+        if (revertProviderDownSwaps(rb, provider) > 0) saveBudget(rb);
         triggerNotification('budgetAlert', `Provider recovered: ${provider} is back online (${result.latencyMs}ms)`);
         console.log(`  🟢 ${provider}: RECOVERED (was down, now up in ${result.latencyMs}ms)`);
       } else {
@@ -299,8 +301,8 @@ async function checkAllProviderHealth() {
 /**
  * Find a healthy model from a fallback chain, skipping models whose provider is down.
  */
-function findHealthyFallback(fallbackChain, currentModel, providerHealth) {
-  const intel = loadModelIntel();
+function findHealthyFallback(fallbackChain, currentModel, providerHealth, intelOverride = null, skipped = null) {
+  const intel = intelOverride || loadModelIntel();
   const currentIdx = fallbackChain.indexOf(currentModel);
 
   for (let i = currentIdx + 1; i < fallbackChain.length; i++) {
@@ -308,10 +310,83 @@ function findHealthyFallback(fallbackChain, currentModel, providerHealth) {
     const modelInfo = intel.models?.[model];
     const provider = modelInfo?.provider;
     if (provider && providerHealth[provider]?.status !== 'down') {
+      // Never swap to a rung we cannot authenticate against (e.g. Groq with no
+      // GROQ_API_KEY) — that trades a transient outage for a permanent one.
+      const ep = HEALTH_ENDPOINTS[provider];
+      if (ep && !resolveProviderKey(ep)) {
+        if (skipped) skipped.push(model);
+        continue;
+      }
       return model;
     }
   }
-  return null; // All fallbacks are on down providers
+  return null; // All fallbacks are on down providers (or have no usable key)
+}
+
+/**
+ * Swap agents off down providers. Marks each swap with `providerDownSwap` so recovery
+ * knows which activeModel overrides are its own. Mutates `budget`; returns swap count.
+ */
+function applyProviderDownSwaps(budget, providerHealth, intel) {
+  const agents = budget.agents || {};
+  let swapCount = 0;
+
+  for (const [name, agentCfg] of Object.entries(agents)) {
+    const model = agentCfg.activeModel || agentCfg.model || 'unknown';
+    const modelInfo = intel.models?.[model];
+    const provider = modelInfo?.provider || agentCfg.provider;
+
+    if (provider && providerHealth[provider]?.status === 'down') {
+      const chain = agentCfg.fallbackChain || [];
+      const skipped = [];
+      const healthyModel = findHealthyFallback(chain, model, providerHealth, intel, skipped);
+
+      if (healthyModel) {
+        const preSwap = agentCfg.providerDownSwap ? agentCfg.providerDownSwap.previousActiveModel : (agentCfg.activeModel ?? null);
+        agents[name].providerDownSwap = { downProvider: provider, previousActiveModel: preSwap, swappedTo: healthyModel };
+        agents[name].activeModel = healthyModel;
+        const newProvider = intel.models?.[healthyModel]?.provider || 'unknown';
+        console.log(`\n  🚨 ${name}: ${provider} DOWN — SWAP ${model} → ${healthyModel} (${newProvider})`);
+        appendLedger({ event: 'provider-down-swap', agent: name, fromModel: model, toModel: healthyModel, downProvider: provider, newProvider, swappedBy: 'provider-down' });
+        triggerNotification('highSeverityFailure',
+          `Provider ${provider} is DOWN. ${name} swapped from ${model} to ${healthyModel} (${newProvider}). Work continues on fallback.`
+        );
+        swapCount++;
+      } else if (skipped.length > 0) {
+        // Healthy rungs exist but none can authenticate: leave activeModel alone.
+        console.log(`\n  ⚠️  ${name}: ${provider} DOWN — no usable rung (no API key for: ${skipped.join(', ')}); leaving model unchanged`);
+        appendLedger({ event: 'provider-down-no-usable-rung', agent: name, model, downProvider: provider, skippedNoKey: skipped });
+      } else {
+        agents[name].activeModel = 'budget-exhausted';
+        console.log(`\n  💀 ${name}: ${provider} DOWN — NO HEALTHY FALLBACK AVAILABLE`);
+        appendLedger({ event: 'all-fallbacks-down', agent: name, model, downProvider: provider });
+        triggerNotification('highSeverityFailure',
+          `CRITICAL: Provider ${provider} is DOWN and ${name} has no healthy fallback. Agent is fully blocked. Add a cross-provider fallback chain or wait for recovery.`
+        );
+      }
+    }
+  }
+  return swapCount;
+}
+
+/**
+ * On provider recovery, undo only the overrides provider-down-swap set. A marker whose
+ * activeModel has since been changed by someone else is dropped without touching it.
+ * Mutates `budget`; returns number of agents reverted.
+ */
+function revertProviderDownSwaps(budget, provider) {
+  let reverted = 0;
+  for (const [name, agentCfg] of Object.entries(budget.agents || {})) {
+    const marker = agentCfg.providerDownSwap;
+    if (!marker || marker.downProvider !== provider) continue;
+    if (agentCfg.activeModel === marker.swappedTo) {
+      agentCfg.activeModel = marker.previousActiveModel ?? null;
+      reverted++;
+      appendLedger({ event: 'provider-down-swap-reverted', agent: name, provider, fromModel: marker.swappedTo, toModel: agentCfg.activeModel });
+    }
+    delete agentCfg.providerDownSwap;
+  }
+  return reverted;
 }
 
 /**
@@ -412,39 +487,11 @@ async function check() {
   let swapCount = 0;
   const intel = loadModelIntel();
 
-  for (const [name, agentCfg] of Object.entries(agents)) {
-    const model = agentCfg.activeModel || agentCfg.model || 'unknown';
-    const modelInfo = intel.models?.[model];
-    const provider = modelInfo?.provider || agentCfg.provider;
-
-    if (provider && providerHealth[provider]?.status === 'down') {
-      // Provider is down — find a healthy fallback
-      const chain = agentCfg.fallbackChain || [];
-      const healthyModel = findHealthyFallback(chain, model, providerHealth);
-
-      if (healthyModel) {
-        agents[name].activeModel = healthyModel;
-        const newProvider = intel.models?.[healthyModel]?.provider || 'unknown';
-        console.log(`\n  🚨 ${name}: ${provider} DOWN — SWAP ${model} → ${healthyModel} (${newProvider})`);
-        appendLedger({ event: 'provider-down-swap', agent: name, fromModel: model, toModel: healthyModel, downProvider: provider, newProvider });
-        triggerNotification('highSeverityFailure',
-          `Provider ${provider} is DOWN. ${name} swapped from ${model} to ${healthyModel} (${newProvider}). Work continues on fallback.`
-        );
-        swapCount++;
-      } else {
-        agents[name].activeModel = 'budget-exhausted';
-        console.log(`\n  💀 ${name}: ${provider} DOWN — NO HEALTHY FALLBACK AVAILABLE`);
-        appendLedger({ event: 'all-fallbacks-down', agent: name, model, downProvider: provider });
-        triggerNotification('highSeverityFailure',
-          `CRITICAL: Provider ${provider} is DOWN and ${name} has no healthy fallback. Agent is fully blocked. Add a cross-provider fallback chain or wait for recovery.`
-        );
-      }
-      continue; // Skip budget check for this agent — provider is down
-    }
-  }
+  swapCount = applyProviderDownSwaps(budget, providerHealth, intel);
+  // Persist unconditionally: budget-exhausted / marker changes also mutate the budget.
+  saveBudget(budget);
 
   if (swapCount > 0) {
-    saveBudget(budget);
     console.log(`\n${swapCount} provider-down swap(s) applied`);
   }
 
@@ -868,6 +915,7 @@ async function research() {
 
 export { check, report, recommend, reset, models, suggest, research, buildCostOrder, loadModelIntel, estimateBurnRate };
 export { HEALTH_ENDPOINTS, pingProvider, resolveProviderKey, loadBudget };
+export { findHealthyFallback, applyProviderDownSwaps, revertProviderDownSwaps };
 
 // --- CLI ---
 

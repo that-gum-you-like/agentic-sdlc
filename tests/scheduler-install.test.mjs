@@ -127,6 +127,13 @@ test('buildUnits bakes pathDirs into the unit PATH (rc=127 hermes/gh fix)', () =
   assert(u.onCalendar === '*-*-* *:7,27,47:00', `comma-list OnCalendar, got ${u.onCalendar}`);
 });
 
+test('service unit waits for network/DNS at boot', () => {
+  const u = buildUnits({ name: 'x', cron: '0 6 * * *', script: 'node ~/a.mjs' }, { repoDir: '/r', nodeBin: '/n/node', home: '/h' });
+  assert(/^Wants=network-online\.target$/m.test(u.service), 'missing Wants=network-online.target');
+  assert(/^After=network-online\.target$/m.test(u.service), 'missing After=network-online.target');
+  assert(/^ExecStartPre=-.*getent hosts/m.test(u.service), 'missing DNS-wait ExecStartPre');
+});
+
 // --- schedule loads and every entry translates ---
 test('loadSchedule returns jobs and all cron exprs translate', () => {
   const { jobs, source } = loadSchedule();

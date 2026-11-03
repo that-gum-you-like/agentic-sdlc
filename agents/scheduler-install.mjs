@@ -154,8 +154,16 @@ export function buildUnits(job, { repoDir, nodeBin, home, pathDirs }) {
   const nodeDir = dirname(nodeBin);
   const path = [...new Set([nodeDir, ...(pathDirs || []), '/usr/local/bin', '/usr/bin', '/bin'])].join(':');
 
+  // Boot race: at login every Persistent=true timer catches up at once, before DNS is up
+  // (getaddrinfo EAI_AGAIN). Wants/After=network-online.target is declared as the
+  // canonical ordering, BUT in a `systemctl --user` manager that target is a system unit
+  // the user manager does not order against, so on its own it is a no-op. The effective
+  // guard is therefore the ExecStartPre below: wait up to 60s for DNS to resolve. The
+  // leading '-' makes it best-effort (offline machine still runs the job and fails
+  // normally rather than being skipped). (Type=oneshot has no start timeout by default.)
   const service = `[Unit]
 Description=Agentic SDLC — ${job.description || job.name}
+Wants=network-online.target
 After=network-online.target
 
 [Service]
@@ -164,6 +172,7 @@ WorkingDirectory=${repoDir}
 Environment=PATH=${path}
 Environment=SDLC_PROJECT_DIR=${repoDir}
 EnvironmentFile=-%h/.hermes/.env
+ExecStartPre=-/usr/bin/timeout 60 /bin/sh -c 'until getent hosts openrouter.ai >/dev/null 2>&1; do sleep 2; done'
 ExecStart=${execStart}
 `;
 
