@@ -400,13 +400,13 @@ test('findOverlaps: shared file lists the later PR (merge order); disjoint -> []
 
 // --- CV-405: overlap deferral ------------------------------------------------
 
-test('deferralFor: later PR deferred; earlier PR and settled (merged) earlier are not', () => {
+test('deferralFor: later PR deferred one run only behind an earlier PR that merged this run', () => {
   const overlaps = [{ later: 6, earlier: 5, files: ['agents/health-check.mjs'] }];
-  const d = deferralFor(6, overlaps);
-  assert(d && d.earlier.join() === '5' && d.files[0] === 'agents/health-check.mjs', 'later deferred');
-  assert(deferralFor(5, overlaps) === null, 'earlier is reviewed normally');
-  assert(deferralFor(6, overlaps, new Set([5])) === null, 'after earlier merges, later is reviewed');
-  assert(deferralFor(7, overlaps) === null, 'unrelated PR');
+  const d = deferralFor(6, overlaps, new Set([5]));
+  assert(d && d.earlier.join() === '5' && d.files[0] === 'agents/health-check.mjs', 'later deferred to re-gate on new base');
+  assert(deferralFor(5, overlaps, new Set([5])) === null, 'earlier is reviewed normally');
+  assert(deferralFor(6, overlaps) === null, 'an earlier PR that did NOT merge (flagged/rejected) never wedges the later one');
+  assert(deferralFor(7, overlaps, new Set([5])) === null, 'unrelated PR');
 });
 
 test('postDeferralOnce: second pass posts no second comment; dry run posts none', () => {

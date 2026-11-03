@@ -377,12 +377,15 @@ export function findOverlaps(prs) {
 const DEFERRED_MARKER = '<!-- pr-auto-review-deferred';
 
 /**
- * Is `prNumber` the LATER side of an overlap with a still-open earlier PR?
- * `settled` holds PR numbers already merged this run (their base change is in,
- * so they no longer block). Returns {earlier, files} or null.
+ * Is `prNumber` the LATER side of an overlap with a PR that MERGED earlier in
+ * this run? Then defer it one run, so its gate runs against the new base.
+ * An overlapping earlier PR that did NOT merge (flagged, rejected, errored)
+ * never blocks: it may never merge, and deferring behind it would wedge this
+ * PR forever — the hardGate already tests head merged with the current base.
+ * `mergedThisRun` holds PR numbers merged this run. Returns {earlier, files} or null.
  */
-export function deferralFor(prNumber, overlaps, settled = new Set()) {
-  const hits = (overlaps || []).filter(o => o.later === prNumber && !settled.has(o.earlier));
+export function deferralFor(prNumber, overlaps, mergedThisRun = new Set()) {
+  const hits = (overlaps || []).filter(o => o.later === prNumber && mergedThisRun.has(o.earlier));
   if (!hits.length) return null;
   const earlier = [...new Set(hits.map(h => h.earlier))].sort((a, b) => a - b);
   const files = [...new Set(hits.flatMap(h => h.files))].sort();
@@ -391,9 +394,9 @@ export function deferralFor(prNumber, overlaps, settled = new Set()) {
 
 export function buildDeferralComment({ earlier, files }) {
   return `${DEFERRED_MARKER} earlier:${earlier.join(',')} -->\n## Deferred (pr-auto-review)\n\n`
-    + `This PR changes files that open PR(s) ${earlier.map(n => `#${n}`).join(', ')} also change, and those merge first:\n`
+    + `This PR changes files that ${earlier.map(n => `#${n}`).join(', ')} just merged:\n`
     + `${files.map(f => `- \`${f}\``).join('\n')}\n\n`
-    + '_No action needed: this is not a rejection. Once they merge or close, this PR is gated against the new base._';
+    + '_No action needed: this is not a rejection. The next run gates this PR against the new base._';
 }
 
 /** Post the deferral comment once per (PR, earlier set). Best-effort; returns true if posted. */
@@ -676,7 +679,7 @@ async function reviewPr(pr, ctx) {
 
   // 0) Overlap with an earlier open PR (CV-REQ-052): defer, never reject —
   // no rejection count, no FIX task; reviewed normally once the earlier one lands.
-  const deferral = deferralFor(pr.number, ctx.overlaps, ctx.settled);
+  const deferral = deferralFor(pr.number, ctx.overlaps, ctx.mergedThisRun);
   if (deferral) {
     record.action = 'deferred-overlap';
     record.detail = `overlaps ${deferral.earlier.map(n => `#${n}`).join(', ')}: ${deferral.files.join(', ')}`;
@@ -846,16 +849,16 @@ export async function runAutoReview({ dryRun = false } = {}) {
     const ordered = orderPrsWithFetch(prs,
       (n) => ghJson(['pr', 'view', String(n), '--json', 'files,additions,deletions']), log);
     const overlaps = findOverlaps(ordered);
-    const settled = new Set();
+    const mergedThisRun = new Set();
     for (const pr of ordered) {
       if (merges >= MAX_AUTO_MERGES) { log(`merge rate limit (${MAX_AUTO_MERGES}) reached — deferring the rest`); break; }
       let res;
       try {
-        res = await reviewPr(pr, { repoDir, cloneDir, log, dryRun, testCmd, overlaps, settled });
+        res = await reviewPr(pr, { repoDir, cloneDir, log, dryRun, testCmd, overlaps, mergedThisRun });
       } catch (err) {
         res = { ts: new Date().toISOString(), pr: pr.number, branch: pr.headRefName, action: 'error', detail: err.message };
       }
-      if (res.action === 'merged') { merges++; settled.add(pr.number); }
+      if (res.action === 'merged') { merges++; mergedThisRun.add(pr.number); }
       log(`PR #${res.pr}: ${res.action}${res.detail ? ` — ${res.detail}` : ''}`);
       record(res);
       results.push(res);
