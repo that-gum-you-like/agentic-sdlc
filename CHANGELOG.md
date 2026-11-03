@@ -14,3 +14,4 @@
 - 2026-11-03 #93 feat(cycles): add runWeeklySteps export + call from main() (CV-103) (backend)
 - 2026-11-03 #94 fix(cycles): read weekly-review reviews from the sdlc-reviewer agent dir (CV-104) (backend)
 - 2026-11-03 #95 CV-105: move BASELINES_PATH to agents/behavior-baselines.json (tracked) (backend)
+- 2026-11-03 #96 refactor(monthly-review): extract buildMonthlySteps({dryRun}) from main() (backend)

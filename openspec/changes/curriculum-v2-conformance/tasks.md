@@ -298,7 +298,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-106
   - Complexity: S
 
-- [ ] **CV-108**: Refactor monthly-review main() step list into exported pure `buildMonthlySteps({dryRun})` with no behavior change
+- [x] **CV-108**: Refactor monthly-review main() step list into exported pure `buildMonthlySteps({dryRun})` with no behavior change
   - **Priority:** HIGH
   - Files: `agents/cycles/monthly-review.mjs, agents/__tests__/monthly-review.test.mjs`
   - Spec: CV-REQ-011, CV-REQ-013

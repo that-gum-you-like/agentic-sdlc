@@ -3,7 +3,7 @@
   "title": "Refactor monthly-review main() step list into exported pure `buildMonthlySteps({dryRun})` with no behavior change",
   "description": "- [ ] **CV-108**: Refactor monthly-review main() step list into exported pure `buildMonthlySteps({dryRun})` with no behavior change\n  - **Priority:** HIGH\n  - Files: `agents/cycles/monthly-review.mjs, agents/__tests__/monthly-review.test.mjs`\n  - Spec: CV-REQ-011, CV-REQ-013\n  - Gaps: D7-01, D7-20\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: steps equal today's list (behavior audit, drift, snapshot, migration check); dryRun omits snapshot\n  - Parallel: blocked-by CV-101\n  - Complexity: S",
   "priority": "HIGH",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-2"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-9.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-03T23:59:18.073Z"
 }
