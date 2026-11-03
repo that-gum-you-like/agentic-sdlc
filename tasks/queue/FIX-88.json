@@ -1,0 +1,24 @@
+{
+  "id": "FIX-88",
+  "phase": 1,
+  "title": "Fix rejected drain PR #88 (agent/drain/OS-curriculum-v2-conformance-19)",
+  "assignee": "sdlc-developer",
+  "priority": "CRITICAL",
+  "estimatedTokens": 16000,
+  "files": [],
+  "blockedBy": [],
+  "created": "2026-11-03T22:21:18.377Z",
+  "tags": [
+    "auto-fix"
+  ],
+  "description": "Drain PR #88 (branch `agent/drain/OS-curriculum-v2-conformance-19`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-19 && git checkout agent/drain/OS-curriculum-v2-conformance-19`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-19` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- regex pattern fails to match existing sections with content\n- incorrect handling of section content replacement\n- does not properly escape regex special characters in replacement\n- test coverage incomplete for edge cases",
+  "attempts": 1,
+  "status": "pending",
+  "fixFor": {
+    "pr": 88,
+    "branch": "agent/drain/OS-curriculum-v2-conformance-19",
+    "headSha": "ed9d2d8f8c5d2a59f5e77e6ab9a0c18387a326da",
+    "sourceTask": "OS-curriculum-v2-conformance-19",
+    "rejectionKind": "llm-rejected"
+  }
+}
