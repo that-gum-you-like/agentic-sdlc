@@ -155,6 +155,87 @@ export function openspecStatusTable(changesDir) {
   ].join('\n');
 }
 
+/**
+ * Name pattern that marks an OpenSpec change as a bug record.
+ * `bug-*` covers drain/scaffolded defects; `prod-error-*` covers production
+ * incident records — both are tracked the same way for the dashboard.
+ * Archived changes are date-prefixed (`2026-01-01-bug-…`), so an optional
+ * leading `YYYY-MM-DD-` is accepted.
+ */
+const BUG_CHANGE_PATTERN = /^(?:\d{4}-\d{2}-\d{2}-)?(?:bug-|prod-error-)/i;
+
+function isBugChange(name) {
+  return BUG_CHANGE_PATTERN.test(String(name));
+}
+
+/**
+ * Build the body of the dashboard's `## Bug metrics` section (CV-120 / CV-REQ-020).
+ *
+ * Pure with respect to the running daily review: it reads only the two trees it
+ * is given — no config, no dashboard write, no globals — so callers and tests
+ * can point it at any OpenSpec/queue pair.
+ *
+ * A bug counts as *resolved* once its change is archived; the resolution rate is
+ * `archived / (active + archived)`. When there is no denominator the rate renders
+ * `none` instead of a number, so "no bugs recorded" cannot look like "0% resolved"
+ * and never renders `NaN`.
+ *
+ * FIX-* queue tasks are split into completed and pending: anything not
+ * `completed` (pending, in-progress, blocked) is counted as pending, because a
+ * blocked repair is still outstanding work, not a finished one.
+ *
+ * @param {string} changesDir path to `openspec/changes`
+ * @param {string} queueDir path to `tasks/queue`
+ * @returns {string} markdown counts line + metric table
+ */
+export function bugMetrics(changesDir, queueDir) {
+  const active = [];
+  const archived = [];
+
+  if (existsSync(changesDir)) {
+    for (const entry of readdirSync(changesDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name !== 'archive' && isBugChange(entry.name)) active.push(entry.name);
+    }
+    const archiveDir = resolve(changesDir, 'archive');
+    if (existsSync(archiveDir)) {
+      for (const entry of readdirSync(archiveDir, { withFileTypes: true })) {
+        if (entry.isDirectory() && isBugChange(entry.name)) archived.push(entry.name);
+      }
+    }
+  }
+
+  const total = active.length + archived.length;
+  const resolutionRate = total === 0 ? 'none' : `${Math.round((archived.length / total) * 100)}%`;
+
+  let pendingFix = 0;
+  let completedFix = 0;
+  if (existsSync(queueDir)) {
+    for (const entry of readdirSync(queueDir, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith('.json') || !entry.name.startsWith('FIX-')) continue;
+      let task;
+      try {
+        task = JSON.parse(readFileSync(resolve(queueDir, entry.name), 'utf8'));
+      } catch {
+        continue; // unreadable task file — skip rather than break the whole report
+      }
+      const id = typeof task?.id === 'string' ? task.id : entry.name.replace(/\.json$/, '');
+      if (!id.startsWith('FIX-')) continue;
+      if (task.status === 'completed') completedFix += 1;
+      else pendingFix += 1;
+    }
+  }
+
+  return [
+    `Active: ${active.length} | Archived: ${archived.length} | Resolution rate: ${resolutionRate}`,
+    '',
+    '| Metric | Count |',
+    '|--------|-------|',
+    `| Pending FIX tasks | ${pendingFix} |`,
+    `| Completed FIX tasks | ${completedFix} |`,
+  ].join('\n');
+}
+
 function loadTasks() {
   const tasksDir = getConfig().tasksDir;
   const tasks = [];
