@@ -315,9 +315,10 @@ function dryRunFixture(tasks) {
   const git = (...args) => execFileSync('git', args, { cwd: tmp, encoding: 'utf8' });
   git('init', '-q', '-b', 'main');
   git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init');
-  const run = () => execFileSync('bash', [script, '--dry-run'], {
+  const run = (extra = {}) => execFileSync('bash', [script, '--dry-run'], {
     cwd: tmp, encoding: 'utf8', timeout: 60000,
-    env: { ...process.env, SDLC_REPO: tmp, SDLC_LOCK_DIR: join(lock, 'l.d'), HERMES_DRAIN_HOME: home },
+    env: { ...process.env, SDLC_REPO: tmp, SDLC_LOCK_DIR: join(lock, 'l.d'), HERMES_DRAIN_HOME: home,
+      SDLC_DRAIN_SKIPS: join(lock, 'no-skips.txt'), ...extra },
   });
   const cleanup = () => { for (const d of [tmp, lock, home]) rmSync(d, { recursive: true, force: true }); };
   return { run, cleanup };
@@ -376,3 +377,17 @@ test('bash substitution keeps &, backslash and / from AGENT.md verbatim (CV-802)
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
+
+test('a task the worker gave up on is skipped next time, not re-picked forever (skip ledger)', () => {
+  const f = dryRunFixture([
+    { id: 'T-1', priority: 'CRITICAL' },
+    { id: 'T-2', priority: 'LOW' },
+  ]);
+  const ledger = join(mkdtempSync(join(tmpdir(), 'skips-')), 'skips.txt');
+  writeFileSync(ledger, 'T-1\n');
+  try {
+    assert(/selected task: T-2 /.test(f.run({ SDLC_DRAIN_SKIPS: ledger })), 'T-1 is in the skip ledger');
+  } finally { f.cleanup(); }
+  const src = readFileSync(script, 'utf8');
+  assert(/DRAIN: \(skipped\|blocked\) \$TASK_ID/.test(src) && />> "\$SKIP_LEDGER"/.test(src), 'a give-up is recorded in the ledger');
+});

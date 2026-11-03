@@ -119,7 +119,13 @@ PROMPT_SCRIPTS_DIR="$SCRIPTS_DIR"
 # Exclude NON-FIX tasks whose agent/drain/<id> PR is already open (a task stays
 # `pending` on the base branch until its PR merges). FIX-* tasks are never excluded.
 open_heads="$(gh pr list --search 'head:agent/drain/' --state open --json headRefName -q '.[].headRefName' 2>/dev/null || true)"
+# Skip ledger: a task the worker gave up on ("DRAIN: skipped <id>" / "DRAIN: blocked <id>")
+# only records that in the CLONE's queue, which the next reset wipes — and selection is
+# deterministic, so without this the same task is re-picked every run, forever.
+SKIP_LEDGER="${SDLC_DRAIN_SKIPS:-$FRAMEWORK_REPO/pm/drain-skips-$PROJECT_NAME.txt}"
+skipped_ids="$(cat "$SKIP_LEDGER" 2>/dev/null | paste -sd, -)"
 exclude_ids="$(printf '%s\n' "$open_heads" | sed -n 's#^agent/drain/##p' | grep -v '^FIX-' | paste -sd, -)"
+exclude_ids="$(printf '%s,%s' "$exclude_ids" "$skipped_ids" | tr ',' '\n' | grep -v '^$' | sort -u | paste -sd, -)"
 
 # select_task <project-dir> — sets TASK_ID and AGENT (empty TASK_ID = nothing selectable).
 select_task() {   # $1 = project dir, $2 = dir holding queue-drainer.mjs
@@ -273,6 +279,12 @@ guard_snapshot "$FRAMEWORK_REPO" "$REPO"
   timeout 3600 hermes -z "$prompt_text" --cli --yolo ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} ) > "$logfile" 2>&1
 rc=$?
 tail -3 "$logfile" 2>/dev/null | sed 's/^/[hermes-drain]   /'
+
+if grep -qE "DRAIN: (skipped|blocked) $TASK_ID\b" "$logfile" 2>/dev/null; then
+  mkdir -p "$(dirname "$SKIP_LEDGER")" && echo "$TASK_ID" >> "$SKIP_LEDGER"
+  log "worker gave up on $TASK_ID — added to skip ledger $SKIP_LEDGER (remove the line to retry)"
+  [ "$rc" -eq 0 ] && rc=96   # surface it: the failure path notifies once with the log tail
+fi
 
 trespass="$(guard_check "drain-trespass-$ts")"
 if [ -n "$trespass" ]; then
