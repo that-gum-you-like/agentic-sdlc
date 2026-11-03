@@ -78,7 +78,8 @@ function readChecklist() {
 // these are the countable signals whose movement flags a behavioral shift when
 // a prompt is edited. Threshold: >20% relative change vs the recorded baseline.
 
-const BASELINES_PATH = resolve(config.projectDir, 'pm', 'behavior-baselines.json');
+const BASELINES_PATH = resolve(config.projectDir, 'agents', 'behavior-baselines.json');
+const LEGACY_BASELINES_PATH = resolve(config.projectDir, 'pm', 'behavior-baselines.json');
 const DRIFT_THRESHOLD = 0.20;
 
 // Words signalling discipline vs overconfidence — counted per 100 lines.
@@ -102,8 +103,14 @@ function computeAgentMetrics(agent) {
 }
 
 function loadBaselines() {
-  if (!existsSync(BASELINES_PATH)) return null;
-  try { return JSON.parse(readFileSync(BASELINES_PATH, 'utf8')); } catch { return null; }
+  // New path takes priority; fall back to legacy pm/ path for existing deployments.
+  if (existsSync(BASELINES_PATH)) {
+    try { return JSON.parse(readFileSync(BASELINES_PATH, 'utf8')); } catch { return null; }
+  }
+  if (existsSync(LEGACY_BASELINES_PATH)) {
+    try { return JSON.parse(readFileSync(LEGACY_BASELINES_PATH, 'utf8')); } catch { return null; }
+  }
+  return null;
 }
 
 function recordBaselines() {
