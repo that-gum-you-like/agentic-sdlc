@@ -408,11 +408,12 @@ describe('4. scope-creep edge cases', () => {
       makeTask('T-010', 'richmond', makeChecklist('T-010', 'richmond', {
         memoryRecall: { used: true },
         browserE2E: { used: true },
-      })),
+      }), '2026-01-01T00:00:01.000Z'),
+      // explicit timestamps: two `new Date()` calls straddle a ms boundary under load and flip the order
       makeTask('T-011', 'richmond', makeChecklist('T-011', 'richmond', {
         memoryRecall: { used: true },
         costTracking: { used: true },
-      })),
+      }), '2026-01-01T00:00:00.000Z'),
     ];
     const systemLog = [
       makeSysEntry('memoryRecall', 'richmond', 'T-010'),
