@@ -298,6 +298,65 @@ export function hardGate(cloneDir, headRef, testCmd = 'npm test') {
 }
 
 // ---------------------------------------------------------------------------
+// Merge order (CV-REQ-051): infra, backend, frontend, docs-tests; small first
+// ---------------------------------------------------------------------------
+
+/** Merge-order rank: earlier entries merge first. */
+export const DOMAIN_ORDER = ['infra', 'backend', 'frontend', 'docs-tests'];
+
+function pathOf(f) { return typeof f === 'string' ? f : (f && f.path) || ''; }
+
+/** Domain of ONE path. Unknown paths rank last (docs-tests). */
+function classifyPath(path) {
+  const p = String(path).replace(/^\.\//, '');
+  const base = p.split('/').pop();
+  if (/^\.github\//.test(p) || /^scripts\//.test(p) || /\.sh$/.test(p) || /(^|\/)systemd(\/|$)/.test(p)
+    || /cron-schedule/.test(base) || base === 'package.json') return 'infra';
+  if (/(^|\/)(tests?|__tests__)\//.test(p) || /\.test\.[cm]?[jt]sx?$/.test(p) || /\.md$/i.test(p)) return 'docs-tests';
+  if (/\.(tsx|css)$/.test(p) || /(^|\/)ui\/web\/components\//.test(p)) return 'frontend';
+  if (/^agents\/[^/]+\.mjs$/.test(p) || /^lib\//.test(p) || /(^|\/)lib\//.test(p) || /^agents\//.test(p)) return 'backend';
+  return 'docs-tests';
+}
+
+/** Domain of a PR: the highest-rank (earliest in DOMAIN_ORDER) domain among its files. */
+export function classifyDomain(files) {
+  let best = DOMAIN_ORDER.length - 1;
+  for (const f of files || []) {
+    const idx = DOMAIN_ORDER.indexOf(classifyPath(pathOf(f)));
+    if (idx >= 0 && idx < best) best = idx;
+  }
+  return DOMAIN_ORDER[best];
+}
+
+/** Pure ordering: domain rank, then additions+deletions ascending, then PR number. */
+export function orderPrs(prs) {
+  const key = (pr) => ({
+    rank: DOMAIN_ORDER.indexOf(classifyDomain(pr.files)),
+    size: (Number(pr.additions) || 0) + (Number(pr.deletions) || 0),
+    n: pr.number,
+  });
+  return [...prs].sort((a, b) => {
+    const ka = key(a), kb = key(b);
+    return ka.rank - kb.rank || ka.size - kb.size || ka.n - kb.n;
+  });
+}
+
+/**
+ * Order PRs for merging, fetching files/sizes per PR via `fetchDetails(number)`
+ * (gh pr view --json files,additions,deletions). Any fetch failure falls back
+ * to plain number order and says so via `log` — ordering must never block a run.
+ */
+export function orderPrsWithFetch(prs, fetchDetails, log = () => {}) {
+  try {
+    const detailed = prs.map(pr => ({ ...pr, ...fetchDetails(pr.number) }));
+    return orderPrs(detailed);
+  } catch (err) {
+    log(`merge-order fetch failed (${err.message}) — falling back to PR number order`);
+    return [...prs].sort((a, b) => a.number - b.number);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Dedicated review clone (TOTAL isolation from the main working tree)
 // ---------------------------------------------------------------------------
 //
@@ -669,7 +728,9 @@ export async function runAutoReview({ dryRun = false } = {}) {
     log(`${prs.length} open drain PR(s)`);
 
     let merges = 0;
-    for (const pr of prs.sort((a, b) => a.number - b.number)) {
+    const ordered = orderPrsWithFetch(prs,
+      (n) => ghJson(['pr', 'view', String(n), '--json', 'files,additions,deletions']), log);
+    for (const pr of ordered) {
       if (merges >= MAX_AUTO_MERGES) { log(`merge rate limit (${MAX_AUTO_MERGES}) reached — deferring the rest`); break; }
       let res;
       try {

@@ -28,6 +28,10 @@ import {
   DIFF_CHAR_LIMIT,
   hardGate,
   detectBaseBranch,
+  classifyDomain,
+  DOMAIN_ORDER,
+  orderPrs,
+  orderPrsWithFetch,
 } from '../agents/pr-auto-review.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -338,6 +342,39 @@ test('hardGate: branch already up to date behaves as before', () => {
   git(d, 'clone', '-q', origin, clone);
   assert(hardGate(clone, 'feat', 'test -f feat.txt').passed, 'up-to-date branch passes');
   assert(!hardGate(clone, 'feat', 'false').passed, 'failing tests still fail');
+});
+
+// --- CV-402/403: domain classification + merge order --------------------------
+
+test('classifyDomain: highest-rank domain among files wins', () => {
+  assert(DOMAIN_ORDER.join() === 'infra,backend,frontend,docs-tests', 'DOMAIN_ORDER');
+  assert(classifyDomain(['agents/a.mjs', 'README.md']) === 'backend', 'backend beats docs');
+  assert(classifyDomain(['.github/x.yml', 'agents/a.mjs']) === 'infra', 'infra beats backend');
+  assert(classifyDomain([{ path: 'ui/web/components/B.tsx' }, { path: 'tests/a.test.mjs' }]) === 'frontend', 'frontend beats tests, objects accepted');
+  assert(classifyDomain(['agents/x.mjs', 'styles/a.css']) === 'backend', 'backend beats frontend');
+  assert(classifyDomain(['docs/a.md', 'tests/x.test.mjs']) === 'docs-tests', 'docs-tests');
+  assert(classifyDomain(['agents/hermes-drain.sh']) === 'infra', '*.sh is infra');
+  assert(classifyDomain(['package.json']) === 'infra', 'package.json is infra');
+  assert(classifyDomain(['agents/cron-schedule.json']) === 'infra', 'cron-schedule is infra');
+  assert(classifyDomain(['agents/__tests__/a.test.mjs']) === 'docs-tests', 'agents tests are tests');
+  assert(classifyDomain([]) === 'docs-tests', 'empty is lowest');
+});
+
+test('orderPrs: domain rank, then size ascending, then number', () => {
+  const pr = (number, path, additions, deletions = 0) => ({ number, files: [{ path }], additions, deletions });
+  const out = orderPrs([pr(9, 'a.tsx', 20), pr(12, 'scripts/x.sh', 500), pr(4, 'agents/b.mjs', 90), pr(3, 'agents/c.mjs', 40, 10), pr(2, 'agents/d.mjs', 50)]);
+  assert(out.map(p => p.number).join() === '12,2,3,4,9', `got ${out.map(p => p.number)}`);
+});
+
+test('orderPrsWithFetch: fetched details order; fetch failure falls back to number order and logs', () => {
+  const base = [{ number: 12 }, { number: 9 }];
+  const detail = { 9: { files: [{ path: 'a.tsx' }], additions: 20, deletions: 0 }, 12: { files: [{ path: '.github/w.yml' }], additions: 500, deletions: 0 } };
+  assert(orderPrsWithFetch(base, n => detail[n]).map(p => p.number).join() === '12,9', 'infra first');
+  const logs = [];
+  const out = orderPrsWithFetch(base, () => { throw new Error('gh down'); }, m => logs.push(m));
+  assert(out.map(p => p.number).join() === '9,12', 'number order on failure');
+  assert(logs.length === 1 && /gh down/.test(logs[0]), 'failure logged');
+  assert(!/prs\.sort\(\(a, b\) => a\.number - b\.number\)/.test(source), 'old sort site replaced');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
