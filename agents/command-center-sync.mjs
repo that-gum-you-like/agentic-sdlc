@@ -49,7 +49,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import { runKanban, sync as bridgeSync, readTasks, nsKey } from './kanban-bridge.mjs';
+import { runKanban, sync as bridgeSync, readTasks, nsKey, adoptBareLink } from './kanban-bridge.mjs';
 import { buildRegistry } from './agent-registry.mjs';
 import * as portfolioModule from './portfolio.mjs';
 
@@ -561,7 +561,7 @@ export function linkQueueTasks(state, changeList) {
   const names = changeList.map((c) => c.name);
   let linked = 0;
   for (const task of readTasks()) {
-    const taskKid = links[nsKey(task.id)];
+    const taskKid = adoptBareLink(links, task.id);
     if (!taskKid) continue;
     const tags = (task.tags || []).map(String);
     const hay = `${tags.join(' ')} ${task.description || ''}`;

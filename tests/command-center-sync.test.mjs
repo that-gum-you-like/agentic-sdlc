@@ -584,6 +584,43 @@ test('CC-003 REQ-005: bespoke nels-workshop-kanban-sync removed; kanban-sync run
   const ks = cron.schedules.find((s) => s.name === 'kanban-sync');
   assert(ks && ks.script.includes('sync --all'), `kanban-sync runs --all, got: ${ks && ks.script}`);
 });
+
+// Pre-existing BARE-key cards (minted before sync --all) must be adopted, not duplicated.
+const projC = join(allFixtures, 'projC');
+mkdirSync(join(projC, 'tasks', 'queue'), { recursive: true });
+mkdirSync(join(projC, 'pm'), { recursive: true });
+for (const id of ['C-1', 'C-2']) {
+  writeFileSync(join(projC, 'tasks', 'queue', `${id}.json`), JSON.stringify({ id, title: `task ${id}`, status: 'pending' }));
+}
+writeFileSync(join(projC, 'pm', 'kanban-links.json'), JSON.stringify({ 'C-1': 't_old1', 'C-2': 't_old2' }));
+writeFileSync(listFile, JSON.stringify([{ id: 't_old1', status: 'todo' }, { id: 't_old2', status: 'todo' }]));
+process.env.HERMES_LIST_FILE = listFile;
+writeFileSync(join(proj, 'portfolio.json'), JSON.stringify({
+  version: 1,
+  projects: [{ name: 'projC', owner: 'self', stage: 'build', enabled: true, path: projC }],
+}));
+writeFileSync(hermesLog, '');
+const rC1 = cc.syncAllProjects();
+const linksC = () => JSON.parse(readFileSync(join(projC, 'pm', 'kanban-links.json'), 'utf8'));
+test('CC-003 bare-key adoption: pre-existing bare links create zero new cards under sync --all', () => {
+  assert(rC1.synced.length === 1 && rC1.synced[0].ok, `projC synced: ${JSON.stringify(rC1.synced)}`);
+  const keys = logLines().filter((a) => a[1] === 'create').map((a) => a[a.indexOf('--idempotency-key') + 1]);
+  assert(!keys.includes('projC:C-1') && !keys.includes('projC:C-2'), `no duplicate task cards, got: ${keys.join(' ')}`);
+});
+test('CC-003 bare-key adoption: link map re-keyed to namespaced keys, same card ids', () => {
+  const l = linksC();
+  assertEqual(l['projC:C-1'], 't_old1');
+  assertEqual(l['projC:C-2'], 't_old2');
+  assert(!('C-1' in l) && !('C-2' in l), 'bare keys removed');
+});
+test('CC-003 bare-key adoption: second run is idempotent (no creates for tasks, links unchanged)', () => {
+  writeFileSync(hermesLog, '');
+  cc.syncAllProjects();
+  const keys = logLines().filter((a) => a[1] === 'create').map((a) => a[a.indexOf('--idempotency-key') + 1]);
+  assert(!keys.some((k) => /^projC:C-\d$/.test(k)), `no task creates on re-run, got: ${keys.join(' ')}`);
+  assertEqual(JSON.stringify(linksC()), JSON.stringify({ 'projC:C-1': 't_old1', 'projC:C-2': 't_old2' }));
+});
+delete process.env.HERMES_LIST_FILE;
 rmSync(allFixtures, { recursive: true, force: true });
 
 console.log('\n📋 command-center-sync: status (dry-run) + degradation');

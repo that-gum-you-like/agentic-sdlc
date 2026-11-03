@@ -13,7 +13,7 @@
  * namespaces every idempotency key so identical task ids across portfolio
  * projects never collide on the shared board (see nsKey).
  *
- * Exports (for tests): mapStatus, mapPriority, runKanban, readTasks, cardTitle, sync, statusReport, nsKey
+ * Exports (for tests): mapStatus, mapPriority, runKanban, readTasks, cardTitle, sync, statusReport, nsKey, adoptBareLink
  */
 
 import { spawnSync } from 'node:child_process';
@@ -37,6 +37,22 @@ const LINKS_PATH = join(PM_DIR, 'kanban-links.json');
  */
 export function nsKey(key) {
   return PROJECT_NAMESPACE ? `${PROJECT_NAMESPACE}:${key}` : key;
+}
+
+/**
+ * Resolve the existing card id for a namespaced key, falling back to the BARE
+ * key's link and migrating it (re-key the entry to the namespaced key). Cards
+ * minted before `sync --all` carry bare keys; without this every one of them
+ * would be duplicated on the first namespaced run. No-op without a namespace.
+ */
+export function adoptBareLink(links, bareKey) {
+  const key = nsKey(bareKey);
+  if (links[key]) return links[key];
+  if (key !== bareKey && links[bareKey]) {
+    links[key] = links[bareKey];
+    delete links[bareKey];
+  }
+  return links[key] || null;
 }
 
 // SDLC status -> kanban lane. `verb` is the CLI verb used to move an existing
@@ -123,6 +139,10 @@ export function cardTitle(task) {
 /** Upsert one task, then reconcile its lane only if it differs. */
 function syncTask(task, links, boardById) {
   const key = nsKey(task.id);
+  const existing = adoptBareLink(links, task.id);
+  // An already-linked card is reused as-is: no create call, so the bare-key
+  // card is never duplicated under the namespaced idempotency key.
+  if (PROJECT_NAMESPACE && existing && boardById[existing]) return reconcileLane(task, existing, boardById);
   const args = ['create', cardTitle(task), '--idempotency-key', key, '--json'];
   if (task.description) args.push('--body', String(task.description).slice(0, 4000));
   if (task.assignee) args.push('--assignee', String(task.assignee));
@@ -135,7 +155,11 @@ function syncTask(task, links, boardById) {
   const kid = kanbanId(created);
   if (!kid) throw new Error(`no kanban id returned for ${task.id}`);
   links[key] = kid;
+  return reconcileLane(task, kid, boardById, true);
+}
 
+function reconcileLane(task, kid, boardById, freshCreate = false) {
+  const target = mapStatus(task.status);
   const currentLane = boardById[kid] && boardById[kid].status;
   let moved = false;
   if (currentLane !== target.lane && target.verb) {
@@ -143,7 +167,7 @@ function syncTask(task, links, boardById) {
     else if (target.verb === 'block') runKanban(['block', kid, 'blocked in SDLC ledger']);
     moved = true;
   }
-  return { id: task.id, kid, lane: target.lane, created: !currentLane, moved };
+  return { id: task.id, kid, lane: target.lane, created: freshCreate && !currentLane, moved };
 }
 
 /** Best-effort reverse: reflect kanban done/blocked back into task JSON status only. */
@@ -202,7 +226,7 @@ export function statusReport() {
   for (const t of tasks) {
     const target = mapStatus(t.status);
     laneCounts[target.lane] = (laneCounts[target.lane] || 0) + 1;
-    const kid = links[nsKey(t.id)];
+    const kid = adoptBareLink(links, t.id);
     if (!kid || !boardById[kid]) toCreate++;
     else if (boardById[kid].status !== target.lane) toUpdate++;
   }
