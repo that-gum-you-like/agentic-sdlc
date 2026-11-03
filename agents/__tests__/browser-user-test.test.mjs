@@ -19,7 +19,7 @@ const AGENTS_DIR = resolve(__dirname, '..');
 const SCRIPT = join(AGENTS_DIR, 'browser-user-test.mjs');
 const TMP_PROJECT = join(tmpdir(), `sdlc-usertest-${process.pid}`);
 
-const { extractScenarios, buildSpecSource } = await import('../browser-user-test.mjs');
+const { extractScenarios, buildSpecSource, hasPlaywrightConfig } = await import('../browser-user-test.mjs');
 
 const PROPOSAL = `# Proposal: photo-upload
 
@@ -79,6 +79,44 @@ describe('buildSpecSource — per-step screenshot discipline', () => {
 
   it('bakes in the navigation-completeness final assertion', () => {
     assert.ok(source.includes('not.toBeEmpty'), 'final state must never be a blank page');
+  });
+});
+
+describe('hasPlaywrightConfig — config file detection', () => {
+  const configNames = ['playwright.config.js', 'playwright.config.ts', 'playwright.config.mjs', 'playwright.config.cjs'];
+
+  it('returns false for an empty directory', () => {
+    const dir = join(tmpdir(), `sdlc-haspwcfg-empty-${process.pid}`);
+    mkdirSync(dir, { recursive: true });
+    try {
+      assert.equal(hasPlaywrightConfig(dir), false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('returns true when any recognised config file exists', () => {
+    for (const name of configNames) {
+      const dir = join(tmpdir(), `sdlc-haspwcfg-${name.replace('.', '-')}-${process.pid}`);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, name), '// placeholder\n');
+      try {
+        assert.ok(hasPlaywrightConfig(dir), `${name} should be detected`);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('returns false for a directory with an unrelated file', () => {
+    const dir = join(tmpdir(), `sdlc-haspwcfg-other-${process.pid}`);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'jest.config.js'), '// placeholder\n');
+    try {
+      assert.equal(hasPlaywrightConfig(dir), false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

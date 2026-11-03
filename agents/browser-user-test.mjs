@@ -224,6 +224,18 @@ function playwrightAvailable(appPath) {
     || existsSync(join(appPath, 'node_modules', 'playwright'));
 }
 
+/**
+ * Check whether a directory contains a Playwright config file.
+ * Recognised filenames: playwright.config.js, playwright.config.ts,
+ * playwright.config.mjs, playwright.config.cjs.
+ * @param {string} dir — directory to scan
+ * @returns {boolean}
+ */
+export function hasPlaywrightConfig(dir) {
+  const names = ['playwright.config.js', 'playwright.config.ts', 'playwright.config.mjs', 'playwright.config.cjs'];
+  return names.some(name => existsSync(join(dir, name)));
+}
+
 function cmdRun(specPath, { dryRun = false } = {}) {
   const config = loadConfig();
   try { logCapabilityUsage('browserE2E', process.env.AGENT || 'system', specPath || 'all', 'browser-user-test.mjs', 'run'); } catch { /* advisory */ }
