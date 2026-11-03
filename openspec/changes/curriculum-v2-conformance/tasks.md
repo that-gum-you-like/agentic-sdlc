@@ -202,6 +202,13 @@ Items marked [x] are already done (2026-11-03). Unchecked items are Lane: intera
   - Parallel: blocked-by CV-006, CV-011
   - Complexity: S
 
+- [x] **CV-013**: Drain trespass guard — the worker never touches a human checkout (done 2026-11-03, incident-driven)
+  - **Priority:** CRITICAL
+  - Files: `agents/drain-trespass-guard.sh` (new), `agents/hermes-drain.sh`, `agents/drain-prompt.md`, `tests/drain-trespass-guard.test.mjs` (new)
+  - Lane: interactive
+  - Test: 5 guard scenarios (untouched, switched branch restored, drain commit backed-up never reset, human commit ignored, dirty tree not switched); hermes-drain suite 18/18
+  - Notes: 2026-11-03 13:14 a worker `cd`'d into ~/agentic-sdlc (prompt + CLAUDE.md name that absolute path), committed on main, reset it, and switched the checkout to its branch. Fix: the prompt never names the human checkout (framework drains use the clone's own scripts) + rule 0 + before/after guard (rc=97, outbox + notify). Follow-up worth considering: run the worker in a bubblewrap sandbox with human checkouts bind-mounted read-only.
+
 ### Phase 1: Cycles wired
 
 Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.json edits and the baseline recording are interactive.
