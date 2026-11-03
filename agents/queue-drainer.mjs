@@ -759,7 +759,7 @@ switch (cmd) {
     } catch { /* performance ledger is best-effort */ }
 
     console.log(`✅ Completed [${task.id}] ${task.title} (tests: passing)`);
-    triggerNotification('deployComplete', `✅ Task ${task.id} completed: ${task.title}`);
+    triggerNotification('taskComplete', `✅ Task ${task.id} completed: ${task.title}`);
     break;
   }
 

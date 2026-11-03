@@ -24,7 +24,8 @@
       "deployFailed": true,
       "deployRolledBack": true,
       "drainComplete": false,
-      "mergeComplete": false
+      "mergeComplete": false,
+      "taskComplete": false
     }
   },
   "humanWellness": {
