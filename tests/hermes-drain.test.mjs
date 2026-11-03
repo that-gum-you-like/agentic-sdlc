@@ -8,7 +8,7 @@
  * Run: node tests/hermes-drain.test.mjs
  */
 
-import { readFileSync, existsSync, statSync, constants, mkdtempSync, rmSync } from 'fs';
+import { readFileSync, existsSync, statSync, constants, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { accessSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { tmpdir } from 'os';
@@ -52,7 +52,7 @@ test('drain script carries the core safety guards', () => {
 test('drain prompt carries the self-healing fix-task procedure (REQ-SH-2)', () => {
   const p = readFileSync(prompt, 'utf8');
   assert(/## Fix tasks/.test(p), 'must have a Fix tasks section');
-  assert(/never skip a `FIX-\*` task for having an open PR/i.test(p), 'open-PR skip rule must exempt FIX-* tasks');
+  assert(readFileSync(script, 'utf8').includes("grep -v '^FIX-'"), 'open-PR exclusion (now done by the script, CV-REQ-120) must exempt FIX-* tasks');
   assert(/Do NOT create a new branch and do NOT open a new PR/i.test(p), 'fixes go to the EXISTING branch, never a second PR');
   assert(/fixFor/.test(p), 'must point the worker at the fixFor metadata');
   assert(/pushed fix for PR/.test(p), 'must define the fix-complete output contract');
@@ -298,6 +298,80 @@ test('framework project.json testCmd runs the full suite, and the script still r
   assert(cfg.testCmd === "node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs'", `testCmd must be the full suite, got: ${cfg.testCmd}`);
   const s = readFileSync(script, 'utf8');
   assert(/c\.testCmd\|\|"npm test"/.test(s), 'per-project testCmd override (default npm test) must remain');
+});
+
+// --- agent identity (curriculum-v2-conformance CV-REQ-120..122) ---
+function dryRunFixture(tasks) {
+  const tmp = mkdtempSync(join(tmpdir(), 'drain-dry-'));
+  const lock = mkdtempSync(join(tmpdir(), 'drain-dry-lock-'));
+  const home = mkdtempSync(join(tmpdir(), 'drain-dry-home-'));
+  execFileSync('mkdir', ['-p', join(tmp, 'agents'), join(tmp, 'tasks', 'queue')]);
+  writeFileSync(join(tmp, 'agents', 'project.json'), JSON.stringify({ name: 'fixture', agents: [] }));
+  writeFileSync(join(home, 'config.yaml'), '');
+  for (const t of tasks) {
+    writeFileSync(join(tmp, 'tasks', 'queue', `${t.id}.json`),
+      JSON.stringify({ title: t.id, description: '', status: 'pending', priority: 'HIGH', ...t }));
+  }
+  const git = (...args) => execFileSync('git', args, { cwd: tmp, encoding: 'utf8' });
+  git('init', '-q', '-b', 'main');
+  git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init');
+  const run = () => execFileSync('bash', [script, '--dry-run'], {
+    cwd: tmp, encoding: 'utf8', timeout: 60000,
+    env: { ...process.env, SDLC_REPO: tmp, SDLC_LOCK_DIR: join(lock, 'l.d'), HERMES_DRAIN_HOME: home },
+  });
+  const cleanup = () => { for (const d of [tmp, lock, home]) rmSync(d, { recursive: true, force: true }); };
+  return { run, cleanup };
+}
+
+test('dry-run logs the selected task and its agent, without an LLM call (CV-802)', () => {
+  const f = dryRunFixture([
+    { id: 'T-2', priority: 'LOW', agent: 'sdlc-developer' },
+    { id: 'T-1', priority: 'CRITICAL', agent: 'sdlc-documentarian' },
+  ]);
+  try {
+    const out = f.run();
+    assert(/selected task: T-1 \(agent sdlc-documentarian\)/.test(out), `expected T-1 + agent, got: ${out}`);
+    assert(!/invoking Hermes/.test(out), 'dry-run must stay LLM-free');
+  } finally { f.cleanup(); }
+});
+
+test('agent defaults to sdlc-developer when the task names none (CV-802)', () => {
+  const f = dryRunFixture([{ id: 'T-1' }]);
+  try {
+    assert(/selected task: T-1 \(agent sdlc-developer\)/.test(f.run()), 'no agent field -> sdlc-developer');
+  } finally { f.cleanup(); }
+});
+
+test('prompt template carries the identity placeholders and no hard-coded developer memory (CV-802)', () => {
+  const p = readFileSync(prompt, 'utf8');
+  for (const ph of ['{{TASK_ID}}', '{{AGENT}}', '{{AGENT_IDENTITY}}']) assert(p.includes(ph), `prompt must use ${ph}`);
+  assert(p.includes('## Your identity ({{AGENT}})'), 'identity section header');
+  assert(!/recall sdlc-developer/.test(p) && !/record sdlc-developer/.test(p), 'memory recall/record must use {{AGENT}}');
+  assert(p.includes('Your task is {{TASK_ID}}') && !/Pick one task/.test(p), 'the worker must not choose its task');
+  assert(/## Fix tasks/.test(p), 'FIX section stays');
+});
+
+test('script selects via queue-drainer next, substitutes identity without sed, -m only behind drainModel (CV-802)', () => {
+  const s = readFileSync(script, 'utf8');
+  for (const ph of ['TASK_ID', 'AGENT', 'AGENT_IDENTITY']) {
+    assert(s.includes(`\\{\\{${ph}\\}\\}`), `script must substitute {{${ph}}}`);
+  }
+  assert(!/sed[^\n]*AGENT_IDENTITY/.test(s), 'identity must not pass through sed');
+  assert(/queue-drainer\.mjs" next/.test(s) && /--exclude/.test(s), 'must select via queue-drainer next --exclude');
+  assert(s.includes("grep -v '^FIX-'"), 'FIX tasks are never excluded');
+  assert(s.includes('nothing selectable — skip (no LLM call)'), 'must skip without an LLM call');
+  assert(s.includes('MODEL_ARGS=(-m "$DRAIN_MODEL")') && /drainModel/.test(s), '-m only set from drainModel');
+  assert(s.includes('--yolo ${MODEL_ARGS[@]+'), 'hermes line passes MODEL_ARGS only (empty = unchanged command line)');
+});
+
+test('bash substitution keeps &, backslash and / from AGENT.md verbatim (CV-802)', () => {
+  const script2 = [
+    'shopt -u patsub_replacement 2>/dev/null || true',
+    "t='A {{AGENT_IDENTITY}} B'; id='x & y \\ z / w'",
+    't="${t//\\{\\{AGENT_IDENTITY\\}\\}/$id}"; printf %s "$t"',
+  ].join('\n');
+  const out = execFileSync('bash', ['-c', script2], { encoding: 'utf8' });
+  assert(out === 'A x & y \\ z / w B', `got: ${out}`);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
