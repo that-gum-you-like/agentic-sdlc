@@ -251,7 +251,12 @@ export function hardGate(cloneDir, headRef, testCmd = 'npm test') {
     const base = detectBaseBranch(cloneDir);
     try { run('git', ['-C', cloneDir, 'fetch', 'origin', base], { timeout: 120_000 }); } catch { /* use the clone's last-fetched base */ }
     try {
-      run('git', ['merge', '--no-commit', '--no-ff', `origin/${base}`], { cwd: wt, timeout: 120_000 });
+      // `merge --no-commit` still needs a committer identity (git prepares the
+      // merge state/message before stopping), and a headless runner has no
+      // global gitconfig — hence "Committer identity unknown". Supply a
+      // throwaway identity: nothing is ever committed from this worktree.
+      run('git', ['-c', 'user.name=SDLC Review Gate', '-c', 'user.email=review-gate@localhost',
+        'merge', '--no-commit', '--no-ff', `origin/${base}`], { cwd: wt, timeout: 120_000 });
     } catch (err) {
       result.step = 'merge-conflict-with-base';
       result.tail = `merging origin/${base} into the PR head failed:\n${`${err.stdout || ''}\n${err.stderr || err.message || ''}`.slice(-1500)}`;

@@ -328,6 +328,34 @@ test('hardGate: branch behind base runs tests on the MERGED tree (base file pres
   assert(!/pr-review-/.test(git(clone, 'worktree', 'list')), 'worktree removed');
 });
 
+test('hardGate: works with NO global git identity (headless runner)', () => {
+  // CI runners have no gitconfig: `merge --no-commit` used to die with
+  // "Committer identity unknown", turning a mergeable PR into a false
+  // merge-conflict-with-base gate failure (live on Actions, 2026-11-03).
+  const { origin, clone, work, d } = gateFixture();
+  git(work, 'checkout', '-qb', 'feat'); writeFileSync(join(work, 'feat.txt'), 'f\n');
+  git(work, 'add', '.'); git(work, 'commit', '-qm', 'feat'); git(work, 'push', '-q', 'origin', 'feat');
+  git(work, 'checkout', '-q', 'main'); writeFileSync(join(work, 'base-only.txt'), 'b\n');
+  git(work, 'add', '.'); git(work, 'commit', '-qm', 'base moves'); git(work, 'push', '-q', 'origin', 'main');
+  git(d, 'clone', '-q', origin, clone);
+  const keys = ['GIT_AUTHOR_NAME', 'GIT_AUTHOR_EMAIL', 'GIT_COMMITTER_NAME', 'GIT_COMMITTER_EMAIL',
+    'GIT_CONFIG_GLOBAL', 'GIT_CONFIG_SYSTEM', 'HOME'];
+  const prev = {};
+  for (const k of keys) prev[k] = process.env[k];
+  try {
+    for (const k of keys.slice(0, 4)) delete process.env[k];
+    process.env.GIT_CONFIG_GLOBAL = '/dev/null';
+    process.env.GIT_CONFIG_SYSTEM = '/dev/null';
+    process.env.HOME = d; // no ~/.gitconfig in a fresh tmpdir
+    const r = hardGate(clone, 'feat', 'test -f base-only.txt && test -f feat.txt');
+    assert(r.passed === true, `headless gate must pass: ${r.step} ${r.tail}`);
+  } finally {
+    for (const k of keys) {
+      if (prev[k] === undefined) delete process.env[k]; else process.env[k] = prev[k];
+    }
+  }
+});
+
 test('hardGate: conflicting branch fails closed with merge-conflict-with-base and runs no tests', () => {
   const { origin, clone, work, d } = gateFixture();
   git(work, 'checkout', '-qb', 'feat'); writeFileSync(join(work, 'shared.txt'), 'feat\n');

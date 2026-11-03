@@ -19,5 +19,8 @@
     "headSha": "5e6c1f3ba185d6f55efad27b16c97c088e52114a",
     "sourceTask": null,
     "rejectionKind": "gate-failed"
-  }
+  },
+  "_file": "FIX-83.json",
+  "claimedBy": "hermes-drain",
+  "claimedAt": "2026-11-03T20:46:05.008Z"
 }
