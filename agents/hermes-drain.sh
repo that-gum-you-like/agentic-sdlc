@@ -194,6 +194,7 @@ prompt_text="${prompt_text//\{\{PROJECT_NAME\}\}/$PROJECT_NAME}"
 prompt_text="${prompt_text//\{\{PROJECT_REMOTE\}\}/$PROJECT_REMOTE}"
 prompt_text="${prompt_text//\{\{TEST_CMD\}\}/$TEST_CMD}"
 prompt_text="${prompt_text//\{\{DRAINER\}\}/$DRAINER}"
+prompt_text="${prompt_text//\{\{SCRIPTS_DIR\}\}/$SCRIPTS_DIR}"
 
 # --- run the isolated, local-backend, OpenRouter Hermes drain worker IN the clone ---
 ts="$(date +%Y%m%d-%H%M%S)"

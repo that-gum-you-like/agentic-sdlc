@@ -271,5 +271,27 @@ test('drain installs the pre-commit hook in the clone after the sync, aborting o
   assert(/cd "\$DRAIN_CLONE"/.test(s.slice(install - 80, install)), 'must install INTO the clone, not the main repo');
 });
 
+test('drain prompt runs check-staged before the commit step (CV-315)', () => {
+  const p = readFileSync(prompt, 'utf8');
+  const gate = p.indexOf('review-hook.mjs" check-staged');
+  const commit = p.indexOf('6. **Commit**');
+  assert(gate !== -1 && commit !== -1, 'prompt must contain check-staged and the commit step');
+  assert(gate < commit, 'check-staged must come before the commit step');
+  assert(/at most \*\*twice\*\*/.test(p), 'retry limit of two must be stated');
+});
+
+test('drain prompt recalls memory before work and records after, even on failure (CV-316)', () => {
+  const p = readFileSync(prompt, 'utf8');
+  const recall = p.indexOf('memory-manager.mjs" recall');
+  const record = p.indexOf('memory-manager.mjs" record');
+  assert(recall !== -1 && record !== -1, 'prompt must contain both recall and record');
+  assert(recall < record, 'recall must come before record');
+  assert(recall < p.indexOf('3. **Branch from'), 'recall must happen before any work (branching/implementing)');
+  assert(/EVERY outcome, including each failing one/.test(p), 'record must cover failing outcomes');
+  assert(/\|\| true/.test(p.slice(recall, recall + 120)), 'a missing memory dir must not fail the run');
+  const s = readFileSync(script, 'utf8');
+  assert(/\\?\{\\?\{SCRIPTS_DIR\\?\}\\?\}/.test(s), 'script must substitute {{SCRIPTS_DIR}}');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
