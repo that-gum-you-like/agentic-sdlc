@@ -8,3 +8,4 @@
 - 2026-11-03 #86 feat(health-check): surface overdue cycles as process erosion (CV-111) (backend)
 - 2026-11-03 #87 feat(CV-112): maturity-assess --report writes a dated maturity report (backend)
 - 2026-11-03 #89 feat(cycles): export runStep from monthly-review.mjs for weekly cycle reuse (CV-101) (backend)
+- 2026-11-03 #90 feat(cycles): openspecStatusTable in daily-review.mjs (CV-119) (backend)
