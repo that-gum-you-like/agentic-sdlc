@@ -11,12 +11,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve, dirname } from 'node:path';
+import { join, resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { evidenceOk, evidenceText, evidenceIcon } from '../agents/maturity-assess.mjs';
+import { evidenceOk, evidenceText, evidenceIcon, renderReport } from '../agents/maturity-assess.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = join(REPO, 'agents', 'maturity-assess.mjs');
@@ -138,4 +138,111 @@ test('assessing a bare project without agents/ does not crash', () => {
   // ENOENT on exactly the greenfield trees the assessor exists to grade.
   const dim = assessFixture(() => {});
   assert.ok(dim, 'a bare tree still produces a Deployment & Release dimension');
+});
+
+// --- CV-112 / CV-REQ-013: --report writes a dated maturity report ----------
+
+// UTC date, matching the assessor's own date stamp. Offset in days so the
+// overwrite test can seed a neighbour without caring where midnight falls.
+const utcDate = (offsetDays = 0) => new Date(Date.now() + offsetDays * 86400000).toISOString().split('T')[0];
+
+function reportFixture(build = () => {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'maturity-report-'));
+  writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'fixture', version: '1.0.0', type: 'module' }));
+  build(dir);
+  return dir;
+}
+
+test('--report writes pm/maturity-reports/<YYYY-MM-DD>.md containing the dimension table', () => {
+  const dir = reportFixture();
+  try {
+    const consoleOut = execFileSync('node', [SCRIPT, '--dir', dir, '--report'], { encoding: 'utf8' });
+
+    const reportsDir = join(dir, 'pm', 'maturity-reports');
+    assert.ok(existsSync(reportsDir), '--report creates the directory when it is absent');
+
+    const files = readdirSync(reportsDir).filter(f => f.endsWith('.md'));
+    assert.deepEqual(files, [`${utcDate()}.md`], 'one file, named for the assessment date');
+
+    const body = readFileSync(join(reportsDir, files[0]), 'utf8');
+    // The title names the assessed directory, not the manifest's "name".
+    assert.match(body, new RegExp(`^# Platform Maturity Assessment — ${basename(dir)}$`, 'm'));
+    assert.match(body, /\| Dimension \| Score \| Bar \|/);
+    assert.match(body, /\| Testing & Quality\s+\| \d\.\d\/5 \|/);
+    assert.match(body, /## Detailed Findings/);
+
+    // "the same table the console shows": every table row in the file was
+    // printed as well. A second, hand-copied renderer would fail this.
+    const rows = body.split('\n').filter(l => l.startsWith('| '));
+    assert.ok(rows.length >= 9, `expected header + 8 dimension rows, got ${rows.length}`);
+    for (const row of rows) assert.ok(consoleOut.includes(row), `console output is missing the row: ${row}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('re-running --report on the same day overwrites that day\'s file', () => {
+  const dir = reportFixture();
+  try {
+    const reportsDir = join(dir, 'pm', 'maturity-reports');
+    mkdirSync(reportsDir, { recursive: true });
+    // Seed today *and* tomorrow: a run that straddles UTC midnight then still
+    // exercises an overwrite rather than tripping over a missing file.
+    for (const name of [utcDate(), utcDate(1)]) {
+      writeFileSync(join(reportsDir, `${name}.md`), 'STALE REPORT\n');
+    }
+
+    execFileSync('node', [SCRIPT, '--dir', dir, '--report'], { encoding: 'utf8' });
+
+    const body = readFileSync(join(reportsDir, `${utcDate()}.md`), 'utf8');
+    assert.doesNotMatch(body, /STALE REPORT/, 'the stale same-day file was overwritten');
+    assert.equal(body.match(/\| Dimension \| Score \| Bar \|/g).length, 1, 'exactly one table — overwritten, not appended');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('without --report the assessor still writes nothing', () => {
+  const dir = reportFixture();
+  try {
+    execFileSync('node', [SCRIPT, '--dir', dir], { encoding: 'utf8' });
+    assert.equal(existsSync(join(dir, 'pm')), false, 'the default run stays read-only');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a failed report write exits nonzero instead of silently reporting success', () => {
+  // pm/ exists as a file, so mkdir -p fails. A monthly cycle that logged a
+  // report but delivered no file must not look like a passing step.
+  const dir = reportFixture((d) => writeFileSync(join(d, 'pm'), 'not a directory\n'));
+  try {
+    assert.throws(
+      () => execFileSync('node', [SCRIPT, '--dir', dir, '--report'], { encoding: 'utf8' }),
+      (err) => {
+        assert.equal(err.status, 1, 'exit code is nonzero');
+        assert.match(String(err.stderr), /Could not write maturity report/);
+        return true;
+      },
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('renderReport is the single source of the table', () => {
+  // The console and the --report file are rendered by the same function, so
+  // this pins its shape: header, date, one row per dimension, real gaps only.
+  const text = renderReport({
+    projectName: 'demo',
+    date: '2026-01-02',
+    results: [{ dimension: 'Testing & Quality', score: 2.5, evidence: [{ text: 'gap one', ok: false }] }],
+    avgScore: 2.5,
+    label: 'Established',
+  });
+  assert.match(text, /^# Platform Maturity Assessment — demo$/m);
+  assert.match(text, /^\*\*Date\*\*: 2026-01-02$/m);
+  assert.match(text, /Overall Score: \*\*2\.5\/5\.0\*\* \(Established\)/);
+  assert.match(text, /\| Testing & Quality\s+\| 2\.5\/5 \|/);
+  assert.match(text, /1\. \*\*Testing & Quality\*\* \(2\.5\/5\): gap one/);
 });
