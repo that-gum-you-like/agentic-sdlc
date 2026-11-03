@@ -25,7 +25,7 @@ import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
 
-import { openspecStatusTable } from '../cycles/daily-review.mjs';
+import { openspecStatusTable, bugMetrics } from '../cycles/daily-review.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(__dirname, '..', '..');
@@ -257,5 +257,108 @@ describe('openspecStatusTable (CV-REQ-020)', () => {
     const table = openspecStatusTable(dir);
     assert.ok(table.includes('| delta | design | draft | draft | 0/0 |'),
       `a present-but-empty tasks.md is measured as 0/0, not '-' (missing):\n${table}`);
+  });
+});
+
+/**
+ * CV-120 / CV-REQ-020: bug + fix-task metrics.
+ *
+ * The function reads only the two trees it is handed, so the fixtures are real
+ * `openspec/changes` and `tasks/queue` directories under a tmp dir — never the
+ * repo's own (whose contents change with every merged PR).
+ */
+function fixtureBugTree({ active = [], archived = [] } = {}) {
+  const root = mkdtempSync(join(tmpdir(), 'sdlc-bug-metrics-'));
+  const changesDir = join(root, 'changes');
+  const queueDir = join(root, 'queue');
+  mkdirSync(changesDir, { recursive: true });
+  mkdirSync(queueDir, { recursive: true });
+  for (const name of active) mkdirSync(join(changesDir, name), { recursive: true });
+  for (const name of archived) mkdirSync(join(changesDir, 'archive', name), { recursive: true });
+  return { changesDir, queueDir };
+}
+
+function writeQueueTask(queueDir, id, status) {
+  writeFileSync(join(queueDir, `${id}.json`), JSON.stringify({ id, status }));
+}
+
+describe('bugMetrics (CV-REQ-020)', () => {
+  it('reports 50% when one bug is active and its sibling is archived', () => {
+    const { changesDir, queueDir } = fixtureBugTree({
+      active: ['bug-1234-login-crash'],
+      archived: ['2026-01-01-bug-1200-timeout'],
+    });
+
+    const block = bugMetrics(changesDir, queueDir);
+    assert.match(block, /Active: 1 \| Archived: 1 \| Resolution rate: 50%/,
+      `one active and one archived bug must resolve to 50%:\n${block}`);
+  });
+
+  it('counts prod-error-* changes as bugs alongside bug-* changes', () => {
+    const { changesDir, queueDir } = fixtureBugTree({
+      active: ['prod-error-4711-checkout-500'],
+      archived: ['2025-12-31-prod-error-4700-queue-stall', '2025-12-30-bug-4100-null'],
+    });
+
+    const block = bugMetrics(changesDir, queueDir);
+    assert.match(block, /Active: 1 \| Archived: 2 \| Resolution rate: 67%/,
+      `prod-error and bug changes count together (1 of 3 resolved, rounded):\n${block}`);
+  });
+
+  it('ignores non-bug changes and never counts the archive dir itself as a bug', () => {
+    const { changesDir, queueDir } = fixtureBugTree({
+      active: ['curriculum-v2-conformance', 'bug-9001-stale-lock'],
+      archived: ['2026-01-01-archived-feature'],
+    });
+
+    const block = bugMetrics(changesDir, queueDir);
+    assert.match(block, /Active: 1 \| Archived: 0 \| Resolution rate: 0%/,
+      `only bug-* changes are counted; 'archive' is not a bug:\n${block}`);
+  });
+
+  it('renders `none` — not 0% and not NaN — when no bug changes exist', () => {
+    const { changesDir, queueDir } = fixtureBugTree({ active: ['some-feature'] });
+
+    const block = bugMetrics(changesDir, queueDir);
+    assert.match(block, /Active: 0 \| Archived: 0 \| Resolution rate: none/,
+      `an empty denominator must read 'none':\n${block}`);
+    assert.ok(!block.includes('NaN'), 'resolution rate must never render NaN');
+    assert.ok(!block.includes('0%'), 'no bugs recorded must not look like 0% resolved');
+  });
+
+  it('splits FIX-* tasks into pending and completed, counting blocked as pending', () => {
+    const { changesDir, queueDir } = fixtureBugTree({ active: ['bug-1'] });
+    writeQueueTask(queueDir, 'FIX-70', 'completed');
+    writeQueueTask(queueDir, 'FIX-71', 'pending');
+    writeQueueTask(queueDir, 'FIX-72', 'blocked');
+    writeQueueTask(queueDir, 'FIX-73', 'in_progress');
+    writeQueueTask(queueDir, 'OS-curriculum-v2-conformance-1', 'pending');
+
+    const block = bugMetrics(changesDir, queueDir);
+    assert.match(block, /\| Pending FIX tasks \| 3 \|/,
+      `pending, blocked and in-progress repairs are all outstanding:\n${block}`);
+    assert.match(block, /\| Completed FIX tasks \| 1 \|/,
+      `only a completed FIX task is finished:\n${block}`);
+  });
+
+  it('renders zeros for a missing changes dir and a missing queue dir without throwing', () => {
+    const missing = join(tmpdir(), 'sdlc-bug-metrics-does-not-exist');
+
+    const block = bugMetrics(join(missing, 'changes'), join(missing, 'queue'));
+    assert.match(block, /Active: 0 \| Archived: 0 \| Resolution rate: none/,
+      `absent trees count zero and read 'none':\n${block}`);
+    assert.match(block, /\| Pending FIX tasks \| 0 \|/);
+    assert.match(block, /\| Completed FIX tasks \| 0 \|/);
+  });
+
+  it('skips malformed FIX task files instead of failing the whole report', () => {
+    const { changesDir, queueDir } = fixtureBugTree({ archived: ['2026-01-01-bug-1'] });
+    writeFileSync(join(queueDir, 'FIX-99.json'), '{ not valid json');
+    writeQueueTask(queueDir, 'FIX-98', 'pending');
+
+    const block = bugMetrics(changesDir, queueDir);
+    assert.match(block, /\| Pending FIX tasks \| 1 \|/,
+      `the readable FIX task is still counted:\n${block}`);
+    assert.match(block, /Resolution rate: 100%/, 'all bugs archived is 100%');
   });
 });

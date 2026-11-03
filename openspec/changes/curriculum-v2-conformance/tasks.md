@@ -431,7 +431,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-120**: daily-review.mjs: add pure `bugMetrics(changesDir, queueDir)` (active vs archived `bug-*` and `prod-error-*`, resolution rate, pending vs completed `FIX-*` queue tasks)
+- [x] **CV-120**: daily-review.mjs: add pure `bugMetrics(changesDir, queueDir)` (active vs archived `bug-*` and `prod-error-*`, resolution rate, pending vs completed `FIX-*` queue tasks)
   - **Priority:** HIGH
   - Files: `agents/cycles/daily-review.mjs, agents/__tests__/daily-review.test.mjs`
   - Spec: CV-REQ-020
