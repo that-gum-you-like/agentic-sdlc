@@ -356,6 +356,24 @@ export function orderPrsWithFetch(prs, fetchDetails, log = () => {}) {
   }
 }
 
+/**
+ * Pairs of open PRs that change a common file (CV-REQ-052). `later` is the PR
+ * that comes later in merge order (orderPrs); it is the one to defer.
+ * Returns [{later, earlier, files}] with PR numbers; disjoint PRs yield [].
+ */
+export function findOverlaps(prs) {
+  const ordered = orderPrs(prs);
+  const sets = ordered.map(pr => new Set((pr.files || []).map(pathOf).filter(Boolean)));
+  const out = [];
+  for (let i = 1; i < ordered.length; i++) {
+    for (let j = 0; j < i; j++) {
+      const files = [...sets[i]].filter(f => sets[j].has(f)).sort();
+      if (files.length) out.push({ later: ordered[i].number, earlier: ordered[j].number, files });
+    }
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Dedicated review clone (TOTAL isolation from the main working tree)
 // ---------------------------------------------------------------------------

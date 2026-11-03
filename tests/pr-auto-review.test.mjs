@@ -32,6 +32,7 @@ import {
   DOMAIN_ORDER,
   orderPrs,
   orderPrsWithFetch,
+  findOverlaps,
 } from '../agents/pr-auto-review.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -375,6 +376,20 @@ test('orderPrsWithFetch: fetched details order; fetch failure falls back to numb
   assert(out.map(p => p.number).join() === '9,12', 'number order on failure');
   assert(logs.length === 1 && /gh down/.test(logs[0]), 'failure logged');
   assert(!/prs\.sort\(\(a, b\) => a\.number - b\.number\)/.test(source), 'old sort site replaced');
+});
+
+// --- CV-404: overlap detection ---------------------------------------------
+
+test('findOverlaps: shared file lists the later PR (merge order); disjoint -> []', () => {
+  const pr = (number, additions, ...paths) => ({ number, additions, deletions: 0, files: paths.map(path => ({ path })) });
+  const o = findOverlaps([pr(6, 10, 'agents/health-check.mjs', 'x.md'), pr(5, 10, 'agents/health-check.mjs')]);
+  assert(o.length === 1 && o[0].later === 6 && o[0].earlier === 5, `got ${JSON.stringify(o)}`);
+  assert(o[0].files.join() === 'agents/health-check.mjs', 'shared files reported');
+  // a bigger infra PR merges first even though its number is higher
+  const o2 = findOverlaps([pr(1, 400, 'agents/a.mjs'), pr(2, 5, 'agents/a.mjs')]);
+  assert(o2[0].later === 1 && o2[0].earlier === 2, 'later follows merge order, not number');
+  assert(findOverlaps([pr(1, 1, 'a.mjs'), pr(2, 1, 'b.mjs')]).length === 0, 'disjoint');
+  assert(findOverlaps([]).length === 0, 'empty');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
