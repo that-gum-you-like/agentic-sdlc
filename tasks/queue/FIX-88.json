@@ -11,14 +11,15 @@
   "tags": [
     "auto-fix"
   ],
-  "description": "Drain PR #88 (branch `agent/drain/OS-curriculum-v2-conformance-19`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-19 && git checkout agent/drain/OS-curriculum-v2-conformance-19`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-19` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- regex pattern fails to match existing sections with content\n- incorrect handling of section content replacement\n- does not properly escape regex special characters in replacement\n- test coverage incomplete for edge cases",
-  "attempts": 1,
+  "description": "Drain PR #88 (branch `agent/drain/OS-curriculum-v2-conformance-19`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-19 && git checkout agent/drain/OS-curriculum-v2-conformance-19`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-19` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- regex pattern incorrectly matches content across multiple sections\n- does not handle section content that includes markdown headings\n- potential file corruption when replacing sections\n- missing proper escaping in regex replacement",
+  "attempts": 2,
   "status": "pending",
   "fixFor": {
     "pr": 88,
     "branch": "agent/drain/OS-curriculum-v2-conformance-19",
-    "headSha": "ed9d2d8f8c5d2a59f5e77e6ab9a0c18387a326da",
+    "headSha": "c7a256cbb90a29d5795d311330e3c32009be330b",
     "sourceTask": "OS-curriculum-v2-conformance-19",
     "rejectionKind": "llm-rejected"
-  }
+  },
+  "refreshedAt": "2026-11-03T22:34:39.837Z"
 }
