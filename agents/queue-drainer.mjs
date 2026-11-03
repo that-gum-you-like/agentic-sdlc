@@ -6,6 +6,7 @@
  *   queue-drainer.mjs run              # Process next available task
  *   queue-drainer.mjs run --parallel   # Process all independent tasks in parallel
  *   queue-drainer.mjs status           # Show queue status
+ *   queue-drainer.mjs next [--exclude a,b]  # Print the top ready task as JSON (FIX first)
  *   queue-drainer.mjs assign <task-id> # Manually assign a specific task
  *   queue-drainer.mjs reset <task-id>  # Reset a stuck task back to pending
  *   queue-drainer.mjs claim <task-id> <agent>  # Claim a task for an agent
@@ -23,6 +24,7 @@ import { loadConfig } from './load-config.mjs';
 import { triggerNotification, notifyHumanTask, runWellnessCheck } from './notify.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
 import { loadOrchestrationAdapter } from './adapters/load-adapter.mjs';
+import { pickNextTask } from './lib/next-task.mjs';
 
 let validate = null;
 try {
@@ -502,6 +504,16 @@ switch (cmd) {
   case 'status':
     showStatus(tasks);
     break;
+
+  case 'next': {
+    // CV-REQ-120: print the ONE task the drain should work on (JSON), or nothing.
+    const exIdx = args.indexOf('--exclude');
+    const exclude = exIdx !== -1 && args[exIdx + 1]
+      ? args[exIdx + 1].split(',').map(s => s.trim()).filter(Boolean) : [];
+    const next = pickNextTask(findIndependentTasks(tasks), exclude);
+    if (next) console.log(JSON.stringify(next));
+    break;
+  }
 
   case 'run': {
     const parallel = args.includes('--parallel');
