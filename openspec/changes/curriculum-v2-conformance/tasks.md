@@ -242,7 +242,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-101
   - Complexity: S
 
-- [ ] **CV-103**: Add exported `runWeeklySteps(steps, runner = runStep)` and call it from weekly-review main() after the existing sections; print `<label>: PASS|FAIL` per step; a failing step must not stop the next
+- [x] **CV-103**: Add exported `runWeeklySteps(steps, runner = runStep)` and call it from weekly-review main() after the existing sections; print `<label>: PASS|FAIL` per step; a failing step must not stop the next
   - **Priority:** HIGH
   - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/weekly-review-steps.test.mjs`
   - Spec: CV-REQ-010

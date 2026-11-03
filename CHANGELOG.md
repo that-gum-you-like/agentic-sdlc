@@ -11,3 +11,4 @@
 - 2026-11-03 #90 feat(cycles): openspecStatusTable in daily-review.mjs (CV-119) (backend)
 - 2026-11-03 #91 feat(cycles): add bugMetrics to daily-review.mjs (CV-120) (backend)
 - 2026-11-03 #92 feat(cycles): add exported buildWeeklySteps({dryRun}) to weekly-review.mjs (CV-102) (backend)
+- 2026-11-03 #93 feat(cycles): add runWeeklySteps export + call from main() (CV-103) (backend)

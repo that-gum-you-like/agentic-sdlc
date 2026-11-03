@@ -3,7 +3,7 @@
   "title": "Add exported `runWeeklySteps(steps, runner = runStep)` and call it from weekly-review main() after the existing sections; print `<label>: PASS|FAIL` per step; a failing step must not stop the next",
   "description": "- [ ] **CV-103**: Add exported `runWeeklySteps(steps, runner = runStep)` and call it from weekly-review main() after the existing sections; print `<label>: PASS|FAIL` per step; a failing step must not stop the next\n  - **Priority:** HIGH\n  - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/weekly-review-steps.test.mjs`\n  - Spec: CV-REQ-010\n  - Gaps: D5-04, D7-03\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: runner stub failing on step 1 still receives steps 2 and 3; result array has 3 entries; add `__isMainModule` guard if main() runs on import\n  - Parallel: blocked-by CV-102\n  - Complexity: S",
   "priority": "HIGH",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-3"
   ],
   "_file": "OS-curriculum-v2-conformance-4.json",
-  "claimedAt": "2026-11-03T23:16:35.034Z"
+  "claimedAt": "2026-11-03T23:16:35.034Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-03T23:27:56.041Z"
 }
