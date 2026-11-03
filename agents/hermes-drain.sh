@@ -88,7 +88,7 @@ cd "$REPO" || { log "repo not found: $REPO"; exit 1; }
 # "no ready tasks — skip" — indistinguishable from a genuinely empty queue, and
 # therefore invisible for as long as you cared to look. Failure must exit
 # NON-ZERO so systemd records it instead of reporting a healthy no-op forever.
-status_out="$(node "$SCRIPTS_DIR/queue-drainer.mjs" status --project-dir "$REPO" 2>&1)"; status_rc=$?
+status_out="$(SDLC_PROJECT_DIR="$REPO" node "$SCRIPTS_DIR/queue-drainer.mjs" status --project-dir "$REPO" 2>&1)"; status_rc=$?
 if [ "$status_rc" -ne 0 ]; then
   log "queue-drainer status FAILED (rc=$status_rc) for project: $REPO"
   printf '%s\n' "$status_out" | sed 's/^/[hermes-drain]   /' >&2
