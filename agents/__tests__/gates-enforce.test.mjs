@@ -14,7 +14,7 @@
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync, mkdirSync, rmSync, lstatSync, existsSync } from 'fs';
+import { readFileSync, readlinkSync, writeFileSync, mkdirSync, rmSync, lstatSync, existsSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
@@ -167,5 +167,23 @@ describe('alignment-monitor — score from real signals (REQ-H1)', () => {
       'score must be computed from executed check counts');
     assert.ok(/checksFailed\s*\/\s*findings\.checksTotal/.test(src),
       'score must be the pass ratio of real checks');
+  });
+});
+
+describe('review-hook — install --pre-only (CV-309)', () => {
+  const REPO = join(tmpdir(), `sdlc-preonly-test-${process.pid}`);
+  const run = (args) => execFileSync(process.execPath, [REVIEW_HOOK, ...args], { cwd: REPO, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  before(() => { mkdirSync(REPO, { recursive: true }); execFileSync('git', ['init', '-q'], { cwd: REPO }); });
+  after(() => { rmSync(REPO, { recursive: true, force: true }); });
+
+  it('installs only pre-commit, and is idempotent', () => {
+    run(['install', '--pre-only']);
+    const pre = join(REPO, '.git', 'hooks', 'pre-commit');
+    assert.ok(lstatSync(pre).isSymbolicLink(), 'pre-commit installed');
+    assert.ok(!existsSync(join(REPO, '.git', 'hooks', 'post-commit')), 'no post-commit hook');
+    const first = readlinkSync(pre);
+    run(['install', '--pre-only']);
+    assert.equal(readlinkSync(pre), first, 'second run leaves the hook identical');
+    assert.ok(!existsSync(join(REPO, '.git', 'hooks', 'post-commit')), 'still no post-commit hook');
   });
 });
