@@ -38,7 +38,7 @@ function loadBudget() {
 }
 
 function saveBudget(budget) {
-  writeFileSync(BUDGET_PATH, JSON.stringify(budget, null, 2));
+  writeFileSync(BUDGET_PATH, JSON.stringify(budget, null, 2) + '\n'); // trailing newline: matches the committed file, so runs don't dirty the tree
 }
 
 function appendLedger(entry) {
