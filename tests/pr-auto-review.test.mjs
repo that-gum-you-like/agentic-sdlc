@@ -8,7 +8,10 @@
  * Run: node tests/pr-auto-review.test.mjs
  */
 
-import { readFileSync } from 'fs';
+import { readFileSync, mkdtempSync, writeFileSync, existsSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -23,6 +26,8 @@ import {
   MAX_AUTO_MERGES,
   FLAG_PATHS,
   DIFF_CHAR_LIMIT,
+  hardGate,
+  detectBaseBranch,
 } from '../agents/pr-auto-review.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -281,6 +286,58 @@ test('fix tasks are written via the review clone and closed on merge', () => {
     'fix tasks must be written in the review clone, never the main tree');
   assert(/`FIX-\$\{pr\.number\}`/.test(source), 'reconcileMerged must also complete FIX-<pr> tasks (REQ-SH-3)');
   assert(/non-fatal/.test(source), 'fix-task filing failures must never break the review run');
+});
+
+// --- CV-401: gate runs on head merged with base -------------------------------
+
+function git(cwd, ...args) {
+  return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' } });
+}
+function gateFixture() {
+  const d = mkdtempSync(join(tmpdir(), 'par-gate-'));
+  const origin = join(d, 'origin.git'); const clone = join(d, 'clone'); const work = join(d, 'work');
+  git(d, 'init', '-q', '--bare', '-b', 'main', origin);
+  git(d, 'clone', '-q', origin, work);
+  writeFileSync(join(work, 'shared.txt'), 'one\n');
+  git(work, 'add', '.'); git(work, 'commit', '-qm', 'init'); git(work, 'push', '-q', 'origin', 'main');
+  return { d, origin, clone, work };
+}
+
+test('hardGate: branch behind base runs tests on the MERGED tree (base file present)', () => {
+  const { origin, clone, work, d } = gateFixture();
+  git(work, 'checkout', '-qb', 'feat'); writeFileSync(join(work, 'feat.txt'), 'f\n');
+  git(work, 'add', '.'); git(work, 'commit', '-qm', 'feat'); git(work, 'push', '-q', 'origin', 'feat');
+  git(work, 'checkout', '-q', 'main'); writeFileSync(join(work, 'base-only.txt'), 'b\n');
+  git(work, 'add', '.'); git(work, 'commit', '-qm', 'base moves'); git(work, 'push', '-q', 'origin', 'main');
+  git(d, 'clone', '-q', origin, clone);
+  assert(detectBaseBranch(clone) === 'main', 'detects base');
+  const r = hardGate(clone, 'feat', 'test -f base-only.txt && test -f feat.txt');
+  assert(r.passed === true, `merged tree must contain both files: ${r.step} ${r.tail}`);
+  assert(!/pr-review-/.test(git(clone, 'worktree', 'list')), 'worktree removed');
+});
+
+test('hardGate: conflicting branch fails closed with merge-conflict-with-base and runs no tests', () => {
+  const { origin, clone, work, d } = gateFixture();
+  git(work, 'checkout', '-qb', 'feat'); writeFileSync(join(work, 'shared.txt'), 'feat\n');
+  git(work, 'add', '.'); git(work, 'commit', '-qm', 'feat'); git(work, 'push', '-q', 'origin', 'feat');
+  git(work, 'checkout', '-q', 'main'); writeFileSync(join(work, 'shared.txt'), 'main\n');
+  git(work, 'add', '.'); git(work, 'commit', '-qm', 'base'); git(work, 'push', '-q', 'origin', 'main');
+  git(d, 'clone', '-q', origin, clone);
+  const marker = join(d, 'tests-ran');
+  const r = hardGate(clone, 'feat', `touch ${marker}`);
+  assert(r.passed === false && r.step === 'merge-conflict-with-base', `got ${r.step}`);
+  assert(!existsSync(marker), 'tests must not run on a conflicted merge');
+  assert(!/pr-review-/.test(git(clone, 'worktree', 'list')), 'worktree removed on conflict');
+});
+
+test('hardGate: branch already up to date behaves as before', () => {
+  const { origin, clone, work, d } = gateFixture();
+  git(work, 'checkout', '-qb', 'feat'); writeFileSync(join(work, 'feat.txt'), 'f\n');
+  git(work, 'add', '.'); git(work, 'commit', '-qm', 'feat'); git(work, 'push', '-q', 'origin', 'feat');
+  git(d, 'clone', '-q', origin, clone);
+  assert(hardGate(clone, 'feat', 'test -f feat.txt').passed, 'up-to-date branch passes');
+  assert(!hardGate(clone, 'feat', 'false').passed, 'failing tests still fail');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -229,12 +229,34 @@ function ghJson(args) {
 // HARD GATE — clean-worktree test run. No pass, no merge.
 // ---------------------------------------------------------------------------
 
-function hardGate(cloneDir, headRef, testCmd = 'npm test') {
+/** Base branch of the review clone (origin/HEAD), falling back to `main`. */
+export function detectBaseBranch(cloneDir) {
+  try {
+    const b = run('git', ['-C', cloneDir, 'symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD'])
+      .trim().replace(/^origin\//, '');
+    if (b) return b;
+  } catch { /* fall through */ }
+  return 'main';
+}
+
+export function hardGate(cloneDir, headRef, testCmd = 'npm test') {
   const wt = mkdtempSync(join(tmpdir(), 'pr-review-'));
   const result = { passed: false, step: null, tail: '' };
   try {
     run('git', ['-C', cloneDir, 'fetch', 'origin', headRef], { timeout: 120_000 });
     run('git', ['-C', cloneDir, 'worktree', 'add', '--detach', wt, 'FETCH_HEAD'], { timeout: 120_000 });
+    // CV-REQ-050: test the head MERGED with current base, so a stale branch
+    // that passes alone but breaks main fails here. Fail closed: a conflict or
+    // any merge error means "not mergeable" and no tests run.
+    const base = detectBaseBranch(cloneDir);
+    try { run('git', ['-C', cloneDir, 'fetch', 'origin', base], { timeout: 120_000 }); } catch { /* use the clone's last-fetched base */ }
+    try {
+      run('git', ['merge', '--no-commit', '--no-ff', `origin/${base}`], { cwd: wt, timeout: 120_000 });
+    } catch (err) {
+      result.step = 'merge-conflict-with-base';
+      result.tail = `merging origin/${base} into the PR head failed:\n${`${err.stdout || ''}\n${err.stderr || err.message || ''}`.slice(-1500)}`;
+      return result;
+    }
     // The gate runs the PROJECT's own test command, not a hardcoded framework
     // one — hermes-pilot's gate is `node tests/smoke.test.mjs`, tally's is
     // vitest (observed live 2026-07-26: hardcoded npm test failed the pilot).
