@@ -38,7 +38,7 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-import { mkdtempSync, writeFileSync, existsSync, readdirSync, rmSync } from 'fs';
+import { readFileSync, mkdtempSync, writeFileSync, existsSync, readdirSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
@@ -184,7 +184,16 @@ test('applyInstall: superseded -> disable + unit removal, no install; enabled:fa
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
-console.log(`\n${passed} passed, ${failed} failed`);
+// --- paperclip retired: no orchestration-sync entry (CV-602) ---
+test('cron-schedule.json and its template carry no paperclip / orchestration-sync entry', () => {
+  for (const p of ['../agents/cron-schedule.json', '../agents/templates/cron-schedule.json.template']) {
+    const raw = readFileSync(new URL(p, import.meta.url), 'utf8');
+    assert(!/paperclip/i.test(raw), `${p} still mentions paperclip`);
+    assert(!JSON.parse(raw).schedules.some(j => j.name === 'orchestration-sync'), `${p} still has orchestration-sync`);
+  }
+});
+
+console.log(`\n${passed} passed,${failed} failed`);
 if (failed > 0) {
   for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`);
   process.exit(1);
