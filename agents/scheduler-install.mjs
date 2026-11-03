@@ -57,11 +57,18 @@ export function loadSchedule(agentsDir = __dirname) {
   throw new Error(`no cron-schedule.json or template found under ${agentsDir}`);
 }
 
-/** Keep only jobs whose required agent / adapter is actually present. */
+/** Keep only jobs whose required agent / adapter is actually present (and not superseded). */
 export function selectJobs(jobs, { agents = [], adapter = 'file-based' } = {}) {
   const kept = [];
   const skipped = [];
+  const superseded = [];
   for (const job of jobs) {
+    // supersededBy: another entry owns this work — never install; install
+    // removes any unit of the same name left over from an earlier install.
+    if (job.supersededBy) {
+      superseded.push(job);
+      continue;
+    }
     if (job.agentRequired && !agents.includes(job.agentRequired)) {
       skipped.push({ ...job, skipReason: `agent '${job.agentRequired}' not configured` });
       continue;
@@ -72,7 +79,7 @@ export function selectJobs(jobs, { agents = [], adapter = 'file-based' } = {}) {
     }
     kept.push(job);
   }
-  return { kept, skipped };
+  return { kept, skipped, superseded };
 }
 
 // ---------------------------------------------------------------------------
@@ -204,6 +211,36 @@ function systemctl(args, { check = true } = {}) {
   }
 }
 
+/**
+ * Write units + drive systemctl for the planned jobs. `systemctlFn` and
+ * `unitDir` are injectable so tests never touch the real user manager.
+ * Superseded jobs: disable + remove an existing unit, install nothing.
+ * `enabled:false` jobs: unit files are written but the timer is not enabled.
+ */
+export function applyInstall({ kept, superseded = [], repoDir, nodeBin, home, pathDirs, unitDir = UNIT_DIR, systemctlFn = systemctl }) {
+  if (!existsSync(unitDir)) mkdirSync(unitDir, { recursive: true });
+  const removed = [];
+  for (const job of superseded) {
+    const name = `${UNIT_PREFIX}${job.name}`;
+    systemctlFn(['disable', '--now', `${name}.timer`], { check: false });
+    for (const ext of ['timer', 'service']) {
+      const f = join(unitDir, `${name}.${ext}`);
+      if (existsSync(f)) unlinkSync(f);
+    }
+    removed.push(name);
+  }
+  const installed = [];
+  for (const job of kept) {
+    const u = buildUnits(job, { repoDir, nodeBin, home, pathDirs });
+    writeFileSync(join(unitDir, u.serviceName), u.service);
+    writeFileSync(join(unitDir, u.timerName), u.timer);
+    installed.push({ ...u, enable: job.enabled !== false });
+  }
+  systemctlFn(['daemon-reload']);
+  for (const u of installed) if (u.enable) systemctlFn(['enable', '--now', u.timerName]);
+  return { installed, removed };
+}
+
 function planInstall() {
   const { config, projectDir } = (() => {
     const cfg = loadConfig();
@@ -212,8 +249,8 @@ function planInstall() {
   const agents = config.agents ? Object.keys(config.agents) : [];
   const adapter = (config.orchestration && config.orchestration.adapter) || 'file-based';
   const { jobs, source } = loadSchedule(__dirname);
-  const { kept, skipped } = selectJobs(jobs, { agents, adapter });
-  return { source, kept, skipped, repoDir: resolve(__dirname, '..'), projectDir };
+  const { kept, skipped, superseded } = selectJobs(jobs, { agents, adapter });
+  return { source, kept, skipped, superseded, repoDir: resolve(__dirname, '..'), projectDir };
 }
 
 // ---------------------------------------------------------------------------
@@ -221,14 +258,16 @@ function planInstall() {
 // ---------------------------------------------------------------------------
 
 function cmdList() {
-  const { source, kept, skipped } = planInstall();
+  const { source, kept, skipped, superseded } = planInstall();
   console.log(`📅 Schedule source: ${source}\n`);
   console.log(`Will install ${kept.length} timer(s):`);
   for (const job of kept) {
     console.log(`  • ${UNIT_PREFIX}${job.name}`);
     console.log(`      cron ${job.cron}  →  OnCalendar ${cronToOnCalendar(job.cron)}`);
     console.log(`      ${job.script}`);
+    if (job.enabled === false) console.log('      (enabled:false — unit installed, timer NOT enabled)');
   }
+  for (const job of superseded) console.log(`  - ${UNIT_PREFIX}${job.name} superseded by ${job.supersededBy} (unit removed on install)`);
   if (skipped.length) {
     console.log(`\nSkipped ${skipped.length}:`);
     for (const job of skipped) console.log(`  • ${job.name} — ${job.skipReason}`);
@@ -236,7 +275,7 @@ function cmdList() {
 }
 
 function cmdInstall(dryRun) {
-  const { kept, repoDir } = planInstall();
+  const { kept, superseded, repoDir } = planInstall();
   const nodeBin = process.execPath;
   const home = homedir();
   const pathDirs = extraPathDirs({ home });
@@ -246,25 +285,17 @@ function cmdInstall(dryRun) {
       const u = buildUnits(job, { repoDir, nodeBin, home, pathDirs });
       console.log(`# ${u.timerName}\n${u.timer}\n# ${u.serviceName}\n${u.service}\n${'─'.repeat(50)}`);
     }
+    for (const j of superseded) console.log(`(dry-run) ${UNIT_PREFIX}${j.name} superseded by ${j.supersededBy}: would be disabled + removed`);
     console.log(`(dry-run) ${kept.length} timer(s) would be installed to ${UNIT_DIR}`);
     return;
   }
 
-  if (!existsSync(UNIT_DIR)) mkdirSync(UNIT_DIR, { recursive: true });
-  const installed = [];
-  for (const job of kept) {
-    const u = buildUnits(job, { repoDir, nodeBin, home, pathDirs });
-    writeFileSync(join(UNIT_DIR, u.serviceName), u.service);
-    writeFileSync(join(UNIT_DIR, u.timerName), u.timer);
-    installed.push(u);
-  }
-
-  systemctl(['daemon-reload']);
-  for (const u of installed) systemctl(['enable', '--now', u.timerName]);
+  const { installed, removed } = applyInstall({ kept, superseded, repoDir, nodeBin, home, pathDirs });
 
   logCapabilityUsage('schedulerInstall', 'system', 'scheduler-install', 'scheduler-install.mjs', 'install');
-  console.log(`✅ Installed + enabled ${installed.length} timer(s) in ${UNIT_DIR}`);
-  for (const u of installed) console.log(`  • ${u.timerName}  (${u.onCalendar})`);
+  console.log(`✅ Installed ${installed.length} timer(s) in ${UNIT_DIR}`);
+  for (const u of installed) console.log(`  • ${u.timerName}  (${u.onCalendar})${u.enable ? '' : '  [not enabled]'}`);
+  for (const n of removed) console.log(`  - ${n} superseded: disabled + removed`);
   console.log(`\nVerify:  node ${resolve(__dirname, 'scheduler-install.mjs')} status`);
 }
 
