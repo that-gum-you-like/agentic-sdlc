@@ -32,6 +32,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const FRAMEWORK = resolve(HERE, '..');
 const PORTFOLIO = join(FRAMEWORK, 'portfolio.json');
 const DRAIN_SH = join(HERE, 'hermes-drain.sh');
+const REVIEW_JS = join(HERE, 'pr-auto-review.mjs');
 const BUDGET = join(HERE, 'budget.json');
 
 const IDLE_SLEEP_MS = Number(process.env.SUPERVISOR_IDLE_MS || 60_000);
@@ -109,6 +110,19 @@ export function mutexHeldByLiveProcess(lockDir = LOCK_DIR) {
   catch { return false; }                      // holder is gone — orphaned lock
 }
 
+/**
+ * Review right after each drain, for the same project. Drain and review share one
+ * host-global mutex, and with drains back-to-back the timer-driven reviewer (:07/:27/:47)
+ * almost never found it free: on 2026-11-03 PRs #83-#85 sat unreviewed while every
+ * review tick logged "another run holds the lock". Alternating here guarantees one
+ * review per drain; pr-auto-review takes the mutex itself and skips cheaply when idle.
+ */
+export function runReview(project, spawn = spawnSync) {
+  const env = { ...process.env, SDLC_PROJECT_DIR: project.path };
+  const r = spawn('node', [REVIEW_JS], { env, stdio: 'inherit', timeout: DRAIN_TIMEOUT_MS });
+  return r.status === 0;
+}
+
 function runDrain(project) {
   const env = { ...process.env, SDLC_REPO: project.path };
   if (project.baseBranch) env.SDLC_BASE_BRANCH = project.baseBranch;
@@ -134,6 +148,7 @@ export async function pass() {
     if (DRY) { drained++; continue; }
     const ok = runDrain(p);
     log(`${p.name}: drain ${ok ? 'finished' : 'FAILED'}`);
+    log(`${p.name}: review ${runReview(p) ? 'finished' : 'FAILED'}`);
     drained++;
     if (conservationMode()) { log('conservation mode switched ON mid-pass — stopping'); break; }
     await sleep(BETWEEN_MS);
