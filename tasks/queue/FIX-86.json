@@ -11,16 +11,18 @@
   "tags": [
     "auto-fix"
   ],
-  "description": "Drain PR #86 (branch `agent/drain/OS-curriculum-v2-conformance-12`) was NOT merged by pr-auto-review (gate-failed).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-12 && git checkout agent/drain/OS-curriculum-v2-conformance-12`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-12` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- hard gate failed at node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs'\n- ✔ absent readiness resolves to draft, never to ready (3.050875ms)\n✔ all five states are recognized, case- and whitespace-insensitively (0.454155ms)\n✔ an unrecognized readiness is invalid, not silently permissive (0.285829ms)\n✔ only ready-for-dev authorizes the dev loop (0.347503ms)\n✔ readiness is orthogonal to phase — specced with tasks is still not authorized (0.31881ms)\n✔ a done change is not re-authorized by its phase (0.263038ms)\n✔ recordSent appends one JSON line per delivered message (9.259359ms)\n✔ an unconfigured send is not logged (0.974024ms)\n✔ real sends are suppressed under node --test; an injected transport still works (1.054611ms)\n✔ wave 2 preflight audit exists (2.327217ms)\n✔ report names every drained repo (0.645692ms)\n✔ report shows queue depth for each repo (0.299589ms)\n✔ report shows open PR count for each repo (0.313885ms)\n✔ report shows last-deployed sha vs origin/<base> for each repo (0.342433ms)\nℹ tests 731\nℹ suites 116\nℹ pass 723\nℹ fail 1\nℹ cancelled 0\nℹ skipped 7\nℹ todo 0\nℹ duration_ms 23134.901897\n\n✖ failing tests:\n\ntest at tests/hermes-drain.test.mjs:1:1\n✖ tests/hermes-drain.test.mjs (1861.827778ms)\n  'test failed'\n\n",
-  "status": "completed",
+  "description": "Drain PR #86 (branch `agent/drain/OS-curriculum-v2-conformance-12`) was NOT merged by pr-auto-review (gate-failed).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-12 && git checkout agent/drain/OS-curriculum-v2-conformance-12`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-12` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- hard gate failed at node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs'\n- ✔ absent readiness resolves to draft, never to ready (3.510333ms)\n✔ all five states are recognized, case- and whitespace-insensitively (0.483108ms)\n✔ an unrecognized readiness is invalid, not silently permissive (0.393751ms)\n✔ only ready-for-dev authorizes the dev loop (0.377153ms)\n✔ readiness is orthogonal to phase — specced with tasks is still not authorized (0.415327ms)\n✔ a done change is not re-authorized by its phase (0.335599ms)\n✔ recordSent appends one JSON line per delivered message (5.969451ms)\n✔ an unconfigured send is not logged (0.634672ms)\n✔ real sends are suppressed under node --test; an injected transport still works (0.782823ms)\n✔ wave 2 preflight audit exists (3.513019ms)\n✔ report names every drained repo (0.980243ms)\n✔ report shows queue depth for each repo (0.498877ms)\n✔ report shows open PR count for each repo (0.458926ms)\n✔ report shows last-deployed sha vs origin/<base> for each repo (0.533767ms)\nℹ tests 733\nℹ suites 116\nℹ pass 725\nℹ fail 1\nℹ cancelled 0\nℹ skipped 7\nℹ todo 0\nℹ duration_ms 22765.779477\n\n✖ failing tests:\n\ntest at tests/hermes-drain.test.mjs:1:1\n✖ tests/hermes-drain.test.mjs (1610.837125ms)\n  'test failed'\n\n",
+  "status": "pending",
   "fixFor": {
     "pr": 86,
     "branch": "agent/drain/OS-curriculum-v2-conformance-12",
-    "headSha": "234c1f2ca62a5f698cb7712b294284866d8954f1",
+    "headSha": "860ef95ef458429efd5bcdcabd5430a5d24ffdf7",
     "sourceTask": "OS-curriculum-v2-conformance-12",
     "rejectionKind": "gate-failed"
   },
   "completed_at": "2026-11-03T21:40:53Z",
   "test_status": "passing",
-  "completionNote": "not a PR defect: tests/hermes-drain.test.mjs is flaky under full-suite load in the gate (passes in isolation via hardGate); tracked as CV-014"
+  "completionNote": "not a PR defect: tests/hermes-drain.test.mjs is flaky under full-suite load in the gate (passes in isolation via hardGate); tracked as CV-014",
+  "attempts": 1,
+  "refreshedAt": "2026-11-03T21:47:00.209Z"
 }
