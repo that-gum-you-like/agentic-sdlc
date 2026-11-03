@@ -357,6 +357,9 @@ function applyProviderDownSwaps(budget, providerHealth, intel) {
         console.log(`\n  ⚠️  ${name}: ${provider} DOWN — no usable rung (no API key for: ${skipped.join(', ')}); leaving model unchanged`);
         appendLedger({ event: 'provider-down-no-usable-rung', agent: name, model, downProvider: provider, skippedNoKey: skipped });
       } else {
+        // Marked like a swap so recovery restores it — otherwise a transient outage blocks the agent forever.
+        const preBlock = agentCfg.providerDownSwap ? agentCfg.providerDownSwap.previousActiveModel : (agentCfg.activeModel ?? null);
+        agents[name].providerDownSwap = { downProvider: provider, previousActiveModel: preBlock, swappedTo: 'budget-exhausted' };
         agents[name].activeModel = 'budget-exhausted';
         console.log(`\n  💀 ${name}: ${provider} DOWN — NO HEALTHY FALLBACK AVAILABLE`);
         appendLedger({ event: 'all-fallbacks-down', agent: name, model, downProvider: provider });
