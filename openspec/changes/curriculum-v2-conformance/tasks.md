@@ -51,14 +51,14 @@ None of these block the hermes lane. Each names the gap and the task it unblocks
 
 | # | Decision | Gap | Unblocks |
 |---|---|---|---|
-| 1 | Enable `humanWellness` in agents/project.json (advisory alerts; currently dormant) | D7-09 | one-line config change, no task yet |
-| 2 | Matrix homeserver vs. Telegram as the documented L4 substitute | D3-05 | `matrix-cli` rooms/test, or a doc line in SHARED_PROTOCOL |
-| 3 | Set an OpenRouter per-key credit limit (key currently has none; usage $30.44) and add a health-check probe | D1-19, D7-12 | RUNBOOK line + probe task |
-| 4 | Create a separate GitHub bot account for the agent PAT, or document the current identity | D1-11 | RUNBOOK line |
-| 5 | Active-hours and merge-only windows for the drain (24/7 may be intentional) | D1-08 | `portfolio.json` fields read by drain-supervisor |
+| 1 | Enable `humanWellness` in agents/project.json (advisory alerts; currently dormant) | D7-09 | one-line config change, no task yet — **DECIDED 2026-11-03 (default):** ON, advisory only — `agents/project.json` humanWellness.enabled=true. |
+| 2 | Matrix homeserver vs. Telegram as the documented L4 substitute | D3-05 | `matrix-cli` rooms/test, or a doc line in SHARED_PROTOCOL — **DECIDED:** keep Telegram as the L4 substitute; CoffeeTalk.md for agent-to-agent; no Matrix homeserver. |
+| 3 | Set an OpenRouter per-key credit limit (key currently has none; usage $30.44) and add a health-check probe | D1-19, D7-12 | RUNBOOK line + probe task — **DECIDED:** $50/month per-key cap — Bryce sets it in the OpenRouter dashboard (human step); RUNBOOK documents it. |
+| 4 | Create a separate GitHub bot account for the agent PAT, or document the current identity | D1-11 | RUNBOOK line — **DECIDED:** keep the current identity (Bryce PAT + `Co-Authored-By: hermes-drain`); bot account optional later; RUNBOOK documents it. |
+| 5 | Active-hours and merge-only windows for the drain (24/7 may be intentional) | D1-08 | `portfolio.json` fields read by drain-supervisor — **DECIDED:** 24/7, no merge-only window. |
 | 6 | ~~Production error source~~ DECIDED 2026-11-03: any and all sources → Phase 7 | D1-04 | CV-703..705 |
-| 7 | Turn on the optional `claude -p` headless review timer? Cost: each review spends subscription tokens in a background session; Bryce's plan is small. Default OFF, max 2/day if on | CV-REQ-104 | CV-511, CV-512 |
-| 8 | Values for values-driven agent goals (bottom-ranked values) | D3-03 | a "Values" section in AGENT.md.template |
+| 7 | Turn on the optional `claude -p` headless review timer? Cost: each review spends subscription tokens in a background session; Bryce's plan is small. Default OFF, max 2/day if on | CV-REQ-104 | CV-511, CV-512 — **DECIDED:** OFF — Claude reviews the flagged queue only in interactive sessions (CV-511/512 stay parked). |
+| 8 | Values for values-driven agent goals (bottom-ranked values) | D3-03 | a "Values" section in AGENT.md.template — **DECIDED:** Claude drafted `framework/values.md` from Bryce's standing rules (top + bottom-ranked); Bryce edits at leisure. Wired into AGENT.md.template and drain-prompt.md. |
 
 ---
 

@@ -28,7 +28,10 @@
     }
   },
   "humanWellness": {
-    "enabled": false
+    "enabled": true,
+    "dailyMaxHours": 10,
+    "nightCutoff": "23:00",
+    "breakIntervalHours": 3
   },
   "capabilityMonitoring": {
     "enabled": true,
