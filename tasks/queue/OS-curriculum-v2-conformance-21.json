@@ -1,0 +1,13 @@
+{
+  "id": "OS-curriculum-v2-conformance-21",
+  "title": "daily-review.mjs: add pure `bugMetrics(changesDir, queueDir)` (active vs archived `bug-*` and `prod-error-*`, resolution rate, pending vs completed `FIX-*` queue tasks)",
+  "description": "- [ ] **CV-120**: daily-review.mjs: add pure `bugMetrics(changesDir, queueDir)` (active vs archived `bug-*` and `prod-error-*`, resolution rate, pending vs completed `FIX-*` queue tasks)\n  - **Priority:** HIGH\n  - Files: `agents/cycles/daily-review.mjs, agents/__tests__/daily-review.test.mjs`\n  - Spec: CV-REQ-020\n  - Gaps: D1-05\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: one active bug-X and one archived bug-Y -> rate 50%; no bug dirs -> `none`, no NaN\n  - Parallel: yes\n  - Complexity: S",
+  "priority": "HIGH",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.798Z",
+  "claimedBy": null,
+  "testStatus": null
+}

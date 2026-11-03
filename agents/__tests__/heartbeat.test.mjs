@@ -371,7 +371,7 @@ describe('CLI exit codes (REQ-002)', () => {
     });
     const result = spawnSync('node', [resolve(MODULE_DIR, '../heartbeat.mjs')], {
       cwd: dir,
-      env: { ...process.env, SDLC_PROJECT_DIR: dir },
+      env: { ...process.env, SDLC_PROJECT_DIR: dir, TELEGRAM_BOT_TOKEN: '', TELEGRAM_CHAT_ID: '' }, // hermetic: the review gate loads real tokens
       timeout: 15000,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -388,7 +388,7 @@ describe('CLI exit codes (REQ-002)', () => {
     });
     const result = spawnSync('node', [resolve(MODULE_DIR, '../heartbeat.mjs')], {
       cwd: dir,
-      env: { ...process.env, SDLC_PROJECT_DIR: dir },
+      env: { ...process.env, SDLC_PROJECT_DIR: dir, TELEGRAM_BOT_TOKEN: '', TELEGRAM_CHAT_ID: '' }, // hermetic: the review gate loads real tokens
       timeout: 15000,
       stdio: ['pipe', 'pipe', 'pipe'],
     });

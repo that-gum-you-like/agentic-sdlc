@@ -1,0 +1,19 @@
+{
+  "id": "OS-curriculum-v2-conformance-98",
+  "title": "pr-auto-review.mjs: after a successful squash-merge call appendChangelog inside the existing completeTaskInClone commit/push path (no new push path)",
+  "description": "- [ ] **CV-407**: pr-auto-review.mjs: after a successful squash-merge call appendChangelog inside the existing completeTaskInClone commit/push path (no new push path)\n  - **Priority:** MEDIUM\n  - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`\n  - Spec: CV-REQ-053\n  - Gaps: D4-04\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: merge flow with injected gh/git runners: CHANGELOG.md is part of the same commit as the queue completion\n  - Parallel: blocked-by CV-406\n  - Complexity: M",
+  "priority": "MEDIUM",
+  "status": "completed",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.813Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-97"
+  ],
+  "completed_at": "2026-11-03T20:15:45.562Z",
+  "test_status": "passing",
+  "completionNote": "interactive batches 2+3 (pr-auto-review release manager; drain-path gates), reviewed + merged 2026-11-03"
+}

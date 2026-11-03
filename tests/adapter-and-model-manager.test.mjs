@@ -14,7 +14,8 @@
  *   - Integration: model-manager → budget.json → worker reads activeModel
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, readdirSync, mkdtempSync } from 'fs';
+import { tmpdir } from 'os';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -523,6 +524,46 @@ test('model-manager has health check and stale task reset functions', () => {
   assert(mm.includes('findHealthyFallback'), 'Should have findHealthyFallback function');
   assert(mm.includes('provider-down-swap'), 'Should log provider-down-swap events');
   assert(mm.includes('stale-task-reset'), 'Should log stale-task-reset events');
+});
+
+test('provider-down swap skips keyless rungs; recovery reverts only its own swaps', async () => {
+  const mm = await import(resolve(SDLC_ROOT, 'agents/model-manager.mjs'));
+  const intel = { models: {
+    'or-model': { provider: 'openrouter' }, 'groq-model': { provider: 'groq' }, 'gem-model': { provider: 'gemini' },
+  } };
+  const health = { openrouter: { status: 'down' } };
+  const mk = () => ({ agents: {
+    a: { model: 'or-model', fallbackChain: ['or-model', 'groq-model'], provider: 'openrouter' },
+    b: { model: 'or-model', fallbackChain: ['or-model', 'groq-model', 'gem-model'], provider: 'openrouter' },
+  } });
+  const saved = { g: process.env.GROQ_API_KEY, m: process.env.GEMINI_API_KEY };
+  const dir = mkdtempSync(resolve(tmpdir(), 'mm-'));
+  try {
+    // (a) no Groq key anywhere -> no usable rung, activeModel untouched
+    delete process.env.GROQ_API_KEY; process.env.GEMINI_API_KEY = 'x';
+    const b1 = mk();
+    const n1 = mm.applyProviderDownSwaps(b1, health, intel);
+    assert(b1.agents.a.activeModel === undefined, 'keyless-only chain must leave activeModel unchanged');
+    assert(!b1.agents.a.providerDownSwap, 'no marker without a swap');
+    assert(b1.agents.b.activeModel === 'gem-model', 'should skip keyless groq and land on gemini');
+    assert(n1 === 1, `expected 1 swap, got ${n1}`);
+
+    // (b) recovery reverts own swaps only
+    b1.agents.a.activeModel = 'manual-pick'; // manual override, no marker
+    const b2 = mk();
+    b2.agents.b.activeModel = 'pinned-before'; // pre-swap override to restore
+    mm.applyProviderDownSwaps(b2, health, intel);
+    assert(b2.agents.b.providerDownSwap.previousActiveModel === 'pinned-before', 'records pre-swap value');
+    b2.agents.a.activeModel = 'manual-pick';
+    b2.agents.a.providerDownSwap = { downProvider: 'openrouter', previousActiveModel: null, swappedTo: 'groq-model' }; // stale marker, user since changed it
+    const r = mm.revertProviderDownSwaps(b2, 'openrouter');
+    assert(r === 1, `expected 1 revert, got ${r}`);
+    assert(b2.agents.b.activeModel === 'pinned-before' && !b2.agents.b.providerDownSwap, 'swap reverted to pre-swap value');
+    assert(b2.agents.a.activeModel === 'manual-pick' && !b2.agents.a.providerDownSwap, 'manual override never clobbered');
+  } finally {
+    for (const [k, v] of [['GROQ_API_KEY', saved.g], ['GEMINI_API_KEY', saved.m]]) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('Gemini adapter exports all 5 required functions', async () => {

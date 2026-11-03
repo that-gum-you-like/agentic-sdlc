@@ -1,0 +1,16 @@
+{
+  "id": "OS-curriculum-v2-conformance-73",
+  "title": "four-layer-validate.mjs Layer 3: report functions over 50 lines and over 4 parameters as advisory `[fn-length]`/`[param-count]` using scanFunctionMetrics; respect defeat-allowlist.json (shrink-only)",
+  "description": "- [ ] **CV-304**: four-layer-validate.mjs Layer 3: report functions over 50 lines and over 4 parameters as advisory `[fn-length]`/`[param-count]` using scanFunctionMetrics; respect defeat-allowlist.json (shrink-only)\n  - **Priority:** MEDIUM\n  - Files: `agents/four-layer-validate.mjs, agents/__tests__/silent-fallback-scan.test.mjs`\n  - Spec: CV-REQ-031\n  - Gaps: D5-02\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: fixture source with a long function yields an advisory line and exit status unchanged; allowlisted file silent\n  - Parallel: blocked-by CV-303\n  - Complexity: M\n  - Notes: Advisory only so existing repo code does not fail npm test; if existing code produces findings, add them to the allowlist in this task.",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.809Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-72"
+  ]
+}

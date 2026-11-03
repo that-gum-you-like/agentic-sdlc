@@ -1,0 +1,19 @@
+{
+  "id": "OS-curriculum-v2-conformance-86",
+  "title": "drain-prompt.md: add tests-first and `never modify a committed test` rule (needs-human with the test path) and the ambiguous-verb data-safety rule (no named scope -> needs-human)",
+  "description": "- [ ] **CV-317**: drain-prompt.md: add tests-first and `never modify a committed test` rule (needs-human with the test path) and the ambiguous-verb data-safety rule (no named scope -> needs-human)\n  - **Priority:** MEDIUM\n  - Files: `agents/drain-prompt.md, tests/hermes-drain.test.mjs`\n  - Spec: CV-REQ-034, CV-REQ-038\n  - Gaps: D1-07, D1-10\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: hermes-drain test asserts the exact phrases `never modify a committed test` and `named scope`\n  - Parallel: blocked-by CV-316, CV-301, CV-302\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.811Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-85",
+    "OS-curriculum-v2-conformance-70",
+    "OS-curriculum-v2-conformance-71"
+  ],
+  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+}

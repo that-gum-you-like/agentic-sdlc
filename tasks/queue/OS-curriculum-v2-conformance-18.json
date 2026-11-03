@@ -1,0 +1,17 @@
+{
+  "id": "OS-curriculum-v2-conformance-18",
+  "title": "daily-review.mjs: add `runUserTests(config, {runner})`; when config present and a spec exists run `browser-user-test.mjs run`, else log `skipped (no-playwright-config)`; failure is non-fatal; write a `User tests` dashboard section",
+  "description": "- [ ] **CV-117**: daily-review.mjs: add `runUserTests(config, {runner})`; when config present and a spec exists run `browser-user-test.mjs run`, else log `skipped (no-playwright-config)`; failure is non-fatal; write a `User tests` dashboard section\n  - **Priority:** HIGH\n  - Files: `agents/cycles/daily-review.mjs, agents/__tests__/daily-review.test.mjs`\n  - Spec: CV-REQ-015\n  - Gaps: D7-04\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: runner stub: config present -> runner called, section shows PASS/FAIL and pm/user-tests path; no config -> runner not called, section shows skipped\n  - Parallel: blocked-by CV-116, CV-118\n  - Complexity: M",
+  "priority": "HIGH",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.797Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-17",
+    "OS-curriculum-v2-conformance-19"
+  ]
+}

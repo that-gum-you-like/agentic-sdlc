@@ -1,0 +1,16 @@
+{
+  "id": "OS-curriculum-v2-conformance-62",
+  "title": "pattern-hunt.mjs teachAgents: also record a `long-term` entry with `learnedFrom: <agent>` on other agents sharing a domain in agents/domains.json; idempotent per (category, agent); dry-run writes nothing",
+  "description": "- [ ] **CV-246**: pattern-hunt.mjs teachAgents: also record a `long-term` entry with `learnedFrom: <agent>` on other agents sharing a domain in agents/domains.json; idempotent per (category, agent); dry-run writes nothing\n  - **Priority:** MEDIUM\n  - Files: `agents/pattern-hunt.mjs, agents/__tests__/teach-wiring.test.mjs`\n  - Spec: CV-REQ-073\n  - Gaps: D6-06\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: two agents sharing a domain: second gets one learnedFrom entry, a rerun adds none; agent without shared domain gets none\n  - Parallel: blocked-by CV-245\n  - Complexity: M",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.806Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-61"
+  ]
+}

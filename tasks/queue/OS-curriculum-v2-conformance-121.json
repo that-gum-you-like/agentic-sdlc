@@ -1,0 +1,14 @@
+{
+  "id": "OS-curriculum-v2-conformance-121",
+  "title": "Verification: run `npm test`, `node agents/cycles/weekly-review.mjs --dry-run` (three steps listed), `node agents/health-check.mjs` (cycles check present), `node agents/scheduler-install.mjs install --dry-run`; record outputs in the change notes",
+  "description": "- [ ] **CV-608**: Verification: run `npm test`, `node agents/cycles/weekly-review.mjs --dry-run` (three steps listed), `node agents/health-check.mjs` (cycles check present), `node agents/scheduler-install.mjs install --dry-run`; record outputs in the change notes\n  - **Priority:** LOW\n  - Files: `openspec/changes/curriculum-v2-conformance/tasks.md`\n  - Spec: all CYC\n  - Gaps: -\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: all four commands exit 0 and show the expected lines\n  - Parallel: blocked-by all Phase 1 and 3 tasks\n  - Complexity: S",
+  "priority": "LOW",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.818Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "OS-curriculum-v2-conformance-31",
+  "title": "seed-queue.mjs: in the function that writes tasks/queue/<id>.json, call `screenExternalInput` when `task.origin` is inbox, mailbox, issue or error; flagged -> do not write, raise a human task via notifyHumanTask, log `injectionScreen`",
+  "description": "- [ ] **CV-204**: seed-queue.mjs: in the function that writes tasks/queue/<id>.json, call `screenExternalInput` when `task.origin` is inbox, mailbox, issue or error; flagged -> do not write, raise a human task via notifyHumanTask, log `injectionScreen`\n  - **Priority:** MEDIUM\n  - Files: `agents/seed-queue.mjs, agents/__tests__/injection-screening.test.mjs`\n  - Spec: CV-REQ-061\n  - Gaps: D5-06\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: tmp queue dir: flagged inbox task writes no file and creates a human task; origin `repo` task unaffected\n  - Parallel: blocked-by CV-202\n  - Complexity: M",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.800Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-29"
+  ]
+}

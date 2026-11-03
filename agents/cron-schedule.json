@@ -37,14 +37,6 @@
       "session": "isolated"
     },
     {
-      "name": "orchestration-sync",
-      "cron": "17 */6 * * *",
-      "script": "node ~/agentic-sdlc/agents/paperclip-sync.mjs --status",
-      "description": "Sync SDLC agent config to orchestration platform. Uses paperclip-sync.mjs when Paperclip adapter is configured; skip if using file-based adapter.",
-      "session": "isolated",
-      "adapterRequired": "paperclip"
-    },
-    {
       "name": "model-manager-check",
       "cron": "*/15 * * * *",
       "script": "node ~/agentic-sdlc/agents/model-manager.mjs check",
@@ -55,7 +47,7 @@
       "name": "dependency-audit",
       "cron": "0 8 * * *",
       "script": "node ~/agentic-sdlc/agents/queue-drainer.mjs run --agent dependency-auditor",
-      "description": "Daily dependency audit — scan for CVEs, license violations, version drift, deprecated packages",
+      "description": "Daily dependency audit \u2014 scan for CVEs, license violations, version drift, deprecated packages",
       "session": "isolated",
       "agentRequired": "dependency-auditor"
     },
@@ -63,7 +55,7 @@
       "name": "performance-check",
       "cron": "0 */4 * * *",
       "script": "node ~/agentic-sdlc/agents/queue-drainer.mjs run --agent performance-sentinel",
-      "description": "Periodic performance benchmark — check bundle size, API latency, test duration against baselines",
+      "description": "Periodic performance benchmark \u2014 check bundle size, API latency, test duration against baselines",
       "session": "isolated",
       "agentRequired": "performance-sentinel"
     },
@@ -71,7 +63,7 @@
       "name": "health-check-daily",
       "cron": "0 6 * * *",
       "script": "node ~/agentic-sdlc/agents/health-check.mjs --notify",
-      "description": "Autonomous health check — queue depth, per-agent budget headroom, disk free, cron liveness; notify on non-ok",
+      "description": "Autonomous health check \u2014 queue depth, per-agent budget headroom, disk free, cron liveness; notify on non-ok",
       "session": "isolated"
     },
     {
@@ -99,14 +91,15 @@
       "name": "autonomous-drain",
       "cron": "*/15 * * * *",
       "script": "~/agentic-sdlc/agents/hermes-drain.sh",
-      "description": "Autonomous backlog drain via isolated local-backend Hermes (OpenRouter affordable models). No-op unless the repo is idle on main with a clean tree AND a task is ready; then runs one task → branch → tests → PR for human review. Never touches main.",
-      "session": "isolated"
+      "description": "Autonomous backlog drain via isolated local-backend Hermes (OpenRouter affordable models). No-op unless the repo is idle on main with a clean tree AND a task is ready; then runs one task \u2192 branch \u2192 tests \u2192 PR for human review. Never touches main. \u2014 DISABLED by design: agents/drain-supervisor.mjs runs the drain continuously from boot; a timer would only contend for the mutex.",
+      "session": "isolated",
+      "enabled": false
     },
     {
       "name": "kanban-sync",
       "cron": "*/15 * * * *",
-      "script": "node ~/agentic-sdlc/agents/command-center-sync.mjs sync",
-      "description": "Full command-center sync: task queue, agent registry, OpenSpec changes + tasks.md sub-cards, BACKLOG.md ideas, run history, and board-side approvals into the Hermes kanban the dashboard reads. Idempotent single command (systemd ExecStart cannot shell-chain).",
+      "script": "node ~/agentic-sdlc/agents/command-center-sync.mjs sync --all",
+      "description": "Full command-center sync --all: queue, agent registry, OpenSpec changes + tasks.md sub-cards, BACKLOG.md ideas, run history, and board-side approvals for EVERY enabled portfolio project \u2014 namespaced per project so cards never collide on the shared board. Idempotent single command (systemd ExecStart cannot shell-chain).",
       "session": "isolated"
     },
     {
@@ -127,8 +120,9 @@
       "name": "pilot-drain",
       "cron": "3,18,33,48 * * * *",
       "script": "/usr/bin/env SDLC_REPO=/home/bryce/hermes-pilot /home/bryce/agentic-sdlc/agents/hermes-drain.sh",
-      "description": "Autonomous drain for hermes-pilot (openspec: pilot-autonomous-replication)",
-      "session": "isolated"
+      "description": "Autonomous drain for hermes-pilot (openspec: pilot-autonomous-replication) \u2014 DISABLED by design: agents/drain-supervisor.mjs runs the drain continuously from boot; a timer would only contend for the mutex.",
+      "session": "isolated",
+      "enabled": false
     },
     {
       "name": "pilot-review",
@@ -141,8 +135,9 @@
       "name": "personal-website-drain",
       "cron": "13,28,43,58 * * * *",
       "script": "/usr/bin/env SDLC_REPO=/home/bryce/personal-website /home/bryce/agentic-sdlc/agents/hermes-drain.sh",
-      "description": "Autonomous drain for personal-website (mission-bootstrap)",
-      "session": "isolated"
+      "description": "Autonomous drain for personal-website (mission-bootstrap) \u2014 DISABLED by design: agents/drain-supervisor.mjs runs the drain continuously from boot; a timer would only contend for the mutex.",
+      "session": "isolated",
+      "enabled": false
     },
     {
       "name": "personal-website-review",
@@ -155,15 +150,16 @@
       "name": "heartbeat",
       "cron": "23 8 * * *",
       "script": "node ~/agentic-sdlc/agents/heartbeat.mjs",
-      "description": "Daily liveness digest to Telegram: timers alive, drain ticks, merges, open approvals, blocked tasks, spend, health. Sent even when nominal — silence must never be ambiguous. Replaces the per-tick drain chatter.",
+      "description": "Daily liveness digest to Telegram: timers alive, drain ticks, merges, open approvals, blocked tasks, spend, health. Sent even when nominal \u2014 silence must never be ambiguous. Replaces the per-tick drain chatter.",
       "session": "isolated"
     },
     {
       "name": "nels-workshop-drain",
       "cron": "11,26,41,56 * * * *",
       "script": "/usr/bin/env SDLC_REPO=/home/bryce/nels-workshop /home/bryce/agentic-sdlc/agents/hermes-drain.sh",
-      "description": "Autonomous drain for nels-workshop (mission-bootstrap)",
-      "session": "isolated"
+      "description": "Autonomous drain for nels-workshop (mission-bootstrap) \u2014 DISABLED by design: agents/drain-supervisor.mjs runs the drain continuously from boot; a timer would only contend for the mutex.",
+      "session": "isolated",
+      "enabled": false
     },
     {
       "name": "nels-workshop-review",
@@ -173,31 +169,18 @@
       "session": "isolated"
     },
     {
-      "name": "nels-workshop-kanban-sync",
-      "cron": "8,38 * * * *",
-      "script": "/usr/bin/env SDLC_PROJECT_DIR=/home/bryce/nels-workshop node /home/bryce/agentic-sdlc/agents/command-center-sync.mjs sync",
-      "description": "Command-center sync for nels-workshop — its queue, OpenSpec change and sub-cards into the board the dashboard reads. The base kanban-sync only ever walks the framework repo.",
-      "session": "isolated"
-    },
-    {
       "name": "willtopaint-drain",
       "cron": "5,35 * * * *",
       "script": "/usr/bin/env SDLC_REPO=/home/bryce/willtopaint SDLC_BASE_BRANCH=staging /home/bryce/agentic-sdlc/agents/hermes-drain.sh",
-      "description": "Autonomous drain for willtopaint. SDLC_BASE_BRANCH=staging because the drain otherwise detects the base from origin/HEAD (main) and ignores project.json deploy.baseBranch — agent work must land on staging, never production.",
-      "session": "isolated"
+      "description": "Autonomous drain for willtopaint. SDLC_BASE_BRANCH=staging because the drain otherwise detects the base from origin/HEAD (main) and ignores project.json deploy.baseBranch \u2014 agent work must land on staging, never production. \u2014 DISABLED by design: agents/drain-supervisor.mjs runs the drain continuously from boot; a timer would only contend for the mutex.",
+      "session": "isolated",
+      "enabled": false
     },
     {
       "name": "willtopaint-review",
       "cron": "24,54 * * * *",
       "script": "/usr/bin/env SDLC_PROJECT_DIR=/home/bryce/willtopaint node /home/bryce/agentic-sdlc/agents/pr-auto-review.mjs",
       "description": "PR auto-review for willtopaint",
-      "session": "isolated"
-    },
-    {
-      "name": "willtopaint-kanban-sync",
-      "cron": "39 * * * *",
-      "script": "/usr/bin/env SDLC_PROJECT_DIR=/home/bryce/willtopaint node /home/bryce/agentic-sdlc/agents/command-center-sync.mjs sync",
-      "description": "Command-center sync for willtopaint — remove once CC-003 lands",
       "session": "isolated"
     }
   ]

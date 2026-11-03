@@ -1,0 +1,15 @@
+{
+  "id": "OS-curriculum-v2-conformance-1",
+  "title": "Flip this change to readiness ready-for-dev, push, and dry-run the seeder: only hermes-lane tasks may be listed",
+  "description": "- [ ] **CV-012**: Flip this change to readiness ready-for-dev, push, and dry-run the seeder: only hermes-lane tasks may be listed\n  - **Priority:** HIGH\n  - Files: `openspec/changes/curriculum-v2-conformance/status.json`\n  - Spec: CV-REQ-039\n  - Gaps: -\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: `node agents/seed-queue-from-openspec.mjs --dry-run` lists no task whose block has `Lane: interactive`\n  - Parallel: blocked-by CV-006, CV-011\n  - Complexity: S\n\n### Phase 1: Cycles wired\n\nCapability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.json edits and the baseline recording are interactive.",
+  "priority": "HIGH",
+  "status": "completed",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.792Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "completed_at": "2026-11-03T20:06:05Z",
+  "completionNote": "done interactively 2026-11-03"
+}

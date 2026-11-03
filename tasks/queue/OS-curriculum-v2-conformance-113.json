@@ -1,0 +1,18 @@
+{
+  "id": "OS-curriculum-v2-conformance-113",
+  "title": "OPTIONAL (default OFF): cron-schedule.json entry `claude-review-headless` with `enabled:false`; reinstall timers",
+  "description": "- [ ] **CV-512**: OPTIONAL (default OFF): cron-schedule.json entry `claude-review-headless` with `enabled:false`; reinstall timers\n  - **Priority:** MEDIUM\n  - Files: `agents/cron-schedule.json, tests/scheduler-install.test.mjs`\n  - Spec: CV-REQ-104\n  - Gaps: -\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: unit file installed and not enabled (injected systemctl runner)\n  - Parallel: blocked-by CV-511, CV-114\n  - Complexity: S\n\n### Phase 6: Hygiene + conformance doc + verification\n\nHygiene tasks cite gap ids and carry no spec. Conformance rows are downgraded first, strengthened by test, and re-upgraded only after Phases 1-5 are verified.",
+  "priority": "MEDIUM",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.816Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-112",
+    "OS-curriculum-v2-conformance-15"
+  ],
+  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+}

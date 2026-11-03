@@ -133,6 +133,14 @@ export const READINESS_STATES = new Set([
   'draft', 'ready-for-dev', 'in-dev', 'ready-for-review', 'done',
 ]);
 
+/**
+ * Absent lane = legacy tasks.md, seeded as before. Any lane other than `hermes`
+ * (interactive, or a typo) is withheld — fail closed. (curriculum-v2-conformance CV-REQ-039)
+ */
+export function isDrainLane(task = {}) {
+  return !task.lane || task.lane === 'hermes';
+}
+
 /** @returns {string} the change's readiness; absent/unset resolves to 'draft'. */
 export function readinessOf(status = {}) {
   const r = String(status.readiness ?? '').toLowerCase().trim();
@@ -191,6 +199,7 @@ function parseTasksMd(changeName, tasksPath) {
 
   let currentTask = null;
   let taskNumber = 0;
+  const doneIds = new Set();
 
   for (const line of lines) {
     // Match ## Task N: Title  or  ## Task N.M: Title
@@ -228,6 +237,7 @@ function parseTasksMd(changeName, tasksPath) {
         tasks.push(currentTask);
       }
       if (taskBullet[1].toLowerCase() === 'x') {
+        doneIds.add(taskBullet[2].replace(/^T/i, ''));
         currentTask = null; // completed — don't re-queue it
         continue;
       }
@@ -265,6 +275,21 @@ function parseTasksMd(changeName, tasksPath) {
         currentTask.inlineTokens = parseInt(tokenMatch[1], 10);
       }
 
+      // Parse lane annotation: `- Lane: hermes|interactive`. Interactive tasks
+      // touch the machinery executing the drain (or need Bryce) and must never
+      // be queued for it (openspec: curriculum-v2-conformance CV-REQ-039).
+      // `- Parallel: blocked-by CV-101, CV-102` → dependencies on sibling tasks.
+      const blockedMatch = line.match(/blocked-by\s+(.+)$/i);
+      if (blockedMatch) {
+        currentTask.blockedByRaw = (blockedMatch[1].match(/\b[A-Z]+-\d+(?:\.\d+)?\b/gi) || [])
+          .map(id => id.replace(/^T/i, ''));
+      }
+
+      const laneMatch = line.match(/^\s*-\s+Lane:\s*([\w-]+)/i);
+      if (laneMatch) {
+        currentTask.lane = laneMatch[1].toLowerCase();
+      }
+
       // Parse inline per-task agent annotation: **Agent:** Jen (Frontend)
       // Honored only if the named agent exists in this project's roster
       // (domains.json keys or project.json agents list).
@@ -287,6 +312,7 @@ function parseTasksMd(changeName, tasksPath) {
     tasks.push(currentTask);
   }
 
+  tasks.doneIds = doneIds; // checked-off ids: a dependency on one is already satisfied
   return tasks;
 }
 
@@ -360,6 +386,7 @@ function main() {
   let totalCreated = 0;
   let totalSkippedDone = 0;
   let totalSkippedDupe = 0;
+  let totalSkippedLane = 0;
   let totalChangesProcessed = 0;
 
   for (const entry of changeEntries) {
@@ -429,6 +456,8 @@ function main() {
         continue;
       }
 
+      // Absent lane = legacy tasks.md, seeded as before. Any lane other than
+      // `hermes` (interactive, or a typo) is withheld — fail closed.
       // Check for duplicates
       if (isDuplicate(task.title, queueTitles)) {
         console.log(`  [dupe]  Task ${task.rawNumber}: ${task.title}`);
@@ -454,6 +483,13 @@ function main() {
       const safeChangeName = changeName.replace(/[^a-zA-Z0-9]/g, '-');
       const taskId = `OS-${safeChangeName}-${task.taskNumber}`;
 
+      // Dependencies: map sibling raw ids to their queue ids; checked-off ones are satisfied.
+      const blockedBy = (task.blockedByRaw || [])
+        .filter(raw => !(tasks.doneIds && tasks.doneIds.has(raw)))
+        .map(raw => tasks.find(t => t.rawNumber === raw))
+        .filter(Boolean)
+        .map(t => `OS-${safeChangeName}-${t.taskNumber}`);
+
       const taskJson = {
         id: taskId,
         title: task.title,
@@ -467,6 +503,14 @@ function main() {
         claimedBy: null,
         testStatus: null,
       };
+      if (blockedBy.length) taskJson.blockedBy = blockedBy;
+      // Interactive-lane tasks are queued visible but BLOCKED: the drain only claims
+      // `pending`, and dependents resolve once a human marks this one completed.
+      if (!isDrainLane(task)) {
+        taskJson.status = 'blocked';
+        taskJson.blockedReason = `interactive-lane (lane=${task.lane}): touches the machinery executing the drain or needs Bryce — done in an interactive session`;
+        totalSkippedLane++;
+      }
 
       if (isDryRun) {
         console.log(`  [would-create] ${taskId} (agent: ${agent}, priority: ${taskPriority}, tokens: ${estimatedTokens})`);
@@ -496,6 +540,7 @@ function main() {
   console.log(`  Tasks ${isDryRun ? 'would create' : 'created    '}: ${totalCreated}`);
   console.log(`  Skipped (done)    : ${totalSkippedDone}`);
   console.log(`  Skipped (dupe)    : ${totalSkippedDupe}`);
+  console.log(`  Interactive (blocked): ${totalSkippedLane}`);
   if (!isDryRun && totalCreated > 0) {
     console.log(`\n[seed] Task queue: ${TASK_QUEUE_DIR}`);
     console.log(`[seed] Run: node ~/agentic-sdlc/agents/queue-drainer.mjs status`);

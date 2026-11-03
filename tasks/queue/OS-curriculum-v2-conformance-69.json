@@ -1,0 +1,16 @@
+{
+  "id": "OS-curriculum-v2-conformance-69",
+  "title": "framework/agent-lifecycle.md: link to agents/templates/agent-proposal.md in the \"when to create a new agent\" section",
+  "description": "- [ ] **CV-253**: framework/agent-lifecycle.md: link to agents/templates/agent-proposal.md in the \"when to create a new agent\" section\n  - **Priority:** MEDIUM\n  - Files: `framework/agent-lifecycle.md, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-075\n  - Gaps: D6-08\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts the link text and that the target file exists\n  - Parallel: blocked-by CV-252\n  - Complexity: S\n\n### Phase 3: Autonomous-path gates\n\nCapability: autonomous-path-gates. Edits the machinery the drain runs on, so the gate tasks are interactive. Pure helper tasks are hermes and land first. Edits to drain-prompt.md are serialized.",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.808Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-68"
+  ]
+}

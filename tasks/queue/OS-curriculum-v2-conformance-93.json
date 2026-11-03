@@ -1,0 +1,19 @@
+{
+  "id": "OS-curriculum-v2-conformance-93",
+  "title": "pr-auto-review.mjs: export `classifyDomain(files)` (infra: .github, scripts, *.sh, systemd, cron-schedule, package.json; backend: agents/*.mjs, lib; frontend: *.tsx, *.css, ui/web/components; docs-tests: *.md, tests) and `DOMAIN_ORDER`",
+  "description": "- [ ] **CV-402**: pr-auto-review.mjs: export `classifyDomain(files)` (infra: .github, scripts, *.sh, systemd, cron-schedule, package.json; backend: agents/*.mjs, lib; frontend: *.tsx, *.css, ui/web/components; docs-tests: *.md, tests) and `DOMAIN_ORDER`\n  - **Priority:** MEDIUM\n  - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`\n  - Spec: CV-REQ-051\n  - Gaps: D4-01\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: files [agents/a.mjs, README.md] -> backend; [.github/x.yml, agents/a.mjs] -> infra\n  - Parallel: blocked-by CV-401\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "completed",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.812Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-92"
+  ],
+  "completed_at": "2026-11-03T20:15:45.561Z",
+  "test_status": "passing",
+  "completionNote": "interactive batches 2+3 (pr-auto-review release manager; drain-path gates), reviewed + merged 2026-11-03"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "OS-curriculum-v2-conformance-80",
+  "title": "review-hook.mjs: add advisory `fn-length` (> 50 lines) and `param-count` (> 4) items using four-layer `scanFunctionMetrics`, applied only to functions overlapping staged added lines",
+  "description": "- [ ] **CV-311**: review-hook.mjs: add advisory `fn-length` (> 50 lines) and `param-count` (> 4) items using four-layer `scanFunctionMetrics`, applied only to functions overlapping staged added lines\n  - **Priority:** MEDIUM\n  - Files: `agents/review-hook.mjs, agents/__tests__/gates-enforce.test.mjs`\n  - Spec: CV-REQ-031\n  - Gaps: D5-02\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: staged 60-line function -> exit 0 with `fn-length` warning; untouched long function elsewhere -> no warning\n  - Parallel: blocked-by CV-303, CV-310\n  - Complexity: M",
+  "priority": "MEDIUM",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.810Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-72",
+    "OS-curriculum-v2-conformance-79"
+  ],
+  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+}

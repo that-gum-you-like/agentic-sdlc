@@ -1,0 +1,16 @@
+{
+  "id": "OS-curriculum-v2-conformance-27",
+  "title": "weekly-review.mjs: add pure `agentMdChangedSinceSnapshot(agentsDir, versionsDir)` and run `version-snapshot.mjs snapshot` when true",
+  "description": "- [ ] **CV-126**: weekly-review.mjs: add pure `agentMdChangedSinceSnapshot(agentsDir, versionsDir)` and run `version-snapshot.mjs snapshot` when true\n  - **Priority:** HIGH\n  - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/weekly-review-steps.test.mjs`\n  - Spec: CV-REQ-016\n  - Gaps: D7-07\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: tmp dirs: identical copy -> false; edited AGENT.md -> true; no snapshot dir -> true\n  - Parallel: blocked-by CV-125\n  - Complexity: S\n\n### Phase 2: Input safety + Planning templates + Memory evolution (parallel)\n\nCapabilities: input-safety, planning-templates, memory-evolution. The three groups touch disjoint files and run in parallel. Within a group, tasks sharing a file are chained with blocked-by.",
+  "priority": "HIGH",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.799Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-26"
+  ]
+}

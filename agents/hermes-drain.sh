@@ -153,6 +153,15 @@ git -C "$DRAIN_CLONE" checkout -q -f -B "$BASE_BRANCH" "origin/$BASE_BRANCH" 2>/
 git -C "$DRAIN_CLONE" reset --hard "origin/$BASE_BRANCH" --quiet 2>/dev/null || true
 git -C "$DRAIN_CLONE" clean -fdq 2>/dev/null || true
 
+# --- enforcing pre-commit gate in the clone (openspec: curriculum-v2-conformance CV-313) ---
+# The drain commits unattended; the pre-commit hook is what refuses secrets and
+# silent error swallowing. Installed from the FRAMEWORK script into the clone.
+# If it cannot be installed, abort the pass rather than commit ungated.
+if ! ( cd "$DRAIN_CLONE" && node "$SCRIPTS_DIR/review-hook.mjs" install --pre-only ) >/dev/null 2>&1; then
+  log "pre-commit hook install FAILED in $DRAIN_CLONE — aborting pass (would commit ungated)"
+  exit 1
+fi
+
 # --- dependencies: a FRESH clone has no node_modules, so the drain prompt's
 # test step would fail for every task on a project that needs them. Install once
 # per clone (and after a lockfile change), before the LLM is invoked.
@@ -177,7 +186,13 @@ fi
 PROJECT_REMOTE="$(git -C "$DRAIN_CLONE" remote get-url origin 2>/dev/null || echo unknown)"
 TEST_CMD="$(node -e 'try{const c=require(process.argv[1]+"/agents/project.json");process.stdout.write(c.testCmd||"npm test")}catch{process.stdout.write("npm test")}' "$REPO" 2>/dev/null)"
 TEST_CMD="${TEST_CMD:-npm test}"
-DRAINER="node \"$SCRIPTS_DIR/queue-drainer.mjs\""
+# The prompt must never name the HUMAN's checkout ($FRAMEWORK_REPO): cheap models
+# `cd` into any absolute path they are shown, and on 2026-11-03 a worker committed on
+# the human's main and switched its branch. When draining the framework itself,
+# point the prompt at the clone's own identical scripts instead.
+PROMPT_SCRIPTS_DIR="$SCRIPTS_DIR"
+[ "$(cd "$REPO" && pwd)" = "$FRAMEWORK_REPO" ] && PROMPT_SCRIPTS_DIR="$DRAIN_CLONE/agents"
+DRAINER="node \"$PROMPT_SCRIPTS_DIR/queue-drainer.mjs\""
 
 prompt_text="$(cat "$PROMPT_FILE")"
 prompt_text="${prompt_text//\{\{BASE_BRANCH\}\}/$BASE_BRANCH}"
@@ -185,6 +200,8 @@ prompt_text="${prompt_text//\{\{PROJECT_NAME\}\}/$PROJECT_NAME}"
 prompt_text="${prompt_text//\{\{PROJECT_REMOTE\}\}/$PROJECT_REMOTE}"
 prompt_text="${prompt_text//\{\{TEST_CMD\}\}/$TEST_CMD}"
 prompt_text="${prompt_text//\{\{DRAINER\}\}/$DRAINER}"
+prompt_text="${prompt_text//\{\{SCRIPTS_DIR\}\}/$PROMPT_SCRIPTS_DIR}"
+prompt_text="${prompt_text//\{\{HUMAN_CHECKOUTS\}\}/$FRAMEWORK_REPO$( [ "$REPO" != "$FRAMEWORK_REPO" ] && echo " and $REPO")}"
 
 # --- run the isolated, local-backend, OpenRouter Hermes drain worker IN the clone ---
 ts="$(date +%Y%m%d-%H%M%S)"
@@ -194,11 +211,22 @@ log "$ready ready task(s) — invoking Hermes drain worker in clone (log: $logfi
 # at the main repo, and load-config.mjs prefers it over CWD — without this
 # override the worker's queue-drainer claim/complete calls DIRTY THE MAIN TREE
 # (observed live 2026-07-06: timer-fired workers wrote task state into main).
+# --- trespass guard: the worker must never touch a human checkout (drain-trespass-guard.sh) ---
+. "$SCRIPTS_DIR/drain-trespass-guard.sh"
+guard_snapshot "$FRAMEWORK_REPO" "$REPO"
+
 ( cd "$DRAIN_CLONE" && HERMES_HOME="$DRAIN_HOME" TERMINAL_ENV=local TERMINAL_CWD="$DRAIN_CLONE" \
   SDLC_PROJECT_DIR="$DRAIN_CLONE" \
   timeout 3600 hermes -z "$prompt_text" --cli --yolo ) > "$logfile" 2>&1
 rc=$?
 tail -3 "$logfile" 2>/dev/null | sed 's/^/[hermes-drain]   /'
+
+trespass="$(guard_check "drain-trespass-$ts")"
+if [ -n "$trespass" ]; then
+  log "TRESPASS — worker touched a human checkout:$trespass"
+  echo "TRESPASS — worker touched a human checkout:$trespass" >> "$logfile"
+  rc=97   # non-zero: the failure path below copies the log to the outbox and notifies
+fi
 log "drain finished (rc=$rc)"
 
 # --- failed runs land in the outbox for inspection (openspec: operator-desktop-launcher) ---

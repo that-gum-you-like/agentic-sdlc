@@ -1,0 +1,18 @@
+{
+  "id": "OS-curriculum-v2-conformance-122",
+  "title": "Verification: one real drain pass shows check-staged in its log and memory recall/record; force a flagged test PR and confirm one queue entry, one Telegram notice, and no re-review on the next two passes",
+  "description": "- [ ] **CV-609**: Verification: one real drain pass shows check-staged in its log and memory recall/record; force a flagged test PR and confirm one queue entry, one Telegram notice, and no re-review on the next two passes\n  - **Priority:** LOW\n  - Files: `pm/drain-logs, pm/claude-review-queue.json`\n  - Spec: CV-REQ-030, CV-REQ-033, CV-REQ-100, CV-REQ-101\n  - Gaps: -\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: drain log contains `check-staged`; queue has exactly one open entry; pr-auto-review.log has one skip-awaiting-claude line\n  - Parallel: blocked-by CV-010, CV-316, CV-504\n  - Complexity: M",
+  "priority": "LOW",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.818Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-85",
+    "OS-curriculum-v2-conformance-105"
+  ],
+  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+}

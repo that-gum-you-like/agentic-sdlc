@@ -8,7 +8,10 @@
  * Run: node tests/pr-auto-review.test.mjs
  */
 
-import { readFileSync } from 'fs';
+import { readFileSync, mkdtempSync, writeFileSync, existsSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -23,6 +26,19 @@ import {
   MAX_AUTO_MERGES,
   FLAG_PATHS,
   DIFF_CHAR_LIMIT,
+  hardGate,
+  detectBaseBranch,
+  classifyDomain,
+  DOMAIN_ORDER,
+  orderPrs,
+  orderPrsWithFetch,
+  findOverlaps,
+  deferralFor,
+  buildDeferralComment,
+  postDeferralOnce,
+  formatChangelogEntry,
+  appendChangelog,
+  completeTaskInClone,
 } from '../agents/pr-auto-review.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -281,6 +297,198 @@ test('fix tasks are written via the review clone and closed on merge', () => {
     'fix tasks must be written in the review clone, never the main tree');
   assert(/`FIX-\$\{pr\.number\}`/.test(source), 'reconcileMerged must also complete FIX-<pr> tasks (REQ-SH-3)');
   assert(/non-fatal/.test(source), 'fix-task filing failures must never break the review run');
+});
+
+// --- CV-401: gate runs on head merged with base -------------------------------
+
+function git(cwd, ...args) {
+  return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' } });
+}
+function gateFixture() {
+  const d = mkdtempSync(join(tmpdir(), 'par-gate-'));
+  const origin = join(d, 'origin.git'); const clone = join(d, 'clone'); const work = join(d, 'work');
+  git(d, 'init', '-q', '--bare', '-b', 'main', origin);
+  git(d, 'clone', '-q', origin, work);
+  writeFileSync(join(work, 'shared.txt'), 'one\n');
+  git(work, 'add', '.'); git(work, 'commit', '-qm', 'init'); git(work, 'push', '-q', 'origin', 'main');
+  return { d, origin, clone, work };
+}
+
+test('hardGate: branch behind base runs tests on the MERGED tree (base file present)', () => {
+  const { origin, clone, work, d } = gateFixture();
+  git(work, 'checkout', '-qb', 'feat'); writeFileSync(join(work, 'feat.txt'), 'f\n');
+  git(work, 'add', '.'); git(work, 'commit', '-qm', 'feat'); git(work, 'push', '-q', 'origin', 'feat');
+  git(work, 'checkout', '-q', 'main'); writeFileSync(join(work, 'base-only.txt'), 'b\n');
+  git(work, 'add', '.'); git(work, 'commit', '-qm', 'base moves'); git(work, 'push', '-q', 'origin', 'main');
+  git(d, 'clone', '-q', origin, clone);
+  assert(detectBaseBranch(clone) === 'main', 'detects base');
+  const r = hardGate(clone, 'feat', 'test -f base-only.txt && test -f feat.txt');
+  assert(r.passed === true, `merged tree must contain both files: ${r.step} ${r.tail}`);
+  assert(!/pr-review-/.test(git(clone, 'worktree', 'list')), 'worktree removed');
+});
+
+test('hardGate: conflicting branch fails closed with merge-conflict-with-base and runs no tests', () => {
+  const { origin, clone, work, d } = gateFixture();
+  git(work, 'checkout', '-qb', 'feat'); writeFileSync(join(work, 'shared.txt'), 'feat\n');
+  git(work, 'add', '.'); git(work, 'commit', '-qm', 'feat'); git(work, 'push', '-q', 'origin', 'feat');
+  git(work, 'checkout', '-q', 'main'); writeFileSync(join(work, 'shared.txt'), 'main\n');
+  git(work, 'add', '.'); git(work, 'commit', '-qm', 'base'); git(work, 'push', '-q', 'origin', 'main');
+  git(d, 'clone', '-q', origin, clone);
+  const marker = join(d, 'tests-ran');
+  const r = hardGate(clone, 'feat', `touch ${marker}`);
+  assert(r.passed === false && r.step === 'merge-conflict-with-base', `got ${r.step}`);
+  assert(!existsSync(marker), 'tests must not run on a conflicted merge');
+  assert(!/pr-review-/.test(git(clone, 'worktree', 'list')), 'worktree removed on conflict');
+});
+
+test('hardGate: branch already up to date behaves as before', () => {
+  const { origin, clone, work, d } = gateFixture();
+  git(work, 'checkout', '-qb', 'feat'); writeFileSync(join(work, 'feat.txt'), 'f\n');
+  git(work, 'add', '.'); git(work, 'commit', '-qm', 'feat'); git(work, 'push', '-q', 'origin', 'feat');
+  git(d, 'clone', '-q', origin, clone);
+  assert(hardGate(clone, 'feat', 'test -f feat.txt').passed, 'up-to-date branch passes');
+  assert(!hardGate(clone, 'feat', 'false').passed, 'failing tests still fail');
+});
+
+// --- CV-402/403: domain classification + merge order --------------------------
+
+test('classifyDomain: highest-rank domain among files wins', () => {
+  assert(DOMAIN_ORDER.join() === 'infra,backend,frontend,docs-tests', 'DOMAIN_ORDER');
+  assert(classifyDomain(['agents/a.mjs', 'README.md']) === 'backend', 'backend beats docs');
+  assert(classifyDomain(['.github/x.yml', 'agents/a.mjs']) === 'infra', 'infra beats backend');
+  assert(classifyDomain([{ path: 'ui/web/components/B.tsx' }, { path: 'tests/a.test.mjs' }]) === 'frontend', 'frontend beats tests, objects accepted');
+  assert(classifyDomain(['agents/x.mjs', 'styles/a.css']) === 'backend', 'backend beats frontend');
+  assert(classifyDomain(['docs/a.md', 'tests/x.test.mjs']) === 'docs-tests', 'docs-tests');
+  assert(classifyDomain(['agents/hermes-drain.sh']) === 'infra', '*.sh is infra');
+  assert(classifyDomain(['package.json']) === 'infra', 'package.json is infra');
+  assert(classifyDomain(['agents/cron-schedule.json']) === 'infra', 'cron-schedule is infra');
+  assert(classifyDomain(['agents/__tests__/a.test.mjs']) === 'docs-tests', 'agents tests are tests');
+  assert(classifyDomain([]) === 'docs-tests', 'empty is lowest');
+});
+
+test('orderPrs: domain rank, then size ascending, then number', () => {
+  const pr = (number, path, additions, deletions = 0) => ({ number, files: [{ path }], additions, deletions });
+  const out = orderPrs([pr(9, 'a.tsx', 20), pr(12, 'scripts/x.sh', 500), pr(4, 'agents/b.mjs', 90), pr(3, 'agents/c.mjs', 40, 10), pr(2, 'agents/d.mjs', 50)]);
+  assert(out.map(p => p.number).join() === '12,2,3,4,9', `got ${out.map(p => p.number)}`);
+});
+
+test('orderPrsWithFetch: fetched details order; fetch failure falls back to number order and logs', () => {
+  const base = [{ number: 12 }, { number: 9 }];
+  const detail = { 9: { files: [{ path: 'a.tsx' }], additions: 20, deletions: 0 }, 12: { files: [{ path: '.github/w.yml' }], additions: 500, deletions: 0 } };
+  assert(orderPrsWithFetch(base, n => detail[n]).map(p => p.number).join() === '12,9', 'infra first');
+  const logs = [];
+  const out = orderPrsWithFetch(base, () => { throw new Error('gh down'); }, m => logs.push(m));
+  assert(out.map(p => p.number).join() === '9,12', 'number order on failure');
+  assert(logs.length === 1 && /gh down/.test(logs[0]), 'failure logged');
+  assert(!/prs\.sort\(\(a, b\) => a\.number - b\.number\)/.test(source), 'old sort site replaced');
+});
+
+// --- CV-404: overlap detection ---------------------------------------------
+
+test('findOverlaps: shared file lists the later PR (merge order); disjoint -> []', () => {
+  const pr = (number, additions, ...paths) => ({ number, additions, deletions: 0, files: paths.map(path => ({ path })) });
+  const o = findOverlaps([pr(6, 10, 'agents/health-check.mjs', 'x.md'), pr(5, 10, 'agents/health-check.mjs')]);
+  assert(o.length === 1 && o[0].later === 6 && o[0].earlier === 5, `got ${JSON.stringify(o)}`);
+  assert(o[0].files.join() === 'agents/health-check.mjs', 'shared files reported');
+  // a bigger infra PR merges first even though its number is higher
+  const o2 = findOverlaps([pr(1, 400, 'agents/a.mjs'), pr(2, 5, 'agents/a.mjs')]);
+  assert(o2[0].later === 1 && o2[0].earlier === 2, 'later follows merge order, not number');
+  assert(findOverlaps([pr(1, 1, 'a.mjs'), pr(2, 1, 'b.mjs')]).length === 0, 'disjoint');
+  assert(findOverlaps([]).length === 0, 'empty');
+});
+
+// --- CV-405: overlap deferral ------------------------------------------------
+
+test('deferralFor: later PR deferred one run only behind an earlier PR that merged this run', () => {
+  const overlaps = [{ later: 6, earlier: 5, files: ['agents/health-check.mjs'] }];
+  const d = deferralFor(6, overlaps, new Set([5]));
+  assert(d && d.earlier.join() === '5' && d.files[0] === 'agents/health-check.mjs', 'later deferred to re-gate on new base');
+  assert(deferralFor(5, overlaps, new Set([5])) === null, 'earlier is reviewed normally');
+  assert(deferralFor(6, overlaps) === null, 'an earlier PR that did NOT merge (flagged/rejected) never wedges the later one');
+  assert(deferralFor(7, overlaps, new Set([5])) === null, 'unrelated PR');
+});
+
+test('postDeferralOnce: second pass posts no second comment; dry run posts none', () => {
+  const posted = [];
+  let comments = [];
+  const deps = {
+    ghJson: () => ({ comments }),
+    gh: (args) => { posted.push(args); comments = [{ body: args[args.indexOf('--body') + 1] }]; },
+  };
+  const d = { earlier: [5], files: ['a.mjs'] };
+  assert(postDeferralOnce(6, d, false, deps) === true, 'first pass posts');
+  assert(postDeferralOnce(6, d, false, deps) === false, 'second pass is idempotent');
+  assert(posted.length === 1, 'exactly one comment');
+  assert(buildDeferralComment(d).includes('<!-- pr-auto-review-deferred earlier:5 -->'), 'marker');
+  assert(postDeferralOnce(9, d, true, { ghJson: () => ({ comments: [] }), gh: () => { throw new Error('no writes in dry-run'); } }) === false, 'dry run');
+});
+
+test('reviewPr defers before the gate/LLM, files no FIX task, and is not an alreadyReviewed marker', () => {
+  const block = source.slice(source.indexOf('// 0) Overlap'), source.indexOf('// 1) Deterministic scope scan'));
+  assert(/record\.action = 'deferred-overlap'/.test(block), 'action logged');
+  assert(!/fileFixTask|hardGate|llmReview/.test(block), 'deferral never gates, reviews, or files a FIX task');
+  assert(!buildDeferralComment({ earlier: [1], files: [] }).includes('<!-- pr-auto-review sha:'), 'must not look like a reviewed-sha marker');
+});
+
+// --- CV-406: changelog helpers -------------------------------------------------
+
+test('formatChangelogEntry renders `- <date> #<pr> <subject> (<domain>)`', () => {
+  assert(formatChangelogEntry({ date: '2026-11-03', pr: 70, subject: 'feat: x\n y', domain: 'backend' }) === '- 2026-11-03 #70 feat: x y (backend)', 'format');
+});
+
+test('appendChangelog: creates header + date group; identical second call adds nothing', () => {
+  const f = join(mkdtempSync(join(tmpdir(), 'par-cl-')), 'CHANGELOG.md');
+  const e = { date: '2026-11-03', pr: 70, subject: 'feat: a', domain: 'backend' };
+  assert(appendChangelog(f, e) === true, 'first call writes');
+  assert(readFileSync(f, 'utf8') === '# Changelog\n\n## 2026-11-03\n\n- 2026-11-03 #70 feat: a (backend)\n', `got ${JSON.stringify(readFileSync(f, 'utf8'))}`);
+  const before = readFileSync(f, 'utf8');
+  assert(appendChangelog(f, e) === false && readFileSync(f, 'utf8') === before, 'idempotent per PR number');
+});
+
+test('appendChangelog: same date groups under one heading; new date goes on top; #7 is not #70', () => {
+  const f = join(mkdtempSync(join(tmpdir(), 'par-cl-')), 'CHANGELOG.md');
+  appendChangelog(f, { date: '2026-11-03', pr: 70, subject: 'a', domain: 'infra' });
+  appendChangelog(f, { date: '2026-11-03', pr: 7, subject: 'b', domain: 'backend' });
+  appendChangelog(f, { date: '2026-11-04', pr: 71, subject: 'c', domain: 'docs-tests' });
+  const t = readFileSync(f, 'utf8');
+  assert((t.match(/^## 2026-11-03$/gm) || []).length === 1, 'one heading per date');
+  assert(t.indexOf('## 2026-11-04') < t.indexOf('## 2026-11-03'), 'newest date first');
+  assert(t.indexOf('#70 a') < t.indexOf('#7 b'), 'appended within the section');
+  assert((t.match(/^- /gm) || []).length === 3, 'three entries');
+});
+
+// --- CV-407: changelog rides the completeTaskInClone commit/push ----------------
+
+test('completeTaskInClone: CHANGELOG.md is in the SAME commit as the queue completion', () => {
+  const { origin, work, d } = gateFixture();
+  const clone = join(d, 'review-clone');
+  const prevClone = process.env.SDLC_REVIEW_CLONE; process.env.SDLC_REVIEW_CLONE = clone;
+  const prevEnv = { ...process.env };
+  Object.assign(process.env, { GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' });
+  try {
+    execFileSync('mkdir', ['-p', join(work, 'tasks', 'queue')]);
+    writeFileSync(join(work, 'tasks', 'queue', 'T-1.json'), JSON.stringify({ id: 'T-1', status: 'in_progress' }));
+    git(work, 'add', '.'); git(work, 'commit', '-qm', 'task'); git(work, 'push', '-q', 'origin', 'main');
+    const cl = { date: '2026-11-03', pr: 70, subject: 'feat: t', domain: 'backend' };
+    completeTaskInClone(work, 'T-1', () => {}, cl);
+    const files = git(origin, 'show', '--name-only', '--format=', 'main').split('\n').filter(Boolean).sort();
+    assert(files.join() === 'CHANGELOG.md,tasks/queue/T-1.json', `one commit with both: ${files}`);
+    assert(/#70 feat: t \(backend\)/.test(git(origin, 'show', 'main:CHANGELOG.md')), 'entry present on origin');
+    const n = git(origin, 'rev-list', '--count', 'main').trim();
+    completeTaskInClone(work, 'T-1', () => {}, cl); // replay
+    assert(git(origin, 'rev-list', '--count', 'main').trim() === n, 'replay adds no commit');
+  } finally {
+    if (prevClone === undefined) delete process.env.SDLC_REVIEW_CLONE; else process.env.SDLC_REVIEW_CLONE = prevClone;
+    for (const k of ['GIT_AUTHOR_NAME', 'GIT_AUTHOR_EMAIL', 'GIT_COMMITTER_NAME', 'GIT_COMMITTER_EMAIL']) {
+      if (prevEnv[k] === undefined) delete process.env[k]; else process.env[k] = prevEnv[k];
+    }
+  }
+});
+
+test('merge flow passes the changelog into completeTaskInClone (no new push path)', () => {
+  assert(/completeTaskInClone\(repoDir, taskId, log, changelog\)/.test(source), 'reviewPr passes changelog');
+  assert((source.match(/'push'/g) || []).length === 2, 'still exactly two push sites');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

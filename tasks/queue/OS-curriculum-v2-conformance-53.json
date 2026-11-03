@@ -1,0 +1,16 @@
+{
+  "id": "OS-curriculum-v2-conformance-53",
+  "title": "seed-tasks.json.template: add one standardization-sweep seed task",
+  "description": "- [ ] **CV-235**: seed-tasks.json.template: add one standardization-sweep seed task\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/seed-tasks.json.template, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-087\n  - Gaps: D1-15\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: template parses as JSON and contains a task whose title includes `Standardization sweep`\n  - Parallel: blocked-by CV-234\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.804Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-52"
+  ]
+}

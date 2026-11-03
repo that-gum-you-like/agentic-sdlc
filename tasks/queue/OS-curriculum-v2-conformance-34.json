@@ -1,0 +1,16 @@
+{
+  "id": "OS-curriculum-v2-conformance-34",
+  "title": "seed-queue-from-openspec.mjs: export `goalSafetyFindings(task)` returning `no-acceptance` (no Test:/acceptance line) and `unbounded-verb` (optimize, improve, clean up, refactor, simplify, \"make better\" with no file in Files:)",
+  "description": "- [ ] **CV-207**: seed-queue-from-openspec.mjs: export `goalSafetyFindings(task)` returning `no-acceptance` (no Test:/acceptance line) and `unbounded-verb` (optimize, improve, clean up, refactor, simplify, \"make better\" with no file in Files:)\n  - **Priority:** MEDIUM\n  - Files: `agents/seed-queue-from-openspec.mjs, tests/seed-queue-from-openspec.test.mjs`\n  - Spec: CV-REQ-062\n  - Gaps: D3-02\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: \"Improve performance\" without Files -> unbounded-verb; same text with a Files line -> none; task without Test -> no-acceptance\n  - Parallel: blocked-by CV-205\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.800Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-32"
+  ]
+}
