@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Health Check — System health across queue depth, budget config, disk, cron
- * liveness, and outbound egress.
+ * liveness, outbound egress, and cycle cadence.
  *
  * Runs a small set of best-effort checks and rolls them up into a single
  * overall status (ok|degraded|down). Intended to be run standalone or wired
@@ -116,6 +116,58 @@ export function evaluateCycleCadence(history, now, limits = {}) {
 // ---------------------------------------------------------------------------
 // Individual checks
 // ---------------------------------------------------------------------------
+
+const CYCLE_HISTORY_FILE = 'pm/cycle-history.json';
+
+/**
+ * Process-erosion check (CV-REQ-012, gap D7-06).
+ *
+ * A cycle that is described but does not run is worse than no cycle, and the
+ * failure is silent: nothing crashes, the weekly review simply stops producing
+ * output. This check makes that erosion visible by comparing
+ * `pm/cycle-history.json` against the expected cadence.
+ *
+ * Best-effort by contract: a missing or unreadable history file is reported as
+ * `degraded` — never thrown — because "I could not measure this" must stay
+ * distinguishable from "the process is broken".
+ *
+ * @param {object} config - resolved config from loadConfig()
+ * @param {Array<{type: string, timestamp: string}>} [history] - pre-loaded cycle
+ *   history. When omitted, the file is read from the project dir.
+ * @param {Date|string} [now] - "current" time, injectable for tests.
+ * @returns {{name: 'cycles', status: 'ok'|'degraded', detail: string}}
+ */
+export function checkCycles(config, history, now = new Date()) {
+  let entries = history;
+
+  if (entries === undefined || entries === null) {
+    const historyPath = resolve(config?.projectDir || process.cwd(), CYCLE_HISTORY_FILE);
+    if (!existsSync(historyPath)) {
+      return { name: 'cycles', status: 'degraded', detail: 'no cycle history' };
+    }
+    try {
+      entries = JSON.parse(readFileSync(historyPath, 'utf8'));
+    } catch (e) {
+      return { name: 'cycles', status: 'degraded', detail: `no cycle history — unreadable: ${e.message}` };
+    }
+  }
+
+  // Drop anything that isn't a usable entry rather than letting a malformed
+  // file produce NaN ages and a bogus verdict.
+  const usable = Array.isArray(entries)
+    ? entries.filter(e => e && typeof e.timestamp === 'string')
+    : [];
+
+  const overdue = evaluateCycleCadence(usable, now).filter(r => r.status === 'degraded');
+  if (overdue.length > 0) {
+    const reasons = overdue.map(r =>
+      r.detail.startsWith('never-run') ? `${r.type} never-run` : `${r.type} overdue`,
+    );
+    return { name: 'cycles', status: 'degraded', detail: `process-erosion: ${reasons.join(', ')}` };
+  }
+
+  return { name: 'cycles', status: 'ok', detail: 'daily, weekly, monthly within cadence' };
+}
 
 function checkQueue(config) {
   if (!existsSync(config.tasksDir)) {
@@ -232,10 +284,17 @@ async function checkEgressHealth(probe) {
  *
  * @param {object} [opts]
  * @param {() => Promise<object>} [opts.egress] override the egress probe (tests)
+ * @param {Array<{type: string, timestamp: string}>} [opts.cycleHistory] override the
+ *   cycle-history file read (tests, or a caller that already parsed it)
+ * @param {Date|string} [opts.now] override "now" for cadence ages (tests)
  * @returns {Promise<{status: 'ok'|'degraded'|'down', checks: Array<{name: string, status: string, detail: string}>, timestamp: string}>}
  */
 export async function runHealthCheck(opts = {}) {
-  const { egress = () => checkEgress({ timeoutMs: EGRESS_TIMEOUT_MS }) } = opts;
+  const {
+    egress = () => checkEgress({ timeoutMs: EGRESS_TIMEOUT_MS }),
+    cycleHistory,
+    now,
+  } = opts;
   const config = loadConfig();
 
   const checks = [
@@ -243,6 +302,7 @@ export async function runHealthCheck(opts = {}) {
     checkBudget(config),
     checkDisk(config),
     checkCron(config),
+    checkCycles(config, cycleHistory, now),
     await checkEgressHealth(egress),
   ];
 

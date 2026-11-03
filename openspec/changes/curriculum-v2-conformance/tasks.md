@@ -325,7 +325,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Complexity: S
   - Notes: Read the history entry shape from recordCycleHistory() in agents/cycles/daily-review.mjs before writing.
 
-- [ ] **CV-111**: health-check.mjs: add `checkCycles(config, history)` returning name `cycles`, status degraded with detail `process-erosion: weekly overdue` when overdue; add it to the `checks` array in runHealthCheck (opts.cycleHistory overrides the file read); missing file -> degraded `no cycle history`, never throws
+- [x] **CV-111**: health-check.mjs: add `checkCycles(config, history)` returning name `cycles`, status degraded with detail `process-erosion: weekly overdue` when overdue; add it to the `checks` array in runHealthCheck (opts.cycleHistory overrides the file read); missing file -> degraded `no cycle history`, never throws
   - **Priority:** HIGH
   - Files: `agents/health-check.mjs, tests/health-check.test.mjs`
   - Spec: CV-REQ-012
