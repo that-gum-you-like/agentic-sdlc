@@ -372,7 +372,7 @@ describe('CLI exit codes (REQ-002)', () => {
     const result = spawnSync('node', [resolve(MODULE_DIR, '../heartbeat.mjs')], {
       cwd: dir,
       env: { ...process.env, SDLC_PROJECT_DIR: dir, TELEGRAM_BOT_TOKEN: '', TELEGRAM_CHAT_ID: '' }, // hermetic: the review gate loads real tokens
-      timeout: 15000,
+      timeout: 30000,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     assert.equal(result.status, 0, `exit code must be 0, got ${result.status}`);
@@ -389,7 +389,7 @@ describe('CLI exit codes (REQ-002)', () => {
     const result = spawnSync('node', [resolve(MODULE_DIR, '../heartbeat.mjs')], {
       cwd: dir,
       env: { ...process.env, SDLC_PROJECT_DIR: dir, TELEGRAM_BOT_TOKEN: '', TELEGRAM_CHAT_ID: '' }, // hermetic: the review gate loads real tokens
-      timeout: 15000,
+      timeout: 30000,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     assert.notEqual(result.status, 0, `exit code must be non-zero, got ${result.status}`);

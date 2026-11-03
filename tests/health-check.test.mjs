@@ -8,8 +8,11 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
-import { runHealthCheck, evaluateCycleCadence } from '../agents/health-check.mjs';
+import { runHealthCheck, evaluateCycleCadence, checkCycles } from '../agents/health-check.mjs';
 
 /** Build an egress probe that returns a fixed finding set. */
 const probeReturning = (findings) => async () => ({ ok: !findings.some(f => f.severity === 'critical'), findings, checkedAt: new Date().toISOString() });
@@ -172,4 +175,101 @@ test('evaluateCycleCadence: only one type with entries does not break others', (
   assert.equal(byType(results, 'daily').status, 'ok');
   assert.match(byType(results, 'weekly').detail, /never-run/);
   assert.match(byType(results, 'monthly').detail, /never-run/);
+});
+
+// ---------------------------------------------------------------------------
+// checkCycles — process erosion (CV-REQ-012)
+// ---------------------------------------------------------------------------
+
+const cyclesCheck = (result) => result.checks.find(c => c.name === 'cycles');
+
+/** Make a throwaway project dir; cleanup is registered by the caller. */
+function tempProject() {
+  return mkdtempSync(join(tmpdir(), 'health-cycles-'));
+}
+
+test('a stale weekly entry surfaces as process erosion in the rollup', async () => {
+  const history = [entry('daily', 0), entry('weekly', 9), entry('monthly', 10)];
+  const result = await runHealthCheck({
+    egress: probeReturning([]),
+    cycleHistory: history,
+    now: NOW,
+  });
+
+  const cycles = cyclesCheck(result);
+  assert.ok(cycles, 'cycles check is present in the rollup');
+  assert.equal(cycles.status, 'degraded');
+  assert.match(cycles.detail, /process-erosion: weekly overdue/);
+  // 'degraded' must propagate to the overall rollup, not get swallowed.
+  assert.notEqual(result.status, 'ok');
+});
+
+test('fresh history for every cycle type is ok', async () => {
+  const history = [entry('daily', 1), entry('weekly', 3), entry('monthly', 10)];
+  const result = await runHealthCheck({
+    egress: probeReturning([]),
+    cycleHistory: history,
+    now: NOW,
+  });
+
+  const cycles = cyclesCheck(result);
+  assert.equal(cycles.status, 'ok');
+  assert.equal(cycles.name, 'cycles');
+});
+
+test('a missing history file degrades with no cycle history and never throws', () => {
+  const dir = tempProject();
+  try {
+    const cycles = checkCycles({ projectDir: dir }, undefined, NOW);
+    assert.equal(cycles.name, 'cycles');
+    assert.equal(cycles.status, 'degraded');
+    assert.equal(cycles.detail, 'no cycle history');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('checkCycles reads pm/cycle-history.json when no history is injected', () => {
+  const dir = tempProject();
+  try {
+    mkdirSync(join(dir, 'pm'), { recursive: true });
+    writeFileSync(
+      join(dir, 'pm', 'cycle-history.json'),
+      JSON.stringify([entry('daily', 0), entry('weekly', 0), entry('monthly', 0)]),
+    );
+    const cycles = checkCycles({ projectDir: dir }, undefined, NOW);
+    assert.equal(cycles.status, 'ok');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('an unparseable history file degrades instead of throwing', () => {
+  const dir = tempProject();
+  try {
+    mkdirSync(join(dir, 'pm'), { recursive: true });
+    writeFileSync(join(dir, 'pm', 'cycle-history.json'), '{not json');
+    const cycles = checkCycles({ projectDir: dir }, undefined, NOW);
+    assert.equal(cycles.status, 'degraded');
+    assert.match(cycles.detail, /no cycle history/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a never-run type is named as never-run, not as overdue', () => {
+  // Only daily entries, 40 days old: monthly has no entries and the oldest
+  // entry is past its 32-day limit, so it is flagged as never-run.
+  const cycles = checkCycles({ projectDir: '/nonexistent' }, [entry('daily', 40)], NOW);
+  assert.equal(cycles.status, 'degraded');
+  assert.match(cycles.detail, /monthly never-run/);
+  assert.doesNotMatch(cycles.detail, /monthly overdue/);
+});
+
+test('malformed history entries are ignored rather than crashing the check', () => {
+  for (const history of [[], [null, 'nope', { type: 'weekly' }], {}, 'nope', 42]) {
+    const cycles = checkCycles({ projectDir: '/nonexistent' }, history, NOW);
+    assert.equal(cycles.name, 'cycles', `history ${JSON.stringify(history)}`);
+    assert.equal(cycles.status, 'ok', `history ${JSON.stringify(history)}`);
+  }
 });
