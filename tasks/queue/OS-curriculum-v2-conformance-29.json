@@ -1,0 +1,16 @@
+{
+  "id": "OS-curriculum-v2-conformance-29",
+  "title": "red-team-tester.mjs: export `imperativeCount(text)` and flag text with 3 or more sentences opening with an imperative verb (list, delete, ignore, send, run, output, reveal, forget) as `imperative-density`",
+  "description": "- [ ] **CV-202**: red-team-tester.mjs: export `imperativeCount(text)` and flag text with 3 or more sentences opening with an imperative verb (list, delete, ignore, send, run, output, reveal, forget) as `imperative-density`\n  - **Priority:** MEDIUM\n  - Files: `agents/red-team-tester.mjs, agents/__tests__/injection-screening.test.mjs`\n  - Spec: CV-REQ-060\n  - Gaps: D5-06\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: 3 imperative sentences flagged; 2 not; normal prose with one \"Run the tests.\" not flagged\n  - Parallel: blocked-by CV-201\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.799Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-28"
+  ]
+}

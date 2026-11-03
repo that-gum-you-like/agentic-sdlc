@@ -191,7 +191,7 @@ Items marked [x] are already done (2026-11-03). Unchecked items are Lane: intera
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-012**: Flip this change to readiness ready-for-dev, push, and dry-run the seeder: only hermes-lane tasks may be listed
+- [x] **CV-012**: Flip this change to readiness ready-for-dev, push, and dry-run the seeder: only hermes-lane tasks may be listed
   - **Priority:** HIGH
   - Files: `openspec/changes/curriculum-v2-conformance/status.json`
   - Spec: CV-REQ-039

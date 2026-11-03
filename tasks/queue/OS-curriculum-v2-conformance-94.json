@@ -1,0 +1,17 @@
+{
+  "id": "OS-curriculum-v2-conformance-94",
+  "title": "pr-auto-review.mjs: export `orderPrs(prs)` (domain rank, then additions+deletions ascending, then number) and replace the `sort((a,b)=>a.number-b.number)` site; fetch files/sizes with `gh pr view --json files,additions,deletions`; fetch failure -> number order + log",
+  "description": "- [ ] **CV-403**: pr-auto-review.mjs: export `orderPrs(prs)` (domain rank, then additions+deletions ascending, then number) and replace the `sort((a,b)=>a.number-b.number)` site; fetch files/sizes with `gh pr view --json files,additions,deletions`; fetch failure -> number order + log\n  - **Priority:** MEDIUM\n  - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`\n  - Spec: CV-REQ-051\n  - Gaps: D4-01\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: PR 9 frontend/20 lines and PR 12 infra/500 lines -> 12 first; fetch failure -> [9,12]\n  - Parallel: blocked-by CV-402\n  - Complexity: M",
+  "priority": "MEDIUM",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.812Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-93"
+  ],
+  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+}

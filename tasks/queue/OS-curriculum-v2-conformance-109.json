@@ -1,0 +1,16 @@
+{
+  "id": "OS-curriculum-v2-conformance-109",
+  "title": "Create tests/sdlc-review-flagged-skill.test.mjs modelled on tests/sdlc-inbox-skill.test.mjs",
+  "description": "- [ ] **CV-508**: Create tests/sdlc-review-flagged-skill.test.mjs modelled on tests/sdlc-inbox-skill.test.mjs\n  - **Priority:** MEDIUM\n  - Files: `tests/sdlc-review-flagged-skill.test.mjs`\n  - Spec: CV-REQ-102\n  - Gaps: -\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: asserts frontmatter, `pm/claude-review-queue.json`, `list-flagged`, `resolve-flagged`, a `git merge` step, and a no-API statement\n  - Parallel: blocked-by CV-507\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.815Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-108"
+  ]
+}

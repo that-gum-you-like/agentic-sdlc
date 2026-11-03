@@ -1,0 +1,17 @@
+{
+  "id": "OS-curriculum-v2-conformance-134",
+  "title": "Cover the Hermes drain's own model calls with a localhost scrubbing proxy, set as Hermes's OpenRouter base URL",
+  "description": "- [ ] **CV-710**: Cover the Hermes drain's own model calls with a localhost scrubbing proxy, set as Hermes's OpenRouter base URL\n  - **Priority:** LOW\n  - Files: `agents/pii-proxy.mjs` (new), `~/.hermes-drain/config.yaml`\n  - Spec: CV-REQ-113\n  - Lane: interactive\n  - Test: one drain pass succeeds through the proxy; proxy log shows scrubbed placeholders\n  - Parallel: blocked-by CV-708\n  - Complexity: M\n\n## Completion Criteria\n\n- [ ] All hermes-lane tasks merged via the drain; all interactive-lane tasks merged by a Claude Code session\n- [ ] `npm test` passes, including `test-behavior.mjs --drift` and the strengthened conformance test\n- [ ] `systemctl --user list-timers 'sdlc-sched-*'` shows weekly/monthly cycles; `pm/cycle-history.json` gains a weekly entry that ran the three steps\n- [ ] A flagged PR produces exactly one queue entry and one Telegram notice (CV-609)\n- [ ] docs/curriculum-conformance.md rows match what is wired (CV-610)\n\n## Notes\n\nGap ids (D1-03 etc.) refer to the delta analyses summarised in proposal.md; `loop-health §N` refers to the 2026-11-03 loop health audit.",
+  "priority": "LOW",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 20000,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.821Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-132"
+  ],
+  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+}

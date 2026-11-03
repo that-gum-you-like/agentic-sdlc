@@ -1,0 +1,16 @@
+{
+  "id": "OS-curriculum-v2-conformance-61",
+  "title": "pattern-hunt.mjs teachAgents: fill feeling (critical=embarrassed, major=frustrated, minor=mildly annoyed), impact (recurrence count), whatIDoNow (= ruleAdded) on taught failures",
+  "description": "- [ ] **CV-245**: pattern-hunt.mjs teachAgents: fill feeling (critical=embarrassed, major=frustrated, minor=mildly annoyed), impact (recurrence count), whatIDoNow (= ruleAdded) on taught failures\n  - **Priority:** MEDIUM\n  - Files: `agents/pattern-hunt.mjs, agents/__tests__/teach-wiring.test.mjs`\n  - Spec: CV-REQ-071\n  - Gaps: D6-03\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: critical pattern recurring 3 times -> feeling `embarrassed`, impact contains `3`\n  - Parallel: blocked-by CV-244\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.806Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-60"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "OS-curriculum-v2-conformance-126",
+  "title": "Route escalation through the `reportsTo` chain before the board",
+  "description": "- [ ] **CV-702**: Route escalation through the `reportsTo` chain before the board\n  - **Priority:** MEDIUM\n  - Files: `agents/SHARED_PROTOCOL.md`, `agents/templates/SHARED_PROTOCOL.md.template`, `framework/agent-lifecycle.md`\n  - Spec: CV-REQ-110\n  - Gaps: D3-10\n  - Lane: hermes\n  - Test: `node agents/test-behavior.mjs --framework` still passes; the protocol text names `reportsTo`\n  - Parallel: blocked-by CV-701\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.819Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-125"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "OS-curriculum-v2-conformance-103",
+  "title": "pr-auto-review.mjs: add `enqueueClaudeReview(entry)` upserting pm/claude-review-queue.json keyed by pr+headSha; a new head SHA marks the older entry superseded",
+  "description": "- [ ] **CV-502**: pr-auto-review.mjs: add `enqueueClaudeReview(entry)` upserting pm/claude-review-queue.json keyed by pr+headSha; a new head SHA marks the older entry superseded\n  - **Priority:** MEDIUM\n  - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`\n  - Spec: CV-REQ-100\n  - Gaps: -\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: tmp pm dir: same pr+sha twice -> one entry; new sha -> old superseded, new open\n  - Parallel: blocked-by CV-501\n  - Complexity: M",
+  "priority": "MEDIUM",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.814Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-102"
+  ],
+  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+}

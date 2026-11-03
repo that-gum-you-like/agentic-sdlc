@@ -1,0 +1,14 @@
+{
+  "id": "OS-curriculum-v2-conformance-15",
+  "title": "scheduler-install.mjs: honour `supersededBy` (skip entry, disable and remove an existing user unit of that name) and `enabled:false` (install the unit, do not enable)",
+  "description": "- [ ] **CV-114**: scheduler-install.mjs: honour `supersededBy` (skip entry, disable and remove an existing user unit of that name) and `enabled:false` (install the unit, do not enable)\n  - **Priority:** HIGH\n  - Files: `agents/scheduler-install.mjs, tests/scheduler-install.test.mjs`\n  - Spec: CV-REQ-014\n  - Gaps: D7-03, D7-11\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: unit tests with an injected systemctl runner: superseded entry yields a disable call and no install; enabled:false yields install without enable\n  - Parallel: yes\n  - Complexity: M",
+  "priority": "HIGH",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.796Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "OS-curriculum-v2-conformance-81",
+  "title": "review-hook.mjs check-staged: when project.json `allowedExtensions` is non-empty, block added files (diff-filter=A) with other extensions; exempt dotfiles and extensionless files",
+  "description": "- [ ] **CV-312**: review-hook.mjs check-staged: when project.json `allowedExtensions` is non-empty, block added files (diff-filter=A) with other extensions; exempt dotfiles and extensionless files\n  - **Priority:** MEDIUM\n  - Files: `agents/review-hook.mjs, agents/__tests__/gates-enforce.test.mjs`\n  - Spec: CV-REQ-032\n  - Gaps: D5-07\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: allowed [\".mjs\",\".md\"]: adding a.py exits 1; adding b.mjs exits 0; empty list exits 0\n  - Parallel: blocked-by CV-310, CV-307\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.810Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-79",
+    "OS-curriculum-v2-conformance-76"
+  ],
+  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+}

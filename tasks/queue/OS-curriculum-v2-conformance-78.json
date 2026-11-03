@@ -1,0 +1,14 @@
+{
+  "id": "OS-curriculum-v2-conformance-78",
+  "title": "review-hook.mjs: `install --pre-only` installs only the pre-commit hook, idempotently",
+  "description": "- [ ] **CV-309**: review-hook.mjs: `install --pre-only` installs only the pre-commit hook, idempotently\n  - **Priority:** MEDIUM\n  - Files: `agents/review-hook.mjs, agents/__tests__/gates-enforce.test.mjs`\n  - Spec: CV-REQ-030\n  - Gaps: D5-01\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: tmp git repo: install --pre-only creates .git/hooks/pre-commit and no post-commit; second run leaves it byte-identical\n  - Parallel: yes\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.810Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+}

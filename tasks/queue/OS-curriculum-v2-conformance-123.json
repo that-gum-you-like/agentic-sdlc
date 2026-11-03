@@ -1,0 +1,18 @@
+{
+  "id": "OS-curriculum-v2-conformance-123",
+  "title": "docs/curriculum-conformance.md: re-upgrade the rows downgraded in CV-605 to Solid, adding agents/cron-schedule.json or agents/cycles/ to owners; run the strengthened test",
+  "description": "- [ ] **CV-610**: docs/curriculum-conformance.md: re-upgrade the rows downgraded in CV-605 to Solid, adding agents/cron-schedule.json or agents/cycles/ to owners; run the strengthened test\n  - **Priority:** LOW\n  - Files: `docs/curriculum-conformance.md`\n  - Spec: hygiene (conformance honesty)\n  - Gaps: D7-21\n  - Agent: sdlc-documentarian\n  - Lane: hermes\n  - Test: tests/curriculum-conformance.test.mjs passes with the rows Solid\n  - Parallel: blocked-by CV-608, CV-609, CV-606\n  - Complexity: S",
+  "priority": "LOW",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.819Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-121",
+    "OS-curriculum-v2-conformance-122",
+    "OS-curriculum-v2-conformance-119"
+  ]
+}

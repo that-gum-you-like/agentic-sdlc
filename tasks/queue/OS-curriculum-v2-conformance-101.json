@@ -1,0 +1,17 @@
+{
+  "id": "OS-curriculum-v2-conformance-101",
+  "title": "queue-drainer.mjs showStatus: warn `CYCLE: A -> B -> A` for blockedBy cycles among queued tasks (use detectBlockedByCycle)",
+  "description": "- [ ] **CV-410**: queue-drainer.mjs showStatus: warn `CYCLE: A -> B -> A` for blockedBy cycles among queued tasks (use detectBlockedByCycle)\n  - **Priority:** MEDIUM\n  - Files: `agents/queue-drainer.mjs, agents/__tests__/queue-drainer-cycles.test.mjs`\n  - Spec: CV-REQ-054\n  - Gaps: D4-05\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: new test: status output over a 2-cycle fixture contains `CYCLE`\n  - Parallel: blocked-by CV-408\n  - Complexity: S\n\n### Phase 5: Claude review lane\n\nCapability: claude-review-lane. Queue and skill first; the headless timer (CV-REQ-104) is optional, default OFF, and decision-gated.",
+  "priority": "MEDIUM",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.814Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-99"
+  ],
+  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+}

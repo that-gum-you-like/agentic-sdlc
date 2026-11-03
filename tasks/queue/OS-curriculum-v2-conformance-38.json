@@ -1,0 +1,18 @@
+{
+  "id": "OS-curriculum-v2-conformance-38",
+  "title": "cron-schedule.json: pass `--tasks` in the weekly red-team entry, then reinstall timers",
+  "description": "- [ ] **CV-211**: cron-schedule.json: pass `--tasks` in the weekly red-team entry, then reinstall timers\n  - **Priority:** MEDIUM\n  - Files: `agents/cron-schedule.json`\n  - Spec: CV-REQ-063\n  - Gaps: D5-05\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: entry script ends with `--tasks`; scheduler-install dry run lists it\n  - Parallel: blocked-by CV-210, CV-115\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.801Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-37",
+    "OS-curriculum-v2-conformance-16"
+  ],
+  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+}

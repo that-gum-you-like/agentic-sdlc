@@ -1,0 +1,17 @@
+{
+  "id": "OS-curriculum-v2-conformance-82",
+  "title": "hermes-drain.sh: after the clone sync, run `node agents/review-hook.mjs install --pre-only` in the drain clone; abort the pass with a logged reason on failure",
+  "description": "- [ ] **CV-313**: hermes-drain.sh: after the clone sync, run `node agents/review-hook.mjs install --pre-only` in the drain clone; abort the pass with a logged reason on failure\n  - **Priority:** MEDIUM\n  - Files: `agents/hermes-drain.sh, tests/hermes-drain.test.mjs`\n  - Spec: CV-REQ-030\n  - Gaps: D5-01\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: hermes-drain test asserts the script text contains the install call after the sync step and an abort path\n  - Parallel: blocked-by CV-309\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "blocked",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.810Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-78"
+  ],
+  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+}

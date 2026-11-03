@@ -1,0 +1,16 @@
+{
+  "id": "OS-curriculum-v2-conformance-8",
+  "title": "Append `&& node agents/test-behavior.mjs --drift` to the package.json `test` script",
+  "description": "- [ ] **CV-107**: Append `&& node agents/test-behavior.mjs --drift` to the package.json `test` script\n  - **Priority:** HIGH\n  - Files: `package.json, agents/__tests__/behavior-baselines.test.mjs`\n  - Spec: CV-REQ-011\n  - Gaps: D7-02\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: new case reads package.json and asserts the test script contains `test-behavior.mjs --drift`; `npm test` exits 0\n  - Parallel: blocked-by CV-106\n  - Complexity: S",
+  "priority": "HIGH",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.795Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-7"
+  ]
+}

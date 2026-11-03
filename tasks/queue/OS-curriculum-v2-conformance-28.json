@@ -1,0 +1,13 @@
+{
+  "id": "OS-curriculum-v2-conformance-28",
+  "title": "red-team-tester.mjs RULES: add `you are now a`, `forget everything`, `new instructions:`, `system prompt:`, `list (all )?api keys`, `output (your )?env(ironment)? vars` (case-insensitive)",
+  "description": "- [ ] **CV-201**: red-team-tester.mjs RULES: add `you are now a`, `forget everything`, `new instructions:`, `system prompt:`, `list (all )?api keys`, `output (your )?env(ironment)? vars` (case-insensitive)\n  - **Priority:** MEDIUM\n  - Files: `agents/red-team-tester.mjs, agents/__tests__/injection-screening.test.mjs`\n  - Spec: CV-REQ-060\n  - Gaps: D5-06\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: each phrase flagged; \"see the system prompt guide\" and \"we list API endpoints\" not flagged\n  - Parallel: yes\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.799Z",
+  "claimedBy": null,
+  "testStatus": null
+}

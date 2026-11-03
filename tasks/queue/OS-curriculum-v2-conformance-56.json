@@ -1,0 +1,16 @@
+{
+  "id": "OS-curriculum-v2-conformance-56",
+  "title": "framework/agent-routing.md: add \"Disagreement is the finding\" paragraph",
+  "description": "- [ ] **CV-238**: framework/agent-routing.md: add \"Disagreement is the finding\" paragraph\n  - **Priority:** MEDIUM\n  - Files: `framework/agent-routing.md, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-089\n  - Gaps: D7-18\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts the phrase `disagreement is the finding`\n  - Parallel: blocked-by CV-221\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "sdlc-documentarian",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.805Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-39"
+  ]
+}

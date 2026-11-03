@@ -1,0 +1,16 @@
+{
+  "id": "OS-curriculum-v2-conformance-71",
+  "title": "AGENT.md.template and worker.mjs micro-cycle text: tests first (derive failing tests from the spec) and the exact phrase `never modify a committed test` (flag needs-human instead)",
+  "description": "- [ ] **CV-302**: AGENT.md.template and worker.mjs micro-cycle text: tests first (derive failing tests from the spec) and the exact phrase `never modify a committed test` (flag needs-human instead)\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/AGENT.md.template, agents/worker.mjs, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-034\n  - Gaps: D1-07\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts the phrase in AGENT.md.template; worker.mjs prompt text contains it (grep in test)\n  - Parallel: blocked-by CV-250\n  - Complexity: S",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.808Z",
+  "claimedBy": null,
+  "testStatus": null,
+  "blockedBy": [
+    "OS-curriculum-v2-conformance-66"
+  ]
+}

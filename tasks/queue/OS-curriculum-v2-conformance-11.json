@@ -1,0 +1,13 @@
+{
+  "id": "OS-curriculum-v2-conformance-11",
+  "title": "health-check.mjs: add exported pure `evaluateCycleCadence(history, now, limits)` (daily 2d, weekly 8d, monthly 32d)",
+  "description": "- [ ] **CV-110**: health-check.mjs: add exported pure `evaluateCycleCadence(history, now, limits)` (daily 2d, weekly 8d, monthly 32d)\n  - **Priority:** HIGH\n  - Files: `agents/health-check.mjs, tests/health-check.test.mjs`\n  - Spec: CV-REQ-012\n  - Gaps: D7-06\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: weekly entry 9 days old -> overdue weekly; all fresh -> none; zero monthly entries and oldest entry < 32d -> not flagged\n  - Parallel: yes\n  - Complexity: S\n  - Notes: Read the history entry shape from recordCycleHistory() in agents/cycles/daily-review.mjs before writing.",
+  "priority": "HIGH",
+  "status": "pending",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.796Z",
+  "claimedBy": null,
+  "testStatus": null
+}
