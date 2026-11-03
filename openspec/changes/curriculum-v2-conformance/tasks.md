@@ -1703,6 +1703,44 @@ Spec: `specs/decisions-2026-11-03.md`. Hermes builds the code against mocks; the
   - Parallel: blocked-by CV-708
   - Complexity: M
 
+### Phase 8: Agent identity on the autonomous path (Bryce, 2026-11-03)
+
+Spec: `specs/agent-identity.md`. All interactive: these change the drain and the reviewer.
+
+- [ ] **CV-801**: `queue-drainer.mjs next [--exclude ids]` — print the top ready task as JSON (FIX first)
+  - **Priority:** HIGH
+  - Files: `agents/queue-drainer.mjs`, `agents/__tests__/queue-drainer-next.test.mjs` (new)
+  - Spec: CV-REQ-120
+  - Lane: interactive
+  - Test: ordering, exclusion, FIX precedence, empty queue prints nothing exit 0
+  - Complexity: S
+
+- [ ] **CV-802**: hermes-drain.sh selects the task + agent, embeds AGENT.md, passes `{{TASK_ID}}`/`{{AGENT}}`, optional `-m drainModel`
+  - **Priority:** HIGH
+  - Files: `agents/hermes-drain.sh`, `agents/drain-prompt.md`, `tests/hermes-drain.test.mjs`
+  - Spec: CV-REQ-120, CV-REQ-121, CV-REQ-122
+  - Lane: interactive
+  - Test: dry-run prints the selected task + agent; prompt contains the agent's identity; no `-m` without drainModel
+  - Parallel: blocked-by CV-801
+  - Complexity: M
+
+- [ ] **CV-803**: pr-auto-review runs as `sdlc-reviewer` (AGENT.md + memory recall in the prompt; optional reviewModel)
+  - **Priority:** HIGH
+  - Files: `agents/pr-auto-review.mjs`, `tests/pr-auto-review.test.mjs`
+  - Spec: CV-REQ-123
+  - Lane: interactive
+  - Test: prompt contains the identity when the file exists; unchanged when missing; reviewModel honoured
+  - Complexity: S
+
+- [ ] **CV-804**: Tool-call trial for per-agent drain models — run one real drain per candidate model, set `drainModel` only for passers
+  - **Priority:** MEDIUM
+  - Files: `agents/budget.json`
+  - Spec: CV-REQ-122
+  - Lane: interactive
+  - Test: the trial drain opens a PR with valid tool calls end-to-end
+  - Parallel: blocked-by CV-802
+  - Complexity: S
+
 ## Completion Criteria
 
 - [ ] All hermes-lane tasks merged via the drain; all interactive-lane tasks merged by a Claude Code session

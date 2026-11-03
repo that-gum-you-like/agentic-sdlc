@@ -214,3 +214,11 @@ Moved from "excluded / needs decision" into scope — see `specs/decisions-2026-
 | D1-17 | Self-hosted VaultWarden for agent credentials, short-lived sessions | CV-REQ-112 |
 | D5-11 | Strip personal data locally (Presidio in the existing `.venv`) before model calls | CV-REQ-113 |
 | D6-12 | A voice per agent — output only, local TTS, respects the hardware kill-switch rule | CV-REQ-114 |
+
+## Added 2026-11-03: agent identity on the autonomous path
+
+Architecture review (Bryce: "look at their architecture"): the drain ran every task as one
+generic worker, ignoring the queue's `agent`, each AGENT.md, agent memory and budget.json
+models; the reviewer likewise ran without `sdlc-reviewer`'s identity. That is the curriculum's
+W3/W6 core, present only in interactive sessions. → `specs/agent-identity.md` (CV-REQ-120..123),
+tasks Phase 8. Per-agent models are opt-in after a tool-call trial (Hermes + coder-model incident).
