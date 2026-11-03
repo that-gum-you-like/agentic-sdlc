@@ -65,7 +65,7 @@ function run(f) {
   try {
     return execFileSync('node', [RUNNER, '--project-dir', f.work], {
       encoding: 'utf8',
-      env: { ...process.env, PORTFOLIO_PATH: f.portfolioPath, NOTIFY_PROVIDER: 'none' },
+      env: { ...process.env, PORTFOLIO_PATH: f.portfolioPath, NOTIFY_PROVIDER: 'none', HERMES_OUTBOX: mkdtempSync(join(tmpdir(), 'deployguard-outbox-')) }, // never litter the real ~/hermes-outbox
     });
   } catch (err) {
     return (err.stdout || '') + (err.stderr || '');
