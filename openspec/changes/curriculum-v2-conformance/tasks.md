@@ -351,7 +351,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-108, CV-112
   - Complexity: S
 
-- [ ] **CV-114**: scheduler-install.mjs: honour `supersededBy` (skip entry, disable and remove an existing user unit of that name) and `enabled:false` (install the unit, do not enable)
+- [x] **CV-114**: scheduler-install.mjs: honour `supersededBy` (skip entry, disable and remove an existing user unit of that name) and `enabled:false` (install the unit, do not enable)
   - **Priority:** HIGH
   - Files: `agents/scheduler-install.mjs, tests/scheduler-install.test.mjs`
   - Spec: CV-REQ-014
@@ -1058,7 +1058,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: yes
   - Complexity: M
 
-- [ ] **CV-309**: review-hook.mjs: `install --pre-only` installs only the pre-commit hook, idempotently
+- [x] **CV-309**: review-hook.mjs: `install --pre-only` installs only the pre-commit hook, idempotently
   - **Priority:** MEDIUM
   - Files: `agents/review-hook.mjs, agents/__tests__/gates-enforce.test.mjs`
   - Spec: CV-REQ-030
@@ -1069,7 +1069,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-310**: review-hook.mjs DEFAULT_CHECKLIST: empty-catch regex matches `catch {}`, `catch () {}`, `catch (e) {}`; does not match `catch (e) { log(e) }`
+- [x] **CV-310**: review-hook.mjs DEFAULT_CHECKLIST: empty-catch regex matches `catch {}`, `catch () {}`, `catch (e) {}`; does not match `catch (e) { log(e) }`
   - **Priority:** MEDIUM
   - Files: `agents/review-hook.mjs, agents/__tests__/gates-enforce.test.mjs`
   - Spec: CV-REQ-031
@@ -1480,7 +1480,7 @@ Hygiene tasks cite gap ids and carry no spec. Conformance rows are downgraded fi
   - Complexity: M
   - Notes: Keep azure-foundry-claude.mjs (Claude on Azure, not OpenAI).
 
-- [ ] **CV-602**: cron-schedule.json (+ template): remove the `orchestration-sync` entry (paperclip retired 2026-09-07); disable its timer via scheduler-install
+- [x] **CV-602**: cron-schedule.json (+ template): remove the `orchestration-sync` entry (paperclip retired 2026-09-07); disable its timer via scheduler-install
   - **Priority:** LOW
   - Files: `agents/cron-schedule.json, agents/templates/cron-schedule.json.template`
   - Spec: hygiene (paperclip retired)
