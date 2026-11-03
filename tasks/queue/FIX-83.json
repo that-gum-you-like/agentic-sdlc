@@ -12,7 +12,7 @@
     "auto-fix"
   ],
   "description": "Drain PR #83 (branch `agent/drain/OS-business-os-21`) was NOT merged by pr-auto-review (gate-failed).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-business-os-21 && git checkout agent/drain/OS-business-os-21`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-business-os-21` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- hard gate failed at node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs'\n- ℹ todo 0\nℹ duration_ms 24156.492017\n\n✖ failing tests:\n\ntest at agents/__tests__/heartbeat.test.mjs:382:3\n✖ exits non-zero on delivery failure with stderr naming the provider (3100.203958ms)\n  AssertionError [ERR_ASSERTION]: exit code must be non-zero, got 0\n      at TestContext.<anonymous> (file:///tmp/pr-review-ZYv7K1/agents/__tests__/heartbeat.test.mjs:395:12)\n      at Test.runInAsyncScope (node:async_hooks:226:14)\n      at Test.run (node:internal/test_runner/test:1118:25)\n      at Suite.processPendingSubtests (node:internal/test_runner/test:787:18)\n      at Test.postRun (node:internal/test_runner/test:1247:19)\n      at Test.run (node:internal/test_runner/test:1175:12)\n      at async Promise.all (index 0)\n      at async Suite.run (node:internal/test_runner/test:1533:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: 0,\n    expected: 0,\n    operator: 'notStrictEqual',\n    diff: 'simple'\n  }\n\ntest at tests/hermes-drain.test.mjs:1:1\n✖ tests/hermes-drain.test.mjs (1832.04109ms)\n  'test failed'\n\n",
-  "status": "pending",
+  "status": "completed",
   "fixFor": {
     "pr": 83,
     "branch": "agent/drain/OS-business-os-21",
@@ -22,5 +22,8 @@
   },
   "_file": "FIX-83.json",
   "claimedBy": "hermes-drain",
-  "claimedAt": "2026-11-03T20:46:05.008Z"
+  "claimedAt": "2026-11-03T20:46:05.008Z",
+  "completed_at": "2026-11-03T21:25:47Z",
+  "test_status": "passing",
+  "completionNote": "PR #83 merged after interactive review"
 }

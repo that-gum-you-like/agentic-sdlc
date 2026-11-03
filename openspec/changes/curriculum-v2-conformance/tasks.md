@@ -313,7 +313,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-108
   - Complexity: M
 
-- [ ] **CV-110**: health-check.mjs: add exported pure `evaluateCycleCadence(history, now, limits)` (daily 2d, weekly 8d, monthly 32d)
+- [x] **CV-110**: health-check.mjs: add exported pure `evaluateCycleCadence(history, now, limits)` (daily 2d, weekly 8d, monthly 32d)
   - **Priority:** HIGH
   - Files: `agents/health-check.mjs, tests/health-check.test.mjs`
   - Spec: CV-REQ-012
@@ -380,7 +380,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-114, CV-103
   - Complexity: M
 
-- [ ] **CV-116**: browser-user-test.mjs: export `hasPlaywrightConfig(dir)` (playwright.config.js/ts/mjs/cjs)
+- [x] **CV-116**: browser-user-test.mjs: export `hasPlaywrightConfig(dir)` (playwright.config.js/ts/mjs/cjs)
   - **Priority:** HIGH
   - Files: `agents/browser-user-test.mjs, agents/__tests__/browser-user-test.test.mjs`
   - Spec: CV-REQ-015

@@ -132,6 +132,13 @@ test('taskIdFromBranch extracts queue task ids', () => {
   assert(taskIdFromBranch('agent/drain/H-001') === 'H-001', 'plain id');
   assert(taskIdFromBranch('agent/drain/H-003-20260706') === 'H-003', 'timestamp suffix');
   assert(taskIdFromBranch('agent/drain/TASK-42') === 'TASK-42', 'other prefixes');
+  // Seeded OpenSpec ids are long and hyphenated — the old pattern matched none of them,
+  // so merged seeded tasks were never marked completed (2026-11-03).
+  assert(taskIdFromBranch('agent/drain/OS-curriculum-v2-conformance-17') === 'OS-curriculum-v2-conformance-17', 'seeded id');
+  assert(taskIdFromBranch('agent/drain/OS-business-os-21-20261103') === 'OS-business-os-21', 'seeded id + timestamp');
+  const queue = new Set(['OS-curriculum-v2-conformance-17']);
+  assert(taskIdFromBranch('agent/drain/OS-curriculum-v2-conformance-17-1430', id => queue.has(id)) === 'OS-curriculum-v2-conformance-17', 'queue-aware: short retry suffix');
+  assert(taskIdFromBranch('feature/x') === null, 'non-drain branch');
   assert(taskIdFromBranch('feature/auto-review-merge') === null, 'non-drain branch');
   assert(taskIdFromBranch('') === null && taskIdFromBranch(undefined) === null, 'empty/undefined');
 });
@@ -521,3 +528,18 @@ test('merge flow passes the changelog into completeTaskInClone (no new push path
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
+
+test('tickTaskInSpec ticks the merged task in its OpenSpec tasks.md', async () => {
+  const { tickTaskInSpec } = await import('../agents/pr-auto-review.mjs');
+  const { mkdtempSync, mkdirSync, writeFileSync, readFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const root = mkdtempSync(join(tmpdir(), 'tick-'));
+  mkdirSync(join(root, 'openspec', 'changes', 'cv'), { recursive: true });
+  const f = join(root, 'openspec', 'changes', 'cv', 'tasks.md');
+  writeFileSync(f, '- [ ] **CV-116**: one\n- [ ] **CV-1160**: other\n');
+  const task = { description: '- [ ] **CV-116**: one\n  - Files: x', source: 'openspec/cv/tasks.md' };
+  assert(tickTaskInSpec(root, task) === true, 'ticked');
+  assert(readFileSync(f, 'utf8') === '- [x] **CV-116**: one\n- [ ] **CV-1160**: other\n', 'only the exact id');
+  assert(tickTaskInSpec(root, task) === false, 'idempotent');
+  assert(tickTaskInSpec(root, { description: 'no id', source: 'openspec/cv/tasks.md' }) === false, 'no id: no-op');
+});

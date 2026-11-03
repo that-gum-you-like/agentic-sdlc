@@ -99,9 +99,28 @@ export function scanScope(paths) {
 }
 
 /** Extract the queue task id from a drain branch name (agent/drain/H-001[-suffix]). */
-export function taskIdFromBranch(branch) {
-  const m = /^agent\/drain\/([A-Za-z]+-\d+)/.exec(branch || '');
-  return m ? m[1] : null;
+export function taskIdFromBranch(branch, exists = null) {
+  // Seeded ids are long and hyphenated (OS-curriculum-v2-conformance-17); the old
+  // `[A-Za-z]+-\d+` pattern matched none of them, so no OpenSpec-seeded task was ever
+  // marked completed on merge and the drain would redo merged work.
+  const m = /^agent\/drain\/([A-Za-z][\w.-]*)$/.exec(branch || '');
+  if (!m) return null;
+  const rest = m[1];
+  if (exists) {
+    // Longest prefix that is a real queue task wins (handles any retry suffix).
+    const parts = rest.split('-');
+    for (let n = parts.length; n >= 2; n--) {
+      const id = parts.slice(0, n).join('-');
+      if (exists(id)) return id;
+    }
+  }
+  const stripped = rest.replace(/-\d{6,}$/, ''); // drop a timestamp retry suffix
+  return /-\d+$/.test(stripped) ? stripped : null;
+}
+
+/** Queue-aware resolver: prefer an id that exists in the repo's tasks/queue. */
+export function queueTaskIdFromBranch(repoDir, branch) {
+  return taskIdFromBranch(branch, (id) => existsSync(join(repoDir, 'tasks', 'queue', `${id}.json`)));
 }
 
 // ---------------------------------------------------------------------------
@@ -513,6 +532,28 @@ function ensureReviewClone(repoDir, log) {
  * ({date, pr, subject, domain}, optional) rides the SAME commit/push so no new
  * push path to main exists (CV-REQ-053).
  */
+/**
+ * Tick the task's checkbox in its OpenSpec tasks.md, so the spec stops claiming merged
+ * work is open. The queue entry's description starts with the original bullet
+ * (`- [ ] **CV-116**: ...`); `source` is `openspec/<change>/tasks.md`. Returns true when
+ * a box was ticked. Never throws — a missing file or id is a no-op.
+ */
+export function tickTaskInSpec(root, task) {
+  try {
+    const id = (/\*\*([\w.-]+)\*\*/.exec(task.description || '') || [])[1];
+    const change = (/^openspec\/([^/]+)\/tasks\.md$/.exec(task.source || '') || [])[1];
+    if (!id || !change) return false;
+    const file = join(root, 'openspec', 'changes', change, 'tasks.md');
+    if (!existsSync(file)) return false;
+    const md = readFileSync(file, 'utf8');
+    const esc = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`^(\\s*- )\\[ \\]( \\*\\*${esc}\\*\\*)`, 'm');
+    if (!re.test(md)) return false;
+    writeFileSync(file, md.replace(re, '$1[x]$2'));
+    return true;
+  } catch { return false; }
+}
+
 export function completeTaskInClone(repoDir, taskId, log, changelog = null) {
   const clone = ensureReviewClone(repoDir, log);
   const taskFile = taskId ? join(clone, 'tasks', 'queue', `${taskId}.json`) : null;
@@ -533,9 +574,10 @@ export function completeTaskInClone(repoDir, taskId, log, changelog = null) {
       writeFileSync(taskFile, JSON.stringify(task, null, 2) + '\n');
     }
   }
+  if (task) tickTaskInSpec(clone, task);
   if (changelog) appendChangelog(join(clone, 'CHANGELOG.md'), changelog);
   if (!run('git', ['-C', clone, 'status', '--porcelain']).trim()) return true;
-  run('git', ['-C', clone, 'add', 'tasks/']);
+  run('git', ['-C', clone, 'add', 'tasks/', ...(existsSync(join(clone, 'openspec')) ? ['openspec/'] : [])]);
   if (changelog) run('git', ['-C', clone, 'add', 'CHANGELOG.md']);
   run('git', ['-C', clone, 'commit', '-q', '-m', changelog
     ? `chore(queue): mark ${taskId || `PR #${changelog.pr}`} completed + changelog #${changelog.pr} (drain PR merged by pr-auto-review)`
@@ -621,7 +663,7 @@ function reconcileMerged(repoDir, cloneDir, log) {
     merged = ghJson(['pr', 'list', '--search', 'head:agent/drain/', '--state', 'merged', '--limit', '20', '--json', 'headRefName,number']);
   } catch { return; }
   for (const pr of merged) {
-    const taskId = taskIdFromBranch(pr.headRefName);
+    const taskId = queueTaskIdFromBranch(repoDir, pr.headRefName);
     // A merged PR also closes its FIX-<pr> task, if one was filed (REQ-SH-3).
     for (const id of [taskId, `FIX-${pr.number}`]) {
       if (!id) continue;
@@ -733,7 +775,7 @@ async function reviewPr(pr, ctx) {
   }
 
   // 4) LLM review. (Task context comes from the freshly-refreshed clone.)
-  const taskId = taskIdFromBranch(pr.headRefName);
+  const taskId = queueTaskIdFromBranch(repoDir, pr.headRefName);
   const taskFile = taskId ? join(ctx.cloneDir, 'tasks', 'queue', `${taskId}.json`) : null;
   const task = taskFile && existsSync(taskFile) ? JSON.parse(readFileSync(taskFile, 'utf8')) : null;
   let diff = '';
