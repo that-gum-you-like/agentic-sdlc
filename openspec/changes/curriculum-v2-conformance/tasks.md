@@ -343,7 +343,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-110
   - Complexity: S
 
-- [ ] **CV-112**: maturity-assess.mjs: add `--report` flag writing the console table to `pm/maturity-reports/<YYYY-MM-DD>.md` (mkdir -p; overwrite same day)
+- [x] **CV-112**: maturity-assess.mjs: add `--report` flag writing the console table to `pm/maturity-reports/<YYYY-MM-DD>.md` (mkdir -p; overwrite same day)
   - **Priority:** HIGH
   - Files: `agents/maturity-assess.mjs, tests/maturity-assess.test.mjs`
   - Spec: CV-REQ-013
