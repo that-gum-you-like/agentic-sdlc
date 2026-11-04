@@ -577,6 +577,28 @@ test('enqueueClaudeReview upserts by pr+sha; a new sha supersedes the old (CV-50
   assert(q[1].notifiedAt === null, 'new entry un-notified');
 });
 
+test('queueFlaggedPr notifies once across passes; failure retries; never throws (CV-503)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crq3-'));
+  const queuePath = join(dir, 'q.json');
+  const pr = { number: 70, headRefName: 'agent/drain/X-1', title: 'Touch drain' };
+  const sent = [];
+  const notify = (m) => { sent.push(m); return true; };
+  for (let i = 0; i < 3; i++) M.queueFlaggedPr(pr, 'abc1234', ['agents/hermes-drain.sh'], { queuePath, notify });
+  assert(sent.length === 1, `one notice across 3 passes, got ${sent.length}`);
+  assert(/#70/.test(sent[0]) && /Touch drain/.test(sent[0]) && /hermes-drain\.sh/.test(sent[0]) && /\/sdlc-review-flagged/.test(sent[0]), 'notice content');
+  assert(M.readClaudeQueue(queuePath)[0].notifiedAt, 'notifiedAt set');
+  const q2 = join(dir, 'q2.json');
+  let ok = false;
+  const flaky = () => { if (!ok) return false; return true; };
+  M.queueFlaggedPr(pr, 'abc1234', ['x'], { queuePath: q2, notify: flaky });
+  assert(M.readClaudeQueue(q2)[0].notifiedAt === null, 'failure leaves notifiedAt null');
+  ok = true;
+  M.queueFlaggedPr(pr, 'abc1234', ['x'], { queuePath: q2, notify: flaky });
+  assert(M.readClaudeQueue(q2)[0].notifiedAt, 'retry succeeds');
+  const r = M.queueFlaggedPr(pr, 'abc1234', ['x'], { queuePath: join(dir, 'q3.json'), notify: () => { throw new Error('boom'); } });
+  assert(r === false, 'throwing notifier swallowed');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
 

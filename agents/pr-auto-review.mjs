@@ -797,6 +797,22 @@ export function notifyClaudeReviewOnce(entry, { path, title, notify = (m) => tri
   } catch { return false; }
 }
 
+/**
+ * On a `flagged` verdict: enqueue for Claude and send the single notice.
+ * Best-effort — never throws, never blocks the review record.
+ */
+export function queueFlaggedPr(pr, headSha, reasons, { repoDir, queuePath, notify, log = () => {} }) {
+  try {
+    const path = queuePath || claudeQueuePath(repoDir);
+    const { entry } = enqueueClaudeReview(
+      { pr: pr.number, branch: pr.headRefName, headSha, reasons }, { path });
+    return notifyClaudeReviewOnce(entry, { path, title: pr.title, notify });
+  } catch (err) {
+    log(`claude-review enqueue for PR #${pr.number} failed (non-fatal): ${err.message}`);
+    return false;
+  }
+}
+
 function reconcileMerged(repoDir, cloneDir, log) {
   let merged;
   try {
@@ -911,6 +927,7 @@ async function reviewPr(pr, ctx) {
       '**Verdict: FLAGGED for human/CTO review** — tests pass in a clean worktree, but this diff touches the guardrail surface, which is never auto-merged:',
       ...scope.flags.map(f => `- \`${f}\``),
     ], dryRun);
+    if (!dryRun) queueFlaggedPr(pr, headSha, scope.flags, ctx);
     return record;
   }
 
