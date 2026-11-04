@@ -146,7 +146,13 @@ async function main() {
   console.log('═'.repeat(50));
 
   for (const step of buildMonthlySteps({ dryRun })) {
-    runStep(step.label, step.script, step.args);
+    const result = runStep(step.label, step.script, step.args);
+
+    // After drift passes, re-record the behavior baseline
+    // Skipped on dry run or when drift fails (non-zero exit caught by runStep)
+    if (step.label === 'Behavior drift vs baseline' && result.ok && !dryRun) {
+      runStep('Re-record baseline', 'test-behavior.mjs', ['--baseline']);
+    }
   }
 
   // 3. Compost cleanup

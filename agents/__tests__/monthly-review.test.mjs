@@ -64,6 +64,8 @@ describe('monthly-review — the executed monthly cycle', () => {
     assert.match(out, /Compost cleanup/);
     assert.match(out, /Cost review/);
     assert.match(out, /2,000 tokens across 2 task\(s\)|2000/, 'only the 30-day window counts');
+    // Baseline re-record must be skipped in dry-run mode (CV-109)
+    assert.ok(!out.includes('Re-record baseline'), 'baseline step must not run in dry-run mode');
   });
 
   it('compost cleanup removes entries past retention (and keeps recent ones)', () => {
@@ -127,5 +129,46 @@ describe('monthly-review — the executed monthly cycle', () => {
     assert.deepEqual(steps[1].args, ['--drift', '--dry-run']);
     assert.equal(steps[2].label, 'Memory migration check');
     assert.deepEqual(steps[2].args, ['--check', '--dry-run']);
+  });
+
+  it('baseline is re-recorded after drift passes (CV-109)', () => {
+    const baselinesPath = join(TMP_PROJECT, 'agents', 'behavior-baselines.json');
+    // Baseline matching the current tester AGENT.md (4 lines due to trailing newline, 1 rule,
+    // "Never" triggers caution score of 25/100 lines, 0 optimism, 0 failure memory noise
+    writeFileSync(baselinesPath, JSON.stringify({
+      recordedAt: '2026-01-01T00:00:00.000Z',
+      threshold: 0.20,
+      agents: { tester: { prompt_lines: 4, rule_count: 1, caution_score: 25, optimism_score: 0, failure_memory_count: 0 } },
+    }, null, 2) + '\n');
+
+    const out = execFileSync(process.execPath, [SCRIPT], {
+      encoding: 'utf8', cwd: TMP_PROJECT,
+      env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT },
+    });
+
+    assert.match(out, /Re-record baseline/, 'baseline re-record step must appear in output');
+
+    const updated = JSON.parse(readFileSync(baselinesPath, 'utf8'));
+    assert.notEqual(updated.recordedAt, '2026-01-01T00:00:00.000Z', 'baseline recordedAt must be updated');
+  });
+
+  it('baseline is NOT re-recorded when drift fails (CV-109)', () => {
+    const baselinesPath = join(TMP_PROJECT, 'agents', 'behavior-baselines.json');
+    // Baseline far from the current tester AGENT.md to trigger drift >20%
+    writeFileSync(baselinesPath, JSON.stringify({
+      recordedAt: '2026-01-01T00:00:00.000Z',
+      threshold: 0.20,
+      agents: { tester: { prompt_lines: 100, rule_count: 30, caution_score: 0, optimism_score: 0, failure_memory_count: 0 } },
+    }, null, 2) + '\n');
+
+    const out = execFileSync(process.execPath, [SCRIPT], {
+      encoding: 'utf8', cwd: TMP_PROJECT,
+      env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT },
+    });
+
+    assert.ok(!out.includes('Re-record baseline'), 'baseline step must be skipped on drift failure');
+
+    const updated = JSON.parse(readFileSync(baselinesPath, 'utf8'));
+    assert.equal(updated.recordedAt, '2026-01-01T00:00:00.000Z', 'baseline recordedAt must not change when drift fails');
   });
 });
