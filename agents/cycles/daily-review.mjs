@@ -15,6 +15,8 @@ import { fileURLToPath } from 'url';
 
 import { loadConfig } from '../load-config.mjs';
 import { triggerNotification } from '../notify.mjs';
+import { hasPlaywrightConfig } from '../browser-user-test.mjs';
+import { runStep } from './monthly-review.mjs';
 
 const MATURATION_LEVEL_NAMES = ['New', 'Corrected', 'Remembering', 'Teaching', 'Autonomous', 'Evolving'];
 
@@ -258,6 +260,48 @@ export function bugMetrics(changesDir, queueDir) {
     `| Pending FIX tasks | ${pendingFix} |`,
     `| Completed FIX tasks | ${completedFix} |`,
   ].join('\n');
+}
+
+/**
+ * Run browser user tests and record the result in the dashboard.
+ *
+ * When the project has a Playwright config, runs browser-user-test.mjs run
+ * via the provided runner and records PASS/FAIL with the screenshot archive
+ * path. Otherwise logs `skipped (no-playwright-config)`. Failure is non-fatal.
+ *
+ * @param {object} config - project config from loadConfig()
+ * @param {{runner?: Function}} opts
+ *   runner - (label, script, args) => {{label, ok}} for dependency injection
+ * @returns {{status: string, detail?: string}}
+ */
+export function runUserTests(config, { runner = runStep } = {}) {
+  const appPath = config.appPath || config.projectDir;
+
+  if (!hasPlaywrightConfig(appPath)) {
+    const reason = 'no-playwright-config';
+    console.log(`User tests: skipped (${reason})`);
+
+    upsertDashboardSection('User tests',
+      'Status | Detail\n-------|-------\nskipped | no-playwright-config',
+      config.dashboardPath);
+
+    return { status: 'skipped', detail: reason };
+  }
+
+  // Run browser-user-test.mjs run via the injected or default runner
+  const result = runner('User tests', 'browser-user-test.mjs', ['run']);
+  const status = result.ok ? 'PASS' : 'FAIL';
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const shotsDir = `pm/user-tests/${stamp}`;
+
+  upsertDashboardSection('User tests',
+    `Status | Detail\n-------|-------\n${status} | ${shotsDir}`,
+    config.dashboardPath);
+
+  return {
+    status: result.ok ? 'pass' : 'fail',
+    detail: shotsDir,
+  };
 }
 
 function loadTasks() {

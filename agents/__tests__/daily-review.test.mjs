@@ -25,7 +25,7 @@ import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
 
-import { openspecStatusTable, bugMetrics } from '../cycles/daily-review.mjs';
+import { openspecStatusTable, bugMetrics, runUserTests } from '../cycles/daily-review.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(__dirname, '..', '..');
@@ -407,5 +407,105 @@ describe('upsertDashboardSection (CV-REQ-020)', () => {
     upsert('A', 'y', f); const once = readFileSync(f, 'utf8');
     upsert('A', 'y', f);
     assert.equal(readFileSync(f, 'utf8'), once);
+  });
+});
+
+/**
+ * CV-REQ-015: runUserTests — browser user-test integration in the daily review.
+ *
+ * The function accepts a config and an optional {runner} for dependency injection.
+ * - With a Playwright config, the runner is called and the dashboard shows PASS or
+ *   FAIL with the pm/user-tests/<date> path.
+ * - Without a config, the runner is NOT called and the dashboard shows skipped.
+ */
+
+/** Build a fixture project dir with an optional playwright.config file. */
+function fixtureForUserTests({ withPlaywrightConfig = false } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'sdlc-usertests-'));
+  mkdirSync(join(dir, 'agents'), { recursive: true });
+  mkdirSync(join(dir, 'pm'), { recursive: true });
+  writeFileSync(
+    join(dir, 'agents/project.json'),
+    JSON.stringify({ name: 'user-test-fixture', notification: { provider: 'none', triggers: {} } })
+  );
+  writeFileSync(join(dir, 'pm/DASHBOARD.md'),
+    '# Fixture — User Test Dashboard\n\n**Last updated:** 2026-11-03\n\n## Current Status\n_Initial._\n');
+  if (withPlaywrightConfig) {
+    writeFileSync(join(dir, 'playwright.config.ts'), 'export default {};\n');
+  }
+  return dir;
+}
+
+/** Build a minimal config object matching loadConfig() shape. */
+function fixtureConfig(dir) {
+  return {
+    projectDir: dir,
+    appPath: dir,
+    dashboardPath: join(dir, 'pm/DASHBOARD.md'),
+  };
+}
+
+describe('runUserTests (CV-REQ-015)', () => {
+  it('calls the runner when Playwright config exists and records PASS on success', () => {
+    const dir = fixtureForUserTests({ withPlaywrightConfig: true });
+    const config = fixtureConfig(dir);
+    const tracker = { called: 0 };
+
+    const result = runUserTests(config, {
+      runner: (label, script, args) => {
+        tracker.called++;
+        assert.equal(label, 'User tests');
+        assert.equal(script, 'browser-user-test.mjs');
+        assert.equal(args.join(' '), 'run');
+        return { label, ok: true };
+      },
+    });
+
+    assert.equal(tracker.called, 1, 'runner must be called exactly once when config exists');
+    assert.equal(result.status, 'pass');
+
+    const dashboard = readFileSync(config.dashboardPath, 'utf8');
+    assert.match(dashboard, /## User tests/,
+      'dashboard must contain a User tests section');
+    assert.match(dashboard, /PASS \| pm\/user-tests\//,
+      'dashboard must show PASS and the pm/user-tests path when tests pass');
+  });
+
+  it('records FAIL when the runner returns ok=false', () => {
+    const dir = fixtureForUserTests({ withPlaywrightConfig: true });
+    const config = fixtureConfig(dir);
+
+    const result = runUserTests(config, {
+      runner: (label) => ({ label, ok: false }),
+    });
+
+    assert.equal(result.status, 'fail');
+
+    const dashboard = readFileSync(config.dashboardPath, 'utf8');
+    assert.match(dashboard, /FAIL \| pm\/user-tests\//,
+      'dashboard must show FAIL and the pm/user-tests path when tests fail');
+  });
+
+  it('skips and does not call runner when no Playwright config exists', () => {
+    const dir = fixtureForUserTests({ withPlaywrightConfig: false });
+    const config = fixtureConfig(dir);
+    let runnerCalled = false;
+
+    const result = runUserTests(config, {
+      runner: () => {
+        runnerCalled = true;
+        return { label: 'User tests', ok: true };
+      },
+    });
+
+    assert.equal(runnerCalled, false, 'runner must NOT be called when no Playwright config');
+    assert.equal(result.status, 'skipped');
+    assert.equal(result.detail, 'no-playwright-config');
+
+    const dashboard = readFileSync(config.dashboardPath, 'utf8');
+    assert.match(dashboard, /## User tests/,
+      'dashboard must contain a User tests section even when skipped');
+    assert.match(dashboard, /skipped \| no-playwright-config/,
+      'dashboard must show skipped with reason no-playwright-config');
   });
 });
