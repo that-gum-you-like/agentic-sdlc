@@ -3,7 +3,7 @@
   "title": "monthly-review: after the drift step passes, re-record the baseline (`test-behavior.mjs --baseline`); skip when drift failed or dryRun",
   "description": "- [ ] **CV-109**: monthly-review: after the drift step passes, re-record the baseline (`test-behavior.mjs --baseline`); skip when drift failed or dryRun\n  - **Priority:** HIGH\n  - Files: `agents/cycles/monthly-review.mjs, agents/__tests__/monthly-review.test.mjs`\n  - Spec: CV-REQ-011\n  - Gaps: D7-01\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: runner stub: drift ok -> baseline step runs after snapshot; drift fail -> baseline step not run; dryRun -> not run\n  - Parallel: blocked-by CV-108\n  - Complexity: M",
   "priority": "HIGH",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-9"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-10.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-04T00:09:44.570Z"
 }

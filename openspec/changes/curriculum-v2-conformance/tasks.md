@@ -309,7 +309,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-101
   - Complexity: S
 
-- [ ] **CV-109**: monthly-review: after the drift step passes, re-record the baseline (`test-behavior.mjs --baseline`); skip when drift failed or dryRun
+- [x] **CV-109**: monthly-review: after the drift step passes, re-record the baseline (`test-behavior.mjs --baseline`); skip when drift failed or dryRun
   - **Priority:** HIGH
   - Files: `agents/cycles/monthly-review.mjs, agents/__tests__/monthly-review.test.mjs`
   - Spec: CV-REQ-011

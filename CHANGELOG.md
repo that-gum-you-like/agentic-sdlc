@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-04
+
+- 2026-11-04 #97 feat(monthly-review): re-record behavior baseline after drift passes (CV-109) (backend)
+
 ## 2026-11-03
 
 - 2026-11-03 #83 docs(runbook): two-wave timer model, heartbeat, guard denials; hardGate headless git identity (T-703, merged after Claude review)
