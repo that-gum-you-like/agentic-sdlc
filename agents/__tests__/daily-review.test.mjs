@@ -509,3 +509,55 @@ describe('runUserTests (CV-REQ-015)', () => {
       'dashboard must show skipped with reason no-playwright-config');
   });
 });
+
+/**
+ * CV-121 / CV-REQ-020: the daily review writes OpenSpec status and Bug metrics
+ * sections to the dashboard via upsertDashboardSection, and re-runs replace
+ * rather than duplicate.
+ */
+function fixtureForDashboardSections() {
+  const dir = mkdtempSync(join(tmpdir(), 'sdlc-dash-sections-'));
+  mkdirSync(join(dir, 'agents'), { recursive: true });
+  mkdirSync(join(dir, 'pm'), { recursive: true });
+  mkdirSync(join(dir, 'openspec/changes'), { recursive: true });
+  mkdirSync(join(dir, 'tasks/queue'), { recursive: true });
+  writeFileSync(
+    join(dir, 'agents/project.json'),
+    JSON.stringify({ name: 'dash-sections-fixture', notification: { provider: 'none', triggers: {} } })
+  );
+  writeFileSync(join(dir, 'pm/DASHBOARD.md'),
+    '# Fixture — Dashboard Sections\n\n**Last updated:** 2026-11-03\n\n## Current Status\n_Initial._\n');
+  return dir;
+}
+
+describe('dashboard sections from upsertDashboardSection (CV-121)', () => {
+  it('OpenSpec status and Bug metrics sections appear after one run', () => {
+    const dir = fixtureForDashboardSections();
+
+    const result = runReview(dir);
+    assert.equal(result.status, 0, result.stderr);
+
+    const written = readFileSync(join(dir, 'pm/DASHBOARD.md'), 'utf8');
+    assert.match(written, /## OpenSpec status/,
+      'dashboard must contain an OpenSpec status section after one run');
+    assert.match(written, /## Bug metrics/,
+      'dashboard must contain a Bug metrics section after one run');
+  });
+
+  it('running twice yields exactly one OpenSpec status and one Bug metrics section', () => {
+    const dir = fixtureForDashboardSections();
+
+    const r1 = runReview(dir);
+    assert.equal(r1.status, 0, `first run stderr: ${r1.stderr}`);
+    const r2 = runReview(dir);
+    assert.equal(r2.status, 0, `second run stderr: ${r2.stderr}`);
+
+    const written = readFileSync(join(dir, 'pm/DASHBOARD.md'), 'utf8');
+    const ossMatches = written.match(/## OpenSpec status/g);
+    assert.equal(ossMatches?.length, 1,
+      `exactly one OpenSpec status heading after two runs, got ${ossMatches?.length}`);
+    const bmMatches = written.match(/## Bug metrics/g);
+    assert.equal(bmMatches?.length, 1,
+      `exactly one Bug metrics heading after two runs, got ${bmMatches?.length}`);
+  });
+});
