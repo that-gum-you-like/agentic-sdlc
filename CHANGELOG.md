@@ -7,6 +7,7 @@
 - 2026-11-04 #99 feat(schemas): add claude-review-queue.schema.json (CV-501) (backend)
 - 2026-11-04 #100 feat(agent-registry): add reportsTo/delegatesTo front matter and org subcommand (CV-701) (backend)
 - 2026-11-04 #101 feat(daily-review): add runUserTests with dashboard section (CV-117) (backend)
+- 2026-11-04 #102 feat(daily-review): upsert OpenSpec status and Bug metrics sections (CV-121) (backend)
 
 ## 2026-11-03
 

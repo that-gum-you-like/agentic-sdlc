@@ -442,7 +442,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-121**: daily-review.mjs: call `upsertDashboardSection` with the OpenSpec status table and Bug metrics from the daily run
+- [x] **CV-121**: daily-review.mjs: call `upsertDashboardSection` with the OpenSpec status table and Bug metrics from the daily run
   - **Priority:** HIGH
   - Files: `agents/cycles/daily-review.mjs, agents/__tests__/daily-review.test.mjs`
   - Spec: CV-REQ-020
