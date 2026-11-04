@@ -1611,7 +1611,7 @@ Hygiene tasks cite gap ids and carry no spec. Conformance rows are downgraded fi
 
 Spec: `specs/decisions-2026-11-03.md`. Hermes builds the code against mocks; the interactive tasks are installs and wiring on this machine.
 
-- [ ] **CV-701**: Add `reportsTo` and `delegatesTo` fields to agent front matter and an `org` subcommand to the agent registry
+- [x] **CV-701**: Add `reportsTo` and `delegatesTo` fields to agent front matter and an `org` subcommand to the agent registry
   - **Priority:** MEDIUM
   - Files: `agents/templates/AGENT.md.template`, `agents/agent-registry.mjs`, `tests/agent-registry-org.test.mjs` (new)
   - Spec: CV-REQ-110

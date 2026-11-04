@@ -3,11 +3,15 @@
   "title": "Add `reportsTo` and `delegatesTo` fields to agent front matter and an `org` subcommand to the agent registry",
   "description": "- [ ] **CV-701**: Add `reportsTo` and `delegatesTo` fields to agent front matter and an `org` subcommand to the agent registry\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/AGENT.md.template`, `agents/agent-registry.mjs`, `tests/agent-registry-org.test.mjs` (new)\n  - Spec: CV-REQ-110\n  - Gaps: D3-10\n  - Lane: hermes\n  - Test: fixture of 3 agents prints a tree rooted at `board`; a 2-agent `reportsTo` cycle exits 1; missing `reportsTo` defaults to `board`\n  - Complexity: M",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
   "createdAt": "2026-11-03T20:05:57.819Z",
   "claimedBy": null,
-  "testStatus": null
+  "testStatus": null,
+  "_file": "OS-curriculum-v2-conformance-125.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-04T00:29:05.631Z"
 }
