@@ -837,6 +837,16 @@ function reconcileMerged(repoDir, cloneDir, log) {
 // Per-PR review
 // ---------------------------------------------------------------------------
 
+/** True when the log already holds a skip-awaiting-claude line for pr+sha. */
+export function skipAlreadyLogged(logFile, pr, sha) {
+  try {
+    return readFileSync(logFile, 'utf8').split('\n').some(l => {
+      if (!l.includes('skip-awaiting-claude')) return false;
+      try { const r = JSON.parse(l); return r.pr === pr && r.sha === sha && r.action === 'skip-awaiting-claude'; } catch { return false; }
+    });
+  } catch { return false; }
+}
+
 function alreadyReviewed(prNumber, headSha) {
   try {
     const { comments } = ghJson(['pr', 'view', String(prNumber), '--json', 'comments']);
@@ -869,10 +879,24 @@ function fileFixTask(pr, headSha, reasons, kind, ctx) {
   }
 }
 
-async function reviewPr(pr, ctx) {
+export async function reviewPr(pr, ctx) {
   const { repoDir, log, dryRun } = ctx;
   const headSha = pr.headRefOid;
   const record = { ts: new Date().toISOString(), pr: pr.number, branch: pr.headRefName, sha: headSha, action: null, detail: null };
+
+  // CV-REQ-101: an open queue entry means Claude owns this PR at this SHA —
+  // no gh comment lookup, no worktree, no LLM. Retry an undelivered notice.
+  {
+    const queued = isAwaitingClaude(pr.number, headSha, ctx.queuePath || claudeQueuePath(repoDir));
+    if (queued) {
+      if (!dryRun && !queued.notifiedAt) {
+        notifyClaudeReviewOnce(queued, { path: ctx.queuePath || claudeQueuePath(repoDir), title: pr.title, notify: ctx.notify });
+      }
+      record.action = 'skip-awaiting-claude';
+      record.detail = 'queued for an interactive Claude review (/sdlc-review-flagged)';
+      return record;
+    }
+  }
 
   if (alreadyReviewed(pr.number, headSha)) {
     record.action = 'skip';
@@ -1064,7 +1088,7 @@ export async function runAutoReview({ dryRun = false } = {}) {
       }
       if (res.action === 'merged') { merges++; mergedThisRun.add(pr.number); }
       log(`PR #${res.pr}: ${res.action}${res.detail ? ` — ${res.detail}` : ''}`);
-      record(res);
+      if (!(res.action === 'skip-awaiting-claude' && skipAlreadyLogged(logFile, res.pr, res.sha))) record(res);
       results.push(res);
     }
   } finally {

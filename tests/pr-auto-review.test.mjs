@@ -599,6 +599,23 @@ test('queueFlaggedPr notifies once across passes; failure retries; never throws 
   assert(r === false, 'throwing notifier swallowed');
 });
 
+test('reviewPr skips an open queue entry with no LLM/worktree and logs the skip once (CV-504)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crq4-'));
+  const queuePath = join(dir, 'q.json');
+  const pr = { number: 71, headRefName: 'agent/drain/X-2', headRefOid: 'abc1234', title: 't', files: [{ path: 'agents/hermes-drain.sh' }] };
+  M.enqueueClaudeReview({ pr: 71, branch: pr.headRefName, headSha: 'abc1234', reasons: ['r'] }, { path: queuePath });
+  const sent = [];
+  const logFile = join(dir, 'log');
+  for (let i = 0; i < 3; i++) {
+    // cloneDir is bogus: any worktree/gate/gh use would throw -> action 'error' upstream
+    const res = await M.reviewPr(pr, { repoDir: dir, cloneDir: join(dir, 'nope'), log: () => {}, dryRun: false, queuePath, notify: (m) => { sent.push(m); return true; }, overlaps: new Map(), mergedThisRun: new Set() });
+    assert(res.action === 'skip-awaiting-claude', `action ${res.action}`);
+    if (!M.skipAlreadyLogged(logFile, res.pr, res.sha)) writeFileSync(logFile, JSON.stringify(res) + '\n', { flag: 'a' });
+  }
+  assert(readFileSync(logFile, 'utf8').trim().split('\n').length === 1, 'exactly one log line');
+  assert(sent.length === 1, 'undelivered notice retried once then stops');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
 
