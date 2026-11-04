@@ -18,6 +18,7 @@ import { execSync } from 'child_process';
 
 import { loadConfig } from '../load-config.mjs';
 import { runStep } from './monthly-review.mjs';
+import { upsertDashboardSection } from './daily-review.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -263,6 +264,21 @@ export function runWeeklySteps(steps, runner = runStep) {
   return results;
 }
 
+/**
+ * Pure function: compute how many days to drain pending tokens at the given daily budget.
+ *
+ * @param {{estimatedTokens?: number}[]} tasks - task objects from the queue
+ * @param {number|undefined|null} budget - daily token budget (a positive number)
+ * @returns {string} "N days" or "n/a" when budget is missing, zero, or invalid
+ */
+export function capacityForecast(tasks, budget) {
+  if (!budget || typeof budget !== 'number' || budget <= 0) return 'n/a';
+  const total = tasks.reduce((sum, t) => sum + (typeof t.estimatedTokens === 'number' ? t.estimatedTokens : 0), 0);
+  const days = Math.ceil(total / budget);
+  if (!Number.isFinite(days) || days < 0) return 'n/a';
+  return `${days} day${days === 1 ? '' : 's'}`;
+}
+
 async function main() {
   console.log('═'.repeat(50));
   console.log('  Weekly Review — ' + new Date().toISOString().split('T')[0]);
@@ -318,6 +334,28 @@ async function main() {
       stats: { completed, pending, agentsConsolidated: AGENTS.length },
     });
     writeFileSync(historyPath, JSON.stringify(history, null, 2));
+  }
+
+  // Capacity forecast — upsert dashboard section (CV-REQ-017 / CV-122)
+  {
+    const pendingTasks = [];
+    if (existsSync(TASKS_DIR)) {
+      for (const file of readdirSync(TASKS_DIR).filter(f => f.endsWith('.json'))) {
+        try {
+          const t = JSON.parse(readFileSync(resolve(TASKS_DIR, file), 'utf8'));
+          if (t.status === 'pending') pendingTasks.push(t);
+        } catch { /* skip malformed task files */ }
+      }
+    }
+    // Derive daily budget from all agents' dailyTokens
+    let dailyBudget = 0;
+    for (const agentCfg of Object.values(config.agentConfigs)) {
+      if (typeof agentCfg.dailyTokens === 'number') {
+        dailyBudget += agentCfg.dailyTokens;
+      }
+    }
+    const forecast = capacityForecast(pendingTasks, dailyBudget > 0 ? dailyBudget : null);
+    upsertDashboardSection('Capacity forecast', `Backlog drains in ${forecast}.`, config.dashboardPath);
   }
 
   // Run weekly review steps after all existing sections
