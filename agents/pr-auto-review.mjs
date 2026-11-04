@@ -813,6 +813,30 @@ export function queueFlaggedPr(pr, headSha, reasons, { repoDir, queuePath, notif
   }
 }
 
+/** Mark an entry resolved (shared by reconcile and resolve-flagged). */
+export function resolveClaudeEntry(path, pr, headSha, outcome, resolvedBy, now = () => new Date().toISOString()) {
+  return updateClaudeEntry(path, pr, headSha, { status: 'resolved', outcome, resolvedBy, resolvedAt: now() });
+}
+
+/**
+ * CV-REQ-101: open entries whose PR is merged/closed on the remote become
+ * `resolved`. `getState(pr)` returns 'MERGED' | 'CLOSED' | 'OPEN' (or throws,
+ * in which case the entry is left alone).
+ * @returns {number[]} PR numbers resolved
+ */
+export function reconcileClaudeQueue(path, getState, log = () => {}) {
+  const done = [];
+  for (const e of readClaudeQueue(path).filter(x => x.status === 'open')) {
+    let state;
+    try { state = String(getState(e.pr) || '').toUpperCase(); } catch { continue; }
+    if (state !== 'MERGED' && state !== 'CLOSED') continue;
+    resolveClaudeEntry(path, e.pr, e.headSha, state.toLowerCase(), 'reconcile');
+    log(`reconcile: queued PR #${e.pr} is ${state.toLowerCase()} — entry resolved`);
+    done.push(e.pr);
+  }
+  return done;
+}
+
 function reconcileMerged(repoDir, cloneDir, log) {
   let merged;
   try {
@@ -1061,6 +1085,10 @@ export async function runAutoReview({ dryRun = false } = {}) {
     }
 
     reconcileMerged(repoDir, cloneDir, log);
+    try {
+      reconcileClaudeQueue(claudeQueuePath(repoDir),
+        (n) => ghJson(['pr', 'view', String(n), '--json', 'state']).state, log);
+    } catch (err) { log(`claude-queue reconcile failed (non-fatal): ${err.message}`); }
 
     let prs;
     try {

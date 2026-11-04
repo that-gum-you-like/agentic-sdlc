@@ -616,6 +616,20 @@ test('reviewPr skips an open queue entry with no LLM/worktree and logs the skip 
   assert(sent.length === 1, 'undelivered notice retried once then stops');
 });
 
+test('reconcileClaudeQueue resolves entries whose PR merged/closed (CV-505)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crq5-'));
+  const path = join(dir, 'q.json');
+  for (const n of [1, 2, 3, 4]) M.enqueueClaudeReview({ pr: n, branch: `b/${n}`, headSha: 'abc1234', reasons: [] }, { path });
+  const states = { 1: 'MERGED', 2: 'CLOSED', 3: 'OPEN' };
+  const done = M.reconcileClaudeQueue(path, (n) => { if (n === 4) throw new Error('gh down'); return states[n]; });
+  assert(done.join() === '1,2', `resolved ${done}`);
+  const q = M.readClaudeQueue(path);
+  assert(q[0].status === 'resolved' && q[0].outcome === 'merged' && q[0].resolvedBy === 'reconcile', 'merged resolved');
+  assert(q[1].outcome === 'closed', 'closed resolved');
+  assert(q[2].status === 'open' && q[3].status === 'open', 'open/unknown stay open');
+  assert(M.reconcileClaudeQueue(path, () => 'MERGED').join() === '3,4', 'rest resolve later; resolved never revisited');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
 
