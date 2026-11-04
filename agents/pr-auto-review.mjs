@@ -28,7 +28,7 @@
  * Zero npm dependencies (Node stdlib only).
  */
 
-import { existsSync, readFileSync, appendFileSync, mkdirSync, rmSync, mkdtempSync, writeFileSync, statSync } from 'fs';
+import { existsSync, readFileSync, appendFileSync, mkdirSync, rmSync, mkdtempSync, writeFileSync, statSync, renameSync } from 'fs';
 import { execFileSync, spawn } from 'child_process';
 import { dirname, join, resolve } from 'path';
 import { tmpdir, homedir } from 'os';
@@ -711,6 +711,90 @@ function upsertFixTaskInClone(repoDir, prInfo, log) {
   }
   log(`filed ${task.id} (${prInfo.kind}) — the drain will repair PR #${prInfo.pr} on its existing branch`);
   return true;
+}
+
+// ---------------------------------------------------------------------------
+// Claude review queue (CV-REQ-100..103): PRs the cheap tier must not merge
+// are queued for an interactive Claude session. Runtime file, gitignored.
+// ---------------------------------------------------------------------------
+
+export function claudeQueuePath(repoDir) {
+  return join(repoDir, 'pm', 'claude-review-queue.json');
+}
+
+export function readClaudeQueue(path) {
+  try {
+    const q = JSON.parse(readFileSync(path, 'utf8'));
+    return Array.isArray(q) ? q : [];
+  } catch { return []; }
+}
+
+export function writeClaudeQueue(path, entries) {
+  mkdirSync(dirname(path), { recursive: true });
+  const tmp = `${path}.${process.pid}.tmp`;
+  writeFileSync(tmp, JSON.stringify(entries, null, 2) + '\n');
+  renameSync(tmp, path);
+}
+
+/**
+ * Upsert a queue entry keyed by (pr, headSha). A new headSha for the same PR
+ * marks older OPEN entries `superseded`. Same key is never duplicated (an
+ * existing entry keeps its status/notifiedAt).
+ * @returns {{ entry: object, created: boolean }}
+ */
+export function enqueueClaudeReview(entry, { path, now = () => new Date().toISOString() } = {}) {
+  const q = readClaudeQueue(path);
+  const found = q.find(e => e.pr === entry.pr && e.headSha === entry.headSha);
+  if (found) return { entry: found, created: false };
+  for (const e of q) {
+    if (e.pr === entry.pr && e.status === 'open') e.status = 'superseded';
+  }
+  const fresh = {
+    pr: entry.pr,
+    branch: entry.branch,
+    headSha: entry.headSha,
+    reasons: entry.reasons || [],
+    flaggedAt: entry.flaggedAt || now(),
+    notifiedAt: null,
+    status: 'open',
+  };
+  q.push(fresh);
+  writeClaudeQueue(path, q);
+  return { entry: fresh, created: true };
+}
+
+function updateClaudeEntry(path, pr, headSha, patch) {
+  const q = readClaudeQueue(path);
+  const e = q.find(x => x.pr === pr && x.headSha === headSha);
+  if (!e) return null;
+  Object.assign(e, patch);
+  writeClaudeQueue(path, q);
+  return e;
+}
+
+/** True when (pr, headSha) is an OPEN queue entry. */
+export function isAwaitingClaude(pr, headSha, path) {
+  return readClaudeQueue(path).find(e => e.pr === pr && e.headSha === headSha && e.status === 'open') || null;
+}
+
+export function claudeNoticeText(entry, title) {
+  return `🔎 PR #${entry.pr}${title ? ` "${title}"` : ''} needs a Claude review — flagged: ${(entry.reasons || []).join('; ') || '(no reason recorded)'}. Run /sdlc-review-flagged`;
+}
+
+/**
+ * Send the one-time notice for an entry without a notifiedAt. Never throws;
+ * notifiedAt is set only when the notifier reports success, so a failure is
+ * retried on the next pass.
+ */
+export function notifyClaudeReviewOnce(entry, { path, title, notify = (m) => triggerNotification('blocker', m) } = {}) {
+  if (entry.notifiedAt) return false;
+  try {
+    if (!notify(claudeNoticeText(entry, title))) return false;
+    const stamp = new Date().toISOString();
+    entry.notifiedAt = stamp;
+    updateClaudeEntry(path, entry.pr, entry.headSha, { notifiedAt: stamp });
+    return true;
+  } catch { return false; }
 }
 
 function reconcileMerged(repoDir, cloneDir, log) {

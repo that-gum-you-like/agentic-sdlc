@@ -15,6 +15,7 @@ import { join } from 'path';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
+import * as M from '../agents/pr-auto-review.mjs';
 import {
   scanScope,
   taskIdFromBranch,
@@ -558,6 +559,22 @@ test('completeTaskInClone: CHANGELOG.md is in the SAME commit as the queue compl
 test('merge flow passes the changelog into completeTaskInClone (no new push path)', () => {
   assert(/completeTaskInClone\(repoDir, taskId, log, changelog\)/.test(source), 'reviewPr passes changelog');
   assert((source.match(/'push'/g) || []).length === 2, 'still exactly two push sites');
+});
+
+test('enqueueClaudeReview upserts by pr+sha; a new sha supersedes the old (CV-502)', () => {
+  const m = M;
+  const dir = mkdtempSync(join(tmpdir(), 'crq-'));
+  const path = join(dir, 'pm', 'claude-review-queue.json');
+  const e = { pr: 70, branch: 'agent/drain/X-1', headSha: 'abc1234', reasons: ['agents/hermes-drain.sh'] };
+  const a = m.enqueueClaudeReview(e, { path });
+  const b = m.enqueueClaudeReview(e, { path });
+  assert(a.created && !b.created, 'second upsert is not a create');
+  assert(m.readClaudeQueue(path).length === 1, 'one entry for same pr+sha');
+  m.enqueueClaudeReview({ ...e, headSha: 'def5678' }, { path });
+  const q = m.readClaudeQueue(path);
+  assert(q.length === 2, 'two entries');
+  assert(q[0].status === 'superseded' && q[1].status === 'open', 'old superseded, new open');
+  assert(q[1].notifiedAt === null, 'new entry un-notified');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
