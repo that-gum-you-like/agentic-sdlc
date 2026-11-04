@@ -9,7 +9,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildWeeklySteps, runWeeklySteps } from '../cycles/weekly-review.mjs';
+import { buildWeeklySteps, runWeeklySteps, capacityForecast } from '../cycles/weekly-review.mjs';
 
 describe('buildWeeklySteps', () => {
   it('returns exactly three steps in the correct order', () => {
@@ -141,5 +141,61 @@ describe('runWeeklySteps', () => {
     // No side-effect console output should have been produced by the import
     // itself — the test harness would have captured any output but we just
     // verify the module is importable and exports are present.
+  });
+});
+
+describe('capacityForecast (CV-REQ-017)', () => {
+  it('returns "4 days" for 1,000,000 tokens at 250,000 daily budget', () => {
+    const tasks = [{ estimatedTokens: 500000 }, { estimatedTokens: 500000 }];
+    const result = capacityForecast(tasks, 250000);
+    assert.equal(result, '4 days');
+  });
+
+  it('returns "n/a" when budget is missing (undefined)', () => {
+    const tasks = [{ estimatedTokens: 1000 }];
+    assert.equal(capacityForecast(tasks, undefined), 'n/a');
+  });
+
+  it('returns "n/a" when budget is null', () => {
+    const tasks = [{ estimatedTokens: 1000 }];
+    assert.equal(capacityForecast(tasks, null), 'n/a');
+  });
+
+  it('returns "n/a" when budget is zero', () => {
+    const tasks = [{ estimatedTokens: 1000 }];
+    assert.equal(capacityForecast(tasks, 0), 'n/a');
+  });
+
+  it('returns "n/a" when budget is negative', () => {
+    const tasks = [{ estimatedTokens: 1000 }];
+    assert.equal(capacityForecast(tasks, -100), 'n/a');
+  });
+
+  it('treats tasks without estimatedTokens as contributing 0', () => {
+    const tasks = [{ estimatedTokens: 1000 }, { noTokens: true }, { estimatedTokens: 1000 }];
+    const result = capacityForecast(tasks, 500);
+    // total = 2000, / 500 = 4
+    assert.equal(result, '4 days');
+  });
+
+  it('returns "0 days" for empty tasks array with valid budget', () => {
+    assert.equal(capacityForecast([], 250000), '0 days');
+  });
+
+  it('returns "1 day" when total equals the daily budget', () => {
+    const tasks = [{ estimatedTokens: 50000 }];
+    assert.equal(capacityForecast(tasks, 50000), '1 day');
+  });
+
+  it('rounds up fractional days', () => {
+    const tasks = [{ estimatedTokens: 1 }];
+    assert.equal(capacityForecast(tasks, 2), '1 day');
+  });
+
+  it('is a pure function (no side effects)', () => {
+    const tasks = [{ estimatedTokens: 100000 }, { estimatedTokens: 200000 }];
+    const tasksCopy = JSON.parse(JSON.stringify(tasks));
+    capacityForecast(tasks, 50000);
+    assert.deepEqual(tasks, tasksCopy, 'tasks array should not be mutated');
   });
 });
