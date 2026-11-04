@@ -6,6 +6,7 @@
 - 2026-11-04 #98 feat(monthly-review): add maturity-assess.mjs --report step to buildMonthlySteps (CV-113) (backend)
 - 2026-11-04 #99 feat(schemas): add claude-review-queue.schema.json (CV-501) (backend)
 - 2026-11-04 #100 feat(agent-registry): add reportsTo/delegatesTo front matter and org subcommand (CV-701) (backend)
+- 2026-11-04 #101 feat(daily-review): add runUserTests with dashboard section (CV-117) (backend)
 
 ## 2026-11-03
 

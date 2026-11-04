@@ -398,7 +398,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-117**: daily-review.mjs: add `runUserTests(config, {runner})`; when config present and a spec exists run `browser-user-test.mjs run`, else log `skipped (no-playwright-config)`; failure is non-fatal; write a `User tests` dashboard section
+- [x] **CV-117**: daily-review.mjs: add `runUserTests(config, {runner})`; when config present and a spec exists run `browser-user-test.mjs run`, else log `skipped (no-playwright-config)`; failure is non-fatal; write a `User tests` dashboard section
   - **Priority:** HIGH
   - Files: `agents/cycles/daily-review.mjs, agents/__tests__/daily-review.test.mjs`
   - Spec: CV-REQ-015
