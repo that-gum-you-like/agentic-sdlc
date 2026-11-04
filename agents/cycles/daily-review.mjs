@@ -526,6 +526,14 @@ async function main() {
   updateDashboard(summary, actionItemsSection);
   console.log('Dashboard updated.');
 
+  // Dashboard sections: OpenSpec status and Bug metrics (CV-REQ-020 / CV-121)
+  {
+    const cfg = getConfig();
+    const changesDir = resolve(cfg.projectDir, 'openspec/changes');
+    upsertDashboardSection('OpenSpec status', openspecStatusTable(changesDir), cfg.dashboardPath);
+    upsertDashboardSection('Bug metrics', bugMetrics(changesDir, cfg.tasksDir), cfg.dashboardPath);
+  }
+
   // Bottleneck detection (15.1-15.2)
   const completedCount = tasks.filter(t => t.status === 'completed').length;
   const inProgressCount = tasks.filter(t => t.status === 'in_progress').length;
