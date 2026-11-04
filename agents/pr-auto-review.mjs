@@ -643,7 +643,7 @@ export const FIXABLE_ACTIONS = ['gate-failed', 'llm-rejected'];
  * Pure builder for a FIX-<pr> queue task (exported for tests).
  * Pass `existing` to refresh a prior fix task after a re-rejection at a new SHA.
  */
-export function buildFixTask({ pr, branch, headSha, reasons, kind, existing }) {
+export function buildFixTask({ pr, branch, headSha, reasons, kind, existing, files }) {
   const sourceTask = taskIdFromBranch(branch);
   const feedback = (reasons || []).map(r => `- ${r}`).join('\n')
     || '- (no detail captured — read the PR review comment)';
@@ -674,12 +674,18 @@ export function buildFixTask({ pr, branch, headSha, reasons, kind, existing }) {
   // re-queuing a repair the cheap model has already failed twice (no endless loop).
   const attempts = (existing?.attempts || 0) + 1;
   const exhausted = attempts >= MAX_FIX_ATTEMPTS;
+  // CV-REQ-103: a repair that must edit interactive-lane machinery (the
+  // guardrail surface) is never handed to the cheap drain — block for a human.
+  const machinery = (files || []).length ? scanScope(files).flags : [];
+  const interactiveOnly = machinery.length > 0;
   return {
     ...base,
     description,
     attempts,
-    status: exhausted ? 'blocked' : 'pending',
-    ...(exhausted ? { blockedReason: `needs-human: PR #${pr} rejected ${attempts}x (${kind}) — the drain will not retry it` } : {}),
+    ...((files || []).length ? { files } : {}),
+    status: exhausted || interactiveOnly ? 'blocked' : 'pending',
+    ...(exhausted ? { blockedReason: `needs-human: PR #${pr} rejected ${attempts}x (${kind}) — the drain will not retry it` }
+      : interactiveOnly ? { blockedReason: `needs-human: fix touches interactive-lane machinery (${machinery.join(', ')}) — an interactive Claude session must do it`, tags: [...new Set([...(base.tags || []), 'needs-human'])] } : {}),
     fixFor: { pr, branch, headSha, sourceTask, rejectionKind: kind },
     ...(existing ? { refreshedAt: new Date().toISOString() } : {}),
   };
@@ -688,7 +694,7 @@ export function buildFixTask({ pr, branch, headSha, reasons, kind, existing }) {
 export const MAX_FIX_ATTEMPTS = 3;
 
 /** Upsert FIX-<pr> in the review clone and push to main (REQ-SH-1). */
-function upsertFixTaskInClone(repoDir, prInfo, log) {
+export function upsertFixTaskInClone(repoDir, prInfo, log) {
   const clone = ensureReviewClone(repoDir, log);
   const taskFile = join(clone, 'tasks', 'queue', `FIX-${prInfo.pr}.json`);
   let existing = null;
@@ -723,10 +729,17 @@ export function claudeQueuePath(repoDir) {
 }
 
 export function readClaudeQueue(path) {
+  if (!existsSync(path)) return [];
   try {
     const q = JSON.parse(readFileSync(path, 'utf8'));
     return Array.isArray(q) ? q : [];
-  } catch { return []; }
+  } catch (err) {
+    // Corrupt queue: keep the evidence aside and start fresh rather than
+    // wedging the review run (queue is derived state; flags re-enqueue).
+    console.error(`[pr-auto-review] claude-review queue unreadable (${err.message}) — moved to .corrupt`);
+    try { renameSync(path, `${path}.corrupt`); } catch (e) { console.error(`[pr-auto-review] could not move corrupt queue: ${e.message}`); }
+    return [];
+  }
 }
 
 export function writeClaudeQueue(path, entries) {
@@ -849,7 +862,7 @@ export function listFlagged(path) {
  * returns { code, message } instead of exiting. Replaying a resolved PR is a
  * no-op (code 0); an unknown outcome or a PR never queued is code 1.
  */
-export function resolveFlagged(pr, outcome, { path } = {}) {
+export function resolveFlagged(pr, outcome, { path, comment, fileFix, getFiles } = {}) {
   if (!RESOLVE_OUTCOMES.includes(outcome)) {
     return { code: 1, message: `unknown outcome "${outcome}" (expected ${RESOLVE_OUTCOMES.join('|')})` };
   }
@@ -860,8 +873,23 @@ export function resolveFlagged(pr, outcome, { path } = {}) {
       ? { code: 0, message: `PR #${pr} has no open entry (already ${q[q.length - 1].status}) — nothing to do` }
       : { code: 1, message: `PR #${pr} is not in the Claude review queue` };
   }
+  let extra = '';
+  if (outcome === 'changes-requested') {
+    // CV-REQ-103: the Claude comment becomes a FIX task (3-attempt cap applies
+    // via buildFixTask). A filing failure leaves the entry open to retry.
+    try {
+      let files = [];
+      try { files = getFiles ? getFiles(pr) : []; } catch { files = []; }
+      const filed = fileFix
+        ? fileFix({ pr, branch: open.branch, headSha: open.headSha, reasons: [comment || 'Claude review requested changes — see the PR comment'], kind: 'changes-requested', files })
+        : false;
+      extra = filed ? ` (FIX-${pr} filed)` : ` (FIX-${pr} not re-filed)`;
+    } catch (err) {
+      return { code: 1, message: `PR #${pr}: could not file FIX task: ${err.message}` };
+    }
+  }
   resolveClaudeEntry(path, pr, open.headSha, outcome, 'claude-session');
-  return { code: 0, message: `PR #${pr} resolved: ${outcome}`, entry: open };
+  return { code: 0, message: `PR #${pr} resolved: ${outcome}${extra}`, entry: open };
 }
 
 function reconcileMerged(repoDir, cloneDir, log) {
@@ -1161,7 +1189,16 @@ if (__isMainModule() && ['list-flagged', 'resolve-flagged'].includes(process.arg
     for (const e of open) console.log(`#${e.pr}\t${e.branch}\t${e.headSha}\t${e.flaggedAt}\t${(e.reasons || []).join('; ')}`);
   } else {
     const [, , , prArg, outcome] = process.argv;
-    const res = resolveFlagged(Number(prArg), outcome, { path: queuePath });
+    const ci = process.argv.indexOf('--comment');
+    const comment = ci > -1 ? process.argv[ci + 1] : undefined;
+    const repoDir = projectDir || resolve(__dirname, '..');
+    process.chdir(repoDir);
+    const res = resolveFlagged(Number(prArg), outcome, {
+      path: queuePath,
+      comment,
+      fileFix: (info) => upsertFixTaskInClone(repoDir, info, (m) => console.log(`[pr-auto-review] ${m}`)),
+      getFiles: (n) => (ghJson(['pr', 'view', String(n), '--json', 'files']).files || []).map(f => f.path),
+    });
     console.log(res.message);
     process.exit(res.code);
   }

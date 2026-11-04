@@ -649,6 +649,32 @@ test('listFlagged / resolveFlagged (CV-506)', () => {
   assert(cli.status === 1, `CLI unknown outcome exits 1, got ${cli.status}`);
 });
 
+test('resolve-flagged changes-requested files one FIX task, idempotently (CV-509)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crq9-'));
+  const path = join(dir, 'q.json');
+  M.enqueueClaudeReview({ pr: 8, branch: 'agent/drain/X-8', headSha: 'abc1234', reasons: ['r'] }, { path });
+  const filed = [];
+  const fileFix = (info) => { filed.push(info); return true; };
+  const r = M.resolveFlagged(8, 'changes-requested', { path, comment: 'rename the flag', fileFix, getFiles: () => ['lib/a.mjs'] });
+  assert(r.code === 0 && filed.length === 1, 'one FIX filed');
+  assert(filed[0].reasons[0] === 'rename the flag' && filed[0].kind === 'changes-requested' && filed[0].files[0] === 'lib/a.mjs', 'comment is the reason');
+  assert(M.readClaudeQueue(path)[0].outcome === 'changes-requested', 'entry resolved');
+  M.resolveFlagged(8, 'changes-requested', { path, comment: 'again', fileFix });
+  assert(filed.length === 1, 'replay files nothing');
+  // a failing filer leaves the entry open for retry
+  M.enqueueClaudeReview({ pr: 9, branch: 'agent/drain/X-9', headSha: 'abc1234', reasons: ['r'] }, { path });
+  const bad = M.resolveFlagged(9, 'changes-requested', { path, fileFix: () => { throw new Error('push failed'); } });
+  assert(bad.code === 1 && M.listFlagged(path).some(e => e.pr === 9), 'filing failure keeps entry open');
+  // buildFixTask lane rule + cap
+  const base = { pr: 8, branch: 'agent/drain/X-8', headSha: 'a', reasons: ['x'], kind: 'changes-requested' };
+  const plain = buildFixTask({ ...base, files: ['lib/a.mjs'] });
+  assert(plain.status === 'pending', 'ordinary files: pending (hermes lane)');
+  const machinery = buildFixTask({ ...base, files: ['agents/hermes-drain.sh'] });
+  assert(machinery.status === 'blocked' && /interactive-lane/.test(machinery.blockedReason) && machinery.tags.includes('needs-human'), 'machinery: blocked + human');
+  const t3 = buildFixTask({ ...base, existing: buildFixTask({ ...base, existing: plain }) });
+  assert(t3.status === 'blocked', 'three-attempt cap still applies');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
 
