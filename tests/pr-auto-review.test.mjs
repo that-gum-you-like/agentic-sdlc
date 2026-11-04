@@ -9,7 +9,7 @@
  */
 
 import { readFileSync, mkdtempSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { execFileSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { resolve, dirname } from 'path';
@@ -628,6 +628,25 @@ test('reconcileClaudeQueue resolves entries whose PR merged/closed (CV-505)', ()
   assert(q[1].outcome === 'closed', 'closed resolved');
   assert(q[2].status === 'open' && q[3].status === 'open', 'open/unknown stay open');
   assert(M.reconcileClaudeQueue(path, () => 'MERGED').join() === '3,4', 'rest resolve later; resolved never revisited');
+});
+
+test('listFlagged / resolveFlagged (CV-506)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crq6-'));
+  const path = join(dir, 'q.json');
+  M.enqueueClaudeReview({ pr: 5, branch: 'b/5', headSha: 'abc1234', reasons: ['r'] }, { path });
+  M.enqueueClaudeReview({ pr: 6, branch: 'b/6', headSha: 'abc1234', reasons: ['r'] }, { path });
+  assert(M.listFlagged(path).length === 2, 'two open');
+  const r = M.resolveFlagged(5, 'closed', { path });
+  assert(r.code === 0, 'resolve ok');
+  const e5 = M.readClaudeQueue(path)[0];
+  assert(e5.status === 'resolved' && e5.outcome === 'closed' && e5.resolvedBy === 'claude-session' && e5.resolvedAt, 'resolution recorded');
+  assert(M.listFlagged(path).map(e => e.pr).join() === '6', 'list shows only open');
+  assert(M.resolveFlagged(6, 'bogus', { path }).code === 1, 'unknown outcome exits 1');
+  assert(M.resolveFlagged(99, 'merged', { path }).code === 1, 'unqueued PR exits 1');
+  assert(M.resolveFlagged(5, 'closed', { path }).code === 0, 'replay is a no-op');
+  const cli = spawnSync('node', [join(root, 'agents/pr-auto-review.mjs'), 'resolve-flagged', '1', 'bogus'],
+    { env: { ...process.env, SDLC_PROJECT_DIR: dir }, encoding: 'utf8' });
+  assert(cli.status === 1, `CLI unknown outcome exits 1, got ${cli.status}`);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

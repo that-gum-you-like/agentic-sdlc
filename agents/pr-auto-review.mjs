@@ -837,6 +837,33 @@ export function reconcileClaudeQueue(path, getState, log = () => {}) {
   return done;
 }
 
+export const RESOLVE_OUTCOMES = ['merged', 'closed', 'changes-requested'];
+
+/** Open queue entries (what `list-flagged` prints). */
+export function listFlagged(path) {
+  return readClaudeQueue(path).filter(e => e.status === 'open');
+}
+
+/**
+ * Resolve the open entry for a PR with an outcome. Pure of process state:
+ * returns { code, message } instead of exiting. Replaying a resolved PR is a
+ * no-op (code 0); an unknown outcome or a PR never queued is code 1.
+ */
+export function resolveFlagged(pr, outcome, { path } = {}) {
+  if (!RESOLVE_OUTCOMES.includes(outcome)) {
+    return { code: 1, message: `unknown outcome "${outcome}" (expected ${RESOLVE_OUTCOMES.join('|')})` };
+  }
+  const q = readClaudeQueue(path).filter(e => e.pr === pr);
+  const open = q.find(e => e.status === 'open');
+  if (!open) {
+    return q.length
+      ? { code: 0, message: `PR #${pr} has no open entry (already ${q[q.length - 1].status}) — nothing to do` }
+      : { code: 1, message: `PR #${pr} is not in the Claude review queue` };
+  }
+  resolveClaudeEntry(path, pr, open.headSha, outcome, 'claude-session');
+  return { code: 0, message: `PR #${pr} resolved: ${outcome}`, entry: open };
+}
+
 function reconcileMerged(repoDir, cloneDir, log) {
   let merged;
   try {
@@ -1125,7 +1152,20 @@ export async function runAutoReview({ dryRun = false } = {}) {
   return results;
 }
 
-if (__isMainModule()) {
+if (__isMainModule() && ['list-flagged', 'resolve-flagged'].includes(process.argv[2])) {
+  const { projectDir } = loadConfig();
+  const queuePath = claudeQueuePath(projectDir || resolve(__dirname, '..'));
+  if (process.argv[2] === 'list-flagged') {
+    const open = listFlagged(queuePath);
+    if (!open.length) console.log('no open flagged PRs');
+    for (const e of open) console.log(`#${e.pr}\t${e.branch}\t${e.headSha}\t${e.flaggedAt}\t${(e.reasons || []).join('; ')}`);
+  } else {
+    const [, , , prArg, outcome] = process.argv;
+    const res = resolveFlagged(Number(prArg), outcome, { path: queuePath });
+    console.log(res.message);
+    process.exit(res.code);
+  }
+} else if (__isMainModule()) {
   const dryRun = process.argv.includes('--dry-run');
   runAutoReview({ dryRun })
     .then(results => {
