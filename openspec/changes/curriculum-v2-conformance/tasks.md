@@ -354,7 +354,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-113**: monthly-review: add `maturity-assess.mjs --report` step to buildMonthlySteps (skipped when dryRun)
+- [x] **CV-113**: monthly-review: add `maturity-assess.mjs --report` step to buildMonthlySteps (skipped when dryRun)
   - **Priority:** HIGH
   - Files: `agents/cycles/monthly-review.mjs, agents/__tests__/monthly-review.test.mjs`
   - Spec: CV-REQ-013

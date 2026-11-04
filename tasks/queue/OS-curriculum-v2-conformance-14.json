@@ -3,7 +3,7 @@
   "title": "monthly-review: add `maturity-assess.mjs --report` step to buildMonthlySteps (skipped when dryRun)",
   "description": "- [ ] **CV-113**: monthly-review: add `maturity-assess.mjs --report` step to buildMonthlySteps (skipped when dryRun)\n  - **Priority:** HIGH\n  - Files: `agents/cycles/monthly-review.mjs, agents/__tests__/monthly-review.test.mjs`\n  - Spec: CV-REQ-013\n  - Gaps: D7-20\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: buildMonthlySteps({dryRun:false}) includes the step; dryRun excludes it\n  - Parallel: blocked-by CV-108, CV-112\n  - Complexity: S",
   "priority": "HIGH",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -13,5 +13,9 @@
   "blockedBy": [
     "OS-curriculum-v2-conformance-9",
     "OS-curriculum-v2-conformance-13"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-14.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-04T00:14:08.581Z"
 }
