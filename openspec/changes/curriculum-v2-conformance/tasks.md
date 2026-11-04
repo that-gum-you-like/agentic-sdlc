@@ -1344,7 +1344,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
 
 Capability: claude-review-lane. Queue and skill first; the headless timer (CV-REQ-104) is optional, default OFF, and decision-gated.
 
-- [ ] **CV-501**: Create agents/schemas/claude-review-queue.schema.json for entries {pr, branch, headSha, reasons[], flaggedAt, notifiedAt, status in open|resolved|superseded}
+- [x] **CV-501**: Create agents/schemas/claude-review-queue.schema.json for entries {pr, branch, headSha, reasons[], flaggedAt, notifiedAt, status in open|resolved|superseded}
   - **Priority:** MEDIUM
   - Files: `agents/schemas/claude-review-queue.schema.json, agents/__tests__/task-schema.test.mjs`
   - Spec: CV-REQ-100

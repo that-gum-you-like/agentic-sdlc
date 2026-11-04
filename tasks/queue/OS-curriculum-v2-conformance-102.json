@@ -3,11 +3,15 @@
   "title": "Create agents/schemas/claude-review-queue.schema.json for entries {pr, branch, headSha, reasons[], flaggedAt, notifiedAt, status in open|resolved|superseded}",
   "description": "- [ ] **CV-501**: Create agents/schemas/claude-review-queue.schema.json for entries {pr, branch, headSha, reasons[], flaggedAt, notifiedAt, status in open|resolved|superseded}\n  - **Priority:** MEDIUM\n  - Files: `agents/schemas/claude-review-queue.schema.json, agents/__tests__/task-schema.test.mjs`\n  - Spec: CV-REQ-100\n  - Gaps: -\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: valid entry passes schema-validator.mjs; unknown status and missing headSha rejected\n  - Parallel: yes\n  - Complexity: S\n  - Notes: Follow the style of agents/schemas/task.schema.json.",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
   "createdAt": "2026-11-03T20:05:57.814Z",
   "claimedBy": null,
-  "testStatus": null
+  "testStatus": null,
+  "_file": "OS-curriculum-v2-conformance-102.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-04T00:21:09.572Z"
 }
