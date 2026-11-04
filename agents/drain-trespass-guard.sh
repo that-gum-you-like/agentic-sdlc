@@ -5,19 +5,30 @@
 # drain-authored commits. Commits are NEVER reset automatically: a human may have
 # committed in the same window. Only unpushed commits count (`--not --remotes`),
 # so pulling squash-merged drain PRs is not a trespass.
-declare -A guard_branch guard_head
+declare -A guard_branch guard_head guard_dirty
 
 guard_snapshot() { # <checkout>...
   local hc
   for hc in "$@"; do
     guard_branch[$hc]="$(git -C "$hc" symbolic-ref --short -q HEAD || echo DETACHED)"
     guard_head[$hc]="$(git -C "$hc" rev-parse -q HEAD)"
+    # Tracked files already modified before the run belong to the human: never touched.
+    guard_dirty[$hc]="$(git -C "$hc" diff --name-only HEAD 2>/dev/null)"
   done
 }
 
 guard_check() { # <backup-ref-name> → prints a one-line report, empty when clean
   local backup="$1" hc now out=""
   for hc in "${!guard_branch[@]}"; do
+    # Tracked files the run modified (e.g. a worker running `queue-drainer run` against the
+    # human checkout, 2026-11-03) are restored — only files that were clean before the run.
+    local f restored=""
+    while IFS= read -r f; do
+      [ -z "$f" ] && continue
+      printf '%s\n' "${guard_dirty[$hc]}" | grep -qxF -- "$f" && continue
+      git -C "$hc" checkout -q -- "$f" 2>/dev/null && restored="$restored $f"
+    done < <(git -C "$hc" diff --name-only HEAD 2>/dev/null)
+    [ -n "$restored" ] && out="$out $hc: modified tracked files restored:$restored;"
     now="$(git -C "$hc" symbolic-ref --short -q HEAD || echo DETACHED)"
     if [ "$now" != "${guard_branch[$hc]}" ]; then
       out="$out $hc: branch ${guard_branch[$hc]} -> $now;"

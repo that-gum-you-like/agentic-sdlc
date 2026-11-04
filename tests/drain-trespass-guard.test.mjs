@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -53,9 +53,27 @@ test("a human's own commit in the same window is not a trespass", () => {
   assert.equal(out, '');
 });
 
-test('a switched branch with a dirty tree is reported but not switched (never discard work)', () => {
+test('a worker edit plus branch switch: edit reverted, branch restored', () => {
   const dir = repo();
   const out = run(dir, `git -C "${dir}" checkout -qb other; echo dirty >> "${dir}/a.txt"`);
+  assert.match(out, /modified tracked files restored: a\.txt;.*branch main -> other; restored;/);
+  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD'), 'main');
+});
+
+test("the human's own uncommitted edit blocks the branch switch-back (never discard human work)", () => {
+  const dir = repo();
+  writeFileSync(join(dir, 'a.txt'), 'human\n');
+  const out = run(dir, `git -C "${dir}" checkout -q -b other 2>/dev/null`);
   assert.match(out, /branch main -> other;$/);
-  assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD'), 'other');
+  assert.equal(readFileSync(join(dir, 'a.txt'), 'utf8'), 'human\n');
+});
+
+test('tracked files modified during the run are restored; files the human had already modified are left alone', () => {
+  const dir = repo();
+  writeFileSync(join(dir, 'b.txt'), 'b\n'); git(dir, 'add', '.'); git(dir, 'commit', '-qm', 'b');
+  writeFileSync(join(dir, 'b.txt'), 'human edit\n');            // dirty BEFORE the run
+  const out = run(dir, `echo worker > "${dir}/a.txt"; echo worker >> "${dir}/b.txt"`);
+  assert.match(out, /modified tracked files restored: a\.txt;/);
+  assert.equal(readFileSync(join(dir, 'a.txt'), 'utf8'), 'a\n', 'worker edit reverted');
+  assert.match(readFileSync(join(dir, 'b.txt'), 'utf8'), /human edit/, 'human edit untouched');
 });
