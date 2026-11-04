@@ -275,7 +275,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: none
   - Complexity: S
 
-- [ ] **CV-106**: Record baselines on the primary box (`node agents/test-behavior.mjs --baseline`) and commit agents/behavior-baselines.json
+- [x] **CV-106**: Record baselines on the primary box (`node agents/test-behavior.mjs --baseline`) and commit agents/behavior-baselines.json
   - **Priority:** HIGH
   - Files: `agents/behavior-baselines.json`
   - Spec: CV-REQ-011
@@ -376,7 +376,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: yes
   - Complexity: M
 
-- [ ] **CV-115**: cron-schedule.json (+ template): declare `model-manager-research` (command copied from the existing user unit), declare `pattern-hunt-weekly` and `rem-sleep-weekly` with `supersededBy: "weekly-pattern-hunt"`, fix the weekly-pattern-hunt description; run `scheduler-install.mjs install`
+- [x] **CV-115**: cron-schedule.json (+ template): declare `model-manager-research` (command copied from the existing user unit), declare `pattern-hunt-weekly` and `rem-sleep-weekly` with `supersededBy: "weekly-pattern-hunt"`, fix the weekly-pattern-hunt description; run `scheduler-install.mjs install`
   - **Priority:** HIGH
   - Files: `agents/cron-schedule.json, agents/templates/cron-schedule.json.template, tests/scheduler-install.test.mjs`
   - Spec: CV-REQ-014

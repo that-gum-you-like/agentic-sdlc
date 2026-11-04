@@ -3,7 +3,7 @@
   "title": "Record baselines on the primary box (`node agents/test-behavior.mjs --baseline`) and commit agents/behavior-baselines.json",
   "description": "- [ ] **CV-106**: Record baselines on the primary box (`node agents/test-behavior.mjs --baseline`) and commit agents/behavior-baselines.json\n  - **Priority:** HIGH\n  - Files: `agents/behavior-baselines.json`\n  - Spec: CV-REQ-011\n  - Gaps: D7-01\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: `node agents/test-behavior.mjs --drift` prints a comparison per agent, exits 0\n  - Parallel: blocked-by CV-105\n  - Complexity: S\n  - Notes: Interactive: baselines depend on the live agents' memory on this host, which the drain clone does not have.",
   "priority": "HIGH",
-  "status": "blocked",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -13,5 +13,7 @@
   "blockedBy": [
     "OS-curriculum-v2-conformance-6"
   ],
-  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+  "completed_at": "2026-11-04T00:27:52.255Z",
+  "test_status": "passing",
+  "completionNote": "done interactively 2026-11-03"
 }

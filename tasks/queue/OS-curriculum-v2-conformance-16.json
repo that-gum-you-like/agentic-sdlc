@@ -3,7 +3,7 @@
   "title": "cron-schedule.json (+ template): declare `model-manager-research` (command copied from the existing user unit), declare `pattern-hunt-weekly` and `rem-sleep-weekly` with `supersededBy: \"weekly-pattern-hunt\"`, fix the weekly-pattern-hunt description; run `scheduler-install.mjs install`",
   "description": "- [ ] **CV-115**: cron-schedule.json (+ template): declare `model-manager-research` (command copied from the existing user unit), declare `pattern-hunt-weekly` and `rem-sleep-weekly` with `supersededBy: \"weekly-pattern-hunt\"`, fix the weekly-pattern-hunt description; run `scheduler-install.mjs install`\n  - **Priority:** HIGH\n  - Files: `agents/cron-schedule.json, agents/templates/cron-schedule.json.template, tests/scheduler-install.test.mjs`\n  - Spec: CV-REQ-014\n  - Gaps: D7-11, D7-03\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: test: every `script` path in the JSON resolves under agents/; entries exist with the expected flags; `systemctl --user list-timers` no longer lists pattern-hunt-weekly\n  - Parallel: blocked-by CV-114, CV-103\n  - Complexity: M",
   "priority": "HIGH",
-  "status": "blocked",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,7 @@
     "OS-curriculum-v2-conformance-15",
     "OS-curriculum-v2-conformance-4"
   ],
-  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+  "completed_at": "2026-11-04T00:27:52.250Z",
+  "test_status": "passing",
+  "completionNote": "done interactively 2026-11-03"
 }
