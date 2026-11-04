@@ -47,6 +47,7 @@ export function buildMonthlySteps({ dryRun = false } = {}) {
   ];
   if (!dryRun) {
     steps.push({ label: 'Agent version snapshot', script: 'version-snapshot.mjs', args: ['snapshot'] });
+    steps.push({ label: 'Maturity assessment', script: 'maturity-assess.mjs', args: ['--report'] });
   }
   steps.push({ label: 'Memory migration check', script: 'migrate-memory.mjs', args: ['--check'] });
   if (dryRun) {
