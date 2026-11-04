@@ -3,7 +3,7 @@
   "title": "pr-auto-review.mjs CLI: add `list-flagged` (prints open entries) and `resolve-flagged <pr> <merged|closed|changes-requested>`",
   "description": "- [ ] **CV-506**: pr-auto-review.mjs CLI: add `list-flagged` (prints open entries) and `resolve-flagged <pr> <merged|closed|changes-requested>`\n  - **Priority:** MEDIUM\n  - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`\n  - Spec: CV-REQ-102\n  - Gaps: -\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: list prints only open entries; resolve sets resolved + resolvedBy/outcome; unknown outcome exits 1\n  - Parallel: blocked-by CV-505\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "blocked",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -13,5 +13,7 @@
   "blockedBy": [
     "OS-curriculum-v2-conformance-106"
   ],
-  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+  "completed_at": "2026-11-04T00:33:10.244Z",
+  "test_status": "passing",
+  "completionNote": "interactive batch (Claude review lane), reviewed + merged 2026-11-03"
 }

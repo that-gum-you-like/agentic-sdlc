@@ -1356,7 +1356,7 @@ Capability: claude-review-lane. Queue and skill first; the headless timer (CV-RE
   - Complexity: S
   - Notes: Follow the style of agents/schemas/task.schema.json.
 
-- [ ] **CV-502**: pr-auto-review.mjs: add `enqueueClaudeReview(entry)` upserting pm/claude-review-queue.json keyed by pr+headSha; a new head SHA marks the older entry superseded
+- [x] **CV-502**: pr-auto-review.mjs: add `enqueueClaudeReview(entry)` upserting pm/claude-review-queue.json keyed by pr+headSha; a new head SHA marks the older entry superseded
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-100
@@ -1367,7 +1367,7 @@ Capability: claude-review-lane. Queue and skill first; the headless timer (CV-RE
   - Parallel: blocked-by CV-501
   - Complexity: M
 
-- [ ] **CV-503**: pr-auto-review.mjs: on action `flagged` call enqueueClaudeReview and send one Telegram notice via notify.mjs sendNotification; set notifiedAt only on success; never throw
+- [x] **CV-503**: pr-auto-review.mjs: on action `flagged` call enqueueClaudeReview and send one Telegram notice via notify.mjs sendNotification; set notifiedAt only on success; never throw
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-100
@@ -1378,7 +1378,7 @@ Capability: claude-review-lane. Queue and skill first; the headless timer (CV-RE
   - Parallel: blocked-by CV-502
   - Complexity: M
 
-- [ ] **CV-504**: pr-auto-review.mjs alreadyReviewed/reviewPr: skip a PR whose pr+headSha is an open queue entry with no LLM call and no worktree; log `skip-awaiting-claude` only the first time
+- [x] **CV-504**: pr-auto-review.mjs alreadyReviewed/reviewPr: skip a PR whose pr+headSha is an open queue entry with no LLM call and no worktree; log `skip-awaiting-claude` only the first time
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-101
@@ -1389,7 +1389,7 @@ Capability: claude-review-lane. Queue and skill first; the headless timer (CV-RE
   - Parallel: blocked-by CV-503
   - Complexity: S
 
-- [ ] **CV-505**: pr-auto-review.mjs reconcile: mark queue entries `resolved` when the PR is merged or closed on GitHub
+- [x] **CV-505**: pr-auto-review.mjs reconcile: mark queue entries `resolved` when the PR is merged or closed on GitHub
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-101
@@ -1400,7 +1400,7 @@ Capability: claude-review-lane. Queue and skill first; the headless timer (CV-RE
   - Parallel: blocked-by CV-504
   - Complexity: S
 
-- [ ] **CV-506**: pr-auto-review.mjs CLI: add `list-flagged` (prints open entries) and `resolve-flagged <pr> <merged|closed|changes-requested>`
+- [x] **CV-506**: pr-auto-review.mjs CLI: add `list-flagged` (prints open entries) and `resolve-flagged <pr> <merged|closed|changes-requested>`
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-102
@@ -1434,7 +1434,7 @@ Capability: claude-review-lane. Queue and skill first; the headless timer (CV-RE
   - Parallel: blocked-by CV-507
   - Complexity: S
 
-- [ ] **CV-509**: pr-auto-review.mjs resolve-flagged `changes-requested`: create a FIX-<task> via buildFixTask/upsertFixTaskInClone from the supplied comment (subject to the 3-attempt cap); lane-blocked + human task when the Files hit interactive machinery
+- [x] **CV-509**: pr-auto-review.mjs resolve-flagged `changes-requested`: create a FIX-<task> via buildFixTask/upsertFixTaskInClone from the supplied comment (subject to the 3-attempt cap); lane-blocked + human task when the Files hit interactive machinery
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-103

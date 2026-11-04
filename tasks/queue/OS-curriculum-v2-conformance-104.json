@@ -3,7 +3,7 @@
   "title": "pr-auto-review.mjs: on action `flagged` call enqueueClaudeReview and send one Telegram notice via notify.mjs sendNotification; set notifiedAt only on success; never throw",
   "description": "- [ ] **CV-503**: pr-auto-review.mjs: on action `flagged` call enqueueClaudeReview and send one Telegram notice via notify.mjs sendNotification; set notifiedAt only on success; never throw\n  - **Priority:** MEDIUM\n  - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`\n  - Spec: CV-REQ-100\n  - Gaps: -\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: injected notifier called once across 3 passes; failing notifier leaves notifiedAt null and the next pass retries\n  - Parallel: blocked-by CV-502\n  - Complexity: M",
   "priority": "MEDIUM",
-  "status": "blocked",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -13,5 +13,7 @@
   "blockedBy": [
     "OS-curriculum-v2-conformance-103"
   ],
-  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+  "completed_at": "2026-11-04T00:33:10.243Z",
+  "test_status": "passing",
+  "completionNote": "interactive batch (Claude review lane), reviewed + merged 2026-11-03"
 }
