@@ -106,7 +106,7 @@ describe('monthly-review — the executed monthly cycle', () => {
 
   it('exports buildMonthlySteps returning the correct steps (dryRun: false)', () => {
     const steps = buildMonthlySteps({ dryRun: false });
-    assert.equal(steps.length, 4, '4 steps in normal mode');
+    assert.equal(steps.length, 5, '5 steps in normal mode');
     assert.equal(steps[0].label, 'Behavior audit');
     assert.equal(steps[0].script, 'test-behavior.mjs');
     assert.deepEqual(steps[0].args, [], 'no --dry-run in normal mode');
@@ -115,9 +115,12 @@ describe('monthly-review — the executed monthly cycle', () => {
     assert.equal(steps[2].label, 'Agent version snapshot');
     assert.equal(steps[2].script, 'version-snapshot.mjs');
     assert.deepEqual(steps[2].args, ['snapshot']);
-    assert.equal(steps[3].label, 'Memory migration check');
-    assert.equal(steps[3].script, 'migrate-memory.mjs');
-    assert.deepEqual(steps[3].args, ['--check']);
+    assert.equal(steps[3].label, 'Maturity assessment');
+    assert.equal(steps[3].script, 'maturity-assess.mjs');
+    assert.deepEqual(steps[3].args, ['--report']);
+    assert.equal(steps[4].label, 'Memory migration check');
+    assert.equal(steps[4].script, 'migrate-memory.mjs');
+    assert.deepEqual(steps[4].args, ['--check']);
   });
 
   it('buildMonthlySteps({dryRun: true}) omits snapshot and appends --dry-run', () => {
