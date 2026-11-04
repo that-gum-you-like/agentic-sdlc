@@ -102,6 +102,30 @@ ${rows.join('\n')}
  * @param {string} changesDir path to `openspec/changes`
  * @returns {string} markdown counts line + one table row per active change
  */
+/**
+ * Replace the `## <title>` section of a markdown file, or append it (CV-REQ-020).
+ * Line-based, no regex: the section runs from the exact heading line to the line before
+ * the next `#`/`##` heading (or EOF), so titles and bodies need no escaping and a body
+ * line containing `## ` mid-text cannot end the section. Returns true when replaced.
+ * (Written interactively after drain PR #88's regex version was rejected 3x.)
+ */
+export function upsertDashboardSection(title, body, path) {
+  const content = existsSync(path) ? readFileSync(path, 'utf8') : '';
+  const lines = content.split('\n');
+  const heading = `## ${title}`;
+  const section = [heading, '', ...String(body).replace(/\n+$/, '').split('\n'), ''];
+  const start = lines.findIndex(l => l.trimEnd() === heading);
+  if (start === -1) {
+    const trimmed = content.replace(/\n+$/, '');
+    writeFileSync(path, (trimmed ? `${trimmed}\n\n` : '') + section.join('\n'));
+    return false;
+  }
+  let end = start + 1;
+  while (end < lines.length && !/^#{1,2} /.test(lines[end])) end++;
+  writeFileSync(path, [...lines.slice(0, start), ...section, ...lines.slice(end)].join('\n'));
+  return true;
+}
+
 export function openspecStatusTable(changesDir) {
   const active = [];
   if (existsSync(changesDir)) {

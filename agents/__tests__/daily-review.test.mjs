@@ -362,3 +362,50 @@ describe('bugMetrics (CV-REQ-020)', () => {
     assert.match(block, /Resolution rate: 100%/, 'all bugs archived is 100%');
   });
 });
+
+describe('upsertDashboardSection (CV-REQ-020)', () => {
+  const tmpFile = (text) => {
+    const f = join(mkdtempSync(join(tmpdir(), 'dash-')), 'DASHBOARD.md');
+    if (text !== null) writeFileSync(f, text);
+    return f;
+  };
+  let upsert;
+  before(async () => { ({ upsertDashboardSection: upsert } = await import('../cycles/daily-review.mjs')); });
+
+  it('replaces only the named section, keeping its neighbours', () => {
+    const f = tmpFile('# Dash\n\n## A\n\nold a\n\n## B\n\nkeep b\n');
+    assert.equal(upsert('A', 'new a', f), true);
+    assert.equal(readFileSync(f, 'utf8'), '# Dash\n\n## A\n\nnew a\n\n## B\n\nkeep b\n');
+  });
+
+  it('a body with "## " mid-line or ### subheadings stays inside the section', () => {
+    const f = tmpFile('## A\n\nx\n## B\n\nb\n');
+    upsert('A', 'see ## not a heading\n### sub\ny', f);
+    const out = readFileSync(f, 'utf8');
+    assert.match(out, /## A\n\nsee ## not a heading\n### sub\ny\n\n## B\n\nb\n/);
+    upsert('A', 'z', f);
+    assert.doesNotMatch(readFileSync(f, 'utf8'), /### sub/, 'the old ### subheading is part of A and is replaced');
+  });
+
+  it('titles with regex characters need no escaping; $& in the body is verbatim', () => {
+    const f = tmpFile('## Bug metrics (bug-*)\n\nold\n');
+    assert.equal(upsert('Bug metrics (bug-*)', 'cost $& and $1', f), true);
+    assert.equal(readFileSync(f, 'utf8'), '## Bug metrics (bug-*)\n\ncost $& and $1\n');
+  });
+
+  it('appends when absent, and creates a missing file', () => {
+    const f = tmpFile('# Dash\n');
+    assert.equal(upsert('New', 'n', f), false);
+    assert.equal(readFileSync(f, 'utf8'), '# Dash\n\n## New\n\nn\n');
+    const g = tmpFile(null);
+    upsert('Only', 'o', g);
+    assert.equal(readFileSync(g, 'utf8'), '## Only\n\no\n');
+  });
+
+  it('is idempotent', () => {
+    const f = tmpFile('## A\n\nx\n');
+    upsert('A', 'y', f); const once = readFileSync(f, 'utf8');
+    upsert('A', 'y', f);
+    assert.equal(readFileSync(f, 'utf8'), once);
+  });
+});
