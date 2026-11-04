@@ -409,7 +409,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-116, CV-118
   - Complexity: M
 
-- [ ] **CV-118**: daily-review.mjs: add exported `upsertDashboardSection(title, body, path)` replacing an existing `## <title>` section or appending it
+- [x] **CV-118**: daily-review.mjs: add exported `upsertDashboardSection(title, body, path)` replacing an existing `## <title>` section or appending it
   - **Priority:** HIGH
   - Files: `agents/cycles/daily-review.mjs, agents/__tests__/daily-review.test.mjs`
   - Spec: CV-REQ-020
