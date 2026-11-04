@@ -182,6 +182,29 @@
       "script": "/usr/bin/env SDLC_PROJECT_DIR=/home/bryce/willtopaint node /home/bryce/agentic-sdlc/agents/pr-auto-review.mjs",
       "description": "PR auto-review for willtopaint",
       "session": "isolated"
+    },
+    {
+      "name": "model-manager-research",
+      "cron": "0 3 * * 1",
+      "script": "node ~/agentic-sdlc/agents/model-manager.mjs research",
+      "description": "Weekly OpenRouter pricing/model research into model-intel.json (was an unmanaged user timer; now repo-declared, CV-REQ-014).",
+      "session": "isolated"
+    },
+    {
+      "name": "pattern-hunt-weekly",
+      "cron": "0 22 * * 0",
+      "script": "node ~/agentic-sdlc/agents/pattern-hunt.mjs",
+      "supersededBy": "weekly-pattern-hunt",
+      "description": "Legacy standalone timer \u2014 superseded: cycles/weekly-review.mjs now runs pattern-hunt (CV-REQ-010). Install removes the old unit.",
+      "session": "isolated"
+    },
+    {
+      "name": "rem-sleep-weekly",
+      "cron": "0 23 * * 0",
+      "script": "node ~/agentic-sdlc/agents/rem-sleep.mjs --similarity",
+      "supersededBy": "weekly-pattern-hunt",
+      "description": "Legacy standalone timer \u2014 superseded: cycles/weekly-review.mjs now runs REM sleep (CV-REQ-010). Install removes the old unit.",
+      "session": "isolated"
     }
   ]
 }

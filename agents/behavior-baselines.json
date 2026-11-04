@@ -1,0 +1,38 @@
+{
+  "recordedAt": "2026-11-04T00:27:05.454Z",
+  "threshold": 0.2,
+  "agents": {
+    "sdlc-developer": {
+      "prompt_lines": 92,
+      "rule_count": 26,
+      "caution_score": 9.78,
+      "optimism_score": 0,
+      "failure_memory_count": 6,
+      "_version": "unversioned"
+    },
+    "jony-aive": {
+      "prompt_lines": 101,
+      "rule_count": 30,
+      "caution_score": 8.91,
+      "optimism_score": 1.98,
+      "failure_memory_count": 0,
+      "_version": "1.0.0"
+    },
+    "sdlc-reviewer": {
+      "prompt_lines": 136,
+      "rule_count": 48,
+      "caution_score": 11.76,
+      "optimism_score": 1.47,
+      "failure_memory_count": 0,
+      "_version": "unversioned"
+    },
+    "sdlc-documentarian": {
+      "prompt_lines": 120,
+      "rule_count": 38,
+      "caution_score": 14.17,
+      "optimism_score": 0,
+      "failure_memory_count": 0,
+      "_version": "unversioned"
+    }
+  }
+}

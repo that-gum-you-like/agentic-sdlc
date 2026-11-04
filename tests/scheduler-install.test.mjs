@@ -198,3 +198,16 @@ if (failed > 0) {
   for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`);
   process.exit(1);
 }
+
+test('cron schedule declares the research timer and supersedes the legacy weekly timers (CV-REQ-014)', async () => {
+  const { readFileSync, existsSync } = await import('node:fs');
+  const { homedir } = await import('node:os');
+  const d = JSON.parse(readFileSync(new URL('../agents/cron-schedule.json', import.meta.url), 'utf8'));
+  const by = Object.fromEntries(d.schedules.map(j => [j.name, j]));
+  assert(by['model-manager-research'] && !by['model-manager-research'].supersededBy, 'research timer declared');
+  for (const n of ['pattern-hunt-weekly', 'rem-sleep-weekly']) assert(by[n] && by[n].supersededBy === 'weekly-pattern-hunt', n);
+  for (const j of d.schedules) {
+    const m = /(?:~\/agentic-sdlc|\/home\/bryce\/agentic-sdlc)\/(agents\/[\w./-]+\.(?:mjs|sh))/.exec(j.script);
+    if (m) assert(existsSync(new URL(`../${m[1]}`, import.meta.url)), `${j.name}: ${m[1]} must exist`);
+  }
+});
