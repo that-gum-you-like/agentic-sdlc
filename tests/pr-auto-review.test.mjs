@@ -9,12 +9,13 @@
  */
 
 import { readFileSync, mkdtempSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { execFileSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
+import * as M from '../agents/pr-auto-review.mjs';
 import {
   scanScope,
   taskIdFromBranch,
@@ -558,6 +559,120 @@ test('completeTaskInClone: CHANGELOG.md is in the SAME commit as the queue compl
 test('merge flow passes the changelog into completeTaskInClone (no new push path)', () => {
   assert(/completeTaskInClone\(repoDir, taskId, log, changelog\)/.test(source), 'reviewPr passes changelog');
   assert((source.match(/'push'/g) || []).length === 2, 'still exactly two push sites');
+});
+
+test('enqueueClaudeReview upserts by pr+sha; a new sha supersedes the old (CV-502)', () => {
+  const m = M;
+  const dir = mkdtempSync(join(tmpdir(), 'crq-'));
+  const path = join(dir, 'pm', 'claude-review-queue.json');
+  const e = { pr: 70, branch: 'agent/drain/X-1', headSha: 'abc1234', reasons: ['agents/hermes-drain.sh'] };
+  const a = m.enqueueClaudeReview(e, { path });
+  const b = m.enqueueClaudeReview(e, { path });
+  assert(a.created && !b.created, 'second upsert is not a create');
+  assert(m.readClaudeQueue(path).length === 1, 'one entry for same pr+sha');
+  m.enqueueClaudeReview({ ...e, headSha: 'def5678' }, { path });
+  const q = m.readClaudeQueue(path);
+  assert(q.length === 2, 'two entries');
+  assert(q[0].status === 'superseded' && q[1].status === 'open', 'old superseded, new open');
+  assert(q[1].notifiedAt === null, 'new entry un-notified');
+});
+
+test('queueFlaggedPr notifies once across passes; failure retries; never throws (CV-503)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crq3-'));
+  const queuePath = join(dir, 'q.json');
+  const pr = { number: 70, headRefName: 'agent/drain/X-1', title: 'Touch drain' };
+  const sent = [];
+  const notify = (m) => { sent.push(m); return true; };
+  for (let i = 0; i < 3; i++) M.queueFlaggedPr(pr, 'abc1234', ['agents/hermes-drain.sh'], { queuePath, notify });
+  assert(sent.length === 1, `one notice across 3 passes, got ${sent.length}`);
+  assert(/#70/.test(sent[0]) && /Touch drain/.test(sent[0]) && /hermes-drain\.sh/.test(sent[0]) && /\/sdlc-review-flagged/.test(sent[0]), 'notice content');
+  assert(M.readClaudeQueue(queuePath)[0].notifiedAt, 'notifiedAt set');
+  const q2 = join(dir, 'q2.json');
+  let ok = false;
+  const flaky = () => { if (!ok) return false; return true; };
+  M.queueFlaggedPr(pr, 'abc1234', ['x'], { queuePath: q2, notify: flaky });
+  assert(M.readClaudeQueue(q2)[0].notifiedAt === null, 'failure leaves notifiedAt null');
+  ok = true;
+  M.queueFlaggedPr(pr, 'abc1234', ['x'], { queuePath: q2, notify: flaky });
+  assert(M.readClaudeQueue(q2)[0].notifiedAt, 'retry succeeds');
+  const r = M.queueFlaggedPr(pr, 'abc1234', ['x'], { queuePath: join(dir, 'q3.json'), notify: () => { throw new Error('boom'); } });
+  assert(r === false, 'throwing notifier swallowed');
+});
+
+test('reviewPr skips an open queue entry with no LLM/worktree and logs the skip once (CV-504)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crq4-'));
+  const queuePath = join(dir, 'q.json');
+  const pr = { number: 71, headRefName: 'agent/drain/X-2', headRefOid: 'abc1234', title: 't', files: [{ path: 'agents/hermes-drain.sh' }] };
+  M.enqueueClaudeReview({ pr: 71, branch: pr.headRefName, headSha: 'abc1234', reasons: ['r'] }, { path: queuePath });
+  const sent = [];
+  const logFile = join(dir, 'log');
+  for (let i = 0; i < 3; i++) {
+    // cloneDir is bogus: any worktree/gate/gh use would throw -> action 'error' upstream
+    const res = await M.reviewPr(pr, { repoDir: dir, cloneDir: join(dir, 'nope'), log: () => {}, dryRun: false, queuePath, notify: (m) => { sent.push(m); return true; }, overlaps: new Map(), mergedThisRun: new Set() });
+    assert(res.action === 'skip-awaiting-claude', `action ${res.action}`);
+    if (!M.skipAlreadyLogged(logFile, res.pr, res.sha)) writeFileSync(logFile, JSON.stringify(res) + '\n', { flag: 'a' });
+  }
+  assert(readFileSync(logFile, 'utf8').trim().split('\n').length === 1, 'exactly one log line');
+  assert(sent.length === 1, 'undelivered notice retried once then stops');
+});
+
+test('reconcileClaudeQueue resolves entries whose PR merged/closed (CV-505)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crq5-'));
+  const path = join(dir, 'q.json');
+  for (const n of [1, 2, 3, 4]) M.enqueueClaudeReview({ pr: n, branch: `b/${n}`, headSha: 'abc1234', reasons: [] }, { path });
+  const states = { 1: 'MERGED', 2: 'CLOSED', 3: 'OPEN' };
+  const done = M.reconcileClaudeQueue(path, (n) => { if (n === 4) throw new Error('gh down'); return states[n]; });
+  assert(done.join() === '1,2', `resolved ${done}`);
+  const q = M.readClaudeQueue(path);
+  assert(q[0].status === 'resolved' && q[0].outcome === 'merged' && q[0].resolvedBy === 'reconcile', 'merged resolved');
+  assert(q[1].outcome === 'closed', 'closed resolved');
+  assert(q[2].status === 'open' && q[3].status === 'open', 'open/unknown stay open');
+  assert(M.reconcileClaudeQueue(path, () => 'MERGED').join() === '3,4', 'rest resolve later; resolved never revisited');
+});
+
+test('listFlagged / resolveFlagged (CV-506)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crq6-'));
+  const path = join(dir, 'q.json');
+  M.enqueueClaudeReview({ pr: 5, branch: 'b/5', headSha: 'abc1234', reasons: ['r'] }, { path });
+  M.enqueueClaudeReview({ pr: 6, branch: 'b/6', headSha: 'abc1234', reasons: ['r'] }, { path });
+  assert(M.listFlagged(path).length === 2, 'two open');
+  const r = M.resolveFlagged(5, 'closed', { path });
+  assert(r.code === 0, 'resolve ok');
+  const e5 = M.readClaudeQueue(path)[0];
+  assert(e5.status === 'resolved' && e5.outcome === 'closed' && e5.resolvedBy === 'claude-session' && e5.resolvedAt, 'resolution recorded');
+  assert(M.listFlagged(path).map(e => e.pr).join() === '6', 'list shows only open');
+  assert(M.resolveFlagged(6, 'bogus', { path }).code === 1, 'unknown outcome exits 1');
+  assert(M.resolveFlagged(99, 'merged', { path }).code === 1, 'unqueued PR exits 1');
+  assert(M.resolveFlagged(5, 'closed', { path }).code === 0, 'replay is a no-op');
+  const cli = spawnSync('node', [join(root, 'agents/pr-auto-review.mjs'), 'resolve-flagged', '1', 'bogus'],
+    { env: { ...process.env, SDLC_PROJECT_DIR: dir }, encoding: 'utf8' });
+  assert(cli.status === 1, `CLI unknown outcome exits 1, got ${cli.status}`);
+});
+
+test('resolve-flagged changes-requested files one FIX task, idempotently (CV-509)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crq9-'));
+  const path = join(dir, 'q.json');
+  M.enqueueClaudeReview({ pr: 8, branch: 'agent/drain/X-8', headSha: 'abc1234', reasons: ['r'] }, { path });
+  const filed = [];
+  const fileFix = (info) => { filed.push(info); return true; };
+  const r = M.resolveFlagged(8, 'changes-requested', { path, comment: 'rename the flag', fileFix, getFiles: () => ['lib/a.mjs'] });
+  assert(r.code === 0 && filed.length === 1, 'one FIX filed');
+  assert(filed[0].reasons[0] === 'rename the flag' && filed[0].kind === 'changes-requested' && filed[0].files[0] === 'lib/a.mjs', 'comment is the reason');
+  assert(M.readClaudeQueue(path)[0].outcome === 'changes-requested', 'entry resolved');
+  M.resolveFlagged(8, 'changes-requested', { path, comment: 'again', fileFix });
+  assert(filed.length === 1, 'replay files nothing');
+  // a failing filer leaves the entry open for retry
+  M.enqueueClaudeReview({ pr: 9, branch: 'agent/drain/X-9', headSha: 'abc1234', reasons: ['r'] }, { path });
+  const bad = M.resolveFlagged(9, 'changes-requested', { path, fileFix: () => { throw new Error('push failed'); } });
+  assert(bad.code === 1 && M.listFlagged(path).some(e => e.pr === 9), 'filing failure keeps entry open');
+  // buildFixTask lane rule + cap
+  const base = { pr: 8, branch: 'agent/drain/X-8', headSha: 'a', reasons: ['x'], kind: 'changes-requested' };
+  const plain = buildFixTask({ ...base, files: ['lib/a.mjs'] });
+  assert(plain.status === 'pending', 'ordinary files: pending (hermes lane)');
+  const machinery = buildFixTask({ ...base, files: ['agents/hermes-drain.sh'] });
+  assert(machinery.status === 'blocked' && /interactive-lane/.test(machinery.blockedReason) && machinery.tags.includes('needs-human'), 'machinery: blocked + human');
+  const t3 = buildFixTask({ ...base, existing: buildFixTask({ ...base, existing: plain }) });
+  assert(t3.status === 'blocked', 'three-attempt cap still applies');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

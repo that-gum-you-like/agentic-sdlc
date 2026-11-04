@@ -28,7 +28,7 @@
  * Zero npm dependencies (Node stdlib only).
  */
 
-import { existsSync, readFileSync, appendFileSync, mkdirSync, rmSync, mkdtempSync, writeFileSync, statSync } from 'fs';
+import { existsSync, readFileSync, appendFileSync, mkdirSync, rmSync, mkdtempSync, writeFileSync, statSync, renameSync } from 'fs';
 import { execFileSync, spawn } from 'child_process';
 import { dirname, join, resolve } from 'path';
 import { tmpdir, homedir } from 'os';
@@ -643,7 +643,7 @@ export const FIXABLE_ACTIONS = ['gate-failed', 'llm-rejected'];
  * Pure builder for a FIX-<pr> queue task (exported for tests).
  * Pass `existing` to refresh a prior fix task after a re-rejection at a new SHA.
  */
-export function buildFixTask({ pr, branch, headSha, reasons, kind, existing }) {
+export function buildFixTask({ pr, branch, headSha, reasons, kind, existing, files }) {
   const sourceTask = taskIdFromBranch(branch);
   const feedback = (reasons || []).map(r => `- ${r}`).join('\n')
     || '- (no detail captured — read the PR review comment)';
@@ -674,12 +674,18 @@ export function buildFixTask({ pr, branch, headSha, reasons, kind, existing }) {
   // re-queuing a repair the cheap model has already failed twice (no endless loop).
   const attempts = (existing?.attempts || 0) + 1;
   const exhausted = attempts >= MAX_FIX_ATTEMPTS;
+  // CV-REQ-103: a repair that must edit interactive-lane machinery (the
+  // guardrail surface) is never handed to the cheap drain — block for a human.
+  const machinery = (files || []).length ? scanScope(files).flags : [];
+  const interactiveOnly = machinery.length > 0;
   return {
     ...base,
     description,
     attempts,
-    status: exhausted ? 'blocked' : 'pending',
-    ...(exhausted ? { blockedReason: `needs-human: PR #${pr} rejected ${attempts}x (${kind}) — the drain will not retry it` } : {}),
+    ...((files || []).length ? { files } : {}),
+    status: exhausted || interactiveOnly ? 'blocked' : 'pending',
+    ...(exhausted ? { blockedReason: `needs-human: PR #${pr} rejected ${attempts}x (${kind}) — the drain will not retry it` }
+      : interactiveOnly ? { blockedReason: `needs-human: fix touches interactive-lane machinery (${machinery.join(', ')}) — an interactive Claude session must do it`, tags: [...new Set([...(base.tags || []), 'needs-human'])] } : {}),
     fixFor: { pr, branch, headSha, sourceTask, rejectionKind: kind },
     ...(existing ? { refreshedAt: new Date().toISOString() } : {}),
   };
@@ -688,7 +694,7 @@ export function buildFixTask({ pr, branch, headSha, reasons, kind, existing }) {
 export const MAX_FIX_ATTEMPTS = 3;
 
 /** Upsert FIX-<pr> in the review clone and push to main (REQ-SH-1). */
-function upsertFixTaskInClone(repoDir, prInfo, log) {
+export function upsertFixTaskInClone(repoDir, prInfo, log) {
   const clone = ensureReviewClone(repoDir, log);
   const taskFile = join(clone, 'tasks', 'queue', `FIX-${prInfo.pr}.json`);
   let existing = null;
@@ -711,6 +717,179 @@ function upsertFixTaskInClone(repoDir, prInfo, log) {
   }
   log(`filed ${task.id} (${prInfo.kind}) — the drain will repair PR #${prInfo.pr} on its existing branch`);
   return true;
+}
+
+// ---------------------------------------------------------------------------
+// Claude review queue (CV-REQ-100..103): PRs the cheap tier must not merge
+// are queued for an interactive Claude session. Runtime file, gitignored.
+// ---------------------------------------------------------------------------
+
+export function claudeQueuePath(repoDir) {
+  return join(repoDir, 'pm', 'claude-review-queue.json');
+}
+
+export function readClaudeQueue(path) {
+  if (!existsSync(path)) return [];
+  try {
+    const q = JSON.parse(readFileSync(path, 'utf8'));
+    return Array.isArray(q) ? q : [];
+  } catch (err) {
+    // Corrupt queue: keep the evidence aside and start fresh rather than
+    // wedging the review run (queue is derived state; flags re-enqueue).
+    console.error(`[pr-auto-review] claude-review queue unreadable (${err.message}) — moved to .corrupt`);
+    try { renameSync(path, `${path}.corrupt`); } catch (e) { console.error(`[pr-auto-review] could not move corrupt queue: ${e.message}`); }
+    return [];
+  }
+}
+
+export function writeClaudeQueue(path, entries) {
+  mkdirSync(dirname(path), { recursive: true });
+  const tmp = `${path}.${process.pid}.tmp`;
+  writeFileSync(tmp, JSON.stringify(entries, null, 2) + '\n');
+  renameSync(tmp, path);
+}
+
+/**
+ * Upsert a queue entry keyed by (pr, headSha). A new headSha for the same PR
+ * marks older OPEN entries `superseded`. Same key is never duplicated (an
+ * existing entry keeps its status/notifiedAt).
+ * @returns {{ entry: object, created: boolean }}
+ */
+export function enqueueClaudeReview(entry, { path, now = () => new Date().toISOString() } = {}) {
+  const q = readClaudeQueue(path);
+  const found = q.find(e => e.pr === entry.pr && e.headSha === entry.headSha);
+  if (found) return { entry: found, created: false };
+  for (const e of q) {
+    if (e.pr === entry.pr && e.status === 'open') e.status = 'superseded';
+  }
+  const fresh = {
+    pr: entry.pr,
+    branch: entry.branch,
+    headSha: entry.headSha,
+    reasons: entry.reasons || [],
+    flaggedAt: entry.flaggedAt || now(),
+    notifiedAt: null,
+    status: 'open',
+  };
+  q.push(fresh);
+  writeClaudeQueue(path, q);
+  return { entry: fresh, created: true };
+}
+
+function updateClaudeEntry(path, pr, headSha, patch) {
+  const q = readClaudeQueue(path);
+  const e = q.find(x => x.pr === pr && x.headSha === headSha);
+  if (!e) return null;
+  Object.assign(e, patch);
+  writeClaudeQueue(path, q);
+  return e;
+}
+
+/** True when (pr, headSha) is an OPEN queue entry. */
+export function isAwaitingClaude(pr, headSha, path) {
+  return readClaudeQueue(path).find(e => e.pr === pr && e.headSha === headSha && e.status === 'open') || null;
+}
+
+export function claudeNoticeText(entry, title) {
+  return `🔎 PR #${entry.pr}${title ? ` "${title}"` : ''} needs a Claude review — flagged: ${(entry.reasons || []).join('; ') || '(no reason recorded)'}. Run /sdlc-review-flagged`;
+}
+
+/**
+ * Send the one-time notice for an entry without a notifiedAt. Never throws;
+ * notifiedAt is set only when the notifier reports success, so a failure is
+ * retried on the next pass.
+ */
+export function notifyClaudeReviewOnce(entry, { path, title, notify = (m) => triggerNotification('blocker', m) } = {}) {
+  if (entry.notifiedAt) return false;
+  try {
+    if (!notify(claudeNoticeText(entry, title))) return false;
+    const stamp = new Date().toISOString();
+    entry.notifiedAt = stamp;
+    updateClaudeEntry(path, entry.pr, entry.headSha, { notifiedAt: stamp });
+    return true;
+  } catch { return false; }
+}
+
+/**
+ * On a `flagged` verdict: enqueue for Claude and send the single notice.
+ * Best-effort — never throws, never blocks the review record.
+ */
+export function queueFlaggedPr(pr, headSha, reasons, { repoDir, queuePath, notify, log = () => {} }) {
+  try {
+    const path = queuePath || claudeQueuePath(repoDir);
+    const { entry } = enqueueClaudeReview(
+      { pr: pr.number, branch: pr.headRefName, headSha, reasons }, { path });
+    return notifyClaudeReviewOnce(entry, { path, title: pr.title, notify });
+  } catch (err) {
+    log(`claude-review enqueue for PR #${pr.number} failed (non-fatal): ${err.message}`);
+    return false;
+  }
+}
+
+/** Mark an entry resolved (shared by reconcile and resolve-flagged). */
+export function resolveClaudeEntry(path, pr, headSha, outcome, resolvedBy, now = () => new Date().toISOString()) {
+  return updateClaudeEntry(path, pr, headSha, { status: 'resolved', outcome, resolvedBy, resolvedAt: now() });
+}
+
+/**
+ * CV-REQ-101: open entries whose PR is merged/closed on the remote become
+ * `resolved`. `getState(pr)` returns 'MERGED' | 'CLOSED' | 'OPEN' (or throws,
+ * in which case the entry is left alone).
+ * @returns {number[]} PR numbers resolved
+ */
+export function reconcileClaudeQueue(path, getState, log = () => {}) {
+  const done = [];
+  for (const e of readClaudeQueue(path).filter(x => x.status === 'open')) {
+    let state;
+    try { state = String(getState(e.pr) || '').toUpperCase(); } catch { continue; }
+    if (state !== 'MERGED' && state !== 'CLOSED') continue;
+    resolveClaudeEntry(path, e.pr, e.headSha, state.toLowerCase(), 'reconcile');
+    log(`reconcile: queued PR #${e.pr} is ${state.toLowerCase()} — entry resolved`);
+    done.push(e.pr);
+  }
+  return done;
+}
+
+export const RESOLVE_OUTCOMES = ['merged', 'closed', 'changes-requested'];
+
+/** Open queue entries (what `list-flagged` prints). */
+export function listFlagged(path) {
+  return readClaudeQueue(path).filter(e => e.status === 'open');
+}
+
+/**
+ * Resolve the open entry for a PR with an outcome. Pure of process state:
+ * returns { code, message } instead of exiting. Replaying a resolved PR is a
+ * no-op (code 0); an unknown outcome or a PR never queued is code 1.
+ */
+export function resolveFlagged(pr, outcome, { path, comment, fileFix, getFiles } = {}) {
+  if (!RESOLVE_OUTCOMES.includes(outcome)) {
+    return { code: 1, message: `unknown outcome "${outcome}" (expected ${RESOLVE_OUTCOMES.join('|')})` };
+  }
+  const q = readClaudeQueue(path).filter(e => e.pr === pr);
+  const open = q.find(e => e.status === 'open');
+  if (!open) {
+    return q.length
+      ? { code: 0, message: `PR #${pr} has no open entry (already ${q[q.length - 1].status}) — nothing to do` }
+      : { code: 1, message: `PR #${pr} is not in the Claude review queue` };
+  }
+  let extra = '';
+  if (outcome === 'changes-requested') {
+    // CV-REQ-103: the Claude comment becomes a FIX task (3-attempt cap applies
+    // via buildFixTask). A filing failure leaves the entry open to retry.
+    try {
+      let files = [];
+      try { files = getFiles ? getFiles(pr) : []; } catch { files = []; }
+      const filed = fileFix
+        ? fileFix({ pr, branch: open.branch, headSha: open.headSha, reasons: [comment || 'Claude review requested changes — see the PR comment'], kind: 'changes-requested', files })
+        : false;
+      extra = filed ? ` (FIX-${pr} filed)` : ` (FIX-${pr} not re-filed)`;
+    } catch (err) {
+      return { code: 1, message: `PR #${pr}: could not file FIX task: ${err.message}` };
+    }
+  }
+  resolveClaudeEntry(path, pr, open.headSha, outcome, 'claude-session');
+  return { code: 0, message: `PR #${pr} resolved: ${outcome}${extra}`, entry: open };
 }
 
 function reconcileMerged(repoDir, cloneDir, log) {
@@ -736,6 +915,16 @@ function reconcileMerged(repoDir, cloneDir, log) {
 // ---------------------------------------------------------------------------
 // Per-PR review
 // ---------------------------------------------------------------------------
+
+/** True when the log already holds a skip-awaiting-claude line for pr+sha. */
+export function skipAlreadyLogged(logFile, pr, sha) {
+  try {
+    return readFileSync(logFile, 'utf8').split('\n').some(l => {
+      if (!l.includes('skip-awaiting-claude')) return false;
+      try { const r = JSON.parse(l); return r.pr === pr && r.sha === sha && r.action === 'skip-awaiting-claude'; } catch { return false; }
+    });
+  } catch { return false; }
+}
 
 function alreadyReviewed(prNumber, headSha) {
   try {
@@ -769,10 +958,24 @@ function fileFixTask(pr, headSha, reasons, kind, ctx) {
   }
 }
 
-async function reviewPr(pr, ctx) {
+export async function reviewPr(pr, ctx) {
   const { repoDir, log, dryRun } = ctx;
   const headSha = pr.headRefOid;
   const record = { ts: new Date().toISOString(), pr: pr.number, branch: pr.headRefName, sha: headSha, action: null, detail: null };
+
+  // CV-REQ-101: an open queue entry means Claude owns this PR at this SHA —
+  // no gh comment lookup, no worktree, no LLM. Retry an undelivered notice.
+  {
+    const queued = isAwaitingClaude(pr.number, headSha, ctx.queuePath || claudeQueuePath(repoDir));
+    if (queued) {
+      if (!dryRun && !queued.notifiedAt) {
+        notifyClaudeReviewOnce(queued, { path: ctx.queuePath || claudeQueuePath(repoDir), title: pr.title, notify: ctx.notify });
+      }
+      record.action = 'skip-awaiting-claude';
+      record.detail = 'queued for an interactive Claude review (/sdlc-review-flagged)';
+      return record;
+    }
+  }
 
   if (alreadyReviewed(pr.number, headSha)) {
     record.action = 'skip';
@@ -827,6 +1030,7 @@ async function reviewPr(pr, ctx) {
       '**Verdict: FLAGGED for human/CTO review** — tests pass in a clean worktree, but this diff touches the guardrail surface, which is never auto-merged:',
       ...scope.flags.map(f => `- \`${f}\``),
     ], dryRun);
+    if (!dryRun) queueFlaggedPr(pr, headSha, scope.flags, ctx);
     return record;
   }
 
@@ -936,6 +1140,10 @@ export async function runAutoReview({ dryRun = false } = {}) {
     }
 
     reconcileMerged(repoDir, cloneDir, log);
+    try {
+      reconcileClaudeQueue(claudeQueuePath(repoDir),
+        (n) => ghJson(['pr', 'view', String(n), '--json', 'state']).state, log);
+    } catch (err) { log(`claude-queue reconcile failed (non-fatal): ${err.message}`); }
 
     let prs;
     try {
@@ -963,7 +1171,7 @@ export async function runAutoReview({ dryRun = false } = {}) {
       }
       if (res.action === 'merged') { merges++; mergedThisRun.add(pr.number); }
       log(`PR #${res.pr}: ${res.action}${res.detail ? ` — ${res.detail}` : ''}`);
-      record(res);
+      if (!(res.action === 'skip-awaiting-claude' && skipAlreadyLogged(logFile, res.pr, res.sha))) record(res);
       results.push(res);
     }
   } finally {
@@ -972,7 +1180,29 @@ export async function runAutoReview({ dryRun = false } = {}) {
   return results;
 }
 
-if (__isMainModule()) {
+if (__isMainModule() && ['list-flagged', 'resolve-flagged'].includes(process.argv[2])) {
+  const { projectDir } = loadConfig();
+  const queuePath = claudeQueuePath(projectDir || resolve(__dirname, '..'));
+  if (process.argv[2] === 'list-flagged') {
+    const open = listFlagged(queuePath);
+    if (!open.length) console.log('no open flagged PRs');
+    for (const e of open) console.log(`#${e.pr}\t${e.branch}\t${e.headSha}\t${e.flaggedAt}\t${(e.reasons || []).join('; ')}`);
+  } else {
+    const [, , , prArg, outcome] = process.argv;
+    const ci = process.argv.indexOf('--comment');
+    const comment = ci > -1 ? process.argv[ci + 1] : undefined;
+    const repoDir = projectDir || resolve(__dirname, '..');
+    process.chdir(repoDir);
+    const res = resolveFlagged(Number(prArg), outcome, {
+      path: queuePath,
+      comment,
+      fileFix: (info) => upsertFixTaskInClone(repoDir, info, (m) => console.log(`[pr-auto-review] ${m}`)),
+      getFiles: (n) => (ghJson(['pr', 'view', String(n), '--json', 'files']).files || []).map(f => f.path),
+    });
+    console.log(res.message);
+    process.exit(res.code);
+  }
+} else if (__isMainModule()) {
   const dryRun = process.argv.includes('--dry-run');
   runAutoReview({ dryRun })
     .then(results => {
