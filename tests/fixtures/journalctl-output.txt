@@ -1,0 +1,5 @@
+Nov 08 10:00:01 hostname tally[1234]: Error: Connection timeout on database pool
+Nov 08 10:01:15 hostname tally[1234]: GET /api/v2/users 429 Too Many Requests
+Nov 08 10:02:30 hostname tally[1234]: Error: Connection timeout on database pool
+Nov 08 10:03:00 hostname tally[1234]: Fatal: Out of memory in worker process
+Nov 08 10:05:00 hostname tally[1234]: POST /api/v2/orders 500 (PG::ConnectionBad)

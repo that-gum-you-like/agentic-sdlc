@@ -23,6 +23,7 @@
 import fs from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SOURCE_TYPES } from './error-sources.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -132,6 +133,36 @@ export function validate(doc) {
           }
         }
         if (e.agentWritable !== undefined && typeof e.agentWritable !== 'boolean') push(eat, '"agentWritable" must be a boolean');
+      }
+    }
+
+    // errorSources validation (CV-REQ-111)
+    if (p.errorSources !== undefined) {
+      if (!Array.isArray(p.errorSources)) { push(at, '"errorSources" must be an array'); continue; }
+      for (const [k, s] of p.errorSources.entries()) {
+        const sat = `${at} errorSource[${k}]`;
+        if (!s || typeof s !== 'object') { push(sat, 'must be an object'); continue; }
+        if (!s.type) push(sat, 'missing required field "type"');
+        else if (!SOURCE_TYPES.includes(s.type)) {
+          push(sat, `type "${s.type}" is not valid; expected one of ${SOURCE_TYPES.join(', ')}`);
+        }
+        // Type-specific required fields
+        if (s.type === 'jsonl' && (!s.path || typeof s.path !== 'string')) {
+          push(sat, 'jsonl adapter requires a "path" string');
+        }
+        if (s.type === 'journalctl' && (!s.unit || typeof s.unit !== 'string')) {
+          push(sat, 'journalctl adapter requires a "unit" string');
+        }
+        if (s.type === 'vercel' && (!s.project || typeof s.project !== 'string')) {
+          push(sat, 'vercel adapter requires a "project" string');
+        }
+        if (s.type === 'supabase' && (!s.projectRef || typeof s.projectRef !== 'string')) {
+          push(sat, 'supabase adapter requires a "projectRef" string');
+        }
+        // Optional numeric field
+        if (s.limit !== undefined && (typeof s.limit !== 'number' || !Number.isFinite(s.limit) || s.limit <= 0)) {
+          push(sat, '"limit" must be a positive number');
+        }
       }
     }
   }
