@@ -486,7 +486,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-122
   - Complexity: S
 
-- [ ] **CV-125**: weekly-review.mjs: add pure `architectureCheck(metrics)` (underperforming: first-attempt success < 0.5 over >= 5 tasks; split-candidate: > 6 routed domains; idle: zero tasks 4 weeks) and print the section
+- [x] **CV-125**: weekly-review.mjs: add pure `architectureCheck(metrics)` (underperforming: first-attempt success < 0.5 over >= 5 tasks; split-candidate: > 6 routed domains; idle: zero tasks 4 weeks) and print the section
   - **Priority:** HIGH
   - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/weekly-review-steps.test.mjs`
   - Spec: CV-REQ-016

@@ -3,7 +3,7 @@
   "title": "weekly-review.mjs: add pure `architectureCheck(metrics)` (underperforming: first-attempt success < 0.5 over >= 5 tasks; split-candidate: > 6 routed domains; idle: zero tasks 4 weeks) and print the section",
   "description": "- [ ] **CV-125**: weekly-review.mjs: add pure `architectureCheck(metrics)` (underperforming: first-attempt success < 0.5 over >= 5 tasks; split-candidate: > 6 routed domains; idle: zero tasks 4 weeks) and print the section\n  - **Priority:** HIGH\n  - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/weekly-review-steps.test.mjs`\n  - Spec: CV-REQ-016\n  - Gaps: D7-07\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: 5 tasks / 2 first-attempt successes -> underperforming; thresholds boundary cases\n  - Parallel: blocked-by CV-124\n  - Complexity: M\n  - Notes: Read computeMaturationMetrics() output to learn the metric field names.",
   "priority": "HIGH",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-25"
   ],
   "_file": "OS-curriculum-v2-conformance-26.json",
-  "claimedAt": "2026-11-08T19:31:07.616Z"
+  "claimedAt": "2026-11-08T19:31:07.616Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-08T20:00:11.973Z"
 }
