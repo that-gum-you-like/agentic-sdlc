@@ -3,7 +3,7 @@
   "title": "weekly-review.mjs: add pure `groomingReport(tasks, now)` (missing estimatedTokens, missing acceptance_criteria, missing priority, unclaimed over 30 days) and upsert a `Grooming` section",
   "description": "- [ ] **CV-123**: weekly-review.mjs: add pure `groomingReport(tasks, now)` (missing estimatedTokens, missing acceptance_criteria, missing priority, unclaimed over 30 days) and upsert a `Grooming` section\n  - **Priority:** HIGH\n  - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/weekly-review-steps.test.mjs`\n  - Spec: CV-REQ-018\n  - Gaps: D4-09\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: a pending task without acceptance_criteria appears under `missing acceptance`; empty lists print `none`\n  - Parallel: blocked-by CV-122\n  - Complexity: S",
   "priority": "HIGH",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-23"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-24.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-08T19:21:16.266Z"
 }

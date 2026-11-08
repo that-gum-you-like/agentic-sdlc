@@ -3,6 +3,7 @@
 ## 2026-11-08
 
 - 2026-11-08 #103 feat(weekly-review): add capacityForecast and Capacity forecast dashboard section (CV-122) (backend)
+- 2026-11-08 #104 feat: add groomingReport() and Grooming section to weekly review (CV-123) (backend)
 
 ## 2026-11-04
 

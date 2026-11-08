@@ -464,7 +464,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-118, CV-103
   - Complexity: S
 
-- [ ] **CV-123**: weekly-review.mjs: add pure `groomingReport(tasks, now)` (missing estimatedTokens, missing acceptance_criteria, missing priority, unclaimed over 30 days) and upsert a `Grooming` section
+- [x] **CV-123**: weekly-review.mjs: add pure `groomingReport(tasks, now)` (missing estimatedTokens, missing acceptance_criteria, missing priority, unclaimed over 30 days) and upsert a `Grooming` section
   - **Priority:** HIGH
   - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/weekly-review-steps.test.mjs`
   - Spec: CV-REQ-018
