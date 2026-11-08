@@ -1445,7 +1445,7 @@ Capability: claude-review-lane. Queue and skill first; the headless timer (CV-RE
   - Parallel: blocked-by CV-506, CV-320
   - Complexity: M
 
-- [ ] **CV-510**: docs/RUNBOOK.md: add "Flagged PRs (Claude review lane)" section: where the queue lives, how the notice looks, how to run /sdlc-review-flagged, how to clear a stuck entry
+- [x] **CV-510**: docs/RUNBOOK.md: add "Flagged PRs (Claude review lane)" section: where the queue lives, how the notice looks, how to run /sdlc-review-flagged, how to clear a stuck entry
   - **Priority:** MEDIUM
   - Files: `docs/RUNBOOK.md`
   - Spec: CV-REQ-102

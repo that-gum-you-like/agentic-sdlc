@@ -3,7 +3,7 @@
   "title": "docs/RUNBOOK.md: add \"Flagged PRs (Claude review lane)\" section: where the queue lives, how the notice looks, how to run /sdlc-review-flagged, how to clear a stuck entry",
   "description": "- [ ] **CV-510**: docs/RUNBOOK.md: add \"Flagged PRs (Claude review lane)\" section: where the queue lives, how the notice looks, how to run /sdlc-review-flagged, how to clear a stuck entry\n  - **Priority:** MEDIUM\n  - Files: `docs/RUNBOOK.md`\n  - Spec: CV-REQ-102\n  - Gaps: -\n  - Agent: sdlc-documentarian\n  - Lane: hermes\n  - Test: RUNBOOK contains `sdlc-review-flagged` and `pm/claude-review-queue.json` (grep in tests/planning-templates.test.mjs)\n  - Parallel: blocked-by CV-507\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-documentarian",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-108"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-111.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-08T23:42:46.767Z"
 }
