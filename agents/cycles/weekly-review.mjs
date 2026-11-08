@@ -279,6 +279,60 @@ export function capacityForecast(tasks, budget) {
   return `${days} day${days === 1 ? '' : 's'}`;
 }
 
+/**
+ * Pure function: report tasks needing grooming attention.
+ *
+ * Returns four lists: tasks missing estimatedTokens, missing acceptance_criteria,
+ * missing priority, and unclaimed for more than 30 days.
+ * Each list is an array of task identifiers (id or title).
+ * Empty arrays mean no tasks have that issue.
+ *
+ * @param {{id?: string, title?: string, estimatedTokens?: number, acceptance_criteria?: unknown, priority?: string, claimedBy?: string|null, createdAt?: string}[]} tasks
+ * @param {Date} [now] - reference date for "unclaimed over 30 days" check (defaults to new Date())
+ * @returns {{ missingEstimatedTokens: string[], missingAcceptanceCriteria: string[], missingPriority: string[], unclaimedOver30Days: string[] }}
+ */
+export function groomingReport(tasks, now = new Date()) {
+  /** @type {string[]} */
+  const missingEstimatedTokens = [];
+  /** @type {string[]} */
+  const missingAcceptanceCriteria = [];
+  /** @type {string[]} */
+  const missingPriority = [];
+  /** @type {string[]} */
+  const unclaimedOver30Days = [];
+
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
+  for (const task of tasks) {
+    const label = task.id || task.title || '';
+
+    // Missing estimatedTokens: undefined, null, or non-number
+    if (task.estimatedTokens === undefined || task.estimatedTokens === null || typeof task.estimatedTokens !== 'number') {
+      missingEstimatedTokens.push(label);
+    }
+
+    // Missing acceptance_criteria: undefined, null, empty string, or empty array
+    if (!task.acceptance_criteria || (Array.isArray(task.acceptance_criteria) && task.acceptance_criteria.length === 0)) {
+      missingAcceptanceCriteria.push(label);
+    }
+
+    // Missing priority: undefined, null, or empty string
+    if (!task.priority) {
+      missingPriority.push(label);
+    }
+
+    // Unclaimed over 30 days
+    if (!task.claimedBy && task.createdAt) {
+      const age = now.getTime() - new Date(task.createdAt).getTime();
+      if (age > thirtyDaysMs) {
+        unclaimedOver30Days.push(label);
+      }
+    }
+  }
+
+  return { missingEstimatedTokens, missingAcceptanceCriteria, missingPriority, unclaimedOver30Days };
+}
+
 async function main() {
   console.log('═'.repeat(50));
   console.log('  Weekly Review — ' + new Date().toISOString().split('T')[0]);
@@ -356,6 +410,32 @@ async function main() {
     }
     const forecast = capacityForecast(pendingTasks, dailyBudget > 0 ? dailyBudget : null);
     upsertDashboardSection('Capacity forecast', `Backlog drains in ${forecast}.`, config.dashboardPath);
+  }
+
+  // Grooming report — upsert dashboard section (CV-REQ-018 / CV-123)
+  {
+    const allTasks = [];
+    if (existsSync(TASKS_DIR)) {
+      for (const file of readdirSync(TASKS_DIR).filter(f => f.endsWith('.json'))) {
+        try {
+          allTasks.push(JSON.parse(readFileSync(resolve(TASKS_DIR, file), 'utf8')));
+        } catch { /* skip malformed task files */ }
+      }
+    }
+    const report = groomingReport(allTasks);
+    const parts = [];
+    parts.push('Missing estimatedTokens:');
+    parts.push(report.missingEstimatedTokens.length > 0 ? report.missingEstimatedTokens.map(id => `- ${id}`).join('\n') : 'none');
+    parts.push('');
+    parts.push('Missing acceptance_criteria:');
+    parts.push(report.missingAcceptanceCriteria.length > 0 ? report.missingAcceptanceCriteria.map(id => `- ${id}`).join('\n') : 'none');
+    parts.push('');
+    parts.push('Missing priority:');
+    parts.push(report.missingPriority.length > 0 ? report.missingPriority.map(id => `- ${id}`).join('\n') : 'none');
+    parts.push('');
+    parts.push('Unclaimed over 30 days:');
+    parts.push(report.unclaimedOver30Days.length > 0 ? report.unclaimedOver30Days.map(id => `- ${id}`).join('\n') : 'none');
+    upsertDashboardSection('Grooming', parts.join('\n'), config.dashboardPath);
   }
 
   // Run weekly review steps after all existing sections
