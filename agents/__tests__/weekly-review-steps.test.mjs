@@ -10,7 +10,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildWeeklySteps, runWeeklySteps, capacityForecast, groomingReport } from '../cycles/weekly-review.mjs';
+import { buildWeeklySteps, runWeeklySteps, capacityForecast, groomingReport, architectureCheck } from '../cycles/weekly-review.mjs';
 
 describe('buildWeeklySteps', () => {
   it('returns exactly three steps in the correct order', () => {
@@ -291,5 +291,98 @@ describe('groomingReport (CV-REQ-018)', () => {
     assert.deepEqual(result.missingAcceptanceCriteria, ['neglected']);
     assert.deepEqual(result.missingPriority, ['neglected']);
     assert.deepEqual(result.unclaimedOver30Days, ['neglected']);
+  });
+});
+
+describe('architectureCheck (CV-REQ-016)', () => {
+  it('flags agent as underperforming when >= 5 tasks and firstAttemptSuccessRate < 0.5', () => {
+    const metrics = {
+      'agent-a': { firstAttemptSuccessRate: 0.4, tasksCompleted: 5, routedDomains: 3, tasksLast4Weeks: 3 },
+    };
+    const result = architectureCheck(metrics);
+    assert.deepEqual(result.underperforming, ['agent-a']);
+    assert.deepEqual(result.splitCandidates, []);
+    assert.deepEqual(result.idle, []);
+  });
+
+  it('does NOT flag agent when < 5 tasks even with low success rate', () => {
+    const metrics = {
+      'agent-a': { firstAttemptSuccessRate: 0.0, tasksCompleted: 4, routedDomains: 3, tasksLast4Weeks: 4 },
+    };
+    const result = architectureCheck(metrics);
+    assert.deepEqual(result.underperforming, []);
+  });
+
+  it('does NOT flag agent when firstAttemptSuccessRate >= 0.5 with >= 5 tasks', () => {
+    const metrics = {
+      'agent-a': { firstAttemptSuccessRate: 0.5, tasksCompleted: 5, routedDomains: 3, tasksLast4Weeks: 5 },
+      'agent-b': { firstAttemptSuccessRate: 0.8, tasksCompleted: 10, routedDomains: 3, tasksLast4Weeks: 10 },
+    };
+    const result = architectureCheck(metrics);
+    assert.deepEqual(result.underperforming, []);
+  });
+
+  it('flags agent as split-candidate when routedDomains > 6', () => {
+    const metrics = {
+      'agent-a': { firstAttemptSuccessRate: 0.8, tasksCompleted: 5, routedDomains: 7, tasksLast4Weeks: 5 },
+    };
+    const result = architectureCheck(metrics);
+    assert.deepEqual(result.splitCandidates, ['agent-a']);
+  });
+
+  it('does NOT flag agent as split-candidate when routedDomains <= 6', () => {
+    const metrics = {
+      'agent-a': { firstAttemptSuccessRate: 0.8, tasksCompleted: 5, routedDomains: 6, tasksLast4Weeks: 5 },
+      'agent-b': { firstAttemptSuccessRate: 0.8, tasksCompleted: 5, routedDomains: 3, tasksLast4Weeks: 5 },
+    };
+    const result = architectureCheck(metrics);
+    assert.deepEqual(result.splitCandidates, []);
+  });
+
+  it('flags agent as idle when tasksLast4Weeks is 0', () => {
+    const metrics = {
+      'agent-a': { firstAttemptSuccessRate: 0.8, tasksCompleted: 10, routedDomains: 3, tasksLast4Weeks: 0 },
+    };
+    const result = architectureCheck(metrics);
+    assert.deepEqual(result.idle, ['agent-a']);
+  });
+
+  it('does NOT flag agent as idle when tasksLast4Weeks > 0', () => {
+    const metrics = {
+      'agent-a': { firstAttemptSuccessRate: 0.8, tasksCompleted: 5, routedDomains: 3, tasksLast4Weeks: 1 },
+      'agent-b': { firstAttemptSuccessRate: 0.8, tasksCompleted: 5, routedDomains: 3, tasksLast4Weeks: 5 },
+    };
+    const result = architectureCheck(metrics);
+    assert.deepEqual(result.idle, []);
+  });
+
+  it('correctly classifies multiple agents in different states', () => {
+    const metrics = {
+      'agent-a': { firstAttemptSuccessRate: 0.3, tasksCompleted: 5, routedDomains: 2, tasksLast4Weeks: 1 },  // underperforming
+      'agent-b': { firstAttemptSuccessRate: 0.9, tasksCompleted: 10, routedDomains: 8, tasksLast4Weeks: 10 }, // split-candidate
+      'agent-c': { firstAttemptSuccessRate: 0.0, tasksCompleted: 0, routedDomains: 3, tasksLast4Weeks: 0 },   // idle
+      'agent-d': { firstAttemptSuccessRate: 0.3, tasksCompleted: 5, routedDomains: 8, tasksLast4Weeks: 0 },   // underperforming + split-candidate + idle
+      'agent-e': { firstAttemptSuccessRate: 0.9, tasksCompleted: 10, routedDomains: 3, tasksLast4Weeks: 3 },  // healthy
+    };
+    const result = architectureCheck(metrics);
+    assert.deepEqual(result.underperforming, ['agent-a', 'agent-d']);
+    assert.deepEqual(result.splitCandidates, ['agent-b', 'agent-d']);
+    assert.deepEqual(result.idle, ['agent-c', 'agent-d']);
+  });
+
+  it('returns empty arrays for empty metrics input', () => {
+    const result = architectureCheck({});
+    assert.deepEqual(result.underperforming, []);
+    assert.deepEqual(result.splitCandidates, []);
+    assert.deepEqual(result.idle, []);
+  });
+
+  it('is a pure function (no side effects)', () => {
+    const metrics = {
+      'agent-a': { firstAttemptSuccessRate: 0.3, tasksCompleted: 5, routedDomains: 7, tasksLast4Weeks: 0 },
+    };
+    const metricsCopy = JSON.parse(JSON.stringify(metrics));
+    architectureCheck(metrics);
+    assert.deepEqual(metrics, metricsCopy, 'metrics object should not be mutated');
   });
 });

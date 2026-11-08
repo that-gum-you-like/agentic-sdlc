@@ -398,6 +398,47 @@ export function prRejectTarget(level) {
   return null;
 }
 
+/**
+ * Pure function: check agent architecture health metrics.
+ *
+ * Evaluates three conditions per agent:
+ *   - underperforming: firstAttemptSuccessRate < 0.5 over >= 5 completed tasks
+ *   - split-candidate: more than 6 routed domains (too many concerns)
+ *   - idle: zero tasks completed in the last 4 consecutive weeks
+ *
+ * @param {Record<string, {firstAttemptSuccessRate: number, tasksCompleted: number, routedDomains: number, tasksLast4Weeks: number}>} metrics
+ * @returns {{ underperforming: string[], splitCandidates: string[], idle: string[] }}
+ *   Each array contains agent names matching the condition.
+ *   Empty arrays mean no agents match that condition.
+ */
+export function architectureCheck(metrics) {
+  /** @type {string[]} */
+  const underperforming = [];
+  /** @type {string[]} */
+  const splitCandidates = [];
+  /** @type {string[]} */
+  const idle = [];
+
+  for (const [agent, m] of Object.entries(metrics)) {
+    // underperforming: firstAttemptSuccessRate < 0.5 over >= 5 completed tasks
+    if (m.tasksCompleted >= 5 && m.firstAttemptSuccessRate < 0.5) {
+      underperforming.push(agent);
+    }
+
+    // split-candidate: more than 6 routed domains
+    if (m.routedDomains > 6) {
+      splitCandidates.push(agent);
+    }
+
+    // idle: zero tasks in the last 4 consecutive weeks
+    if (m.tasksLast4Weeks === 0) {
+      idle.push(agent);
+    }
+  }
+
+  return { underperforming, splitCandidates, idle };
+}
+
 async function main() {
   console.log('═'.repeat(50));
   console.log('  Weekly Review — ' + new Date().toISOString().split('T')[0]);
@@ -532,6 +573,97 @@ async function main() {
       console.log('─'.repeat(40));
       console.log(`  Rate:   ${rateStr} (${rateResult.rejected} rejected / ${rateResult.merged + rateResult.rejected} total)`);
       console.log(`  Target: ${targetStr} (level ${frameworkLevel})`);
+    }
+  }
+
+  // Architecture check — agent health metrics (CV-REQ-016 / CV-125)
+  {
+    const domainsPath = resolve(AGENTS_DIR, 'domains.json');
+    const perfLogPath = resolve(ROOT, 'pm', 'model-performance.jsonl');
+
+    // Load domains for routed domain counts
+    /** @type {Record<string, string[]>} */
+    let domainData = {};
+    if (existsSync(domainsPath)) {
+      try {
+        domainData = JSON.parse(readFileSync(domainsPath, 'utf8'));
+      } catch { /* skip malformed domains */ }
+    }
+
+    // Load performance ledger for first-attempt success rate and tasks in last 4 weeks
+    /** @type {{agent?: string, firstAttempt?: boolean, ts?: string}[]} */
+    let perfEntries = [];
+    if (existsSync(perfLogPath)) {
+      try {
+        perfEntries = readFileSync(perfLogPath, 'utf8')
+          .split('\n')
+          .filter(Boolean)
+          .map(line => { try { return JSON.parse(line); } catch { return null; } })
+          .filter(Boolean);
+      } catch { /* skip malformed ledger */ }
+    }
+
+    const fourWeeksAgo = Date.now() - 28 * 24 * 60 * 60 * 1000;
+
+    /** @type {Record<string, {firstAttemptSuccessRate: number, tasksCompleted: number, routedDomains: number, tasksLast4Weeks: number}>} */
+    const metrics = {};
+
+    for (const agent of AGENTS) {
+      const agentEntries = perfEntries.filter(e => e.agent === agent);
+      const tasksCompleted = agentEntries.length;
+      const last4Weeks = agentEntries.filter(e => {
+        const ts = new Date(e.ts).getTime();
+        return !isNaN(ts) && ts >= fourWeeksAgo;
+      });
+      const firstAttemptCount = last4Weeks.filter(e => e.firstAttempt === true).length;
+      const firstAttemptSuccessRate = last4Weeks.length > 0
+        ? firstAttemptCount / last4Weeks.length
+        : 0;
+
+      const patterns = domainData[agent]?.patterns || [];
+      const routedDomains = patterns.length;
+
+      metrics[agent] = {
+        firstAttemptSuccessRate,
+        tasksCompleted,
+        routedDomains,
+        tasksLast4Weeks: last4Weeks.length,
+      };
+    }
+
+    const archResult = architectureCheck(metrics);
+    const hasAnyIssues = archResult.underperforming.length > 0 ||
+                         archResult.splitCandidates.length > 0 ||
+                         archResult.idle.length > 0;
+
+    if (hasAnyIssues) {
+      console.log('\n🏗️  Architecture Check');
+      console.log('─'.repeat(40));
+      if (archResult.underperforming.length > 0) {
+        console.log('  ⚠️  Underperforming (< 50% first-attempt over >=5 tasks):');
+        for (const agent of archResult.underperforming) {
+          const m = metrics[agent];
+          const rate = m ? `${Math.round(m.firstAttemptSuccessRate * 100)}%` : '?';
+          console.log(`     - ${agent} (${rate} over ${m?.tasksCompleted} tasks)`);
+        }
+      }
+      if (archResult.splitCandidates.length > 0) {
+        console.log('  🔀 Split candidates (>6 routed domains):');
+        for (const agent of archResult.splitCandidates) {
+          const m = metrics[agent];
+          console.log(`     - ${agent} (${m?.routedDomains} domains)`);
+        }
+      }
+      if (archResult.idle.length > 0) {
+        console.log('  💤 Idle agents (no tasks in 4 weeks):');
+        for (const agent of archResult.idle) {
+          console.log(`     - ${agent}`);
+        }
+      }
+    } else {
+      console.log('\n🏗️  Architecture Check');
+      console.log('─'.repeat(40));
+      console.log('  ✅ All agents healthy — no issues found.');
     }
   }
 
