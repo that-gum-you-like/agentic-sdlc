@@ -2,7 +2,7 @@
   "name": "agentic-sdlc",
   "projectDir": "/home/bryce/agentic-sdlc",
   "appDir": ".",
-  "testCmd": "node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs'",
+  "testCmd": "node --test --test-concurrency=2 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs'",
   "agents": [
     "sdlc-developer",
     "jony-aive",
