@@ -132,7 +132,7 @@ When a deployable project's base branch advances, the bot asks:
 - **Hard dollar stop: the OpenRouter per-key credit limit — $50/month** (decided
   2026-11-03). Token budgets above are soft; the key limit is what actually stops a
   runaway loop. Set it at openrouter.ai → Keys → the key in `~/.hermes-drain/.env`.
-  Check: `curl -s https://openrouter.ai/api/v1/key -H "Authorization: Bearer $KEY"`
+  Check: `curl -s https://openrouter.ai/api/v1/key -H "Authorization: Bearer ***"`
   (`limit` must not be null).
 - **Cross-provider fallback needs `GROQ_API_KEY`** in `~/.hermes/.env` and
   `~/.hermes-drain/.env`. Every ladder ends in a Groq rung; without the key an
@@ -318,3 +318,80 @@ node ~/agentic-sdlc/agents/env-guard.mjs check <project> <environment> <write|de
 | `<project>/pm/` | markers, locks, approvals, drain logs |
 | `~/hermes-outbox/` | artifacts delivered to you (receipts, failed-run logs) — safe to empty |
 | `~/.sdlc-{drain,deploy}-clone-*` | disposable isolated clones |
+
+## 12. Flagged PRs (Claude review lane)
+
+PRs that touch the guardrail surface (`FLAG_PATHS` in `agents/pr-auto-review.mjs`) are
+automatically flagged for a human-quality (Claude) review — the cheap drain tier must
+never auto-merge them. The system queues them and sends a one-time Telegram notice.
+
+See also §6 (Budget & caps) for the one-line summary of the lane's purpose.
+
+### Where the queue lives
+
+The runtime queue file at `pm/claude-review-queue.json` (gitignored) holds entries with
+`{pr, branch, headSha, reasons[], flaggedAt, notifiedAt, status}` where `status` is one
+of `open`, `resolved`, or `superseded`. Each entry is keyed by PR number + head SHA;
+a force-push marks the old entry `superseded` and creates a new `open` one.
+
+Validate an entry against the schema at `agents/schemas/claude-review-queue.schema.json`.
+List all open entries:
+
+```bash
+node agents/pr-auto-review.mjs list-flagged
+```
+
+### How the notice looks
+
+When a flagged PR is first detected, the system sends a single Telegram message:
+
+```
+🔎 PR #70 "Touch drain" needs a Claude review — flagged: agents/hermes-drain.sh.
+  Run /sdlc-review-flagged
+```
+
+Subsequent passes with the same SHA send nothing. A new head SHA triggers a new notice.
+
+### How to run /sdlc-review-flagged
+
+In an interactive Claude Code session, invoke the skill:
+
+```
+/sdlc-review-flagged
+```
+
+The skill at `skills/sdlc-review-flagged/SKILL.md` walks you through:
+
+1. **list-flagged** — view open queue entries
+2. **scratch worktree** — check out the PR in an isolated `mktemp -d` worktree
+3. **merge origin/main** — bring the PR current
+4. **npm test** — run the full suite (never merge with failing tests)
+5. **read every changed line** of the flagged files — no skimming
+6. **decide** — merge / changes-requested / close
+7. **gh pr comment** — leave a review with rationale
+8. **resolve-flagged** — mark the entry resolved in the queue
+9. **clean up** — remove the scratch worktree
+
+**Hard rules:** No LLM API calls (your eyes are the quality gate). Never merge with
+failing tests. Never skip a flagged file's diff. Remove the worktree when done.
+
+### How to clear a stuck entry
+
+If the interactive session cannot run (no Claude Code available, or the reviewer is
+blocked) and you need to clear a stuck `open` entry:
+
+```bash
+node agents/pr-auto-review.mjs resolve-flagged <PR> merged
+node agents/pr-auto-review.mjs resolve-flagged <PR> closed
+node agents/pr-auto-review.mjs resolve-flagged <PR> changes-requested
+```
+
+- `merged` — the PR was already merged outside the lane; marks the entry resolved.
+- `closed` — the PR was closed without merging; marks the entry resolved.
+- `changes-requested` — creates a `FIX-<PR>` task in the queue for re-drain.
+
+To verify nothing is stuck:
+
+```bash
+node agents/pr-auto-review.mjs list-flagged   # should be empty
+```
