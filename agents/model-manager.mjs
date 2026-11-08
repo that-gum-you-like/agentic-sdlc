@@ -42,7 +42,7 @@ function saveBudget(budget) {
 }
 
 function appendLedger(entry) {
-  appendFileSync(LEDGER_PATH, JSON.stringify({ ts: new Date().toISOString(), ...entry }) + '\n');
+  appendFileSync(LEDGER_PATH, JSON.stringify({ timestamp: new Date().toISOString(), ...entry }) + '\n');
 }
 
 function readLedger() {

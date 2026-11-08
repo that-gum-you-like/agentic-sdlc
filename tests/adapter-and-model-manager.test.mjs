@@ -158,7 +158,7 @@ test('model-manager.mjs exists and is importable', () => {
 
 test('performance ledger JSONL format is parseable', () => {
   const entry = JSON.stringify({
-    ts: new Date().toISOString(),
+    timestamp: new Date().toISOString(),
     event: 'task-complete',
     agent: 'roy',
     model: 'claude-sonnet-4-6',
@@ -174,7 +174,7 @@ test('performance ledger JSONL format is parseable', () => {
   const parsed = JSON.parse(entry);
   assertEqual(parsed.agent, 'roy');
   assertEqual(parsed.success, true);
-  assert(parsed.ts, 'Should have timestamp');
+  assert(parsed.timestamp, 'Should have timestamp');
 });
 
 // ============================================================================
