@@ -578,20 +578,11 @@ async function main() {
 
   // Architecture check — agent health metrics (CV-REQ-016 / CV-125)
   {
-    const domainsPath = resolve(AGENTS_DIR, 'domains.json');
     const perfLogPath = resolve(ROOT, 'pm', 'model-performance.jsonl');
 
-    // Load domains for routed domain counts
-    /** @type {Record<string, string[]>} */
-    let domainData = {};
-    if (existsSync(domainsPath)) {
-      try {
-        domainData = JSON.parse(readFileSync(domainsPath, 'utf8'));
-      } catch { /* skip malformed domains */ }
-    }
-
-    // Load performance ledger for first-attempt success rate and tasks in last 4 weeks
-    /** @type {{agent?: string, firstAttempt?: boolean, ts?: string}[]} */
+    // Load performance ledger for first-attempt success rate, tasks in last 4 weeks,
+    // and actual routed domain (task type) counts
+    /** @type {{agent?: string, firstAttempt?: boolean, timestamp?: string, taskType?: string}[]} */
     let perfEntries = [];
     if (existsSync(perfLogPath)) {
       try {
@@ -612,16 +603,24 @@ async function main() {
       const agentEntries = perfEntries.filter(e => e.agent === agent);
       const tasksCompleted = agentEntries.length;
       const last4Weeks = agentEntries.filter(e => {
-        const ts = new Date(e.ts).getTime();
-        return !isNaN(ts) && ts >= fourWeeksAgo;
+        if (!e.timestamp) {
+          console.warn(`  ⚠️  Skipping performance entry for ${agent} without timestamp`);
+          return false;
+        }
+        const ts = new Date(e.timestamp).getTime();
+        if (isNaN(ts)) {
+          console.warn(`  ⚠️  Skipping performance entry for ${agent} with invalid timestamp: "${e.timestamp}"`);
+          return false;
+        }
+        return ts >= fourWeeksAgo;
       });
       const firstAttemptCount = agentEntries.filter(e => e.firstAttempt === true).length;
       const firstAttemptSuccessRate = tasksCompleted > 0
         ? firstAttemptCount / tasksCompleted
         : 0;
 
-      const patterns = domainData[agent]?.patterns || [];
-      const routedDomains = patterns.length;
+      // Count actual routed domains (distinct task types from performance ledger)
+      const routedDomains = new Set(agentEntries.map(e => e.taskType).filter(Boolean)).size;
 
       metrics[agent] = {
         firstAttemptSuccessRate,

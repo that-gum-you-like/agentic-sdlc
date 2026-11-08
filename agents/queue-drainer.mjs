@@ -753,7 +753,7 @@ switch (cmd) {
       const ledgerPath = config.performanceLedgerPath;
       const agentBudget = config.agentConfigs?.[task.claimedBy] || {};
       const ledgerEntry = {
-        ts: task.completed_at,
+        timestamp: task.completed_at,
         event: 'task-complete',
         agent: task.claimedBy || 'unknown',
         model: agentBudget.activeModel || agentBudget.model || 'unknown',
