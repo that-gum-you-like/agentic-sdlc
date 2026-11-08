@@ -295,7 +295,7 @@ test('drain prompt recalls memory before work and records after, even on failure
 
 test('framework project.json testCmd runs the full suite, and the script still reads testCmd per project', () => {
   const cfg = JSON.parse(readFileSync(resolve(root, 'agents/project.json'), 'utf8'));
-  assert(cfg.testCmd === "node --test --test-concurrency=2 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs'", `testCmd must be the full suite, got: ${cfg.testCmd}`);
+  assert(cfg.testCmd === "node --test --test-concurrency=1 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs'", `testCmd must be the full suite, got: ${cfg.testCmd}`);
   const s = readFileSync(script, 'utf8');
   assert(/c\.testCmd\|\|"npm test"/.test(s), 'per-project testCmd override (default npm test) must remain');
 });
