@@ -1,0 +1,24 @@
+{
+  "id": "FIX-106",
+  "phase": 1,
+  "title": "Fix rejected drain PR #106 (agent/drain/OS-curriculum-v2-conformance-26)",
+  "assignee": "sdlc-developer",
+  "priority": "CRITICAL",
+  "estimatedTokens": 16000,
+  "files": [],
+  "blockedBy": [],
+  "created": "2026-11-08T19:38:36.811Z",
+  "tags": [
+    "auto-fix"
+  ],
+  "description": "Drain PR #106 (branch `agent/drain/OS-curriculum-v2-conformance-26`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-26 && git checkout agent/drain/OS-curriculum-v2-conformance-26`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-26` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- architectureCheck function incorrectly calculates firstAttemptSuccessRate using last 4 weeks data instead of all tasks\n- tasksCompleted count includes all historical tasks but success rate only uses recent 4 weeks\n- function signature and implementation mismatch task requirements",
+  "attempts": 1,
+  "status": "pending",
+  "fixFor": {
+    "pr": 106,
+    "branch": "agent/drain/OS-curriculum-v2-conformance-26",
+    "headSha": "049d701953ec47a80a63c3941938c31cbb1e0bd7",
+    "sourceTask": "OS-curriculum-v2-conformance-26",
+    "rejectionKind": "llm-rejected"
+  }
+}
