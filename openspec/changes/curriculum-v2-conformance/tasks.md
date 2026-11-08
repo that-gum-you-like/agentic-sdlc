@@ -498,7 +498,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Complexity: M
   - Notes: Read computeMaturationMetrics() output to learn the metric field names.
 
-- [ ] **CV-126**: weekly-review.mjs: add pure `agentMdChangedSinceSnapshot(agentsDir, versionsDir)` and run `version-snapshot.mjs snapshot` when true
+- [x] **CV-126**: weekly-review.mjs: add pure `agentMdChangedSinceSnapshot(agentsDir, versionsDir)` and run `version-snapshot.mjs snapshot` when true
   - **Priority:** HIGH
   - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/weekly-review-steps.test.mjs`
   - Spec: CV-REQ-016
