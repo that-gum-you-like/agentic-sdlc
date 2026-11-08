@@ -3,7 +3,7 @@
   "title": "weekly-review.mjs: add pure `computePrRejectRate(logLines, now)` over pm/pr-auto-review.log JSON lines (28 days; rejected = gate-failed + llm-rejected; denominator adds merged; each pr+sha once) and `prRejectTarget(level)` (0-1: 30%, 2-3: 10%, 4: 1%, 5-6: 0.1%); print both",
   "description": "- [ ] **CV-124**: weekly-review.mjs: add pure `computePrRejectRate(logLines, now)` over pm/pr-auto-review.log JSON lines (28 days; rejected = gate-failed + llm-rejected; denominator adds merged; each pr+sha once) and `prRejectTarget(level)` (0-1: 30%, 2-3: 10%, 4: 1%, 5-6: 0.1%); print both\n  - **Priority:** HIGH\n  - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/maturation-tracking.test.mjs`\n  - Spec: CV-REQ-019\n  - Gaps: D5-08\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: 1 merged + 1 llm-rejected -> 50%; only skip/flagged lines -> n/a\n  - Parallel: blocked-by CV-122\n  - Complexity: S",
   "priority": "HIGH",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-23"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-25.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-08T19:30:43.673Z"
 }

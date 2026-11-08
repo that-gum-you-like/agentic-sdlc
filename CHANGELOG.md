@@ -4,6 +4,7 @@
 
 - 2026-11-08 #103 feat(weekly-review): add capacityForecast and Capacity forecast dashboard section (CV-122) (backend)
 - 2026-11-08 #104 feat: add groomingReport() and Grooming section to weekly review (CV-123) (backend)
+- 2026-11-08 #105 feat(weekly-review): add computePrRejectRate and prRejectTarget (CV-124) (backend)
 
 ## 2026-11-04
 

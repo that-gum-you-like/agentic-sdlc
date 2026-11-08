@@ -475,7 +475,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-122
   - Complexity: S
 
-- [ ] **CV-124**: weekly-review.mjs: add pure `computePrRejectRate(logLines, now)` over pm/pr-auto-review.log JSON lines (28 days; rejected = gate-failed + llm-rejected; denominator adds merged; each pr+sha once) and `prRejectTarget(level)` (0-1: 30%, 2-3: 10%, 4: 1%, 5-6: 0.1%); print both
+- [x] **CV-124**: weekly-review.mjs: add pure `computePrRejectRate(logLines, now)` over pm/pr-auto-review.log JSON lines (28 days; rejected = gate-failed + llm-rejected; denominator adds merged; each pr+sha once) and `prRejectTarget(level)` (0-1: 30%, 2-3: 10%, 4: 1%, 5-6: 0.1%); print both
   - **Priority:** HIGH
   - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/maturation-tracking.test.mjs`
   - Spec: CV-REQ-019
