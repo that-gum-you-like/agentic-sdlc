@@ -3,7 +3,7 @@
   "title": "Add a `report-error` subcommand to `seed-queue.mjs` that dedups error events into one `prod-error-<hash>` task",
   "description": "- [ ] **CV-703**: Add a `report-error` subcommand to `seed-queue.mjs` that dedups error events into one `prod-error-<hash>` task\n  - **Priority:** MEDIUM\n  - Files: `agents/seed-queue.mjs`, `tests/report-error.test.mjs` (new)\n  - Spec: CV-REQ-111\n  - Gaps: D1-04\n  - Lane: hermes\n  - Test: 50 identical JSONL events on stdin give one task with `occurrences: 50`; crossing 10 sets HIGH and 100 sets CRITICAL; the text passes through `screenExternalInput` from `agents/red-team-tester.mjs`\n  - Complexity: M",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -11,5 +11,8 @@
   "claimedBy": "hermes-drain",
   "testStatus": null,
   "_file": "OS-curriculum-v2-conformance-127.json",
-  "claimedAt": "2026-11-08T23:48:15.301Z"
+  "claimedAt": "2026-11-08T23:48:15.301Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-08T23:55:16.781Z"
 }

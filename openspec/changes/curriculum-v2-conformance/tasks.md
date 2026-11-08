@@ -1630,7 +1630,7 @@ Spec: `specs/decisions-2026-11-03.md`. Hermes builds the code against mocks; the
   - Parallel: blocked-by CV-701
   - Complexity: S
 
-- [ ] **CV-703**: Add a `report-error` subcommand to `seed-queue.mjs` that dedups error events into one `prod-error-<hash>` task
+- [x] **CV-703**: Add a `report-error` subcommand to `seed-queue.mjs` that dedups error events into one `prod-error-<hash>` task
   - **Priority:** MEDIUM
   - Files: `agents/seed-queue.mjs`, `tests/report-error.test.mjs` (new)
   - Spec: CV-REQ-111

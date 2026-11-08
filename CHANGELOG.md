@@ -12,6 +12,7 @@
 - 2026-11-08 #110 test(skill): add sdlc-review-flagged-skill.test.mjs (CV-508) (docs-tests)
 - 2026-11-08 #111 docs(runbook): add Flagged PRs (Claude review lane) section to RUNBOOK.md (docs-tests)
 - 2026-11-08 #112 docs(protocol): route escalation through reportsTo chain before the board (backend)
+- 2026-11-08 #113 feat(queue): add report-error subcommand to seed-queue.mjs (CV-703) (backend)
 
 ## 2026-11-04
 
