@@ -287,7 +287,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Complexity: S
   - Notes: Interactive: baselines depend on the live agents' memory on this host, which the drain clone does not have.
 
-- [ ] **CV-107**: Append `&& node agents/test-behavior.mjs --drift` to the package.json `test` script
+- [x] **CV-107**: Append `&& node agents/test-behavior.mjs --drift` to the package.json `test` script
   - **Priority:** HIGH
   - Files: `package.json, agents/__tests__/behavior-baselines.test.mjs`
   - Spec: CV-REQ-011

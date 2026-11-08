@@ -7,6 +7,7 @@
 - 2026-11-08 #105 feat(weekly-review): add computePrRejectRate and prRejectTarget (CV-124) (backend)
 - 2026-11-08 #106 feat(weekly-review): add architectureCheck(metrics) pure function and print section (CV-125) (backend)
 - 2026-11-08 #107 feat(weekly-review): add agentMdChangedSinceSnapshot pure function and auto-snapshot (CV-126) (backend)
+- 2026-11-08 #108 feat(test): append drift check to npm test script (CV-107) (infra)
 
 ## 2026-11-04
 
