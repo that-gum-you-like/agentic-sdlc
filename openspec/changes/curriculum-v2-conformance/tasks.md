@@ -1423,7 +1423,7 @@ Capability: claude-review-lane. Queue and skill first; the headless timer (CV-RE
   - Complexity: M
   - Notes: Model on skills/sdlc-inbox/SKILL.md.
 
-- [ ] **CV-508**: Create tests/sdlc-review-flagged-skill.test.mjs modelled on tests/sdlc-inbox-skill.test.mjs
+- [x] **CV-508**: Create tests/sdlc-review-flagged-skill.test.mjs modelled on tests/sdlc-inbox-skill.test.mjs
   - **Priority:** MEDIUM
   - Files: `tests/sdlc-review-flagged-skill.test.mjs`
   - Spec: CV-REQ-102
