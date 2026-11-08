@@ -11,6 +11,7 @@
 - 2026-11-08 #109 feat(skill): create sdlc-review-flagged skill for Claude review lane (CV-507) (docs-tests)
 - 2026-11-08 #110 test(skill): add sdlc-review-flagged-skill.test.mjs (CV-508) (docs-tests)
 - 2026-11-08 #111 docs(runbook): add Flagged PRs (Claude review lane) section to RUNBOOK.md (docs-tests)
+- 2026-11-08 #112 docs(protocol): route escalation through reportsTo chain before the board (backend)
 
 ## 2026-11-04
 

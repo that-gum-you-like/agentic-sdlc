@@ -1620,7 +1620,7 @@ Spec: `specs/decisions-2026-11-03.md`. Hermes builds the code against mocks; the
   - Test: fixture of 3 agents prints a tree rooted at `board`; a 2-agent `reportsTo` cycle exits 1; missing `reportsTo` defaults to `board`
   - Complexity: M
 
-- [ ] **CV-702**: Route escalation through the `reportsTo` chain before the board
+- [x] **CV-702**: Route escalation through the `reportsTo` chain before the board
   - **Priority:** MEDIUM
   - Files: `agents/SHARED_PROTOCOL.md`, `agents/templates/SHARED_PROTOCOL.md.template`, `framework/agent-lifecycle.md`
   - Spec: CV-REQ-110
