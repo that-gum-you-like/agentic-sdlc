@@ -18,6 +18,7 @@ import { execFileSync } from 'child_process';
 import { tmpdir } from 'os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(__dirname, '..', '..');
 const AGENTS_DIR = resolve(__dirname, '..');
 const SCRIPT = join(AGENTS_DIR, 'test-behavior.mjs');
 const TMP_PROJECT = join(tmpdir(), `sdlc-baseline-test-${process.pid}`);
@@ -122,5 +123,12 @@ Honestly it is trivially obvious and quick.
   it('the normal project run includes the drift check when a baseline exists', () => {
     const out = runScript(['--project', '--dry-run']);
     assert.match(out, /Behavior Baselines & Drift/);
+  });
+
+  it('package.json test script includes drift check (CV-REQ-011)', () => {
+    const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+    const testScript = pkg.scripts.test;
+    assert.ok(testScript.includes('test-behavior.mjs --drift'),
+      `test script "${testScript}" must contain "test-behavior.mjs --drift"`);
   });
 });

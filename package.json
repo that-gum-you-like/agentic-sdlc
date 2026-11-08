@@ -8,7 +8,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs' && node agents/four-layer-validate.mjs && node agents/test-behavior.mjs --framework",
+    "test": "node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs' && node agents/four-layer-validate.mjs && node agents/test-behavior.mjs --framework && node agents/test-behavior.mjs --drift",
     "test:replay": "node tests/replay.test.mjs",
     "test:behavior": "node agents/test-behavior.mjs --framework",
     "test:all": "npm test && npm run test:replay",
