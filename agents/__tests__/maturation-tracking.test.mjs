@@ -19,7 +19,7 @@ import { resolve, join } from 'path';
 import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { REVIEWER_AGENT, resolveReviewsDir } from '../cycles/weekly-review.mjs';
+import { REVIEWER_AGENT, resolveReviewsDir, computePrRejectRate, prRejectTarget } from '../cycles/weekly-review.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -727,5 +727,153 @@ describe('Dashboard maturation section formatting', () => {
     // Two pipe-delimited data rows
     const rows = result.split('\n').filter(l => l.startsWith('| ') && !l.includes('Agent') && !l.includes('---'));
     assert.equal(rows.length, 2, 'Should have exactly 2 data rows');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. PR reject rate computation (CV-REQ-019 / CV-124)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('computePrRejectRate', () => {
+  const NOW = new Date('2026-11-08T12:00:00Z');
+  const RECENT_TS = '2026-10-20T12:00:00Z'; // within 28 days
+  const OLD_TS = '2026-09-01T12:00:00Z';     // outside 28 days
+
+  function makeLine(overrides = {}) {
+    return JSON.stringify({
+      ts: RECENT_TS,
+      pr: 1,
+      sha: 'abc123',
+      action: 'merged',
+      ...overrides,
+    });
+  }
+
+  it('1 merged + 1 llm-rejected -> 50% rate', () => {
+    const lines = [
+      makeLine({ pr: 1, sha: 'aaa', action: 'merged' }),
+      makeLine({ pr: 2, sha: 'bbb', action: 'llm-rejected' }),
+    ];
+    const result = computePrRejectRate(lines, NOW);
+    assert.equal(result.rate, 0.5);
+    assert.equal(result.rejected, 1);
+    assert.equal(result.merged, 1);
+  });
+
+  it('only skip/flagged lines -> rate is null (n/a)', () => {
+    const lines = [
+      makeLine({ pr: 1, sha: 'aaa', action: 'skip' }),
+      makeLine({ pr: 2, sha: 'bbb', action: 'flagged' }),
+      makeLine({ pr: 3, sha: 'ccc', action: 'deferred-overlap' }),
+    ];
+    const result = computePrRejectRate(lines, NOW);
+    assert.equal(result.rate, null);
+    assert.equal(result.rejected, 0);
+    assert.equal(result.merged, 0);
+  });
+
+  it('deduplicates by pr+sha keeping latest action', () => {
+    const lines = [
+      makeLine({ pr: 1, sha: 'aaa', action: 'gate-failed' }),
+      makeLine({ pr: 1, sha: 'aaa', action: 'merged' }),
+    ];
+    const result = computePrRejectRate(lines, NOW);
+    // Latest entry for pr=1,sha=aaa is 'merged', so 0 rejected, 1 merged
+    assert.equal(result.rate, 0);
+    assert.equal(result.rejected, 0);
+    assert.equal(result.merged, 1);
+  });
+
+  it('filters entries outside 28-day window', () => {
+    const lines = [
+      makeLine({ pr: 1, sha: 'aaa', action: 'merged', ts: RECENT_TS }),
+      makeLine({ pr: 2, sha: 'bbb', action: 'llm-rejected', ts: OLD_TS }),
+    ];
+    const result = computePrRejectRate(lines, NOW);
+    // Only the recent entry counts
+    assert.equal(result.rate, 0);
+    assert.equal(result.rejected, 0);
+    assert.equal(result.merged, 1);
+  });
+
+  it('skips malformed JSON lines', () => {
+    const lines = [
+      '{ invalid json',
+      makeLine({ pr: 1, sha: 'aaa', action: 'merged' }),
+      'not json at all',
+    ];
+    const result = computePrRejectRate(lines, NOW);
+    assert.equal(result.rate, 0);
+    assert.equal(result.merged, 1);
+  });
+
+  it('returns null rate for empty log', () => {
+    const result = computePrRejectRate([], NOW);
+    assert.equal(result.rate, null);
+    assert.equal(result.rejected, 0);
+    assert.equal(result.merged, 0);
+  });
+
+  it('counts gate-failed as rejected', () => {
+    const lines = [
+      makeLine({ pr: 1, sha: 'aaa', action: 'gate-failed' }),
+      makeLine({ pr: 2, sha: 'bbb', action: 'merged' }),
+    ];
+    const result = computePrRejectRate(lines, NOW);
+    assert.equal(result.rate, 0.5);
+    assert.equal(result.rejected, 1);
+    assert.equal(result.merged, 1);
+  });
+
+  it('multiple PRs with different shas are counted separately', () => {
+    const lines = [
+      makeLine({ pr: 1, sha: 'aaa', action: 'gate-failed' }),
+      makeLine({ pr: 1, sha: 'bbb', action: 'merged' }), // same PR, different sha
+      makeLine({ pr: 2, sha: 'ccc', action: 'llm-rejected' }),
+    ];
+    const result = computePrRejectRate(lines, NOW);
+    assert.equal(result.rate, 2 / 3); // 2 rejected, 1 merged = 2/3
+    assert.equal(result.rejected, 2);
+    assert.equal(result.merged, 1);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. PR reject rate target (CV-REQ-019 / CV-124)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('prRejectTarget', () => {
+  it('level 0 returns 0.30 (30%)', () => {
+    assert.equal(prRejectTarget(0), 0.30);
+  });
+
+  it('level 1 returns 0.30 (30%)', () => {
+    assert.equal(prRejectTarget(1), 0.30);
+  });
+
+  it('level 2 returns 0.10 (10%)', () => {
+    assert.equal(prRejectTarget(2), 0.10);
+  });
+
+  it('level 3 returns 0.10 (10%)', () => {
+    assert.equal(prRejectTarget(3), 0.10);
+  });
+
+  it('level 4 returns 0.01 (1%)', () => {
+    assert.equal(prRejectTarget(4), 0.01);
+  });
+
+  it('level 5 returns 0.001 (0.1%)', () => {
+    assert.equal(prRejectTarget(5), 0.001);
+  });
+
+  it('level 6 returns 0.001 (0.1%)', () => {
+    assert.equal(prRejectTarget(6), 0.001);
+  });
+
+  it('returns null for unknown levels', () => {
+    assert.equal(prRejectTarget(-1), null);
+    assert.equal(prRejectTarget(7), null);
+    assert.equal(prRejectTarget(100), null);
   });
 });

@@ -333,6 +333,71 @@ export function groomingReport(tasks, now = new Date()) {
   return { missingEstimatedTokens, missingAcceptanceCriteria, missingPriority, unclaimedOver30Days };
 }
 
+/**
+ * Pure function: compute PR rejection rate from pr-auto-review.log JSON lines.
+ *
+ * Filters to entries within the last 28 days (relative to `now`), deduplicates
+ * by (pr, sha) keeping the latest entry per pair, then computes:
+ *   rate = (gate-failed + llm-rejected) / (merged + gate-failed + llm-rejected)
+ *
+ * @param {string[]} logLines - array of JSON strings from pm/pr-auto-review.log
+ * @param {Date} now - reference date for the 28-day window
+ * @returns {{ rate: number|null, rejected: number, merged: number }}
+ *   rate is null when the denominator (rejected + merged) is zero
+ */
+export function computePrRejectRate(logLines, now) {
+  const cutoff = now.getTime() - 28 * 24 * 60 * 60 * 1000;
+
+  // Dedupe by pr+sha, keeping the latest entry per pair
+  /** @type {Record<string, {action: string}>} */
+  const entries = {};
+
+  for (const line of logLines) {
+    let entry;
+    try { entry = JSON.parse(line); } catch { continue; }
+    if (!entry || typeof entry.ts !== 'string' || entry.pr == null || !entry.sha || !entry.action) continue;
+
+    const ts = new Date(entry.ts).getTime();
+    if (isNaN(ts) || ts < cutoff) continue;
+
+    const key = `${entry.pr}|${entry.sha}`;
+    entries[key] = { action: entry.action };
+  }
+
+  let rejected = 0;
+  let merged = 0;
+
+  for (const key of Object.keys(entries)) {
+    const { action } = entries[key];
+    if (action === 'gate-failed' || action === 'llm-rejected') {
+      rejected++;
+    } else if (action === 'merged') {
+      merged++;
+    }
+  }
+
+  const denominator = rejected + merged;
+  return {
+    rate: denominator > 0 ? rejected / denominator : null,
+    rejected,
+    merged,
+  };
+}
+
+/**
+ * Pure function: map maturation level to its PR reject rate target.
+ *
+ * @param {number} level - maturation level (0-6)
+ * @returns {number|null} target reject rate (0-1), or null for unknown levels
+ */
+export function prRejectTarget(level) {
+  if (level === 0 || level === 1) return 0.30;
+  if (level === 2 || level === 3) return 0.10;
+  if (level === 4) return 0.01;
+  if (level === 5 || level === 6) return 0.001;
+  return null;
+}
+
 async function main() {
   console.log('═'.repeat(50));
   console.log('  Weekly Review — ' + new Date().toISOString().split('T')[0]);
@@ -436,6 +501,38 @@ async function main() {
     parts.push('Unclaimed over 30 days:');
     parts.push(report.unclaimedOver30Days.length > 0 ? report.unclaimedOver30Days.map(id => `- ${id}`).join('\n') : 'none');
     upsertDashboardSection('Grooming', parts.join('\n'), config.dashboardPath);
+  }
+
+  // PR reject rate vs maturity target (CV-REQ-019 / CV-124)
+  {
+    const logPath = resolve(ROOT, 'pm', 'pr-auto-review.log');
+    if (existsSync(logPath)) {
+      const lines = readFileSync(logPath, 'utf8').split('\n').filter(Boolean);
+      const rateResult = computePrRejectRate(lines, new Date());
+
+      // Derive framework maturity level as the max level across all agents
+      let frameworkLevel = 0;
+      for (const agent of AGENTS) {
+        const corePath = resolve(AGENTS_DIR, agent, 'memory/core.json');
+        if (existsSync(corePath)) {
+          try {
+            const core = JSON.parse(readFileSync(corePath, 'utf8'));
+            const lvl = core.maturation?.level;
+            if (typeof lvl === 'number' && lvl > frameworkLevel) {
+              frameworkLevel = lvl;
+            }
+          } catch { /* skip malformed core */ }
+        }
+      }
+      const target = prRejectTarget(frameworkLevel);
+      const rateStr = rateResult.rate !== null ? `${(rateResult.rate * 100).toFixed(1)}%` : 'n/a';
+      const targetStr = target !== null ? `${(target * 100).toFixed(1)}%` : 'n/a';
+
+      console.log('\n🔬 PR Reject Rate vs Maturity Target');
+      console.log('─'.repeat(40));
+      console.log(`  Rate:   ${rateStr} (${rateResult.rejected} rejected / ${rateResult.merged + rateResult.rejected} total)`);
+      console.log(`  Target: ${targetStr} (level ${frameworkLevel})`);
+    }
   }
 
   // Run weekly review steps after all existing sections
