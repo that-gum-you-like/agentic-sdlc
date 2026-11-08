@@ -14,6 +14,10 @@ Don't create a new agent when:
 - The task is a one-off (less than a day)
 - You'd need to duplicate most of the context another agent already has
 
+When a new agent is created, set its `reportsTo` field in AGENT.md front
+matter to define its place in the org chart. Escalation routes through this
+chain before reaching the board (see `agents/SHARED_PROTOCOL.md`).
+
 ## When to Specialize
 
 Start generic, specialize when needed:

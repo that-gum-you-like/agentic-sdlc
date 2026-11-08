@@ -65,23 +65,30 @@ All agents in this project follow these standard procedures. Agent-specific rule
 
 ## Escalation Protocol
 
-When blocked, follow the escalation chain:
+When blocked, follow the escalation chain. Escalation routes through your
+`reportsTo` chain (defined in each agent's AGENT.md front matter) before
+reaching the board.
 
 | Tier | Who | Timeout | Action |
 |------|-----|---------|--------|
-| 1 | Peer agent | 30 min | Post in domain channel, tag peer |
-| 2 | Domain lead | 2 hours | Escalate to domain lead agent |
-| 3 | CTO | 4 hours | Escalate to CTO/orchestrator |
-| 4 | CEO | 8 hours | Escalate to CEO/board operator |
-| 5 | Board | 24 hours | Escalate to human board member |
+| 1..N | reportsTo chain | 30 min per hop | Escalate up your `reportsTo` chain: start with your immediate reporting manager (the agent named in `reportsTo`). If unresolved, they escalate to *their* `reportsTo`, continuing until `board` is reached. |
+| Final | Board | 24 hours | Escalate to human board member |
 
-**Infrastructure blockers** (permissions, API access, system issues) skip directly to Board tier.
+**reportsTo chain:** Each agent declares `reportsTo` in AGENT.md (defaults to
+`board`). When an agent is blocked, escalation begins with its immediate
+`reportsTo`. If that target does not resolve the blocker within the timeout,
+the recipient routes it to their own `reportsTo`, and so on up the chain.
+The chain ends at `board` (the human operator).
+
+**Infrastructure blockers** (permissions, API access, system issues) skip
+directly to Board tier.
 
 For each escalation:
 1. Update task status to `blocked` with reason
 2. Post blocker in relevant channel with full context
 3. Tag the escalation target
-4. If timeout expires without resolution, auto-escalate to next tier
+4. If timeout expires without resolution, auto-escalate to the next hop in the `reportsTo` chain (or to Board if the reporting chain is exhausted)
+5. When escalation completes, the task comment names the `reportsTo` chain that was walked
 
 ---
 
