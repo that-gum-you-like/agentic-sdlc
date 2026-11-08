@@ -13,7 +13,7 @@
   ],
   "description": "Drain PR #106 (branch `agent/drain/OS-curriculum-v2-conformance-26`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-26 && git checkout agent/drain/OS-curriculum-v2-conformance-26`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-26` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- architectureCheck function incorrectly uses routedDomains from domains.json instead of counting actual routed domains\n- tasksLast4Weeks calculation uses incorrect timestamp field name (should be 'timestamp' not 'ts')\n- Missing error handling for invalid date parsing in performance log entries",
   "attempts": 2,
-  "status": "pending",
+  "status": "completed",
   "fixFor": {
     "pr": 106,
     "branch": "agent/drain/OS-curriculum-v2-conformance-26",
@@ -21,5 +21,9 @@
     "sourceTask": "OS-curriculum-v2-conformance-26",
     "rejectionKind": "llm-rejected"
   },
-  "refreshedAt": "2026-11-08T19:50:00.095Z"
+  "refreshedAt": "2026-11-08T19:50:00.095Z",
+  "_file": "FIX-106.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-08T20:12:40.559Z"
 }
