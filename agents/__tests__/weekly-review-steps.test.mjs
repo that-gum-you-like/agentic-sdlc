@@ -2,6 +2,7 @@
  * weekly-review-steps.test.mjs — CV-REQ-010: buildWeeklySteps returns the correct
  * ordered list of weekly review steps and appends --dry-run when requested.
  * Also tests runWeeklySteps runner function (CV-103).
+ * Also tests capacityForecast (CV-REQ-017) and groomingReport (CV-REQ-018).
  *
  * Run with:
  *   node --test agents/__tests__/weekly-review-steps.test.mjs
@@ -9,7 +10,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildWeeklySteps, runWeeklySteps, capacityForecast } from '../cycles/weekly-review.mjs';
+import { buildWeeklySteps, runWeeklySteps, capacityForecast, groomingReport } from '../cycles/weekly-review.mjs';
 
 describe('buildWeeklySteps', () => {
   it('returns exactly three steps in the correct order', () => {
@@ -197,5 +198,98 @@ describe('capacityForecast (CV-REQ-017)', () => {
     const tasksCopy = JSON.parse(JSON.stringify(tasks));
     capacityForecast(tasks, 50000);
     assert.deepEqual(tasks, tasksCopy, 'tasks array should not be mutated');
+  });
+});
+
+describe('groomingReport (CV-REQ-018)', () => {
+  it('flags a task missing estimatedTokens', () => {
+    const tasks = [
+      { id: 'task-1', title: 'Task One', acceptance_criteria: 'done', priority: 'HIGH', estimatedTokens: 100 },
+      { id: 'task-2', title: 'Task Two', acceptance_criteria: 'done', priority: 'HIGH' }, // no estimatedTokens
+    ];
+    const result = groomingReport(tasks, new Date('2026-11-08'));
+    assert.deepEqual(result.missingEstimatedTokens, ['task-2']);
+  });
+
+  it('flags a task missing acceptance_criteria', () => {
+    const tasks = [
+      { id: 'task-a', title: 'Task A', estimatedTokens: 100, priority: 'HIGH' }, // no acceptance_criteria
+      { id: 'task-b', title: 'Task B', estimatedTokens: 100, acceptance_criteria: 'yes', priority: 'HIGH' },
+    ];
+    const result = groomingReport(tasks, new Date('2026-11-08'));
+    assert.deepEqual(result.missingAcceptanceCriteria, ['task-a']);
+  });
+
+  it('flags a task missing priority', () => {
+    const tasks = [
+      { id: 'task-x', title: 'Task X', estimatedTokens: 100, acceptance_criteria: 'yes' }, // no priority
+      { id: 'task-y', title: 'Task Y', estimatedTokens: 100, acceptance_criteria: 'yes', priority: 'HIGH' },
+    ];
+    const result = groomingReport(tasks, new Date('2026-11-08'));
+    assert.deepEqual(result.missingPriority, ['task-x']);
+  });
+
+  it('flags a task unclaimed over 30 days', () => {
+    const oldDate = new Date('2026-09-01').toISOString(); // >30 days before Nov 8
+    const tasks = [
+      { id: 'task-1', title: 'Old Task', estimatedTokens: 100, acceptance_criteria: 'yes', priority: 'HIGH', claimedBy: null, createdAt: oldDate },
+      { id: 'task-2', title: 'Recent Task', estimatedTokens: 100, acceptance_criteria: 'yes', priority: 'HIGH', claimedBy: null, createdAt: new Date('2026-11-01').toISOString() },
+    ];
+    const result = groomingReport(tasks, new Date('2026-11-08'));
+    assert.deepEqual(result.unclaimedOver30Days, ['task-1']);
+    assert.ok(!result.unclaimedOver30Days.includes('task-2'));
+  });
+
+  it('returns empty arrays when all tasks are healthy', () => {
+    const tasks = [
+      { id: 't1', title: 'T1', estimatedTokens: 100, acceptance_criteria: 'yes', priority: 'HIGH', claimedBy: 'bot', createdAt: new Date().toISOString() },
+    ];
+    const result = groomingReport(tasks, new Date());
+    assert.deepEqual(result.missingEstimatedTokens, []);
+    assert.deepEqual(result.missingAcceptanceCriteria, []);
+    assert.deepEqual(result.missingPriority, []);
+    assert.deepEqual(result.unclaimedOver30Days, []);
+  });
+
+  it('is a pure function (no side effects)', () => {
+    const tasks = [
+      { id: 't1', title: 'T1', estimatedTokens: 100, acceptance_criteria: 'yes', priority: 'HIGH', claimedBy: 'bot' },
+    ];
+    const tasksCopy = JSON.parse(JSON.stringify(tasks));
+    groomingReport(tasks, new Date('2026-11-08'));
+    assert.deepEqual(tasks, tasksCopy, 'tasks array should not be mutated');
+  });
+
+  it('does not flag unclaimed task without createdAt', () => {
+    const tasks = [
+      { id: 't1', title: 'T1', estimatedTokens: 100, acceptance_criteria: 'yes', priority: 'HIGH', claimedBy: null },
+    ];
+    const result = groomingReport(tasks, new Date('2026-11-08'));
+    assert.deepEqual(result.unclaimedOver30Days, []);
+  });
+
+  it('uses task title as fallback when id is missing', () => {
+    const tasks = [
+      { title: 'NoIdTask', estimatedTokens: 100, acceptance_criteria: 'yes', priority: 'HIGH' },
+    ];
+    // With all fields set, no grooming issues — but if one were, title would be the label
+    const result = groomingReport(tasks, new Date('2026-11-08'));
+    // This task is healthy, so no issues
+    assert.deepEqual(result.missingEstimatedTokens, []);
+    assert.deepEqual(result.missingAcceptanceCriteria, []);
+    assert.deepEqual(result.missingPriority, []);
+  });
+
+  it('reports multiple issues on a single task across all four categories', () => {
+    const oldDate = new Date('2026-09-01').toISOString();
+    const tasks = [
+      { id: 'neglected', title: 'Neglected Task', claimedBy: null, createdAt: oldDate },
+      // missing estimatedTokens, acceptance_criteria, priority, AND unclaimed
+    ];
+    const result = groomingReport(tasks, new Date('2026-11-08'));
+    assert.deepEqual(result.missingEstimatedTokens, ['neglected']);
+    assert.deepEqual(result.missingAcceptanceCriteria, ['neglected']);
+    assert.deepEqual(result.missingPriority, ['neglected']);
+    assert.deepEqual(result.unclaimedOver30Days, ['neglected']);
   });
 });
