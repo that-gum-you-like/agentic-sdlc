@@ -10,7 +10,10 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildWeeklySteps, runWeeklySteps, capacityForecast, groomingReport, architectureCheck } from '../cycles/weekly-review.mjs';
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { buildWeeklySteps, runWeeklySteps, capacityForecast, groomingReport, architectureCheck, agentMdChangedSinceSnapshot } from '../cycles/weekly-review.mjs';
 
 describe('buildWeeklySteps', () => {
   it('returns exactly three steps in the correct order', () => {
@@ -384,5 +387,147 @@ describe('architectureCheck (CV-REQ-016)', () => {
     const metricsCopy = JSON.parse(JSON.stringify(metrics));
     architectureCheck(metrics);
     assert.deepEqual(metrics, metricsCopy, 'metrics object should not be mutated');
+  });
+});
+
+describe('agentMdChangedSinceSnapshot (CV-REQ-016)', () => {
+  function setupDirs() {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'agent-md-snapshot-'));
+    const agentsDir = join(tmpDir, 'agents');
+    const versionsDir = join(agentsDir, 'versions');
+    mkdirSync(versionsDir, { recursive: true });
+    return { tmpDir, agentsDir, versionsDir };
+  }
+
+  function cleanup(tmpDir) {
+    rmSync(tmpDir, { recursive: true, force: true });
+  }
+
+  function createAgentMd(agentsDir, agent, content) {
+    const agentDir = join(agentsDir, agent);
+    mkdirSync(agentDir, { recursive: true });
+    writeFileSync(join(agentDir, 'AGENT.md'), content, 'utf8');
+  }
+
+  function createSnapshot(versionsDir, date, agent, content) {
+    const snapshotDir = join(versionsDir, date);
+    mkdirSync(snapshotDir, { recursive: true });
+    writeFileSync(join(snapshotDir, `${agent}.md`), content, 'utf8');
+  }
+
+  it('returns false when all AGENT.md files are identical to the latest snapshot', () => {
+    const { tmpDir, agentsDir, versionsDir } = setupDirs();
+    try {
+      createAgentMd(agentsDir, 'test-agent', '# Test Agent\ncontent v1\n');
+      createSnapshot(versionsDir, '2026-01-01', 'test-agent', '# Test Agent\ncontent v1\n');
+      assert.equal(agentMdChangedSinceSnapshot(agentsDir, versionsDir), false);
+    } finally {
+      cleanup(tmpDir);
+    }
+  });
+
+  it('returns true when an AGENT.md has been edited since the snapshot', () => {
+    const { tmpDir, agentsDir, versionsDir } = setupDirs();
+    try {
+      createAgentMd(agentsDir, 'test-agent', '# Test Agent\ncontent v2\n');
+      createSnapshot(versionsDir, '2026-01-01', 'test-agent', '# Test Agent\ncontent v1\n');
+      assert.equal(agentMdChangedSinceSnapshot(agentsDir, versionsDir), true);
+    } finally {
+      cleanup(tmpDir);
+    }
+  });
+
+  it('returns true when no snapshot directory exists', () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'agent-md-snapshot-'));
+    const agentsDir = join(tmpDir, 'agents');
+    const versionsDir = join(tmpDir, 'versions');
+    // Do NOT create versions dir
+    try {
+      mkdirSync(agentsDir, { recursive: true });
+      assert.equal(agentMdChangedSinceSnapshot(agentsDir, versionsDir), true);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('returns true when versions directory exists but has no date snapshots', () => {
+    const { tmpDir, agentsDir, versionsDir } = setupDirs();
+    try {
+      // versions dir is empty (no date directories)
+      createAgentMd(agentsDir, 'test-agent', '# Test Agent\ncontent\n');
+      assert.equal(agentMdChangedSinceSnapshot(agentsDir, versionsDir), true);
+    } finally {
+      cleanup(tmpDir);
+    }
+  });
+
+  it('returns true when an agent has AGENT.md but no matching snapshot file', () => {
+    const { tmpDir, agentsDir, versionsDir } = setupDirs();
+    try {
+      createAgentMd(agentsDir, 'test-agent', '# Test Agent\ncontent\n');
+      createSnapshot(versionsDir, '2026-01-01', 'other-agent', '# Other Agent\n');
+      assert.equal(agentMdChangedSinceSnapshot(agentsDir, versionsDir), true);
+    } finally {
+      cleanup(tmpDir);
+    }
+  });
+
+  it('returns false when multiple agents all match their snapshots', () => {
+    const { tmpDir, agentsDir, versionsDir } = setupDirs();
+    try {
+      createAgentMd(agentsDir, 'agent-a', '# Agent A\nv1\n');
+      createAgentMd(agentsDir, 'agent-b', '# Agent B\nv1\n');
+      createSnapshot(versionsDir, '2026-01-01', 'agent-a', '# Agent A\nv1\n');
+      createSnapshot(versionsDir, '2026-01-01', 'agent-b', '# Agent B\nv1\n');
+      assert.equal(agentMdChangedSinceSnapshot(agentsDir, versionsDir), false);
+    } finally {
+      cleanup(tmpDir);
+    }
+  });
+
+  it('returns true when one of multiple agents has changed', () => {
+    const { tmpDir, agentsDir, versionsDir } = setupDirs();
+    try {
+      createAgentMd(agentsDir, 'agent-a', '# Agent A\nv1\n');
+      createAgentMd(agentsDir, 'agent-b', '# Agent B\nv2\n'); // changed
+      createSnapshot(versionsDir, '2026-01-01', 'agent-a', '# Agent A\nv1\n');
+      createSnapshot(versionsDir, '2026-01-01', 'agent-b', '# Agent B\nv1\n');
+      assert.equal(agentMdChangedSinceSnapshot(agentsDir, versionsDir), true);
+    } finally {
+      cleanup(tmpDir);
+    }
+  });
+
+  it('is a pure function (no side effects)', () => {
+    const { tmpDir, agentsDir, versionsDir } = setupDirs();
+    try {
+      createAgentMd(agentsDir, 'test-agent', '# Test Agent\ncontent\n');
+      createSnapshot(versionsDir, '2026-01-01', 'test-agent', '# Test Agent\ncontent\n');
+      const snapshotDirBefore = join(versionsDir, '2026-01-01');
+      assert.ok(existsSync(snapshotDirBefore));
+      agentMdChangedSinceSnapshot(agentsDir, versionsDir);
+      // Verify no files were created, modified, or deleted
+      assert.ok(existsSync(snapshotDirBefore));
+      assert.equal(existsSync(join(snapshotDirBefore, 'test-agent.md')), true);
+    } finally {
+      cleanup(tmpDir);
+    }
+  });
+
+  it('returns true when an agent subdirectory exists without AGENT.md but snapshot has it', () => {
+    const { tmpDir, agentsDir, versionsDir } = setupDirs();
+    try {
+      // An agent subdir exists but no AGENT.md inside it — snapshot has a file for it
+      const noMdDir = join(agentsDir, 'no-md-agent');
+      mkdirSync(noMdDir, { recursive: true });
+      createSnapshot(versionsDir, '2026-01-01', 'no-md-agent', '# Was removed\n');
+      // Another agent with matching content
+      createAgentMd(agentsDir, 'agent-a', '# Agent A\nv1\n');
+      createSnapshot(versionsDir, '2026-01-01', 'agent-a', '# Agent A\nv1\n');
+      // Snapshot has no-md-agent but current AGENT.md doesn't exist — that's a change
+      assert.equal(agentMdChangedSinceSnapshot(agentsDir, versionsDir), true);
+    } finally {
+      cleanup(tmpDir);
+    }
   });
 });

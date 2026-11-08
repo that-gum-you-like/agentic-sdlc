@@ -12,7 +12,7 @@
  */
 
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
 
@@ -26,6 +26,7 @@ const config = loadConfig();
 const ROOT = config.projectDir;
 const AGENTS_DIR = config.agentsDir;
 const TASKS_DIR = config.tasksDir;
+const VERSIONS_DIR = resolve(AGENTS_DIR, 'versions');
 
 // The reviewer agent whose review records feed pattern analysis and maturation
 // metrics. Review records are written by the automated review pipeline
@@ -439,6 +440,60 @@ export function architectureCheck(metrics) {
   return { underperforming, splitCandidates, idle };
 }
 
+/**
+ * Pure function: check if any AGENT.md has changed since the last snapshot.
+ *
+ * Compares the current AGENT.md files in agentsDir against the latest snapshot
+ * in versionsDir. If no snapshot directory exists, returns true (needs snapshot).
+ * If all AGENT.md files match their snapshot copies, returns false.
+ *
+ * @param {string} agentsDir - absolute path to the agents/ directory
+ * @param {string} versionsDir - absolute path to the agents/versions/ directory
+ * @returns {boolean} true if any AGENT.md has changed or no snapshot exists
+ */
+export function agentMdChangedSinceSnapshot(agentsDir, versionsDir) {
+  // No versions directory at all — snapshot needed
+  if (!existsSync(versionsDir)) return true;
+
+  const snapshots = readdirSync(versionsDir)
+    .filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f))
+    .sort()
+    .reverse();
+
+  // No snapshot date directories — snapshot needed
+  if (snapshots.length === 0) return true;
+
+  const latestSnapshot = snapshots[0];
+  const snapshotDir = join(versionsDir, latestSnapshot);
+
+  // Scan agentsDir for subdirectories that contain AGENT.md
+  const agentDirs = readdirSync(agentsDir, { withFileTypes: true })
+    .filter(d => d.isDirectory())
+    .map(d => d.name);
+
+  for (const agent of agentDirs) {
+    const currentPath = resolve(agentsDir, agent, 'AGENT.md');
+    const snapshotPath = join(snapshotDir, `${agent}.md`);
+
+    const currentExists = existsSync(currentPath);
+    const snapshotExists = existsSync(snapshotPath);
+
+    // One exists but not the other — changed
+    if (currentExists !== snapshotExists) return true;
+
+    // Neither exists — skip this agent
+    if (!currentExists) continue;
+
+    // Both exist — compare contents
+    const currentContent = readFileSync(currentPath, 'utf8');
+    const snapshotContent = readFileSync(snapshotPath, 'utf8');
+
+    if (currentContent !== snapshotContent) return true;
+  }
+
+  return false;
+}
+
 async function main() {
   console.log('═'.repeat(50));
   console.log('  Weekly Review — ' + new Date().toISOString().split('T')[0]);
@@ -663,6 +718,29 @@ async function main() {
       console.log('\n🏗️  Architecture Check');
       console.log('─'.repeat(40));
       console.log('  ✅ All agents healthy — no issues found.');
+    }
+  }
+
+  // Agent version snapshot check — run snapshot if AGENT.md files changed (CV-REQ-016 / CV-126)
+  {
+    const changed = agentMdChangedSinceSnapshot(AGENTS_DIR, VERSIONS_DIR);
+    if (changed) {
+      console.log('\n📸 Agent Version Snapshot');
+      console.log('─'.repeat(40));
+      console.log('  AGENT.md files changed since last snapshot — running snapshot...');
+      try {
+        execSync(
+          `node ${resolve(AGENTS_DIR, 'version-snapshot.mjs')} snapshot`,
+          { encoding: 'utf8', cwd: ROOT, stdio: 'inherit' }
+        );
+        console.log('  ✅ Snapshot complete.');
+      } catch (e) {
+        console.log(`  ❌ Snapshot failed: ${e.message}`);
+      }
+    } else {
+      console.log('\n📸 Agent Version Snapshot');
+      console.log('─'.repeat(40));
+      console.log('  ✅ No AGENT.md changes detected since last snapshot.');
     }
   }
 
