@@ -453,7 +453,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
   - Parallel: blocked-by CV-118, CV-119, CV-120
   - Complexity: S
 
-- [ ] **CV-122**: weekly-review.mjs: add pure `capacityForecast(tasks, budget)` and upsert a `Capacity forecast` dashboard section (import `upsertDashboardSection`)
+- [x] **CV-122**: weekly-review.mjs: add pure `capacityForecast(tasks, budget)` and upsert a `Capacity forecast` dashboard section (import `upsertDashboardSection`)
   - **Priority:** HIGH
   - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/weekly-review-steps.test.mjs`
   - Spec: CV-REQ-017

@@ -3,7 +3,7 @@
   "title": "weekly-review.mjs: add pure `capacityForecast(tasks, budget)` and upsert a `Capacity forecast` dashboard section (import `upsertDashboardSection`)",
   "description": "- [ ] **CV-122**: weekly-review.mjs: add pure `capacityForecast(tasks, budget)` and upsert a `Capacity forecast` dashboard section (import `upsertDashboardSection`)\n  - **Priority:** HIGH\n  - Files: `agents/cycles/weekly-review.mjs, agents/__tests__/weekly-review-steps.test.mjs`\n  - Spec: CV-REQ-017\n  - Gaps: D4-08\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: 1,000,000 pending tokens / 250,000 daily -> `4 days`; missing or zero budget -> `n/a`\n  - Parallel: blocked-by CV-118, CV-103\n  - Complexity: S",
   "priority": "HIGH",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -13,5 +13,9 @@
   "blockedBy": [
     "OS-curriculum-v2-conformance-19",
     "OS-curriculum-v2-conformance-4"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-23.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-08T19:11:40.164Z"
 }

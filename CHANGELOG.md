@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-08
+
+- 2026-11-08 #103 feat(weekly-review): add capacityForecast and Capacity forecast dashboard section (CV-122) (backend)
+
 ## 2026-11-04
 
 - 2026-11-04 #97 feat(monthly-review): re-record behavior baseline after drift passes (CV-109) (backend)
