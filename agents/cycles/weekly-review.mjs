@@ -615,9 +615,9 @@ async function main() {
         const ts = new Date(e.ts).getTime();
         return !isNaN(ts) && ts >= fourWeeksAgo;
       });
-      const firstAttemptCount = last4Weeks.filter(e => e.firstAttempt === true).length;
-      const firstAttemptSuccessRate = last4Weeks.length > 0
-        ? firstAttemptCount / last4Weeks.length
+      const firstAttemptCount = agentEntries.filter(e => e.firstAttempt === true).length;
+      const firstAttemptSuccessRate = tasksCompleted > 0
+        ? firstAttemptCount / tasksCompleted
         : 0;
 
       const patterns = domainData[agent]?.patterns || [];
