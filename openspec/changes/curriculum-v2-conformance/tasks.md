@@ -1411,7 +1411,7 @@ Capability: claude-review-lane. Queue and skill first; the headless timer (CV-RE
   - Parallel: blocked-by CV-505
   - Complexity: S
 
-- [ ] **CV-507**: Create skills/sdlc-review-flagged/SKILL.md (frontmatter name/description; steps: list-flagged; scratch worktree; merge origin/main; npm test; read the FLAG_PATHS diffs fully; merge/changes-requested/close; gh pr comment; resolve-flagged; remove worktree; no API, no merging on red tests)
+- [x] **CV-507**: Create skills/sdlc-review-flagged/SKILL.md (frontmatter name/description; steps: list-flagged; scratch worktree; merge origin/main; npm test; read the FLAG_PATHS diffs fully; merge/changes-requested/close; gh pr comment; resolve-flagged; remove worktree; no API, no merging on red tests)
   - **Priority:** MEDIUM
   - Files: `skills/sdlc-review-flagged/SKILL.md`
   - Spec: CV-REQ-102

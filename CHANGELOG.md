@@ -8,6 +8,7 @@
 - 2026-11-08 #106 feat(weekly-review): add architectureCheck(metrics) pure function and print section (CV-125) (backend)
 - 2026-11-08 #107 feat(weekly-review): add agentMdChangedSinceSnapshot pure function and auto-snapshot (CV-126) (backend)
 - 2026-11-08 #108 feat(test): append drift check to npm test script (CV-107) (infra)
+- 2026-11-08 #109 feat(skill): create sdlc-review-flagged skill for Claude review lane (CV-507) (docs-tests)
 
 ## 2026-11-04
 

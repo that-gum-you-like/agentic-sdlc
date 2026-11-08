@@ -3,7 +3,7 @@
   "title": "Create skills/sdlc-review-flagged/SKILL.md (frontmatter name/description; steps: list-flagged; scratch worktree; merge origin/main; npm test; read the FLAG_PATHS diffs fully; merge/changes-requested/close; gh pr comment; resolve-flagged; remove worktree; no API, no merging on red tests)",
   "description": "- [ ] **CV-507**: Create skills/sdlc-review-flagged/SKILL.md (frontmatter name/description; steps: list-flagged; scratch worktree; merge origin/main; npm test; read the FLAG_PATHS diffs fully; merge/changes-requested/close; gh pr comment; resolve-flagged; remove worktree; no API, no merging on red tests)\n  - **Priority:** MEDIUM\n  - Files: `skills/sdlc-review-flagged/SKILL.md`\n  - Spec: CV-REQ-102\n  - Gaps: -\n  - Agent: sdlc-documentarian\n  - Lane: hermes\n  - Test: covered by CV-508\n  - Parallel: blocked-by CV-506\n  - Complexity: M\n  - Notes: Model on skills/sdlc-inbox/SKILL.md.",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-107"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-108.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-08T23:25:17.988Z"
 }
