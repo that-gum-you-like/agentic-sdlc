@@ -13,12 +13,16 @@
   ],
   "description": "Drain PR #103 (branch `agent/drain/OS-curriculum-v2-conformance-23`) was NOT merged by pr-auto-review (gate-failed).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-23 && git checkout agent/drain/OS-curriculum-v2-conformance-23`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-23` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- hard gate failed at node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs'\n- ✔ absent readiness resolves to draft, never to ready (3.512289ms)\n✔ all five states are recognized, case- and whitespace-insensitively (0.491816ms)\n✔ an unrecognized readiness is invalid, not silently permissive (0.447325ms)\n✔ only ready-for-dev authorizes the dev loop (0.359147ms)\n✔ readiness is orthogonal to phase — specced with tasks is still not authorized (0.399713ms)\n✔ a done change is not re-authorized by its phase (0.285942ms)\n✔ recordSent appends one JSON line per delivered message (5.234161ms)\n✔ an unconfigured send is not logged (0.612615ms)\n✔ real sends are suppressed under node --test; an injected transport still works (0.962687ms)\n✔ wave 2 preflight audit exists (2.315908ms)\n✔ report names every drained repo (0.631062ms)\n✔ report shows queue depth for each repo (0.29776ms)\n✔ report shows open PR count for each repo (0.280372ms)\n✔ report shows last-deployed sha vs origin/<base> for each repo (0.313542ms)\nℹ tests 808\nℹ suites 126\nℹ pass 800\nℹ fail 1\nℹ cancelled 0\nℹ skipped 7\nℹ todo 0\nℹ duration_ms 69511.567766\n\n✖ failing tests:\n\ntest at tests/hermes-drain.test.mjs:1:1\n✖ tests/hermes-drain.test.mjs (61753.399751ms)\n  'test failed'\n\n",
   "attempts": 1,
-  "status": "pending",
+  "status": "completed",
   "fixFor": {
     "pr": 103,
     "branch": "agent/drain/OS-curriculum-v2-conformance-23",
     "headSha": "972522338e9fd1c14efaf983aca725663651286d",
     "sourceTask": "OS-curriculum-v2-conformance-23",
     "rejectionKind": "gate-failed"
-  }
+  },
+  "_file": "FIX-103.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-08T19:13:18.022Z"
 }
