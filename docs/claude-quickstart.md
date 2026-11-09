@@ -81,6 +81,38 @@ node ~/agentic-sdlc/agents/telegram-notify.mjs "msg"   # opt-in Telegram channel
 
 Embeddings are **local sentence-transformers only** (privacy-first, no OpenAI); everything degrades gracefully to a lexical fallback when python isn't installed.
 
+|---
+
+## Scheduling: interactive-only vs. autonomous
+
+Claude Code has two built-in scheduling commands:
+
+- **`/schedule`** — durable, cloud-hosted routines (requires a claude.ai subscription). Interactive-only: you must be in a live Claude Code session to set them up, and they run under your interactive quota.
+- **`/loop`** — in-session, local-only task loops. Also interactive-only: the loop dies when your session ends.
+
+For autonomous (headless, no-session) scheduling, the framework provides **`agents/scheduler-install.mjs`** — a stdlib-only script that reads `agents/cron-schedule.json` and installs systemd user timers. Each job is a oneshot service with `Persistent=true` so missed runs catch up after downtime. No always-on daemon to crash:
+
+```bash
+node agents/scheduler-install.mjs list         # Preview what would be installed
+node agents/scheduler-install.mjs install       # Install + enable timers
+node agents/scheduler-install.mjs status        # List installed sdlc-* timers
+node agents/scheduler-install.mjs uninstall     # Disable + remove all sdlc-* units
+```
+
+The autonomous drain workers (see [the autonomous launcher](#working-with-hermes-and-the-autonomous-launcher)) use these systemd timers rather than `/schedule` or `/loop`, so the iteration cycle keeps running whether or not anyone is at a terminal.
+
+### REA MCP for user-test generation
+
+**[REA — Reverse Engineer Anything](https://github.com/morluto/rea)** is an MCP server that lets an agent reverse-engineer how a feature works from an existing app (native binaries, Electron/JS apps, websites, APKs). Its output — observed behaviour, confirmed and unconfirmed signals — feeds directly into the framework's E2E test pipeline:
+
+```bash
+node agents/browser-user-test.mjs generate <change-name> [--llm] [--dry-run]
+```
+
+Run REA against a target app, capture what it finds, then use `browser-user-test.mjs generate` to turn those findings into Playwright user-journey tests with per-step screenshot proof. This replaces manual reverse-engineering and guesswork with automated test scaffolding.
+
+> `/schedule` and `/loop` are interactive-only Claude Code features. For autonomous, headless operation, use `scheduler-install.mjs` systemd timers.
+
 ---
 
 ## Working with Hermes and the autonomous launcher

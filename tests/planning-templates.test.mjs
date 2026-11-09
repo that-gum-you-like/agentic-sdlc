@@ -241,6 +241,28 @@ test('seed-tasks.json.template parses as valid JSON and contains a Standardizati
     'seed-tasks.json.template must contain a task whose title includes "Standardization sweep"');
 });
 
+// ── CV-236: claude-quickstart.md interactive-only / scheduler / REA ────────
+
+test('claude-quickstart.md states /schedule and /loop are interactive-only (CV-236)', () => {
+  const raw = read('docs/claude-quickstart.md');
+  assert.match(raw, /interactive-only/,
+    'claude-quickstart.md must state that /schedule and /loop are interactive-only');
+});
+
+test('claude-quickstart.md references scheduler-install.mjs as the autonomous equivalent (CV-236)', () => {
+  const raw = read('docs/claude-quickstart.md');
+  assert.match(raw, /scheduler-install\.mjs/,
+    'claude-quickstart.md must reference scheduler-install.mjs as the autonomous scheduling equivalent');
+});
+
+test('claude-quickstart.md mentions REA MCP feeding browser-user-test.mjs generate (CV-236)', () => {
+  const raw = read('docs/claude-quickstart.md');
+  assert.match(raw, /REA/,
+    'claude-quickstart.md must mention REA MCP');
+  assert.match(raw, /browser-user-test\.mjs generate/,
+    'claude-quickstart.md must mention browser-user-test.mjs generate as fed by REA');
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
