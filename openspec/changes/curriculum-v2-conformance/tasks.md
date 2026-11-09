@@ -966,7 +966,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221
   - Complexity: S
 
-- [ ] **CV-253**: framework/agent-lifecycle.md: link to agents/templates/agent-proposal.md in the "when to create a new agent" section
+- [x] **CV-253**: framework/agent-lifecycle.md: link to agents/templates/agent-proposal.md in the "when to create a new agent" section
   - **Priority:** MEDIUM
   - Files: `framework/agent-lifecycle.md, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-075
