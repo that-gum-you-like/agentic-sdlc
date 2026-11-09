@@ -177,6 +177,18 @@ test('frontend-developer.md forbids raw CSS (CV-229)', () => {
     'frontend-developer.md must forbid raw CSS');
 });
 
+// ── CV-085: project-manager.md exists and has required content ─────────────
+
+test('project-manager.md exists and references BACKLOG.md (CV-085)', () => {
+  const f = 'agents/templates/planning-agents/project-manager.md';
+  assert.ok(existsSync(join(ROOT, f)), `project-manager.md must exist at ${f}`);
+  const raw = read(f);
+  assert.match(raw, /BACKLOG\.md/,
+    'project-manager.md must reference BACKLOG.md for idea capture');
+  assert.match(raw, /never one more thing/i,
+    'project-manager.md must enforce the "never one more thing" rule');
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
@@ -185,7 +197,6 @@ const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-tem
 // future tasks as they implement the corresponding CV-REQ).  Later tasks add
 // to this array when they commit a file named in the spec.
 const NOT_YET_CREATED = [
-  'agents/templates/planning-agents/project-manager.md', // CV-REQ-085
   'agents/templates/execution-agents/git-expert.md',     // CV-REQ-089
   'pm/coffeetalk.md',                                     // CV-REQ-083 (runtime log)
 ];
