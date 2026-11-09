@@ -312,6 +312,20 @@ test('agent-proposal.md exists and contains all five required headings (CV-252)'
     'agent-proposal.md must have an Exit Criterion heading');
 });
 
+// ── CV-253: agent-lifecycle.md links to agent-proposal.md ─────────────────
+
+test('agent-lifecycle.md links to the agent-proposal template in the "when to create" section (CV-253)', () => {
+  const raw = read('framework/agent-lifecycle.md');
+  assert.match(raw, /agents\/templates\/agent-proposal\.md/,
+    'agent-lifecycle.md must reference agents/templates/agent-proposal.md');
+});
+
+test('agent-proposal.md still exists (CV-253)', () => {
+  const f = 'agents/templates/agent-proposal.md';
+  assert.ok(existsSync(join(ROOT, f)),
+    'agent-proposal.md must exist so the link from agent-lifecycle.md resolves');
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
