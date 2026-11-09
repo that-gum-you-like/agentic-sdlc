@@ -712,7 +712,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221
   - Complexity: S
 
-- [ ] **CV-228**: SHARED_PROTOCOL.md and SHARED_PROTOCOL.md.template: add "Agent log (coffeetalk)" section: append-only pm/coffeetalk.md, line `- <ISO time> @from -> @to: message`, read last 20 lines at turn start, never edit or delete
+- [x] **CV-228**: SHARED_PROTOCOL.md and SHARED_PROTOCOL.md.template: add "Agent log (coffeetalk)" section: append-only pm/coffeetalk.md, line `- <ISO time> @from -> @to: message`, read last 20 lines at turn start, never edit or delete
   - **Priority:** MEDIUM
   - Files: `agents/SHARED_PROTOCOL.md, agents/templates/SHARED_PROTOCOL.md.template, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-083

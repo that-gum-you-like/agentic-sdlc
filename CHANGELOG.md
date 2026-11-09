@@ -20,6 +20,7 @@
 - 2026-11-09 #130 feat(proposal-template): add User Stories (by persona) section (CV-224) (docs-tests)
 - 2026-11-09 #131 feat(requirements-engineer): add persona-coverage checklist line (CV-225) (docs-tests)
 - 2026-11-09 #132 feat(templates): add Success Metrics and Who Benefits to proposal Value Analysis (CV-226) (docs-tests)
+- 2026-11-09 #134 feat(protocol): add Agent log (CoffeeTalk) section (CV-228) (backend)
 
 ## 2026-11-08
 

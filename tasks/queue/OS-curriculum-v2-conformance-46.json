@@ -3,7 +3,7 @@
   "title": "SHARED_PROTOCOL.md and SHARED_PROTOCOL.md.template: add \"Agent log (coffeetalk)\" section: append-only pm/coffeetalk.md, line `- <ISO time> @from -> @to: message`, read last 20 lines at turn start, never edit or delete",
   "description": "- [ ] **CV-228**: SHARED_PROTOCOL.md and SHARED_PROTOCOL.md.template: add \"Agent log (coffeetalk)\" section: append-only pm/coffeetalk.md, line `- <ISO time> @from -> @to: message`, read last 20 lines at turn start, never edit or delete\n  - **Priority:** MEDIUM\n  - Files: `agents/SHARED_PROTOCOL.md, agents/templates/SHARED_PROTOCOL.md.template, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-083\n  - Gaps: D3-06, D6-09\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts both files contain `pm/coffeetalk.md` and `append-only`\n  - Parallel: blocked-by CV-221\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-39"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-46.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T18:05:32.361Z"
 }
