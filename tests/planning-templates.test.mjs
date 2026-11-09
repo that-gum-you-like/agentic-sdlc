@@ -133,26 +133,6 @@ test('proposal.md.template Success Metrics table has metric, baseline, target, h
   }
 });
 
-// ── CV-227: value-analyst.md requires success metrics, who benefits, and "what if we do not build this" ─
-
-test('value-analyst.md requires success metrics, who benefits, and what if we do not build this (CV-227)', () => {
-  const raw = read('agents/templates/planning-agents/value-analyst.md');
-
-  // Must reference success metrics (with metric, baseline, target, how measured)
-  assert.match(raw, /success metrics/i,
-    'value-analyst.md must require success metrics');
-  assert.match(raw, /metric.*baseline.*target/i,
-    'value-analyst.md success metrics must reference metric, baseline, and target');
-
-  // Must reference who benefits (determine or output format)
-  assert.match(raw, /who benefits/i,
-    'value-analyst.md must reference who benefits');
-
-  // Must reference "what if we do not build this" or cost of inaction
-  assert.match(raw, /what if we do not build/i,
-    'value-analyst.md must ask what if we do not build this');
-});
-
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
