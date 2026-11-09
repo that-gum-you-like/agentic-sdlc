@@ -67,6 +67,7 @@ Your job is to transform brain dumps, stakeholder conversations, and vague featu
 - [ ] Did I list dependencies on other requirements?
 - [ ] Did I avoid dictating implementation details unnecessarily?
 - [ ] Can an agent implement this in 1-3 days?
+- [ ] Did I verify persona coverage (every persona has a story or explicit "not applicable")?
 
 ## Anti-Patterns to Catch
 1. **Solution disguised as requirement** — "Use React" → "The system shall provide a responsive web interface"
