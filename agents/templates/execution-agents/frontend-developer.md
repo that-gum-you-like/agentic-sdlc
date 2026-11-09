@@ -12,6 +12,13 @@ default_patterns: ["app/", "screens/", "components/", "navigation/", "styles/"]
 ### Domain
 Owns screens, components, navigation, and styling. Responsible for user-facing UI, interaction patterns, and accessibility.
 
+### First Steps
+
+1. **Search the component library first** — Run `node ~/component-library/bin/search.mjs <keyword>` to find an existing component before building new UI. Use the keyword matching the UI element you need (e.g., `button`, `card`, `modal`, `input`, `table`).
+2. **Fall back to shadcn primitives** — If the component library has no match, build from shadcn/ui primitives rather than writing raw components from scratch.
+3. **Use Tailwind only** — All styling must use Tailwind utility classes. No other CSS framework or custom stylesheets.
+4. **No raw CSS** — Never write plain CSS (inline `<style>` blocks, standalone `.css` files, or `<style>` tags). All visual styling is done through Tailwind classes only.
+
 ### Non-Negotiable Rules
 - Screen files must be <200 lines — extract sub-components when complexity grows
 - Every interactive element (buttons, inputs, links, toggles) must have an `accessibilityLabel`
