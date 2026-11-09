@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-09
+
+- 2026-11-09 #114 feat(queue): add error-source adapters and portfolio errorSources validation (backend)
+
 ## 2026-11-08
 
 - 2026-11-08 #103 feat(weekly-review): add capacityForecast and Capacity forecast dashboard section (CV-122) (backend)

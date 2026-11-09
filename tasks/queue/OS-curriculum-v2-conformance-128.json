@@ -3,7 +3,7 @@
   "title": "Add error-source adapters (jsonl file, journalctl, `vercel logs`, `supabase` logs) and an `errorSources[]` field per project in portfolio.json",
   "description": "- [ ] **CV-704**: Add error-source adapters (jsonl file, journalctl, `vercel logs`, `supabase` logs) and an `errorSources[]` field per project in portfolio.json\n  - **Priority:** MEDIUM\n  - Files: `agents/error-sources.mjs` (new), `agents/portfolio.mjs`, `tests/error-sources.test.mjs` (new)\n  - Spec: CV-REQ-111\n  - Gaps: D1-04\n  - Lane: hermes\n  - Test: each adapter is unit-tested against a recorded fixture of its CLI output (no live CLI calls); `portfolio.mjs validate` accepts and type-checks `errorSources`\n  - Parallel: blocked-by CV-703\n  - Complexity: M",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-127"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-128.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T00:01:18.747Z"
 }

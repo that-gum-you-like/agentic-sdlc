@@ -1639,7 +1639,7 @@ Spec: `specs/decisions-2026-11-03.md`. Hermes builds the code against mocks; the
   - Test: 50 identical JSONL events on stdin give one task with `occurrences: 50`; crossing 10 sets HIGH and 100 sets CRITICAL; the text passes through `screenExternalInput` from `agents/red-team-tester.mjs`
   - Complexity: M
 
-- [ ] **CV-704**: Add error-source adapters (jsonl file, journalctl, `vercel logs`, `supabase` logs) and an `errorSources[]` field per project in portfolio.json
+- [x] **CV-704**: Add error-source adapters (jsonl file, journalctl, `vercel logs`, `supabase` logs) and an `errorSources[]` field per project in portfolio.json
   - **Priority:** MEDIUM
   - Files: `agents/error-sources.mjs` (new), `agents/portfolio.mjs`, `tests/error-sources.test.mjs` (new)
   - Spec: CV-REQ-111
