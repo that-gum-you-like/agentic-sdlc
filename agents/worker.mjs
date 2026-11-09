@@ -39,6 +39,7 @@ const CANONICAL_CAPABILITIES = [
 
 import { loadConfig } from './load-config.mjs';
 import { computeEfficiencyMetrics } from './cost-tracker.mjs';
+import { renderCharacter } from './memory-manager.mjs';
 
 let semanticSearch = null;
 try {
@@ -241,6 +242,9 @@ function generatePrompt(agentName, task, agentMd, memories) {
   const instanceSection = generateInstanceSection(task);
   const capabilitySection = generateCapabilityChecklistSection(agentName);
 
+  // Render optional character block (CV-REQ-070, CV-243)
+  const characterSection = renderCharacter(memories.core);
+
   let efficiencySummary = '';
   try {
     const eff = computeEfficiencyMetrics(agentName);
@@ -259,7 +263,7 @@ ${agentMd}
 
 ## Permission Constraints
 ${permissionConstraint}
-${instanceSection}${efficiencySummary}
+${instanceSection}${efficiencySummary}${characterSection ? `\n${characterSection}` : ''}
 ## Your Memory
 ${memorySection}
 
@@ -309,7 +313,21 @@ Do NOT fabricate credentials, make irreversible design choices on behalf of the 
 ${capabilitySection}`;
 }
 
-// Main
+// ─────────────────────────────────────────────────────────────────────────────
+// Exported API for testing
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { generatePrompt, loadMemory };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CLI entry — guarded so importing the module for tests doesn't trigger it
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __isMainModule = !process.env['SDLC_TEST'] && (
+  process.argv[1] && resolve(process.argv[1]) === __filename
+);
+
+if (__isMainModule) {
 const { agent, task: taskId } = parseArgs();
 
 if (!agent || !taskId) {
@@ -368,3 +386,4 @@ console.log(`\nTo launch this agent, use the Task tool with:`);
 console.log(`  subagent_type: "general-purpose"`);
 console.log(`  model: "${modelShort}"${agentBudget.activeModel ? ' (swapped by model-manager)' : ''}`);
 console.log(`  prompt: <the above prompt>`);
+}
