@@ -18,6 +18,9 @@ import fs from 'fs';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { loadConfig } from './load-config.mjs';
+import { screenExternalInput } from './red-team-tester.mjs';
+import { logCapabilityUsage } from './capability-logger.mjs';
+import { notifyHumanTask } from './notify.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 
@@ -387,6 +390,7 @@ function main() {
   let totalSkippedDone = 0;
   let totalSkippedDupe = 0;
   let totalSkippedLane = 0;
+  let totalSkippedInjection = 0;
   let totalChangesProcessed = 0;
 
   for (const entry of changeEntries) {
@@ -483,6 +487,31 @@ function main() {
       const safeChangeName = changeName.replace(/[^a-zA-Z0-9]/g, '-');
       const taskId = `OS-${safeChangeName}-${task.taskNumber}`;
 
+      // CV-205 (CV-REQ-061): screen every task block before writing. An
+      // OpenSpec tasks.md is external-origin text — authored outside the drain
+      // — and may carry prompt injection. A flagged task is never written: it
+      // is skipped with reason `injection-screen`, a human task is raised, and
+      // the outcome is logged via logCapabilityUsage('injectionScreen', ...).
+      const screenText = (task.title || '') + '\n' + description;
+      const { safe } = screenExternalInput(screenText);
+      if (!safe) {
+        console.log(`  [BLOCKED] ${taskId}: ${task.title} (injection screen — reason: injection-screen)`);
+        totalSkippedInjection++;
+        if (!isDryRun) {
+          const humanTask = {
+            id: `injection-${taskId}`,
+            title: `Injection blocked: ${task.title}`,
+            description: `Task from openspec change "${changeName}" was blocked by the injection screen.\n\nSource: openspec/${changeName}/tasks.md\n\nOriginal task:\n${screenText}`,
+            urgency: 'HIGH',
+          };
+          try { notifyHumanTask(humanTask); } catch { /* notification is best-effort */ }
+          try {
+            logCapabilityUsage('injectionScreen', 'seed-queue-from-openspec', taskId, 'seed-queue-from-openspec.mjs', 'blocked');
+          } catch { /* capability logging must never break seeding */ }
+        }
+        continue;
+      }
+
       // Dependencies: map sibling raw ids to their queue ids; checked-off ones are satisfied.
       const blockedBy = (task.blockedByRaw || [])
         .filter(raw => !(tasks.doneIds && tasks.doneIds.has(raw)))
@@ -540,6 +569,7 @@ function main() {
   console.log(`  Tasks ${isDryRun ? 'would create' : 'created    '}: ${totalCreated}`);
   console.log(`  Skipped (done)    : ${totalSkippedDone}`);
   console.log(`  Skipped (dupe)    : ${totalSkippedDupe}`);
+  console.log(`  Skipped (injection): ${totalSkippedInjection}`);
   console.log(`  Interactive (blocked): ${totalSkippedLane}`);
   if (!isDryRun && totalCreated > 0) {
     console.log(`\n[seed] Task queue: ${TASK_QUEUE_DIR}`);

@@ -102,6 +102,9 @@ Desktop popups mirror the same events when you're at the machine.
   (copy an existing one; `status: "pending"`, unique `id`). The next drain tick
   picks it up.
 - **From an openspec change**: `node ~/agentic-sdlc/agents/seed-queue-from-openspec.mjs`
+  Each task block is screened for prompt injection (`screenExternalInput`);
+  flagged tasks are never written — they are skipped with reason
+  `injection-screen` and a human task is raised.
 - **Another project**: `SDLC_REPO=~/tally bash ~/agentic-sdlc/agents/hermes-drain.sh --dry-run`
   to check, then add a drain job for it in `cron-schedule.json`.
 - **Ad hoc**: just message the Telegram chat bot or run `hermes` — that's a
