@@ -267,17 +267,21 @@ describe('CLI --screen flag', () => {
   it('reads from stdin with --screen -', () => {
     const r = spawnSync('node', [RT, '--screen', '-'], { input: 'This text is fine and safe.' });
     assert.equal(r.status, 0);
+    assert.doesNotThrow(() => JSON.parse(r.stdout.toString()), 'stdout must be valid JSON');
     const parsed = JSON.parse(r.stdout.toString());
     assert.equal(parsed.flagged, false);
   });
 
   it('outputs valid JSON to stdout', () => {
     const r = spawnSync('node', [RT, '--screen', 'test']);
-    assert.doesNotThrow(() => JSON.parse(r.stdout.toString()));
+    assert.equal(r.status, 0, 'benign text should exit 0');
+    assert.doesNotThrow(() => JSON.parse(r.stdout.toString()), 'stdout must be valid JSON');
   });
 
   it('includes imperativeDensity in verdict JSON', () => {
     const r = spawnSync('node', [RT, '--screen', 'test']);
+    assert.equal(r.status, 0, 'benign text should exit 0');
+    assert.doesNotThrow(() => JSON.parse(r.stdout.toString()), 'stdout must be valid JSON');
     const parsed = JSON.parse(r.stdout.toString());
     assert.ok('imperativeDensity' in parsed);
     assert.ok('safe' in parsed);

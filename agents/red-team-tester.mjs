@@ -12,6 +12,7 @@
  *   node ~/agentic-sdlc/agents/red-team-tester.mjs               # Full scan + report
  *   node ~/agentic-sdlc/agents/red-team-tester.mjs --dry-run     # Scan without writing
  *   node ~/agentic-sdlc/agents/red-team-tester.mjs --notify      # Also notify on HIGH findings
+ *   node ~/agentic-sdlc/agents/red-team-tester.mjs --screen <text|->  # Screen text and print verdict JSON (exit 2 when flagged)
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
@@ -258,7 +259,7 @@ export function screenVerdict(text) {
  * Read all of stdin and return the assembled string.
  * @returns {Promise<string>}
  */
-function readStdin() {
+export function readStdin() {
   return new Promise((resolve, reject) => {
     const chunks = [];
     process.stdin.setEncoding('utf8');
@@ -279,6 +280,8 @@ function __isMainModule() {
 
 if (__isMainModule()) {
   const args = process.argv.slice(2);
+  const dryRun = args.includes('--dry-run');
+  const notify = args.includes('--notify');
 
   // --screen <text|-> : screen external text and print verdict JSON, exit 2 when flagged
   const screenIdx = args.indexOf('--screen');
@@ -301,9 +304,7 @@ if (__isMainModule()) {
       process.exit(1);
     });
   } else {
-    const dryRun = args.includes('--dry-run');
-    const notify = args.includes('--notify');
-
+    // Normal scan mode
     const result = runRedTeam({ dryRun });
 
     console.log(`Scanned ${result.scanned} files.`);
