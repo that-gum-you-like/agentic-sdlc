@@ -989,6 +989,45 @@ function reviewerAgent() {
 }
 
 /**
+ * Load agents/domains.json — the agent → patterns mapping used to determine
+ * which agents share a domain (overlapping file patterns).
+ * Returns an object keyed by agent name, or {} when the file doesn't exist.
+ */
+function loadDomainsConfig() {
+  const domainsPath = resolve(AGENTS_DIR, 'domains.json');
+  if (!existsSync(domainsPath)) return {};
+  try {
+    return JSON.parse(readFileSync(domainsPath, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Given an agent name and the domains config, returns names of other agents
+ * whose pattern arrays overlap with the given agent's patterns — i.e. they
+ * share at least one domain entry.
+ * Returns an empty array when no shared-domain agents are found.
+ */
+function findSharedDomainAgents(agent, domains) {
+  const myPatterns = domains[agent]?.patterns || [];
+  if (myPatterns.length === 0) return [];
+
+  const shared = [];
+  for (const [otherAgent, info] of Object.entries(domains)) {
+    if (otherAgent === agent) continue;
+    const otherPatterns = info.patterns || [];
+    if (otherPatterns.length === 0) continue;
+    // Two agents share a domain when at least one pattern string appears in both
+    if (myPatterns.some(p => otherPatterns.includes(p)) ||
+        otherPatterns.some(p => myPatterns.includes(p))) {
+      shared.push(otherAgent);
+    }
+  }
+  return shared;
+}
+
+/**
  * The TEACH step of the improvement loop: each recurring pattern is recorded
  * into the LONG-TERM memory of the agent(s) whose commits produced it
  * (reviewer agent when authorship can't be attributed), so the lesson feeds
@@ -999,6 +1038,7 @@ function reviewerAgent() {
  */
 function teachAgents(recurringPatterns, dryRun = false) {
   const details = [];
+  const domains = loadDomainsConfig();
 
   for (const pattern of recurringPatterns) {
     // Attribute via the commits behind this pattern's occurrences.
@@ -1052,6 +1092,51 @@ function teachAgents(recurringPatterns, dryRun = false) {
         memory.entries.push(entry);
         writeFileSync(memPath, JSON.stringify(memory, null, 2));
         try { logCapabilityUsage('memoryRecord', agent, 'pattern-hunt-teach', 'pattern-hunt.mjs', 'teach'); } catch { /* advisory */ }
+
+        // Cross-teach: record a learnedFrom entry on other agents sharing a domain
+        const peers = findSharedDomainAgents(agent, domains);
+        for (const peer of peers) {
+          const peerMemPath = resolve(AGENTS_DIR, peer, 'memory', 'long-term.json');
+          let peerMemory = { entries: [] };
+          if (existsSync(peerMemPath)) {
+            try { peerMemory = JSON.parse(readFileSync(peerMemPath, 'utf8')); } catch { peerMemory = { entries: [] }; }
+          }
+          peerMemory.entries = peerMemory.entries || [];
+
+          // Idempotent per (category, learnedFrom) — a rerun adds none
+          const alreadyCrossTaught = peerMemory.entries.some(
+            e => e.source === 'pattern-hunt' && e.pattern === pattern.category && e.learnedFrom === agent
+          );
+          if (alreadyCrossTaught) {
+            details.push({ agent: peer, pattern: pattern.category, action: 'already-cross-taught', learnedFrom: agent });
+            continue;
+          }
+
+          const crossEntry = {
+            id: `PH-cross-${pattern.category}-${agent}-${Date.now()}`,
+            content: `Learned from ${agent}: Recurring anti-pattern (${pattern.count}x in reviews): ${pattern.label}. ` +
+              `Check for this before every commit — a defeat test ${pattern.defeatTestProposal?.testFile ? `guards it in ${pattern.defeatTestProposal.testFile}` : 'is proposed'}.`,
+            date: new Date().toISOString().split('T')[0],
+            source: 'pattern-hunt',
+            pattern: pattern.category,
+            learnedFrom: agent,
+            severity: pattern.worstSeverity,
+            feeling: feelingMap[pattern.worstSeverity] || 'mildly annoyed',
+            impact: `Shared domain with ${agent} who had this pattern recur in ${pattern.count} reviews`,
+            whatIDoNow: 'ruleAdded',
+          };
+
+          peerMemory.entries.push(crossEntry);
+          writeFileSync(peerMemPath, JSON.stringify(peerMemory, null, 2));
+          try { logCapabilityUsage('memoryRecord', peer, 'pattern-hunt-cross-teach', 'pattern-hunt.mjs', 'teach'); } catch { /* advisory */ }
+          details.push({ agent: peer, pattern: pattern.category, action: 'cross-taught', learnedFrom: agent });
+        }
+      } else {
+        // Dry-run: report cross-teaching without writing
+        const peers = findSharedDomainAgents(agent, domains);
+        for (const peer of peers) {
+          details.push({ agent: peer, pattern: pattern.category, action: 'would-cross-teach', learnedFrom: agent });
+        }
       }
       details.push({ agent, pattern: pattern.category, action: dryRun ? 'would-teach' : 'taught' });
     }
@@ -1314,6 +1399,8 @@ async function main() {
       dryRun,
       taught: teachDetails.filter(d => d.action === 'taught').length,
       alreadyTaught: teachDetails.filter(d => d.action === 'already-taught').length,
+      crossTaught: teachDetails.filter(d => d.action === 'cross-taught').length,
+      alreadyCrossTaught: teachDetails.filter(d => d.action === 'already-cross-taught').length,
       details: teachDetails,
     },
     checklistGrowth: {
@@ -1332,7 +1419,7 @@ async function main() {
   }
 }
 
-export { categorizeIssue, parseReview, groupByCategory, findRecurringPatterns, findReviewsDir };
+export { categorizeIssue, parseReview, groupByCategory, findRecurringPatterns, findReviewsDir, loadDomainsConfig, findSharedDomainAgents };
 
 function __isMainModule() {
   return process.argv[1] && resolve(process.argv[1]) === __filename;
