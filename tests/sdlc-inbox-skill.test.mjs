@@ -142,3 +142,43 @@ test('the skill forbids capturing code work as a chore/note', () => {
   assert.match(raw, /never set `kind: code`|NEVER set `kind: code`/i,
     'skill must forbid kind: code on captures');
 });
+
+test('the skill routes `idea:` prefix to openspec/BACKLOG.md', () => {
+  const raw = readFileSync(SKILL_PATH, 'utf8');
+  assert.match(raw, /idea:/, 'skill must recognise the idea: prefix');
+  assert.match(raw, /openspec\/BACKLOG\.md/,
+    'skill must reference openspec/BACKLOG.md for idea captures');
+  assert.match(raw, /captured, keep current focus/,
+    'skill must reply "captured, keep current focus" for idea captures');
+  assert.match(raw, /Remaining Ideas/,
+    'skill must reference the Remaining Ideas section of BACKLOG.md');
+  assert.match(raw, /Problem:/,
+    'skill must document the Problem: field in the backlog entry format');
+  assert.match(raw, /Idea:/,
+    'skill must document the Idea: field in the backlog entry format');
+  assert.match(raw, /Complexity:/,
+    'skill must document the Complexity: field in the backlog entry format');
+  assert.match(raw, /Example:/,
+    'skill must include a worked example of an idea: capture');
+});
+
+test('the skill teaches `idea` as a third capture kind', () => {
+  const raw = readFileSync(SKILL_PATH, 'utf8');
+  assert.match(raw, /`idea`/, 'skill must recognise the idea kind');
+  assert.match(raw, /BACKLOG\.md, not task queue|backlog entry/,
+    'skill must state that idea items go to BACKLOG.md not the task queue');
+});
+
+test('the skill forbids filing an idea: item as a task file', () => {
+  const raw = readFileSync(SKILL_PATH, 'utf8');
+  assert.match(raw, /NEVER file an `idea:`/,
+    'guardrail must forbid filing idea: items as task files');
+  assert.match(raw, /NEVER skip reading `openspec\/BACKLOG\.md`/,
+    'guardrail must require reading BACKLOG.md for the next entry number');
+});
+
+test('the skill mentions `idea` alongside chore and note in the frontmatter description', () => {
+  const raw = readFileSync(SKILL_PATH, 'utf8');
+  assert.match(raw, /idea/, 'frontmatter must mention idea');
+  assert.match(raw, /BACKLOG\.md/, 'frontmatter must mention BACKLOG.md');
+});
