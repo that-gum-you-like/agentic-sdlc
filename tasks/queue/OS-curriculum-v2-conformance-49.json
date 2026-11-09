@@ -3,7 +3,7 @@
   "title": "skills/sdlc-inbox/SKILL.md: route messages prefixed `idea:` to openspec/BACKLOG.md as the next REQ-xxx entry and reply \"captured, keep current focus\" (read BACKLOG.md for the entry format first)",
   "description": "- [ ] **CV-231**: skills/sdlc-inbox/SKILL.md: route messages prefixed `idea:` to openspec/BACKLOG.md as the next REQ-xxx entry and reply \"captured, keep current focus\" (read BACKLOG.md for the entry format first)\n  - **Priority:** MEDIUM\n  - Files: `skills/sdlc-inbox/SKILL.md, tests/sdlc-inbox-skill.test.mjs`\n  - Spec: CV-REQ-085\n  - Gaps: D7-10\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: skill test asserts `idea:` routing and `BACKLOG.md` mentioned\n  - Parallel: blocked-by CV-206\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-33"
   ],
   "_file": "OS-curriculum-v2-conformance-49.json",
-  "claimedAt": "2026-11-09T18:18:03.894Z"
+  "claimedAt": "2026-11-09T18:18:03.894Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T18:31:11.096Z"
 }

@@ -745,7 +745,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221
   - Complexity: S
 
-- [ ] **CV-231**: skills/sdlc-inbox/SKILL.md: route messages prefixed `idea:` to openspec/BACKLOG.md as the next REQ-xxx entry and reply "captured, keep current focus" (read BACKLOG.md for the entry format first)
+- [x] **CV-231**: skills/sdlc-inbox/SKILL.md: route messages prefixed `idea:` to openspec/BACKLOG.md as the next REQ-xxx entry and reply "captured, keep current focus" (read BACKLOG.md for the entry format first)
   - **Priority:** MEDIUM
   - Files: `skills/sdlc-inbox/SKILL.md, tests/sdlc-inbox-skill.test.mjs`
   - Spec: CV-REQ-085
