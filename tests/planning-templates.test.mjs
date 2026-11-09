@@ -263,6 +263,14 @@ test('claude-quickstart.md mentions REA MCP feeding browser-user-test.mjs genera
     'claude-quickstart.md must mention browser-user-test.mjs generate as fed by REA');
 });
 
+// ── CV-238: agent-routing.md has "Disagreement is the finding" ──────────────
+
+test('agent-routing.md contains the phrase "disagreement is the finding" (CV-238)', () => {
+  const raw = read('framework/agent-routing.md');
+  assert.match(raw, /disagreement is the finding/i,
+    'agent-routing.md must state that when reviewers disagree, the disagreement is the finding');
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
