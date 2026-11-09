@@ -110,3 +110,17 @@ This agent follows a structured maturation cycle:
 - **Level 3 (Teaching):** Correction rate declining, critic reviewing at higher level
 - **Level 4 (Autonomous):** Zero basic corrections for 2 consecutive weeks
 - **Level 5 (Evolving):** Agent proposes new checklist items or defeat tests from own observations
+
+---
+
+## Version History
+
+| Date | Description | Lines |
+|------|-------------|-------|
+| | | |
+
+## Breaking Changes
+
+| Version / Date | Description | Migration |
+|----------------|-------------|-----------|
+| | | |
