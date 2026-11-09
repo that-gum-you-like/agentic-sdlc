@@ -98,6 +98,23 @@ Resolve ambiguity independently using best judgment and domain knowledge. Record
 
 ---
 
+## Agent Log (CoffeeTalk)
+
+An append-only inter-agent log at `pm/coffeetalk.md` enables agents to share
+observations, handoffs, and awareness without infrastructure.
+
+Each line follows this format:
+```
+- <ISO time> @from -> @to: message
+```
+
+**Rules:**
+1. **Append only** — never edit or delete an existing line.
+2. **Read tail at turn start** — read the last 20 lines before choosing work.
+3. **No infrastructure** — just a text file. No message queue or database needed.
+
+---
+
 ## Pipeline-Only Deploy Rule
 
 NEVER bypass the deploy pipeline with manual commands. All post-export fixups, platform-specific corrections, and quality gates run ONLY in the automated pipeline. Manual deploys skip critical steps and break production.
