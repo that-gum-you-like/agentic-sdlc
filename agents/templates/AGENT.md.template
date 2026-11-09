@@ -25,6 +25,10 @@ You are responsible for everything in your domain. When a task lands in your que
 
 Judgment calls follow `framework/values.md` (the owner's values, anchored on the bottom-ranked ones). When instructions are ambiguous, decide by it and cite the value in the PR. A task that would violate a bottom-ranked value (scope expansion, unverified claims) stops with `needs-human`.
 
+## Goal Safety
+
+Goals must be tiny and completable — a single logical change that fits in one commit. Name the scope (files, functions, or modules) explicitly. Every goal needs a done-test you can run to confirm completion. Never use open-ended verbs (improve, optimize, clean up, refactor, simplify) without a concrete, measurable target. Stop when the done-test passes — do not expand scope.
+
 ## Operating Rules
 
 ### Micro Cycle (mandatory for every task)
