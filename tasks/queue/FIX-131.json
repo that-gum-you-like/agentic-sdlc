@@ -1,0 +1,24 @@
+{
+  "id": "FIX-131",
+  "phase": 1,
+  "title": "Fix rejected drain PR #131 (agent/drain/OS-curriculum-v2-conformance-43)",
+  "assignee": "sdlc-developer",
+  "priority": "CRITICAL",
+  "estimatedTokens": 16000,
+  "files": [],
+  "blockedBy": [],
+  "created": "2026-11-09T16:35:46.649Z",
+  "tags": [
+    "auto-fix"
+  ],
+  "description": "Drain PR #131 (branch `agent/drain/OS-curriculum-v2-conformance-43`) was NOT merged by pr-auto-review (gate-failed).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-43 && git checkout agent/drain/OS-curriculum-v2-conformance-43`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-43` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- hard gate failed at node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs'\n- ℹ todo 0\nℹ duration_ms 32895.311177\n\n✖ failing tests:\n\ntest at agents/__tests__/heartbeat.test.mjs:365:3\n✖ exits 0 when delivery succeeds (30037.801521ms)\n  AssertionError [ERR_ASSERTION]: exit code must be 0, got null\n  \n  null !== 0\n  \n      at TestContext.<anonymous> (file:///tmp/pr-review-InsyI2/agents/__tests__/heartbeat.test.mjs:378:12)\n      at Test.runInAsyncScope (node:async_hooks:226:14)\n      at Test.run (node:internal/test_runner/test:1118:25)\n      at Test.start (node:internal/test_runner/test:1015:17)\n      at node:internal/test_runner/test:1531:71\n      at node:internal/per_context/primordials:466:82\n      at new Promise (<anonymous>)\n      at new SafePromise (node:internal/per_context/primordials:435:3)\n      at node:internal/per_context/primordials:466:9\n      at Array.map (<anonymous>) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: null,\n    expected: 0,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n\n",
+  "attempts": 1,
+  "status": "pending",
+  "fixFor": {
+    "pr": 131,
+    "branch": "agent/drain/OS-curriculum-v2-conformance-43",
+    "headSha": "1f0b3851eb157f384b57e6b28aca5e08a944c267",
+    "sourceTask": "OS-curriculum-v2-conformance-43",
+    "rejectionKind": "gate-failed"
+  }
+}
