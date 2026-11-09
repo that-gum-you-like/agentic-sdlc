@@ -3,7 +3,7 @@
   "title": "docs/claude-quickstart.md: state /schedule and /loop are interactive-only with scheduler-install.mjs timers as the autonomous equivalent; mention REA MCP feeding `browser-user-test.mjs generate`",
   "description": "- [ ] **CV-236**: docs/claude-quickstart.md: state /schedule and /loop are interactive-only with scheduler-install.mjs timers as the autonomous equivalent; mention REA MCP feeding `browser-user-test.mjs generate`\n  - **Priority:** MEDIUM\n  - Files: `docs/claude-quickstart.md, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-088\n  - Gaps: D7-15, D7-17\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts `interactive-only`, `scheduler-install.mjs`, `REA`\n  - Parallel: blocked-by CV-221\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-documentarian",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-39"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-54.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T19:04:54.803Z"
 }

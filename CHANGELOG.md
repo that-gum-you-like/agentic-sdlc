@@ -27,6 +27,7 @@
 - 2026-11-09 #138 feat(code-reviewer): add Reasoning Framework (name-cite-reframe) per CV-232 (docs-tests)
 - 2026-11-09 #139 feat(code-reviewer): add Standardization Sweep procedure (CV-234) (docs-tests)
 - 2026-11-09 #140 feat(seed-tasks): add standardization-sweep seed task (CV-235) (backend)
+- 2026-11-09 #141 docs(claude-quickstart): state /schedule and /loop are interactive-only (CV-236) (docs-tests)
 
 ## 2026-11-08
 

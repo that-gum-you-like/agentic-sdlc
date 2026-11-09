@@ -800,7 +800,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-234
   - Complexity: S
 
-- [ ] **CV-236**: docs/claude-quickstart.md: state /schedule and /loop are interactive-only with scheduler-install.mjs timers as the autonomous equivalent; mention REA MCP feeding `browser-user-test.mjs generate`
+- [x] **CV-236**: docs/claude-quickstart.md: state /schedule and /loop are interactive-only with scheduler-install.mjs timers as the autonomous equivalent; mention REA MCP feeding `browser-user-test.mjs generate`
   - **Priority:** MEDIUM
   - Files: `docs/claude-quickstart.md, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-088
