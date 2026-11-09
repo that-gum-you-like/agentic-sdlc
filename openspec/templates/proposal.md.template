@@ -81,6 +81,18 @@
 
 ---
 
+## User Stories (by persona)
+
+| Persona  | User Story |
+|----------|------------|
+| New      | As a new user, I want {{NEW_USER_STORY}} so that {{NEW_USER_RATIONALE}} |
+| Regular  | As a regular user, I want {{REGULAR_USER_STORY}} so that {{REGULAR_USER_RATIONALE}} |
+| Power    | As a power user, I want {{POWER_USER_STORY}} so that {{POWER_USER_RATIONALE}} |
+| Admin    | As an admin, I want {{ADMIN_STORY}} so that {{ADMIN_RATIONALE}} |
+| Payer    | As a payer, I want {{PAYER_STORY}} so that {{PAYER_RATIONALE}} |
+
+---
+
 ## Next Step
 
 If approved: proceed to design phase using `openspec-continue-change`.
