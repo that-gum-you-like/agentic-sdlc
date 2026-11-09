@@ -55,6 +55,22 @@ const RECURRENCE_THRESHOLD = 3;
 function categorizeIssue(issueText) {
   const lower = issueText.toLowerCase();
 
+  // Categories seen in real drain-PR rejections (pm/pr-auto-review.log, 2026-11).
+  if (lower.includes('diff unavailable') || lower.includes('no diff') || lower.includes('without seeing the actual code') || lower.includes('without code changes')) {
+    return { category: 'review-infra', label: 'Reviewer could not see the diff (infrastructure, not the author)' };
+  }
+  if (lower.includes('scope creep') || lower.includes('unrelated') || lower.includes('not part of the original task') || lower.includes('not mentioned in task scope')) {
+    return { category: 'scope-creep', label: 'Change goes beyond the task scope' };
+  }
+  if (/(removed|rewr[io]te|rewritten|deletes?|no longer validate)\b.*\btests?\b|\btests?\b.*\b(removed|rewritten|deleted|no longer)/.test(lower)) {
+    return { category: 'test-weakening', label: 'Existing tests removed, rewritten or weakened' };
+  }
+  if (lower.includes('regex')) {
+    return { category: 'regex-fragility', label: 'Fragile or incorrect regex' };
+  }
+  if (lower.includes('package-lock') || lower.includes('node_modules')) {
+    return { category: 'stray-artifacts', label: 'Generated files (package-lock, node_modules) committed' };
+  }
   if (lower.includes('console.log')) {
     return { category: 'console-log', label: 'console.log in production code' };
   }
@@ -106,7 +122,8 @@ function parseReview(filePath) {
   const titleMatch = content.match(/^## Review: (.+)$/m);
   const commitMatch = content.match(/^\*\*Commit:\*\* ([a-f0-9]+)/m);
   const verdictMatch = content.match(/^\*\*Verdict:\*\* (.+)$/m);
-  const reviewedAtMatch = content.match(/_Reviewed by Richmond Avenal at (.+?)_/);
+  // Any reviewer name: pr-auto-review writes `_Reviewed by sdlc-reviewer at <ts>_`.
+  const reviewedAtMatch = content.match(/_Reviewed by .+? at (.+?)_/);
 
   const title = titleMatch ? titleMatch[1].trim() : 'Unknown';
   const commitHash = commitMatch ? commitMatch[1].trim() : 'unknown';
@@ -275,10 +292,15 @@ async function semanticMergeCategories(categoryMap) {
 /**
  * Identifies recurring patterns: categories appearing in >= RECURRENCE_THRESHOLD reviews.
  */
+// Not patterns in the author's work: unclassified issues share a bucket only
+// because nothing matched (three unrelated [major]s are not a pattern), and
+// review-infra is the reviewer's own failure.
+const NON_PATTERN = (category) => category.startsWith('other-') || category === 'review-infra';
+
 function findRecurringPatterns(categoryMap) {
   const patterns = [];
   for (const [, entry] of categoryMap) {
-    if (entry.count >= RECURRENCE_THRESHOLD) {
+    if (entry.count >= RECURRENCE_THRESHOLD && !NON_PATTERN(entry.category)) {
       patterns.push(entry);
     }
   }
@@ -1300,7 +1322,15 @@ async function main() {
   }
 }
 
-main().catch(err => {
-  process.stderr.write(`pattern-hunt error: ${err.message}\n`);
-  process.exit(1);
-});
+export { categorizeIssue, parseReview, groupByCategory, findRecurringPatterns, findReviewsDir };
+
+function __isMainModule() {
+  return process.argv[1] && resolve(process.argv[1]) === __filename;
+}
+
+if (__isMainModule()) {
+  main().catch(err => {
+    process.stderr.write(`pattern-hunt error: ${err.message}\n`);
+    process.exit(1);
+  });
+}
