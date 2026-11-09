@@ -11,14 +11,15 @@
   "tags": [
     "auto-fix"
   ],
-  "description": "Drain PR #133 (branch `agent/drain/OS-curriculum-v2-conformance-45`) was NOT merged by pr-auto-review (gate-failed).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-45 && git checkout agent/drain/OS-curriculum-v2-conformance-45`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-45` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- hard gate failed at node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs'\n- ✔ reports no conflicts when changes are disjoint (10.015686ms)\n✔ ignores archived changes (5.049839ms)\n✔ filters URL false positives from file regex (6.191344ms)\n✔ all three artifact sources contribute to file set (7.131454ms)\n✔ the doc actually parses into capability rows (3.487345ms)\n✔ no capability is marked Missing while its owner exists on disk (2.7165ms)\n✔ no capability is marked Solid while none of its owners exist (1.983041ms)\n✔ the obsolete \"close ONLY these\" gap list is gone (0.453733ms)\n✔ decorated statuses parse (0.660158ms)\n✔ prose in the owner cell is not mistaken for a path (0.3475ms)\n✔ a Missing row whose owner exists is exactly what fails (0.427928ms)\n\ndeploy-rollback.mjs\n  Scenario 2: missing rollbackCmd exits 1 ... OK\n  Scenario 1: happy path with echo rollback succeeds ... OK\n  Scenario 3: failing rollback exits 2 ... OK\n  Scenario 5: --dry-run does not execute and exits 0 ... OK\n  Scenario 4: debounce marker written after successful fire ... OK\n  deploy.rollbackCmd is preferred over legacy top-level rollbackCmd (openspec: autonomous-deploy-pipeline) ... OK\n  legacy top-level rollbackCmd still works when no deploy block exists ... OK\n  Exit code 3 when project.json missing ... OK\n\nResults: 8 passed, 0 failed\n✔ tests/deploy-rollback.test.mjs (1729.042064ms)\nwarning: remote HEAD refers to nonexistent ref, unable to checkout\nwarning: remote HEAD refers to nonexistent ref, unable to checkout\nwarning: remote HEAD refers to nonexistent ref, unable to checkout\nwarning: remote HEAD refers to nonexistent ref, unable to checkout\n\n",
-  "attempts": 1,
+  "description": "Drain PR #133 (branch `agent/drain/OS-curriculum-v2-conformance-45`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-45 && git checkout agent/drain/OS-curriculum-v2-conformance-45`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-45` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- Scope creep: added unrelated file tasks/queue/FIX-133.json\n- Test duplication: CV-226 test block appears twice in test file\n- Who Benefits test redundant: template already contained Who Benefits section",
+  "attempts": 2,
   "status": "pending",
   "fixFor": {
     "pr": 133,
     "branch": "agent/drain/OS-curriculum-v2-conformance-45",
-    "headSha": "2ff075b300a40a1a57d66e492fd564d3a817c5e9",
+    "headSha": "5b98bf99d34dac1342fad9e7b5ae7619b332a9d9",
     "sourceTask": "OS-curriculum-v2-conformance-45",
-    "rejectionKind": "gate-failed"
-  }
+    "rejectionKind": "llm-rejected"
+  },
+  "refreshedAt": "2026-11-09T17:48:37.734Z"
 }
