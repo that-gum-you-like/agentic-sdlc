@@ -38,6 +38,7 @@
 - 2026-11-09 #149 feat(pattern-hunt): cross-teach learnedFrom entries to agents sharing a domain (CV-246) (backend)
 - 2026-11-09 #151 feat(memory-manager): audit every memory save to pm/memory-audit.jsonl (CV-REQ-072) (backend)
 - 2026-11-09 #152 feat(template): add Version History and Breaking Changes sections (CV-250) (backend)
+- 2026-11-09 #153 feat(template): create agent-proposal.md with five required headings (CV-252) (docs-tests)
 
 ## 2026-11-08
 
