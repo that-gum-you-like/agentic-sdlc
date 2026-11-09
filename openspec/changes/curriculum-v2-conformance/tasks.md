@@ -855,7 +855,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-241
   - Complexity: S
 
-- [ ] **CV-243**: worker.mjs: render the character block (via memory-manager `renderCharacter`) in the agent prompt when present
+- [x] **CV-243**: worker.mjs: render the character block (via memory-manager `renderCharacter`) in the agent prompt when present
   - **Priority:** MEDIUM
   - Files: `agents/worker.mjs, agents/__tests__/character-render.test.mjs`
   - Spec: CV-REQ-070

@@ -84,6 +84,7 @@ before(async () => {
 
   process.env.SDLC_PROJECT_DIR = fixtureRoot;
   memoryManager = await import('../../agents/memory-manager.mjs');
+  workerModule = await import('../../agents/worker.mjs');
 });
 
 after(() => {
@@ -206,5 +207,69 @@ describe('recall output — character present', () => {
     const block = end === -1 ? output.slice(start) : output.slice(start, end);
     assert.ok(block.length <= 400, `character block must be <= 400 chars, got ${block.length}`);
     assert.match(block, /In their own words: I turn ambiguity into certainty\./);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. worker.mjs generatePrompt integration tests (CV-243)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TASK_FIXTURE = { id: 'CV-243-TEST', title: 'Test task', description: 'Test' };
+const AGENT_MD_FIXTURE = '# Test Agent\n\nSimple test agent.';
+
+let workerModule;
+
+describe('generatePrompt — absent character', () => {
+  it('does NOT include 🎭 CHARACTER: in the prompt when core has no character', () => {
+    const memories = { core: PLAIN_CORE, 'long-term': { entries: [] }, 'medium-term': { entries: [] }, recent: { entries: [] } };
+    const prompt = workerModule.generatePrompt('plain-agent', TASK_FIXTURE, AGENT_MD_FIXTURE, memories);
+    assert.doesNotMatch(prompt, /🎭 CHARACTER/);
+  });
+
+  it('does NOT include 🎭 CHARACTER: when core has an empty character', () => {
+    const memories = { core: { identity: { name: 'x' }, character: {} }, 'long-term': { entries: [] }, 'medium-term': { entries: [] }, recent: { entries: [] } };
+    const prompt = workerModule.generatePrompt('plain-agent', TASK_FIXTURE, AGENT_MD_FIXTURE, memories);
+    assert.doesNotMatch(prompt, /🎭 CHARACTER/);
+  });
+});
+
+describe('generatePrompt — character present', () => {
+  it('includes 🎭 CHARACTER: in the prompt when core has a character', () => {
+    const memories = { core: CHAR_CORE, 'long-term': { entries: [] }, 'medium-term': { entries: [] }, recent: { entries: [] } };
+    const prompt = workerModule.generatePrompt('char-agent', TASK_FIXTURE, AGENT_MD_FIXTURE, memories);
+    assert.match(prompt, /🎭 CHARACTER:/);
+    assert.match(prompt, /Personality: Curious and methodical\./);
+    assert.match(prompt, /Communication style: Direct but warm\./);
+    assert.match(prompt, /In their own words: I turn ambiguity into certainty\./);
+  });
+
+  it('places the character block before ## Your Memory', () => {
+    const memories = { core: CHAR_CORE, 'long-term': { entries: [] }, 'medium-term': { entries: [] }, recent: { entries: [] } };
+    const prompt = workerModule.generatePrompt('char-agent', TASK_FIXTURE, AGENT_MD_FIXTURE, memories);
+    const charIdx = prompt.indexOf('🎭 CHARACTER:');
+    const memoryIdx = prompt.indexOf('## Your Memory');
+    assert.ok(charIdx !== -1, 'character block must be present');
+    assert.ok(memoryIdx !== -1, 'memory section must be present');
+    assert.ok(charIdx < memoryIdx, 'character block must appear before memory section');
+  });
+
+  it('capped at 400 characters in the prompt', () => {
+    const bigChar = {
+      character: {
+        personality: 'p'.repeat(300),
+        communicationStyle: 'c'.repeat(300),
+        quirks: ['q'.repeat(200)],
+        relationships: [{ name: 'r'.repeat(150), nature: 'n'.repeat(150), notes: 'o'.repeat(150) }],
+        inTheirOwnWords: 'w'.repeat(400),
+        growthJourney: ['g'.repeat(300)],
+      },
+    };
+    const memories = { core: bigChar, 'long-term': { entries: [] }, 'medium-term': { entries: [] }, recent: { entries: [] } };
+    const prompt = workerModule.generatePrompt('char-agent', TASK_FIXTURE, AGENT_MD_FIXTURE, memories);
+    const start = prompt.indexOf('🎭 CHARACTER:');
+    const end = prompt.indexOf('\n## Your Memory', start);
+    const block = end === -1 ? prompt.slice(start) : prompt.slice(start, end);
+    assert.ok(block.length <= 400, `character block must be <= 400 chars, got ${block.length}`);
+    assert.ok(block.length > 0, 'block must be non-empty');
   });
 });
