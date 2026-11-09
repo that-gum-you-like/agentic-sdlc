@@ -8,6 +8,8 @@
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
   "createdAt": "2026-11-03T20:05:57.806Z",
-  "claimedBy": null,
-  "testStatus": null
+  "claimedBy": "hermes-drain",
+  "testStatus": null,
+  "_file": "OS-curriculum-v2-conformance-63.json",
+  "claimedAt": "2026-11-09T20:09:27.238Z"
 }
