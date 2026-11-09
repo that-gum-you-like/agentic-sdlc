@@ -668,7 +668,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221
   - Complexity: S
 
-- [ ] **CV-224**: proposal.md.template: add `### User Stories (by persona)` with rows for new, regular, power, admin, payer in As a / I want / so that form
+- [x] **CV-224**: proposal.md.template: add `### User Stories (by persona)` with rows for new, regular, power, admin, payer in As a / I want / so that form
   - **Priority:** MEDIUM
   - Files: `openspec/templates/proposal.md.template, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-081
