@@ -1,0 +1,5 @@
+2026-11-08T10:00:01.000Z	tally-xxxxxxxx	ERROR	Connection timeout on database pool
+2026-11-08T10:01:15.000Z	tally-xxxxxxxx	ERROR	API rate limit exceeded for endpoint /api/v2/users
+2026-11-08T10:02:30.000Z	tally-xxxxxxxx	ERROR	Connection timeout on database pool
+2026-11-08T10:03:00.000Z	tally-xxxxxxxx	CRITICAL	Out of memory in worker process
+2026-11-08T10:05:00.000Z	tally-xxxxxxxx	ERROR	POST /api/v2/orders returned 500 Internal Server Error

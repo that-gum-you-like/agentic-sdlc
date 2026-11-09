@@ -1,0 +1,5 @@
+2026-11-08T10:00:01.000Z	ERROR	Connection timeout on database pool (timeout: 30s)
+2026-11-08T10:01:15.000Z	WARN	Rate limit approaching for endpoint /api/v2/users
+2026-11-08T10:02:30.000Z	ERROR	Connection timeout on database pool (timeout: 30s)
+2026-11-08T10:03:00.000Z	CRITICAL	Out of memory in worker process
+2026-11-08T10:05:00.000Z	ERROR	Database query failed: relation "orders" does not exist

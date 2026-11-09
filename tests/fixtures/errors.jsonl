@@ -1,0 +1,5 @@
+{"message":"Connection timeout on database pool after 30s","timestamp":"2026-11-08T10:00:01Z","level":"error"}
+{"message":"API rate limit exceeded for endpoint /api/v2/users","timestamp":"2026-11-08T10:01:15Z","level":"error"}
+{"message":"Connection timeout on database pool after 30s","timestamp":"2026-11-08T10:02:30Z","level":"error"}
+{"message":"Out of memory in worker process pid=1234","timestamp":"2026-11-08T10:03:00Z","level":"critical"}
+{"message":"Connection timeout on database pool after 30s","timestamp":"2026-11-08T10:05:00Z","level":"error"}
