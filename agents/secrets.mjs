@@ -85,10 +85,20 @@ function resolveFromEnv(name) {
 // VaultWarden via `bw` CLI
 // ---------------------------------------------------------------------------
 
+// Never inherit stdin: an interactive `bw` prompt must fail fast, not hang a timer.
+const BW_STDIO = ['ignore', 'pipe', 'pipe'];
+
+/** Run `bw` with optional extra env; returns trimmed stdout or throws. */
+function bw(args, extraEnv = {}) {
+  return execFileSync('bw', args, {
+    encoding: 'utf8', timeout: 15000, stdio: BW_STDIO, env: { ...process.env, ...extraEnv },
+  }).trim();
+}
+
 /** Check whether the `bw` binary exists on PATH. */
 function hasBw() {
   try {
-    execFileSync('bw', ['--version'], { encoding: 'utf8', timeout: 5000 });
+    bw(['--version']);
     return true;
   } catch {
     return false;
@@ -100,31 +110,30 @@ function _now() {
   return Date.now();
 }
 
-/** Open a fresh VaultWarden session via unlock or login. */
-function refreshSession() {
-  // Try unlock first (already logged in, just needs master password)
+/** `bw unlock` → session key, or null. Requires BW_PASSPHRASE in the environment. */
+function unlock() {
+  if (!process.env.BW_PASSPHRASE) return null;
   try {
-    const out = execFileSync('bw', ['unlock', '--passwordenv', 'BW_PASSPHRASE', '--raw'], {
-      encoding: 'utf8',
-      timeout: 15000,
-    });
-    _sessionKey = out.trim();
-    _sessionExpiresAt = _now() + (ttlSeconds() * 1000);
-    return _sessionKey;
+    return bw(['unlock', '--passwordenv', 'BW_PASSPHRASE', '--raw']) || null;
   } catch {
-    // Not in a logged-in state — try login with API key
-    try {
-      const out = execFileSync('bw', ['login', '--apikey', '--raw'], {
-        encoding: 'utf8',
-        timeout: 15000,
-      });
-      _sessionKey = out.trim();
-      _sessionExpiresAt = _now() + (ttlSeconds() * 1000);
-      return _sessionKey;
-    } catch {
-      return null;
-    }
+    return null;
   }
+}
+
+/**
+ * Open a fresh VaultWarden session. `bw login --apikey` (BW_CLIENTID /
+ * BW_CLIENTSECRET) only authenticates — it does not return a session key —
+ * so a logged-out vault is logged in first and then unlocked.
+ */
+function refreshSession() {
+  let key = unlock();
+  if (!key && process.env.BW_CLIENTID && process.env.BW_CLIENTSECRET) {
+    try { bw(['login', '--apikey']); } catch { /* already logged in, or bad API key: unlock decides */ }
+    key = unlock();
+  }
+  _sessionKey = key;
+  _sessionExpiresAt = key ? _now() + (ttlSeconds() * 1000) : 0;
+  return key;
 }
 
 /** Return the current session key, refreshing if expired or absent. */
@@ -134,23 +143,17 @@ function getSession() {
 }
 
 /**
- * Fetch a credential from VaultWarden by item name.
+ * Fetch a credential from VaultWarden by item name. The session key travels
+ * in BW_SESSION, never argv: command lines are readable by every local
+ * process through `ps`.
  * @param {string} name
  * @returns {string|null}
  */
 function getFromVault(name) {
-  if (!hasBw()) return null;
   const session = getSession();
   if (!session) return null;
-
   try {
-    // `bw get password <name>` returns just the password string on stdout.
-    const out = execFileSync('bw', ['get', 'password', name, '--session', session], {
-      encoding: 'utf8',
-      timeout: 15000,
-    });
-    const val = out.trim();
-    return val || null;
+    return bw(['get', 'password', name], { BW_SESSION: session }) || null;
   } catch {
     return null;
   }

@@ -11,7 +11,7 @@
  *   - Session past its TTL → session is re-unlocked
  */
 
-import { writeFileSync, mkdtempSync, rmSync } from 'fs';
+import { writeFileSync, readFileSync, mkdtempSync, rmSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
@@ -69,10 +69,12 @@ function fixtureValue(suffix) {
 /** Create a stub `bw` executable that returns canned values. */
 function createBwStub(dir, result) {
   const unlockCountPath = join(dir, '.bw-unlock-count');
+  const argvLogPath = join(dir, '.bw-argv.log');
 
   const scriptContent =
 `#!/bin/bash
 set -e
+echo "ARGV:$* BW_SESSION_SET:\${BW_SESSION:+yes}" >> "${argvLogPath}"
 case "$1" in
   --version) exit 0 ;;
   unlock|login)
@@ -82,7 +84,7 @@ case "$1" in
     exit 0
     ;;
   get)
-    if [ "$2" = "password" ]; then
+    if [ "$2" = "password" ] && [ -n "$BW_SESSION" ]; then
       echo "${result}"
       exit 0
     fi
@@ -93,6 +95,11 @@ esac
 `;
 
   writeFileSync(join(dir, 'bw'), scriptContent, { mode: 0o755 });
+}
+
+/** Child-process options that can never reach a real .env: HOME and cwd are the temp dir. */
+function sealed(extraEnv = {}) {
+  return { encoding: 'utf8', timeout: 10000, cwd: tmpDir, env: { ...process.env, HOME: tmpDir, ...extraEnv } };
 }
 
 /** Resolve the directory containing the `node` binary. */
@@ -143,17 +150,14 @@ test('with stub bw on PATH, getCredential returns the vault value', async () => 
     const script = `
 import { getCredential } from '${resolve(ROOT, 'agents/secrets.mjs')}';
 process.env.PATH = '${tmpDir}:' + process.env.PATH;
-const val = getCredential('OPENROUTER_API_KEY');
+process.env.BW_PASSPHRASE = 'stub-passphrase';
+const val = getCredential('VAULT_TEST');
 process.stdout.write(val ? 'OK:' + val : 'FAIL:null');
 `;
 
-    const out = execFileSync('node', ['-e', script], {
-      encoding: 'utf8',
-      timeout: 10000,
-    });
+    const out = execFileSync('node', ['-e', script], sealed());
 
-    assert(out.includes('OK:' + sentinelVal),
-      `Expected vault value in output, got: ${out.substring(0, 200)}`);
+    assert(out === 'OK:' + sentinelVal, 'expected the vault value (output withheld: it may be a credential)');
   } finally {
     teardown();
   }
@@ -178,15 +182,10 @@ const leaksValue = stderr.includes('${envVal}');
 process.stdout.write(JSON.stringify({ val, warnsAboutEnv, leaksValue }));
 `;
 
-    const out = execFileSync('node', ['-e', script], {
-      encoding: 'utf8',
-      timeout: 10000,
-      env: {
-        ...process.env,
-        TEST_SECRET: envVal,
-        PATH: nodeBinDir(), // only node's bin dir, no bw reachable
-      },
-    });
+    const out = execFileSync('node', ['-e', script], sealed({
+      TEST_SECRET: envVal,
+      PATH: nodeBinDir(), // only node's bin dir, no bw reachable
+    }));
 
     const result = JSON.parse(out.trim());
     assertEqual(result.val, envVal, 'Should return env value');
@@ -210,6 +209,7 @@ import { getCredential } from '${resolve(ROOT, 'agents/secrets.mjs')}';
 import { readFileSync } from 'fs';
 process.env.BW_SESSION_TTL = '3600';  // 1 hour — well within TTL for both calls
 process.env.PATH = '${tmpDir}:' + process.env.PATH;
+process.env.BW_PASSPHRASE = 'stub-passphrase';
 
 const v1 = getCredential('SESSION_TEST');
 const v2 = getCredential('SESSION_TEST');
@@ -217,10 +217,7 @@ const count = parseInt(readFileSync('${unlockCountPath}', 'utf8').trim(), 10);
 process.stdout.write(JSON.stringify({ v1, v2, count }));
 `;
 
-    const out = execFileSync('node', ['-e', script], {
-      encoding: 'utf8',
-      timeout: 10000,
-    });
+    const out = execFileSync('node', ['-e', script], sealed());
 
     const result = JSON.parse(out.trim());
     assertEqual(result.v1, sessionVal, 'First call should return vault value');
@@ -244,6 +241,7 @@ import { getCredential } from '${resolve(ROOT, 'agents/secrets.mjs')}';
 import { readFileSync } from 'fs';
 process.env.BW_SESSION_TTL = '0';   // immediate expiry — every call needs a fresh session
 process.env.PATH = '${tmpDir}:' + process.env.PATH;
+process.env.BW_PASSPHRASE = 'stub-passphrase';
 
 const v1 = getCredential('TTL_TEST');
 const v2 = getCredential('TTL_TEST');
@@ -251,10 +249,7 @@ const count = parseInt(readFileSync('${unlockCountPath}', 'utf8').trim(), 10);
 process.stdout.write(JSON.stringify({ v1, v2, count }));
 `;
 
-    const out = execFileSync('node', ['-e', script], {
-      encoding: 'utf8',
-      timeout: 10000,
-    });
+    const out = execFileSync('node', ['-e', script], sealed());
 
     const result = JSON.parse(out.trim());
     assertEqual(result.v1, renewedVal, 'First call should return vault value');
@@ -268,5 +263,58 @@ process.stdout.write(JSON.stringify({ v1, v2, count }));
 // ===========================================================================
 // Run all tests
 // ===========================================================================
+
+// --- Test 5: session key never on argv (readable via ps) ---------------------
+
+test('tests are sealed: no child process can read a real .env (HOME and cwd are the temp dir)', async () => {
+  setup();
+  try {
+    const opts = sealed();
+    assertEqual(opts.env.HOME, tmpDir, 'HOME sealed');
+    assertEqual(opts.cwd, tmpDir, 'cwd sealed');
+  } finally {
+    teardown();
+  }
+});
+
+test('the session key is passed in BW_SESSION, never on the bw command line', async () => {
+  setup();
+  try {
+    createBwStub(tmpDir, sentinelVal);
+    const script = `
+import { getCredential } from '${resolve(ROOT, 'agents/secrets.mjs')}';
+process.env.PATH = '${tmpDir}:' + process.env.PATH;
+process.env.BW_PASSPHRASE = 'stub-passphrase';
+process.stdout.write(String(getCredential('ARGV_TEST')));
+`;
+    const out = execFileSync('node', ['-e', script], sealed());
+    assertEqual(out, sentinelVal, 'value resolved through the stub');
+    const log = readFileSync(join(tmpDir, '.bw-argv.log'), 'utf8');
+    assert(!log.includes('test-session-key'), `session key leaked onto argv:\n${log}`);
+    assert(/ARGV:get password ARGV_TEST BW_SESSION_SET:yes/.test(log), `get must receive BW_SESSION:\n${log}`);
+  } finally {
+    teardown();
+  }
+});
+
+// --- Test 6: no passphrase → no session → env fallback ----------------------
+
+test('without BW_PASSPHRASE the vault is skipped and env is used (no interactive prompt)', async () => {
+  setup();
+  try {
+    createBwStub(tmpDir, sentinelVal);
+    const envVal = fixtureValue('no-passphrase');
+    const script = `
+import { getCredential } from '${resolve(ROOT, 'agents/secrets.mjs')}';
+process.env.PATH = '${tmpDir}:' + process.env.PATH;
+delete process.env.BW_PASSPHRASE;
+process.stdout.write(String(getCredential('NOPASS_TEST')));
+`;
+    const out = execFileSync('node', ['-e', script], sealed({ NOPASS_TEST: envVal }));
+    assertEqual(out, envVal, 'falls back to env');
+  } finally {
+    teardown();
+  }
+});
 
 await runAll();
