@@ -124,3 +124,13 @@ Is this a PLANNING task?
 | QA + integration testing | Parallel if testing different boundaries |
 | Cron agents (auditor, sentinel, model-manager) | Parallel (independent scheduled runs) |
 | Architect designs API contract + devs implement | Sequential (Architect first, then parallel Backend + Frontend) |
+
+## Disagreement Resolution
+
+When two reviewing personas reach opposite conclusions on the same artifact, that disagreement is the finding. Do not average, merge, or resolve competing verdicts algorithmically — record both positions as a finding for a human lead to decide.
+
+| Situation | Response |
+|-----------|----------|
+| Two reviewers return opposite verdicts | Record both positions as a finding; escalate to a human |
+| One reviewer flags a concern, another clears it | The concern stands as a finding — do not suppress it |
+| Unresolvable disagreement between automated checks | Flag the conflict in the review summary for human resolution |
