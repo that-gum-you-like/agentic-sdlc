@@ -13,7 +13,7 @@
   ],
   "description": "Drain PR #132 (branch `agent/drain/OS-curriculum-v2-conformance-44`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-44 && git checkout agent/drain/OS-curriculum-v2-conformance-44`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-44` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- Scope creep: CV-227 tests and changes to value-analyst.md were not part of the original task\n- Task description specifically limited changes to proposal.md.template and tests/planning-templates.test.mjs only",
   "attempts": 2,
-  "status": "pending",
+  "status": "completed",
   "fixFor": {
     "pr": 132,
     "branch": "agent/drain/OS-curriculum-v2-conformance-44",
@@ -21,5 +21,9 @@
     "sourceTask": "OS-curriculum-v2-conformance-44",
     "rejectionKind": "llm-rejected"
   },
-  "refreshedAt": "2026-11-09T17:10:35.404Z"
+  "refreshedAt": "2026-11-09T17:10:35.404Z",
+  "_file": "FIX-132.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T17:19:20.774Z"
 }
