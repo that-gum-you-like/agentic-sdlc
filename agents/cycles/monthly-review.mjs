@@ -18,7 +18,7 @@
  *   costReview(config) — token cost summary
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
@@ -139,6 +139,25 @@ export function costReview(config) {
   return result;
 }
 
+/**
+ * Append a `monthly-review` entry to pm/cycle-history.json so health-check's
+ * process-erosion check can see the monthly cycle ran (bug 2026-11-09: only
+ * daily and weekly recorded, so monthly always read as never-run).
+ */
+export function recordMonthlyHistory(projectDir, now = new Date()) {
+  const pmDir = resolve(projectDir, 'pm');
+  mkdirSync(pmDir, { recursive: true });
+  const historyPath = resolve(pmDir, 'cycle-history.json');
+  let history = [];
+  if (existsSync(historyPath)) {
+    try { history = JSON.parse(readFileSync(historyPath, 'utf8')); } catch { history = []; }
+  }
+  if (!Array.isArray(history)) history = [];
+  history.push({ type: 'monthly-review', timestamp: now.toISOString(), success: true });
+  writeFileSync(historyPath, JSON.stringify(history, null, 2));
+  return historyPath;
+}
+
 async function main() {
   const dryRun = process.argv.includes('--dry-run');
   const config = loadConfig();
@@ -161,6 +180,8 @@ async function main() {
 
   // 4. Cost review
   costReview(config);
+
+  if (!dryRun) recordMonthlyHistory(config.projectDir || resolve(__dirname, '..', '..'));
 
   console.log(`\n${'═'.repeat(50)}`);
   console.log('🗓️  Monthly review complete.');

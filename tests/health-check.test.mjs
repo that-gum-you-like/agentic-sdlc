@@ -273,3 +273,17 @@ test('malformed history entries are ignored rather than crashing the check', () 
     assert.equal(cycles.status, 'ok', `history ${JSON.stringify(history)}`);
   }
 });
+
+// --- bug 2026-11-09: the cycles record '<kind>-review', the checker matched '<kind>' ---
+
+test('evaluateCycleCadence: entries as the cycles actually write them (daily-review, weekly-review, monthly-review) count', () => {
+  const history = [entry('daily-review', 0), entry('weekly-review', 5), entry('monthly-review', 20), entry('daily-review', 90)];
+  for (const r of evaluateCycleCadence(history, NOW)) assert.equal(r.status, 'ok', `${r.type}: ${r.detail}`);
+});
+
+test('checkCycles: live-shaped history with no monthly run reports ONLY monthly as never-run', () => {
+  const history = [entry('daily-review', 0), entry('weekly-review', 1), entry('daily-review', 120)];
+  const res = checkCycles({}, history, NOW);
+  assert.equal(res.status, 'degraded');
+  assert.equal(res.detail, 'process-erosion: monthly never-run');
+});

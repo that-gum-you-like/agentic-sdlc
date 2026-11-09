@@ -14,7 +14,8 @@ import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
 import { tmpdir } from 'os';
-import { runStep, buildMonthlySteps } from '../cycles/monthly-review.mjs';
+import { runStep, buildMonthlySteps, recordMonthlyHistory } from '../cycles/monthly-review.mjs';
+import { checkCycles } from '../health-check.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const AGENTS_DIR = resolve(__dirname, '..');
@@ -173,5 +174,27 @@ describe('monthly-review — the executed monthly cycle', () => {
 
     const updated = JSON.parse(readFileSync(baselinesPath, 'utf8'));
     assert.equal(updated.recordedAt, '2026-01-01T00:00:00.000Z', 'baseline recordedAt must not change when drift fails');
+  });
+});
+
+describe('recordMonthlyHistory (bug 2026-11-09: monthly never recorded a run)', () => {
+  it('appends a monthly-review entry that health-check counts as a monthly run', () => {
+    const dir = join(tmpdir(), `mr-hist-${process.pid}`);
+    mkdirSync(join(dir, 'pm'), { recursive: true });
+    const now = new Date('2026-12-01T13:00:00Z');
+    writeFileSync(join(dir, 'pm', 'cycle-history.json'), JSON.stringify([
+      { type: 'daily-review', timestamp: '2026-12-01T12:00:00Z' },
+      { type: 'weekly-review', timestamp: '2026-11-30T06:00:00Z' },
+      { type: 'daily-review', timestamp: '2026-07-06T05:00:00Z' },
+    ]));
+    try {
+      assert.equal(checkCycles({ projectDir: dir }, undefined, now).detail, 'process-erosion: monthly never-run');
+      recordMonthlyHistory(dir, now);
+      const hist = JSON.parse(readFileSync(join(dir, 'pm', 'cycle-history.json'), 'utf8'));
+      assert.equal(hist.at(-1).type, 'monthly-review');
+      assert.equal(checkCycles({ projectDir: dir }, undefined, now).status, 'ok');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

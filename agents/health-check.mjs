@@ -39,6 +39,11 @@ function worst(a, b) {
 // evaluateCycleCadence — pure function for cycle erosion detection
 // ---------------------------------------------------------------------------
 
+/** 'weekly-review' → 'weekly'; bare 'weekly' is accepted too. */
+export function cycleKind(type) {
+  return String(type || '').replace(/-review$/, '');
+}
+
 /**
  * Evaluate cycle cadence against expected limits.
  * Pure function — no side effects, no I/O.
@@ -71,7 +76,9 @@ export function evaluateCycleCadence(history, now, limits = {}) {
 
   return Object.keys(typeLimits).map(type => {
     const limitDays = typeLimits[type];
-    const typeEntries = history.filter(e => e.type === type);
+    // The cycles record 'daily-review' / 'weekly-review' / 'monthly-review'
+    // (bug 2026-11-09: matching on the bare word made every cycle 'never-run').
+    const typeEntries = history.filter(e => cycleKind(e.type) === type);
 
     if (typeEntries.length === 0) {
       // No entries for this cycle type — defer to the oldest entry in the

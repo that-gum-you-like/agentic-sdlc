@@ -1254,6 +1254,12 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Lane: interactive
   - Test: 59 counted in pr-auto-review (was 50); a deliberately failing late test now exits 1
 
+- [x] **CV-328**: BUG (2026-11-09): health-check process-erosion matched cycle type `daily|weekly|monthly`, but the cycles record `daily-review|weekly-review` — every cycle read `never-run` forever (71 daily + 13 weekly entries ignored), a permanent false alarm. Added `cycleKind()`; monthly-review now records `monthly-review` in pm/cycle-history.json (it recorded nothing).
+  - Files: `agents/health-check.mjs, agents/cycles/monthly-review.mjs, tests/health-check.test.mjs, agents/__tests__/monthly-review.test.mjs`
+  - Spec: CV-REQ-012
+  - Lane: interactive
+  - Test: live-shaped history → only `monthly never-run`; after recordMonthlyHistory → ok
+
 ### Phase 4: Release manager
 
 Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are interactive; the cycle detector is hermes.
