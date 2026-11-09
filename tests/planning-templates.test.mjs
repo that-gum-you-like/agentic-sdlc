@@ -174,6 +174,28 @@ test('SHARED_PROTOCOL.md.template contains the coffeetalk agent log protocol (CV
     'SHARED_PROTOCOL.md.template must state the log is append-only');
 });
 
+// ── CV-301: Ambiguous verbs and data safety rule in SHARED_PROTOCOL.md ─────
+
+test('SHARED_PROTOCOL.md contains the ambiguous verbs and data safety rule (CV-301)', () => {
+  const raw = read('agents/SHARED_PROTOCOL.md');
+  assert.match(raw, /Ambiguous verbs/i,
+    'SHARED_PROTOCOL.md must contain the Ambiguous Verbs and Data Safety section');
+  assert.match(raw, /no scope.*needs-human/i,
+    'SHARED_PROTOCOL.md must state the "no scope → needs-human" rule');
+  assert.match(raw, /Never authorise deleting or rewriting data/i,
+    'SHARED_PROTOCOL.md must forbid authorising deletion without explicit scope');
+});
+
+test('SHARED_PROTOCOL.md.template contains the ambiguous verbs and data safety rule (CV-301)', () => {
+  const raw = read('agents/templates/SHARED_PROTOCOL.md.template');
+  assert.match(raw, /Ambiguous verbs/i,
+    'SHARED_PROTOCOL.md.template must contain the Ambiguous Verbs and Data Safety section');
+  assert.match(raw, /no scope.*needs-human/i,
+    'SHARED_PROTOCOL.md.template must state the "no scope → needs-human" rule');
+  assert.match(raw, /Never authorise deleting or rewriting data/i,
+    'SHARED_PROTOCOL.md.template must forbid authorising deletion without explicit scope');
+});
+
 // ── CV-229: Frontend first-step bullets ───────────────────────────────────
 
 test('frontend-developer.md instructs searching the component library first (CV-229)', () => {

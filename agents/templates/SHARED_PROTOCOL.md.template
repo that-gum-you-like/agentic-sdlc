@@ -115,6 +115,41 @@ Each line follows this format:
 
 ---
 
+## Ambiguous Verbs and Data Safety
+
+Task descriptions sometimes use verbs whose scope and destructiveness are
+ambiguous — they can be read as authorising deletion, rewriting, or other
+destructive operations on data without naming the target.
+
+**The following verbs MUST always carry a named scope** (file path, table name,
+function name, or data domain) whenever they appear in a task description:
+
+- *optimize*
+- *clean up*
+- *simplify*
+- *tidy*
+
+**Examples of properly scoped usage:**
+- "Optimize the `UserRepository` class" ✓
+- "Clean up unused imports in `services/payment.js`" ✓
+- "Simplify the `renderDashboard` function" ✓
+
+**Examples of dangerously ambiguous usage:**
+- "Optimize the system" ✗ — no scope, could authorise anything
+- "Clean up the database" ✗ — no scope, could authorise deletions
+- "Tidy up the code" ✗ — no scope, implicitly authorises rewriting
+
+**Rules:**
+1. **Never authorise deleting or rewriting data** unless the task explicitly
+   names the target and specifies the operation (e.g. "Remove the `legacyFlag`
+   column from the `users` table").
+2. **No scope → needs-human.** If a task uses an ambiguous verb without a
+   named scope, escalate to the human operator rather than guessing intent.
+3. **Data safety is non-negotiable.** When in doubt, preserve existing data and
+   escalate.
+
+---
+
 ## Pipeline-Only Deploy Rule
 
 NEVER bypass the deploy pipeline with manual commands. All post-export fixups, platform-specific corrections, and quality gates run ONLY in the automated pipeline. Manual deploys skip critical steps and break production.
