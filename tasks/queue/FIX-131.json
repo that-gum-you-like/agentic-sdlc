@@ -1,0 +1,28 @@
+{
+  "id": "FIX-131",
+  "phase": 1,
+  "title": "Fix rejected drain PR #131 (agent/drain/OS-curriculum-v2-conformance-43)",
+  "assignee": "sdlc-developer",
+  "priority": "CRITICAL",
+  "estimatedTokens": 16000,
+  "files": [],
+  "blockedBy": [],
+  "created": "2026-11-09T16:35:46.649Z",
+  "tags": [
+    "auto-fix"
+  ],
+  "description": "Drain PR #131 (branch `agent/drain/OS-curriculum-v2-conformance-43`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-43 && git checkout agent/drain/OS-curriculum-v2-conformance-43`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-43` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- Unrelated change to heartbeat.mjs timeout value not mentioned in task scope\n- Heartbeat timeout reduction from 30000ms to 10000ms introduces potential race condition without justification",
+  "attempts": 2,
+  "status": "pending",
+  "fixFor": {
+    "pr": 131,
+    "branch": "agent/drain/OS-curriculum-v2-conformance-43",
+    "headSha": "b4b5bd09cd2b34c981bcca72d20ac455e173d3f0",
+    "sourceTask": "OS-curriculum-v2-conformance-43",
+    "rejectionKind": "llm-rejected"
+  },
+  "refreshedAt": "2026-11-09T16:46:12.947Z",
+  "_file": "FIX-131.json",
+  "claimedBy": "hermes-drain",
+  "claimedAt": "2026-11-09T16:55:36.782Z"
+}
