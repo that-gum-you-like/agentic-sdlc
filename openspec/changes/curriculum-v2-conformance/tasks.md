@@ -778,7 +778,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-232
   - Complexity: S
 
-- [ ] **CV-234**: code-reviewer.md: add "Standardization sweep" procedure (naming, error pattern, types, docstrings, typecheck if configured)
+- [x] **CV-234**: code-reviewer.md: add "Standardization sweep" procedure (naming, error pattern, types, docstrings, typecheck if configured)
   - **Priority:** MEDIUM
   - Files: `agents/templates/execution-agents/code-reviewer.md, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-087

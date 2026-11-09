@@ -3,7 +3,7 @@
   "title": "code-reviewer.md: add \"Standardization sweep\" procedure (naming, error pattern, types, docstrings, typecheck if configured)",
   "description": "- [ ] **CV-234**: code-reviewer.md: add \"Standardization sweep\" procedure (naming, error pattern, types, docstrings, typecheck if configured)\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/execution-agents/code-reviewer.md, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-087\n  - Gaps: D1-15\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts `## Standardization sweep`\n  - Parallel: blocked-by CV-232\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-50"
   ],
   "_file": "OS-curriculum-v2-conformance-52.json",
-  "claimedAt": "2026-11-09T18:42:28.315Z"
+  "claimedAt": "2026-11-09T18:42:28.315Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T18:45:42.343Z"
 }
