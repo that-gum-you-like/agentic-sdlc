@@ -43,6 +43,14 @@ const RULES = [
   { pattern: /\bDAN\b/, severity: 'medium', label: 'jailbreak-marker' },
   { pattern: /developer mode/i, severity: 'medium', label: 'jailbreak-marker' },
   { pattern: /show me the (api key|token|\.env)/i, severity: 'high', label: 'secret-leak-ask' },
+
+  // Curriculum Phase 5 additions (CV-REQ-060)
+  { pattern: /you are now a/i, severity: 'high', label: 'instruction-override' },
+  { pattern: /forget everything/i, severity: 'high', label: 'instruction-override' },
+  { pattern: /new instructions:/i, severity: 'high', label: 'instruction-override' },
+  { pattern: /system prompt:/i, severity: 'high', label: 'data-exfiltration' },
+  { pattern: /list (all )?api keys/i, severity: 'high', label: 'data-exfiltration' },
+  { pattern: /output (your )?env(ironment)? vars/i, severity: 'high', label: 'data-exfiltration' },
 ];
 
 // ---------------------------------------------------------------------------
