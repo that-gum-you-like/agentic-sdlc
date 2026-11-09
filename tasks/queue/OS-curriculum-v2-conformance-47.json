@@ -3,7 +3,7 @@
   "title": "frontend-developer.md: add first-step bullets: run `node ~/component-library/bin/search.mjs <keyword>`; else shadcn primitives; Tailwind only; no raw CSS",
   "description": "- [ ] **CV-229**: frontend-developer.md: add first-step bullets: run `node ~/component-library/bin/search.mjs <keyword>`; else shadcn primitives; Tailwind only; no raw CSS\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/execution-agents/frontend-developer.md, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-084\n  - Gaps: D3-09\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts `component-library/bin/search.mjs`\n  - Parallel: blocked-by CV-221\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-39"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-47.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T18:10:27.824Z"
 }

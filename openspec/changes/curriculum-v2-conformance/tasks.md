@@ -723,7 +723,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221
   - Complexity: S
 
-- [ ] **CV-229**: frontend-developer.md: add first-step bullets: run `node ~/component-library/bin/search.mjs <keyword>`; else shadcn primitives; Tailwind only; no raw CSS
+- [x] **CV-229**: frontend-developer.md: add first-step bullets: run `node ~/component-library/bin/search.mjs <keyword>`; else shadcn primitives; Tailwind only; no raw CSS
   - **Priority:** MEDIUM
   - Files: `agents/templates/execution-agents/frontend-developer.md, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-084

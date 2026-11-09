@@ -21,6 +21,7 @@
 - 2026-11-09 #131 feat(requirements-engineer): add persona-coverage checklist line (CV-225) (docs-tests)
 - 2026-11-09 #132 feat(templates): add Success Metrics and Who Benefits to proposal Value Analysis (CV-226) (docs-tests)
 - 2026-11-09 #134 feat(protocol): add Agent log (CoffeeTalk) section (CV-228) (backend)
+- 2026-11-09 #135 feat(frontend-developer): add first-step bullets (CV-229 | OS-curriculum-v2-conformance-47) (docs-tests)
 
 ## 2026-11-08
 
