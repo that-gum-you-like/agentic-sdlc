@@ -1,0 +1,24 @@
+{
+  "id": "FIX-119",
+  "phase": 1,
+  "title": "Fix rejected drain PR #119 (agent/drain/OS-curriculum-v2-conformance-30)",
+  "assignee": "sdlc-developer",
+  "priority": "CRITICAL",
+  "estimatedTokens": 16000,
+  "files": [],
+  "blockedBy": [],
+  "created": "2026-11-09T14:44:34.573Z",
+  "tags": [
+    "auto-fix"
+  ],
+  "description": "Drain PR #119 (branch `agent/drain/OS-curriculum-v2-conformance-30`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-30 && git checkout agent/drain/OS-curriculum-v2-conformance-30`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-30` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- CLI --screen flag blocks existing --dry-run and --notify functionality\n- readStdin function is not exported but tested in isolation\n- Missing error handling for JSON parsing in CLI tests\n- No documentation for new CLI flag in usage help",
+  "attempts": 1,
+  "status": "pending",
+  "fixFor": {
+    "pr": 119,
+    "branch": "agent/drain/OS-curriculum-v2-conformance-30",
+    "headSha": "88eb85db26b2f3af51534200714c1baca11ffd42",
+    "sourceTask": "OS-curriculum-v2-conformance-30",
+    "rejectionKind": "llm-rejected"
+  }
+}
