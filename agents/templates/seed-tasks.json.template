@@ -116,6 +116,17 @@
       "estimatedTokens": 3500,
       "files": ["{{APP_DIR}}/services/errorReporting.*"],
       "blockedBy": ["T-002"]
+    },
+    {
+      "id": "T-011",
+      "phase": 3,
+      "title": "Run a Standardization sweep across the codebase",
+      "description": "Execute the standardization-sweep procedure: check naming conventions, error pattern consistency, type annotation completeness, docstring coverage, and a clean typecheck pass.",
+      "assignee": "code-reviewer",
+      "priority": "MEDIUM",
+      "estimatedTokens": 3500,
+      "files": ["{{APP_DIR}}/"],
+      "blockedBy": ["T-003"]
     }
   ]
 }
