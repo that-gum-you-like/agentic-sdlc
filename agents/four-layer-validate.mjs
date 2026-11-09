@@ -145,306 +145,368 @@ function rel(absPath) {
 
 /**
  * Scan JavaScript/TypeScript source code and return metrics for every function
- * with a brace-delimited body. Supports:
- *   - Function declarations: `function name(params) { ... }`
- *   - Async function declarations: `async function name(params) { ... }`
- *   - Function expressions assigned to variables: `const name = function(params) { ... }`
- *   - Arrow functions with block body: `const name = (params) => { ... }`
- *   - Method shorthand: `name(params) { ... }`
- *   - Async method shorthand: `async name(params) { ... }`
- *   - Getters/setters: `get name() { ... }`
- *
- * Uses brace-matching to determine function span. Nested functions are counted
- * separately. Only functions with brace-delimited bodies are reported (implicit
- * return arrow functions like `() => x` are excluded).
- *
- * @param {string} source - Source code to scan
- * @returns {Array<{name: string, startLine: number, lines: number, params: number}>}
- */
+ /**
+  * Build an array of line-start offsets for a normalized source string.
+  * @param {string} source - normalized (\\n-separated) source
+  * @returns {number[]}
+  */
+ function buildLineStarts(source) {
+   const starts = [0];
+   for (let i = 0; i < source.length; i++) {
+     if (source[i] === '\n') starts.push(i + 1);
+   }
+   return starts;
+ }
 
+ /**
+  * Convert a character offset to a 1-based line number using pre-built line starts.
+  * @param {number} offset
+  * @param {number[]} lineStarts
+  * @returns {number}
+  */
+ function offsetToLine(offset, lineStarts) {
+   let lo = 0, hi = lineStarts.length - 1;
+   while (lo < hi) {
+     const mid = Math.ceil((lo + hi) / 2);
+     if (lineStarts[mid] <= offset) lo = mid;
+     else hi = mid - 1;
+   }
+   return lo + 1;
+ }
 
+ /**
+  * Count top-level comma-separated parameters in a text fragment (e.g. inside parens).
+  * @param {string} text
+  * @returns {number}
+  */
+ function countParams(text) {
+   if (!text || text.trim() === '') return 0;
+   let depth = 0, count = 0;
+   for (let i = 0; i < text.length; i++) {
+     const ch = text[i];
+     if (ch === '"' || ch === "'" || ch === '`') { i++; while (i < text.length && text[i] !== ch) { if (text[i] === '\\') i++; i++; } continue; }
+     if (ch === '(' || ch === '[' || ch === '{') { depth++; continue; }
+     if (ch === ')' || ch === ']' || ch === '}') { if (depth) depth--; continue; }
+     if (depth === 0 && ch === ',') count++;
+   }
+   return count + 1;
+ }
 
+ /**
+  * Given a source string and the index of an opening `{`, find the matching
+  * closing `}` while respecting strings, comments, and template literals.
+  * @param {string} src
+  * @param {number} braceStart - index of `{`
+  * @returns {number} index of matching `}`, or -1
+  */
+ function matchBrace(src, braceStart) {
+   let depth = 1;
+   let i = braceStart + 1;
+   while (i < src.length && depth > 0) {
+     const ch = src[i];
+     if (ch === '"' || ch === "'") {
+       const quote = ch; i++;
+       while (i < src.length && src[i] !== quote) { if (src[i] === '\\') i++; i++; }
+     } else if (ch === '`') {
+       i++;
+       while (i < src.length && src[i] !== '`') {
+         if (src[i] === '\\') i++;
+         if (src[i] === '$' && i + 1 < src.length && src[i + 1] === '{') { depth++; i += 2; continue; }
+         i++;
+       }
+     } else if (ch === '/' && i + 1 < src.length) {
+       const n = src[i + 1];
+       if (n === '/') { i += 2; while (i < src.length && src[i] !== '\n') i++; }
+       else if (n === '*') { i += 2; while (i + 1 < src.length && !(src[i] === '*' && src[i + 1] === '/')) i++; if (i < src.length) i++; }
+       else if (i > braceStart + 1) { const p = src[i - 1]; if (/[;=(\[!&|,:{?]/.test(p)) { i++; while (i < src.length && src[i] !== '/' && src[i] !== '\n') { if (src[i] === '\\') i++; i++; } } }
+     } else if (ch === '{') { depth++; }
+     else if (ch === '}') { depth--; }
+     if (depth > 0) i++;
+   }
+   return depth === 0 ? i : -1;
+ }
 
-export function scanFunctionMetrics(source) {
-  source = source.replace(/\r\n/g, '\n');
-  const results = [];
+ /**
+  * Given a source string and the index of an opening `(`, find the matching `)`.
+  * @param {string} src
+  * @param {number} openParen
+  * @returns {number} index of matching `)`, or -1
+  */
+ function matchParen(src, openParen) {
+   let depth = 1;
+   let i = openParen + 1;
+   while (i < src.length && depth > 0) {
+     const ch = src[i];
+     if (ch === '(') depth++;
+     else if (ch === ')') depth--;
+     else if (ch === '"' || ch === "'") { const q = ch; i++; while (i < src.length && src[i] !== q) { if (src[i] === '\\') i++; i++; } }
+     else if (ch === '`') { i++; while (i < src.length && src[i] !== '`') { if (src[i] === '\\') i++; i++; } }
+     if (depth > 0) i++;
+   }
+   return depth === 0 ? i : -1;
+ }
 
-  const lineStarts = [0];
-  for (let i = 0; i < source.length; i++) {
-    if (source[i] === '\n') lineStarts.push(i + 1);
-  }
+ /**
+  * Find the nearest `(` or structural stop (`{`, `;`, newline) starting from startIdx.
+  * Skips string/backtick literals.
+  * @param {string} src
+  * @param {number} startIdx
+  * @returns {{type: string, pos: number}}
+  */
+ function nearestOf(src, startIdx) {
+   for (let i = startIdx; i < src.length; i++) {
+     const ch = src[i];
+     if (ch === '(') return { type: 'paren-open', pos: i };
+     if (ch === '{' || ch === ';' || ch === '\n') return { type: 'stop', pos: i };
+     if (ch === '"' || ch === "'") { const q = ch; i++; while (i < src.length && src[i] !== q) { if (src[i] === '\\') i++; i++; } }
+   }
+   return { type: 'stop', pos: src.length - 1 };
+ }
 
-  function lineFromOffset(offset) {
-    let lo = 0, hi = lineStarts.length - 1;
-    while (lo < hi) {
-      const mid = Math.ceil((lo + hi) / 2);
-      if (lineStarts[mid] <= offset) lo = mid;
-      else hi = mid - 1;
-    }
-    return lo + 1;
-  }
+ /**
+  * Advance the cursor past one string literal, template literal, or comment
+  * starting at position i.  Returns the index after the skipped construct,
+  * or i unchanged (returning i) when nothing was skipped.
+  * @param {string} s
+  * @param {number} i
+  * @returns {number}
+  */
+ function skipLiteralOrComment(s, i) {
+   const ch = s[i];
+   // String literals (single / double)
+   if (ch === '"' || ch === "'") {
+     const q = ch; let j = i + 1;
+     while (j < s.length && s[j] !== q) { if (s[j] === '\\') j++; j++; }
+     return j < s.length ? j + 1 : j;
+   }
+   // Template literals
+   if (ch === '`') {
+     let j = i + 1;
+     while (j < s.length && s[j] !== '`') {
+       if (s[j] === '\\') j++;
+       if (s[j] === '$' && j + 1 < s.length && s[j + 1] === '{') { j += 2; continue; }
+       j++;
+     }
+     return j < s.length ? j + 1 : j;
+   }
+   // Line comments
+   if (ch === '/' && i + 1 < s.length && s[i + 1] === '/') {
+     let j = i + 2;
+     while (j < s.length && s[j] !== '\n') j++;
+     return j < s.length ? j + 1 : j;
+   }
+   // Block comments
+   if (ch === '/' && i + 1 < s.length && s[i + 1] === '*') {
+     let j = i + 2;
+     while (j + 1 < s.length && !(s[j] === '*' && s[j + 1] === '/')) j++;
+     return j + 2;
+   }
+   return i; // nothing skipped
+ }
 
-  function countParams(text) {
-    if (!text || text.trim() === '') return 0;
-    let depth = 0, count = 0;
-    for (let i = 0; i < text.length; i++) {
-      const ch = text[i];
-      if (ch === '"' || ch === "'" || ch === '`') { i++; while (i < text.length && text[i] !== ch) { if (text[i] === '\\') i++; i++; } continue; }
-      if (ch === '(' || ch === '[' || ch === '{') { depth++; continue; }
-      if (ch === ')' || ch === ']' || ch === '}') { if (depth) depth--; continue; }
-      if (depth === 0 && ch === ',') count++;
-    }
-    return count + 1;
-  }
+ /**
+  * Scan a `function` keyword starting at `i` and, if the pattern matches,
+  * return a metric result.  Handles function declarations,
+  * function expressions (named and anonymous), and async function.
+  * @param {string} src
+  * @param {number} i - position of the 'f' in 'function'
+  * @param {number[]} lineStarts
+  * @returns {object|null} {name, startLine, lines, params} or null
+  */
+ function scanFunctionDecl(src, i, lineStarts) {
+   if (!src.startsWith('function', i)) return null;
 
-  function matchBrace(src, braceStart) {
-    let depth = 1;
-    let i = braceStart + 1;
-    while (i < src.length && depth > 0) {
-      const ch = src[i];
-      if (ch === '"' || ch === "'") {
-        const quote = ch; i++;
-        while (i < src.length && src[i] !== quote) { if (src[i] === '\\') i++; i++; }
-      } else if (ch === '`') {
-        i++;
-        while (i < src.length && src[i] !== '`') {
-          if (src[i] === '\\') i++;
-          if (src[i] === '$' && i + 1 < src.length && src[i + 1] === '{') { depth++; i += 2; continue; }
-          i++;
-        }
-      } else if (ch === '/' && i + 1 < src.length) {
-        const n = src[i + 1];
-        if (n === '/') { i += 2; while (i < src.length && src[i] !== '\n') i++; }
-        else if (n === '*') { i += 2; while (i + 1 < src.length && !(src[i] === '*' && src[i + 1] === '/')) i++; if (i < src.length) i++; }
-        else if (i > braceStart + 1) { const p = src[i - 1]; if (/[;=(\[!&|,:{?]/.test(p)) { i++; while (i < src.length && src[i] !== '/' && src[i] !== '\n') { if (src[i] === '\\') i++; i++; } } }
-      } else if (ch === '{') { depth++; }
-      else if (ch === '}') { depth--; }
-      if (depth > 0) i++;
-    }
-    return depth === 0 ? i : -1;
-  }
+   let j = i + 8;
+   // Skip whitespace between 'function' and optional name
+   while (j < src.length && (src[j] === ' ' || src[j] === '\t' || src[j] === '\n')) j++;
 
-  function nearestOf(src, startIdx) {
-    for (let i = startIdx; i < src.length; i++) {
-      const ch = src[i];
-      if (ch === '(') return { type: 'paren-open', pos: i };
-      if (ch === '{' || ch === ';' || ch === '\n') return { type: 'stop', pos: i };
-      if (ch === '"' || ch === "'") { const q = ch; i++; while (i < src.length && src[i] !== q) { if (src[i] === '\\') i++; i++; } }
-    }
-    return { type: 'stop', pos: src.length - 1 };
-  }
+   // Extract name (or default to anonymous)
+   let name = '(anonymous)';
+   if (j < src.length && /[a-zA-Z_$]/.test(src[j])) {
+     const ns = j;
+     while (j < src.length && /\w/.test(src[j])) j++;
+     name = src.slice(ns, j);
+   }
 
-  function matchParen(src, openParen) {
-    let depth = 1;
-    let i = openParen + 1;
-    while (i < src.length && depth > 0) {
-      const ch = src[i];
-      if (ch === '(') depth++;
-      else if (ch === ')') depth--;
-      else if (ch === '"' || ch === "'") { const q = ch; i++; while (i < src.length && src[i] !== q) { if (src[i] === '\\') i++; i++; } }
-      else if (ch === '`') { i++; while (i < src.length && src[i] !== '`') { if (src[i] === '\\') i++; i++; } }
-      if (depth > 0) i++;
-    }
-    return depth === 0 ? i : -1;
-  }
+   // Look for '(' — parameter list
+   const next = nearestOf(src, j);
+   if (next.type !== 'paren-open') return null;
 
-  /**
-   * Extract get/set/async prefix from before a method name.
-   * cursor is at the last char of the method name.
-   * Returns { prefixName, posBeforePrefix } or null.
-   */
-  function extractPrefix(src, cursor) {
-    // Walk back to start of method name
-    let ms = cursor;
-    while (ms >= 0 && /\w/.test(src[ms])) ms--;
-    ms++;
-    // Before the name, skip whitespace
-    let bw = ms - 1;
-    while (bw >= 0 && /\s/.test(src[bw])) bw--;
-    if (bw < 0) return null;
-    // Find start of the word before the name
-    let ws = bw;
-    while (ws >= 0 && /\w/.test(src[ws])) ws--;
-    ws++;
-    const word = src.slice(ws, bw + 1);
-    if (word === 'get' || word === 'set' || word === 'async') {
-      // Return the prefix word and position before it (for context check)
-      return { prefixName: word, posBeforePrefix: ws - 1 };
-    }
-    return null;
-  }
+   const openParen = next.pos;
+   const closeParen = matchParen(src, openParen);
+   if (closeParen === -1) return null;
 
-  let i = 0;
-  while (i < source.length) {
-    const ch = source[i];
+   const paramCount = countParams(src.slice(openParen + 1, closeParen));
 
-    if (ch === '"' || ch === "'") { const q = ch; i++; while (i < source.length && source[i] !== q) { if (source[i] === '\\') i++; i++; } i++; continue; }
-    if (ch === '`') { i++; while (i < source.length && source[i] !== '`') { if (source[i] === '\\') i++; if (source[i] === '$' && i + 1 < source.length && source[i + 1] === '{') { i += 2; continue; } i++; } i++; continue; }
-    if (ch === '/' && i + 1 < source.length && source[i + 1] === '/') { i += 2; while (i < source.length && source[i] !== '\n') i++; i++; continue; }
-    if (ch === '/' && i + 1 < source.length && source[i + 1] === '*') { i += 2; while (i + 1 < source.length && !(source[i] === '*' && source[i + 1] === '/')) i++; i += 2; continue; }
+   // Find { after the parameter list
+   let k = closeParen + 1;
+   while (k < src.length && src[k] !== '{' && src[k] !== ';' && src[k] !== '\n') k++;
+   if (k >= src.length || src[k] !== '{') return null;
 
-    // Pattern A: function declarations and expressions
-    if (ch === 'f' && source.startsWith('function', i)) {
-      let j = i + 8;
-      while (j < source.length && (source[j] === ' ' || source[j] === '\t' || source[j] === '\n')) j++;
-      let name = '(anonymous)';
-      if (j < source.length && /[a-zA-Z_$]/.test(source[j])) {
-        const ns = j;
-        while (j < source.length && /\w/.test(source[j])) j++;
-        name = source.slice(ns, j);
-      }
-      const next = nearestOf(source, j);
-      if (next.type !== 'paren-open') { i++; continue; }
-      const openParen = next.pos;
-      const closeParen = matchParen(source, openParen);
-      if (closeParen === -1) { i++; continue; }
-      const paramCount = countParams(source.slice(openParen + 1, closeParen));
-      let k = closeParen + 1;
-      while (k < source.length && source[k] !== '{' && source[k] !== ';' && source[k] !== '\n') k++;
-      if (k < source.length && source[k] === '{') {
-        const cb = matchBrace(source, k);
-        if (cb !== -1) {
-          results.push({ name, startLine: lineFromOffset(i), lines: lineFromOffset(cb) - lineFromOffset(i) + 1, params: paramCount });
-        }
-      }
-      i++;
-      continue;
-    }
+   const closeBrace = matchBrace(src, k);
+   if (closeBrace === -1) return null;
 
-    // Pattern B: Arrow functions with block body
-    if (ch === '=' && i + 1 < source.length && source[i + 1] === '>') {
-      let k = i + 2;
-      while (k < source.length && (source[k] === ' ' || source[k] === '\t' || source[k] === '\n')) k++;
-      if (k < source.length && source[k] === '{') {
-        const arrowResult = { name: '(anonymous)', paramCount: 0 };
-        let scanPos = i - 1;
-        while (scanPos >= 0 && /\s/.test(source[scanPos])) scanPos--;
+   return {
+     name,
+     startLine: offsetToLine(i, lineStarts),
+     lines: offsetToLine(closeBrace, lineStarts) - offsetToLine(i, lineStarts) + 1,
+     params: paramCount,
+   };
+ }
 
-        if (scanPos >= 0 && source[scanPos] === ')') {
-          let pd = 1;
-          let openParenPos = scanPos - 1;
-          while (openParenPos >= 0 && pd > 0) {
-            const bc = source[openParenPos];
-            if (bc === ')') pd++;
-            if (bc === '(') pd--;
-            if (pd > 0) openParenPos--;
-          }
-          if (openParenPos >= 0) {
-            arrowResult.paramCount = countParams(source.slice(openParenPos + 1, scanPos));
-            let eqPos = openParenPos - 1;
-            while (eqPos >= 0 && /\s/.test(source[eqPos])) eqPos--;
-            if (eqPos >= 0 && source[eqPos] === '=') {
-              let ns = eqPos - 1;
-              while (ns >= 0 && /\s/.test(source[ns])) ns--;
-              if (ns >= 0 && /[a-zA-Z_$]/.test(source[ns])) {
-                const ne = ns + 1;
-                while (ns >= 0 && /\w/.test(source[ns])) ns--;
-                ns++;
-                arrowResult.name = source.slice(ns, ne);
-              }
-            }
-          }
-        } else {
-          let eqPos = scanPos;
-          while (eqPos >= 0 && /\s/.test(source[eqPos])) eqPos--;
-          if (eqPos >= 0 && source[eqPos] === '=') {
-            arrowResult.paramCount = 1;
-            let ns = eqPos - 1;
-            while (ns >= 0 && /\s/.test(source[ns])) ns--;
-            if (ns >= 0 && /[a-zA-Z_$]/.test(source[ns])) {
-              const ne = ns + 1;
-              while (ns >= 0 && /\w/.test(source[ns])) ns--;
-              ns++;
-              arrowResult.name = source.slice(ns, ne);
-            }
-          }
-        }
+ /**
+  * Scan an arrow function (`=>`) starting at `i` and, if followed by a block
+  * body (`{`), return a metric result.  Supports named arrows assigned to
+  * variables (`const f = (x) => { ... }`) and single-param forms.
+  * @param {string} src
+  * @param {number} i - position of '=' in '=>'
+  * @param {number[]} lineStarts
+  * @returns {object|null} {name, startLine, lines, params} or null
+  */
+ function scanArrowFn(src, i, lineStarts) {
+   if (src[i] !== '=' || i + 1 >= src.length || src[i + 1] !== '>') return null;
 
-        const cb = matchBrace(source, k);
-        if (cb !== -1) {
-          const startOffset = (() => {
-            let s = i - 1;
-            while (s >= 0 && (/\w/.test(source[s]) || /\s/.test(source[s]) || source[s] === '(' || source[s] === ')' || source[s] === ',')) s--;
-            return s + 1;
-          })();
-          results.push({
-            name: arrowResult.name,
-            startLine: lineFromOffset(startOffset),
-            lines: lineFromOffset(cb) - lineFromOffset(startOffset) + 1,
-            params: arrowResult.paramCount,
-          });
-        }
-      }
-      i++;
-      continue;
-    }
+   let k = i + 2;
+   while (k < src.length && (src[k] === ' ' || src[k] === '\t' || src[k] === '\n')) k++;
+   if (k >= src.length || src[k] !== '{') return null;
 
-    // Pattern C: Method shorthand and get/set/async methods
-    if (ch === ')') {
-      let afterParen = i + 1;
-      while (afterParen < source.length && (source[afterParen] === ' ' || source[afterParen] === '\t')) afterParen++;
-      if (afterParen < source.length && source[afterParen] === '{') {
-        let pd = 1;
-        let openParenPos = i - 1;
-        while (openParenPos >= 0 && pd > 0) {
-          const bc = source[openParenPos];
-          if (bc === ')') pd++;
-          if (bc === '(') pd--;
-          if (pd > 0) openParenPos--;
-        }
-        if (openParenPos < 0) { i++; continue; }
+   // Resolve param list and optional variable name from left of =>
+   const name = '(anonymous)';
+   let paramCount = 0;
 
-        // Find the method name (word before '(')
-        let nameEndPos = openParenPos - 1;
-        while (nameEndPos >= 0 && /\s/.test(source[nameEndPos])) nameEndPos--;
-        if (nameEndPos < 0 || !/[a-zA-Z_$]/.test(source[nameEndPos])) { i++; continue; }
+   // Walk back from => to find the param expression
+   let scanPos = i - 1;
+   while (scanPos >= 0 && /\s/.test(src[scanPos])) scanPos--;
 
-        // Walk back to find start of method name
-        let nameStartPos = nameEndPos;
-        while (nameStartPos >= 0 && /\w/.test(source[nameStartPos])) nameStartPos--;
-        nameStartPos++;
+   if (scanPos >= 0 && src[scanPos] === ')') {
+     // Multi-param form: ...(p1, p2) =>
+     let pd = 1;
+     let openParenPos = scanPos - 1;
+     while (openParenPos >= 0 && pd > 0) {
+       const bc = src[openParenPos];
+       if (bc === ')') pd++;
+       if (bc === '(') pd--;
+       if (pd > 0) openParenPos--;
+     }
+     if (openParenPos >= 0) {
+       paramCount = countParams(src.slice(openParenPos + 1, scanPos));
+       // Try to find the assigned variable name: <ident> = (p1, p2) =>
+       let beforeParen = openParenPos - 1;
+       while (beforeParen >= 0 && /\s/.test(src[beforeParen])) beforeParen--;
+       if (beforeParen >= 0 && src[beforeParen] === '=') {
+         let ns = beforeParen - 1;
+         while (ns >= 0 && /\s/.test(src[ns])) ns--;
+         if (ns >= 0 && /[a-zA-Z_$]/.test(src[ns])) {
+           const ne = ns + 1;
+           while (ns >= 0 && /\w/.test(src[ns])) ns--;
+           return {
+             name: src.slice(ns + 1, ne),
+             startLine: offsetToLine(ns + 1, lineStarts),
+             lines: offsetToLine(matchBrace(src, k), lineStarts) - offsetToLine(ns + 1, lineStarts) + 1,
+             params: paramCount,
+           };
+         }
+       }
+     }
+   } else {
+     // Single-param form: x => { ... }   or  const f = x => { ... }
+     // Just count it as 1 param. Try to find a variable assignment.
+     paramCount = 1;
+     let beforeArrow = i - 1;
+     while (beforeArrow >= 0 && /\s/.test(src[beforeArrow])) beforeArrow--;
+     // Check if we're in a `name = x =>` pattern
+     if (beforeArrow >= 0 && src[beforeArrow] === '=') {
+       let ns = beforeArrow - 1;
+       while (ns >= 0 && /\s/.test(src[ns])) ns--;
+       if (ns >= 0 && /[a-zA-Z_$]/.test(src[ns])) {
+         const ne = ns + 1;
+         while (ns >= 0 && /\w/.test(src[ns])) ns--;
+         return {
+           name: src.slice(ns + 1, ne),
+           startLine: offsetToLine(ns + 1, lineStarts),
+           lines: offsetToLine(matchBrace(src, k), lineStarts) - offsetToLine(ns + 1, lineStarts) + 1,
+           params: paramCount,
+         };
+       }
+     }
+   }
 
-        // Check for get/set/async prefix before the name
-        const prefixInfo = extractPrefix(source, nameEndPos);
-        let prefix = '';
-        let contextPos = nameStartPos - 1;
-        if (prefixInfo) {
-          if (prefixInfo.prefixName === "async") {
-            contextPos = prefixInfo.posBeforePrefix;
-          } else {
-            prefix = prefixInfo.prefixName + " ";
-            contextPos = prefixInfo.posBeforePrefix;
-          }
-        }
+   // Anonymous arrow — compute startOffset from the expression preceding =>
+   const closeBrace = matchBrace(src, k);
+   if (closeBrace === -1) return null;
 
-        // Skip whitespace before contextPos to find the context character
-        while (contextPos >= 0 && /\s/.test(source[contextPos])) contextPos--;
+   let startPos = i - 1;
+   while (startPos >= 0 && (/\w/.test(src[startPos]) || /\s/.test(src[startPos]) || src[startPos] === '(' || src[startPos] === ')' || src[startPos] === ',')) startPos--;
+   startPos++;
 
-        // Method context check: the character before should be , { ; = or line start
-        if (!(contextPos < 0 || /[,{};=]/.test(source[contextPos]))) { i++; continue; }
+   return {
+     name: name,
+     startLine: offsetToLine(startPos, lineStarts),
+     lines: offsetToLine(closeBrace, lineStarts) - offsetToLine(startPos, lineStarts) + 1,
+     params: paramCount,
+   };
+ }
 
-        const rawName = source.slice(nameStartPos, nameEndPos + 1);
-        const SKIP_KEYWORDS = new Set(["function", "if", "while", "for", "switch", "catch", "with"]);
-        if (SKIP_KEYWORDS.has(rawName)) { i++; continue; }
-        const methodName = prefix + rawName;
-        const paramCount = countParams(source.slice(openParenPos + 1, i));
-        const cb = matchBrace(source, afterParen);
-        if (cb !== -1) {
-          results.push({
-            name: methodName,
-            startLine: lineFromOffset(nameStartPos),
-            lines: lineFromOffset(cb) - lineFromOffset(nameStartPos) + 1,
-            params: paramCount,
-          });
-        }
-      }
-    }
+ /**
+  * Scan JavaScript/TypeScript source code and return metrics for every function
+  * with a brace-delimited body.
+  *
+  * Supports:
+  *   - Function declarations: `function name(params) { ... }`
+  *   - Async function declarations: `async function name(params) { ... }`
+  *   - Function expressions: `const name = function(params) { ... }`
+  *   - Arrow functions with block body: `const name = (params) => { ... }`
+  *
+  * Uses brace-matching to determine function span. Nested functions are counted
+  * separately. Implicit-return arrow functions like `() => x` are excluded.
+  *
+  * @param {string} source - Source code to scan
+  * @returns {Array<{name: string, startLine: number, lines: number, params: number}>}
+  */
+ export function scanFunctionMetrics(source) {
+   source = source.replace(/\r\n/g, '\n');
+   const results = [];
+   const lineStarts = buildLineStarts(source);
 
-    i++;
-  }
+   let i = 0;
+   while (i < source.length) {
+     // Skip any string/comment literal at this position
+     const afterSkip = skipLiteralOrComment(source, i);
+     if (afterSkip > i) { i = afterSkip; continue; }
 
-  return results;
-}
+     // Pattern A: function declarations and expressions (including async)
+     if (source[i] === 'a' && source.startsWith('async', i) && i + 5 < source.length && /\s/.test(source[i + 5])) {
+       // Advance past 'async' to check for 'function'
+       let j = i + 5;
+       while (j < source.length && (source[j] === ' ' || source[j] === '\t' || source[j] === '\n')) j++;
+       if (source.startsWith('function', j)) {
+         const fnResult = scanFunctionDecl(source, j, lineStarts);
+        if (fnResult) { results.push(fnResult); i = j + 8; continue; }
+       }
+       i++;
+       continue;
+     }
+
+     if (source[i] === 'f' && source.startsWith('function', i)) {
+       const fnResult = scanFunctionDecl(source, i, lineStarts);
+       if (fnResult) { results.push(fnResult); }
+       i++;
+       continue;
+     }
+
+     // Pattern B: Arrow functions with block body
+     if (source[i] === '=' && i + 1 < source.length && source[i + 1] === '>') {
+       const fnResult = scanArrowFn(source, i, lineStarts);
+       if (fnResult) { results.push(fnResult); }
+       i++;
+       continue;
+     }
+
+     i++;
+   }
+
+   return results;
+ }
 // ---------------------------------------------------------------------------
 // File collection: git diff or glob
 // ---------------------------------------------------------------------------
