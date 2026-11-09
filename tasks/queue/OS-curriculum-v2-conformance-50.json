@@ -3,7 +3,7 @@
   "title": "code-reviewer.md: add \"Reasoning framework\" (name the distortion, cite evidence, state the reframe) per finding",
   "description": "- [ ] **CV-232**: code-reviewer.md: add \"Reasoning framework\" (name the distortion, cite evidence, state the reframe) per finding\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/execution-agents/code-reviewer.md, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-086\n  - Gaps: D5-09\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts `## Reasoning framework`\n  - Parallel: blocked-by CV-221\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-39"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-50.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T18:41:50.244Z"
 }

@@ -756,7 +756,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-206
   - Complexity: S
 
-- [ ] **CV-232**: code-reviewer.md: add "Reasoning framework" (name the distortion, cite evidence, state the reframe) per finding
+- [x] **CV-232**: code-reviewer.md: add "Reasoning framework" (name the distortion, cite evidence, state the reframe) per finding
   - **Priority:** MEDIUM
   - Files: `agents/templates/execution-agents/code-reviewer.md, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-086

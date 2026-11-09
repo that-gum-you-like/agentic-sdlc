@@ -24,6 +24,7 @@
 - 2026-11-09 #135 feat(frontend-developer): add first-step bullets (CV-229 | OS-curriculum-v2-conformance-47) (docs-tests)
 - 2026-11-09 #136 feat(planning-agents): create project-manager.md (CV-230 / CV-REQ-085) (docs-tests)
 - 2026-11-09 #137 feat(sdlc-inbox): route `idea:` prefix to openspec/BACKLOG.md as new backlog entry (CV-231) (docs-tests)
+- 2026-11-09 #138 feat(code-reviewer): add Reasoning Framework (name-cite-reframe) per CV-232 (docs-tests)
 
 ## 2026-11-08
 
