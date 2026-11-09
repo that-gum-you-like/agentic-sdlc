@@ -16,10 +16,10 @@
  *   node agents/memory-manager.mjs compost <agent> <entry-id>
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { resolve } from 'path';
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync } from 'fs';
+import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { createHash } from 'crypto';
 
 import { loadConfig } from './load-config.mjs';
 import { triggerNotification } from './notify.mjs';
@@ -61,7 +61,39 @@ function loadMemory(agent, layer) {
 
 function saveMemory(agent, layer, data) {
   const path = getMemoryPath(agent, layer);
-  writeFileSync(path, JSON.stringify(data, null, 2));
+  const content = JSON.stringify(data, null, 2);
+
+  // bytesBefore: size of existing file content (0 if not exists)
+  const bytesBefore = existsSync(path) ? readFileSync(path).length : 0;
+
+  // Write the memory file first (primary operation)
+  writeFileSync(path, content);
+
+  // Audit write — MUST NEVER FAIL the save (CV-REQ-072)
+  try {
+    const sha256 = createHash('sha256').update(content, 'utf8').digest('hex');
+    const bytesAfter = content.length;
+    const auditPath = resolve(config.projectDir, 'pm/memory-audit.jsonl');
+
+    // Ensure pm/ directory exists
+    const auditDir = dirname(auditPath);
+    if (!existsSync(auditDir)) {
+      mkdirSync(auditDir, { recursive: true });
+    }
+
+    appendFileSync(auditPath, JSON.stringify({
+      ts: new Date().toISOString(),
+      agent,
+      layer,
+      bytesBefore,
+      bytesAfter,
+      sha256,
+    }) + '\n');
+  } catch {
+    // Audit failure must never fail the memory save
+    // Log a warning for debugging but don't propagate
+    console.error(`  ⚠ Warning: audit log write failed for ${agent}/${layer}`);
+  }
 }
 
 /**
