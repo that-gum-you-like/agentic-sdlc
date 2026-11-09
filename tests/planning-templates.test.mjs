@@ -151,6 +151,32 @@ test('SHARED_PROTOCOL.md.template contains the coffeetalk agent log protocol (CV
     'SHARED_PROTOCOL.md.template must state the log is append-only');
 });
 
+// ── CV-229: Frontend first-step bullets ───────────────────────────────────
+
+test('frontend-developer.md instructs searching the component library first (CV-229)', () => {
+  const raw = read('agents/templates/execution-agents/frontend-developer.md');
+  assert.match(raw, /component-library\/bin\/search\.mjs/,
+    'frontend-developer.md must reference the component library search script');
+});
+
+test('frontend-developer.md references shadcn primitives as fallback (CV-229)', () => {
+  const raw = read('agents/templates/execution-agents/frontend-developer.md');
+  assert.match(raw, /shadcn/,
+    'frontend-developer.md must mention shadcn primitives as the fallback');
+});
+
+test('frontend-developer.md mandates Tailwind-only styling (CV-229)', () => {
+  const raw = read('agents/templates/execution-agents/frontend-developer.md');
+  assert.match(raw, /Tailwind/,
+    'frontend-developer.md must mandate Tailwind-only styling');
+});
+
+test('frontend-developer.md forbids raw CSS (CV-229)', () => {
+  const raw = read('agents/templates/execution-agents/frontend-developer.md');
+  assert.match(raw, /no raw CSS/i,
+    'frontend-developer.md must forbid raw CSS');
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
