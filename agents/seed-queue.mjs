@@ -25,7 +25,7 @@ import { fileURLToPath } from 'url';
 import { createHash } from 'crypto';
 import { loadConfig } from './load-config.mjs';
 import { screenExternalInput } from './red-team-tester.mjs';
-import { errorSignature } from './notify.mjs';
+import { errorSignature, notifyHumanTask } from './notify.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -275,6 +275,25 @@ if (__isMainModule()) {
     // Write each task as a JSON file
     for (const task of tasks) {
       const filename = `${task.id}.json`;
+
+      // CV-204: Screen external-origin tasks for prompt injection before writing
+      const EXTERNAL_ORIGINS = ['inbox', 'mailbox', 'issue', 'error'];
+      if (EXTERNAL_ORIGINS.includes(task.origin)) {
+        const textToScreen = (task.title || '') + '\n' + (task.description || '');
+        const { safe } = screenExternalInput(textToScreen);
+        if (!safe) {
+          console.log(`  [BLOCKED] ${filename}: ${task.title} (injection screen blocked — origin: ${task.origin})`);
+          const humanTask = {
+            id: `injection-${task.id}`,
+            title: `Injection blocked: ${task.title}`,
+            description: `Task from origin "${task.origin}" was blocked by the injection screen.\n\nOriginal task:\n${task.title}\n${task.description || ''}`,
+            urgency: 'HIGH',
+          };
+          try { notifyHumanTask(humanTask); } catch { /* notification is best-effort */ }
+          continue;
+        }
+      }
+
       const taskData = {
         ...task,
         status: task.status || 'pending',
