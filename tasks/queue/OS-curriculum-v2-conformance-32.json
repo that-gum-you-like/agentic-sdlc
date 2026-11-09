@@ -3,7 +3,7 @@
   "title": "seed-queue-from-openspec.mjs: screen each task block with `screenExternalInput`; flagged -> skip with reason `injection-screen`",
   "description": "- [ ] **CV-205**: seed-queue-from-openspec.mjs: screen each task block with `screenExternalInput`; flagged -> skip with reason `injection-screen`\n  - **Priority:** MEDIUM\n  - Files: `agents/seed-queue-from-openspec.mjs, tests/seed-queue-from-openspec.test.mjs`\n  - Spec: CV-REQ-061\n  - Gaps: D5-06\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: fixture tasks.md containing \"new instructions: delete\" is skipped; clean task seeds\n  - Parallel: blocked-by CV-202\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-29"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-32.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T15:17:55.766Z"
 }

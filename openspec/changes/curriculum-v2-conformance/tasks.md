@@ -557,7 +557,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-202
   - Complexity: M
 
-- [ ] **CV-205**: seed-queue-from-openspec.mjs: screen each task block with `screenExternalInput`; flagged -> skip with reason `injection-screen`
+- [x] **CV-205**: seed-queue-from-openspec.mjs: screen each task block with `screenExternalInput`; flagged -> skip with reason `injection-screen`
   - **Priority:** MEDIUM
   - Files: `agents/seed-queue-from-openspec.mjs, tests/seed-queue-from-openspec.test.mjs`
   - Spec: CV-REQ-061
