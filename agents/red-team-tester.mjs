@@ -13,11 +13,14 @@
  *   node ~/agentic-sdlc/agents/red-team-tester.mjs --dry-run     # Scan without writing
  *   node ~/agentic-sdlc/agents/red-team-tester.mjs --notify      # Also notify on HIGH findings
  *   node ~/agentic-sdlc/agents/red-team-tester.mjs --screen <text|->  # Screen text and print verdict JSON (exit 2 when flagged)
+ *   node ~/agentic-sdlc/agents/red-team-tester.mjs --tasks       # Scan + write HIGH findings as queue tasks (max 5)
+ *   node ~/agentic-sdlc/agents/red-team-tester.mjs --tasks --dry-run  # Preview tasks without writing
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
 import { resolve, join } from 'path';
 import { fileURLToPath } from 'url';
+import { createHash } from 'crypto';
 
 import { loadConfig } from './load-config.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
@@ -255,18 +258,64 @@ export function screenVerdict(text) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Findings → Queue tasks (CV-210)
+// ---------------------------------------------------------------------------
+
 /**
- * Read all of stdin and return the assembled string.
- * @returns {Promise<string>}
+ * Convert red-team findings into queue tasks (HIGH severity only).
+ *
+ * Each task gets id `RT-<sha1(file+pattern)>` — deterministic per
+ * (file, pattern) pair so repeated scans produce the same id.
+ *
+ * @param {Array} findings — raw findings from scanFile / runRedTeam
+ * @param {Set|string[]} existingIds — task ids already in the queue (dedup)
+ * @param {object} [opts]
+ * @param {number} [opts.maxTasks=5] — cap on new tasks to create
+ * @returns {{ tasks: Array, capped: boolean }}
  */
-export function readStdin() {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', c => chunks.push(c));
-    process.stdin.on('end', () => resolve(chunks.join('')));
-    process.stdin.on('error', reject);
-  });
+export function findingsToTasks(findings, existingIds, opts = {}) {
+  const maxTasks = opts.maxTasks ?? 5;
+  const seen = new Set(existingIds ?? []);
+
+  const highFindings = findings.filter(f => f.severity === 'high');
+
+  /** @type {Map<string, Object>} */
+  const deduped = new Map();
+
+  for (const f of highFindings) {
+    const raw = `${f.file}|${f.pattern}`;
+    const hash = createHash('sha1').update(raw).digest('hex').slice(0, 12);
+    const taskId = `RT-${hash}`;
+
+    if (!deduped.has(taskId)) {
+      deduped.set(taskId, {
+        id: taskId,
+        title: `Red-team: ${f.pattern} in ${f.file}`,
+        description: `Severity: ${f.severity}\nPattern: ${f.pattern}\nFile: ${f.file}\nLine: ${f.line}\nSnippet: ${f.snippet}`,
+        priority: 'HIGH',
+        status: 'pending',
+        agent: 'sdlc-developer',
+        source: 'red-team-tester',
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  const tasks = [];
+  let capped = false;
+
+  for (const [, task] of deduped) {
+    if (!seen.has(task.id)) {
+      if (tasks.length >= maxTasks) {
+        capped = true;
+        break;
+      }
+      tasks.push(task);
+    }
+  }
+
+  return { tasks, capped };
 }
 
 // ---------------------------------------------------------------------------
@@ -282,6 +331,9 @@ if (__isMainModule()) {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
   const notify = args.includes('--notify');
+
+  // --tasks mode: scan + write HIGH findings as queue tasks
+  const tasksMode = args.includes('--tasks');
 
   // --screen <text|-> : screen external text and print verdict JSON, exit 2 when flagged
   const screenIdx = args.indexOf('--screen');
@@ -303,6 +355,44 @@ if (__isMainModule()) {
       process.stderr.write(`error reading input: ${err.message}\n`);
       process.exit(1);
     });
+  } else if (tasksMode) {
+    // --tasks mode: scan and write queue tasks
+    const result = runRedTeam({ dryRun });
+
+    // Collect existing task IDs from the queue directory
+    const tasksDir = config.tasksDir;
+    const existingIds = [];
+    if (!dryRun && existsSync(tasksDir)) {
+      for (const entry of readdirSync(tasksDir)) {
+        if (entry.endsWith('.json')) {
+          existingIds.push(entry.replace(/\.json$/, ''));
+        }
+      }
+    }
+
+    const { tasks, capped } = findingsToTasks(result.findings, existingIds);
+
+    console.log(`Scanned ${result.scanned} files.`);
+    console.log(`Findings: ${result.findings.length} (${result.highCount} high)`);
+    console.log(`New tasks from HIGH findings: ${tasks.length}${capped ? ' (capped at 5)' : ''}`);
+
+    if (!dryRun && tasks.length > 0) {
+      ensureDir(tasksDir);
+      for (const task of tasks) {
+        const filePath = join(tasksDir, `${task.id}.json`);
+        writeFileSync(filePath, JSON.stringify(task, null, 2));
+        console.log(`  Written: ${task.id} — ${task.title}`);
+      }
+      logCapabilityUsage('redTeamScan', 'system', 'red-team-tasks', 'red-team-tester.mjs', 'tasks-written');
+    } else if (dryRun && tasks.length > 0) {
+      for (const task of tasks) {
+        console.log(`  [DRY] ${task.id} — ${task.title}`);
+      }
+    }
+
+    if (tasks.length === 0) {
+      console.log('No new HIGH findings to enqueue.');
+    }
   } else {
     // Normal scan mode
     const result = runRedTeam({ dryRun });
@@ -327,4 +417,22 @@ if (__isMainModule()) {
       }
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Stdin helper for --screen
+// ---------------------------------------------------------------------------
+
+/**
+ * Read all of stdin and return the assembled string.
+ * @returns {Promise<string>}
+ */
+function readStdin() {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', c => chunks.push(c));
+    process.stdin.on('end', () => resolve(chunks.join('')));
+    process.stdin.on('error', reject);
+  });
 }
