@@ -981,7 +981,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
 
 Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the gate tasks are interactive. Pure helper tasks are hermes and land first. Edits to drain-prompt.md are serialized.
 
-- [ ] **CV-301**: SHARED_PROTOCOL.md and its template: add "Ambiguous verbs and data safety" rule (optimize, clean up, simplify, tidy need a named file/table scope; never authorise deleting or rewriting data; no scope -> needs-human)
+- [x] **CV-301**: SHARED_PROTOCOL.md and its template: add "Ambiguous verbs and data safety" rule (optimize, clean up, simplify, tidy need a named file/table scope; never authorise deleting or rewriting data; no scope -> needs-human)
   - **Priority:** MEDIUM
   - Files: `agents/SHARED_PROTOCOL.md, agents/templates/SHARED_PROTOCOL.md.template, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-038

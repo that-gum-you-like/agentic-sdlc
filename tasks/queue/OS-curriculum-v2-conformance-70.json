@@ -3,7 +3,7 @@
   "title": "SHARED_PROTOCOL.md and its template: add \"Ambiguous verbs and data safety\" rule (optimize, clean up, simplify, tidy need a named file/table scope; never authorise deleting or rewriting data; no scope -> needs-human)",
   "description": "- [ ] **CV-301**: SHARED_PROTOCOL.md and its template: add \"Ambiguous verbs and data safety\" rule (optimize, clean up, simplify, tidy need a named file/table scope; never authorise deleting or rewriting data; no scope -> needs-human)\n  - **Priority:** MEDIUM\n  - Files: `agents/SHARED_PROTOCOL.md, agents/templates/SHARED_PROTOCOL.md.template, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-038\n  - Gaps: D1-10\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts both files contain `Ambiguous verbs`\n  - Parallel: blocked-by CV-228\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-46"
   ],
   "_file": "OS-curriculum-v2-conformance-70.json",
-  "claimedAt": "2026-11-09T20:36:47.368Z"
+  "claimedAt": "2026-11-09T20:36:47.368Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T20:45:46.184Z"
 }
