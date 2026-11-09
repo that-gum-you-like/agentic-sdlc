@@ -1,0 +1,13 @@
+# Natural Language Processing dependencies for agentic-sdlc
+#
+# Install: pip install -r requirements-nlp.txt
+#
+# These are optional — all scripts degrade gracefully when missing.
+
+# PII scrubbing (CV-REQ-113)
+presidio-analyzer
+presidio-anonymizer
+
+# Memory embedding search (all-MiniLM-L6-v2, used by embed.py)
+sentence-transformers
+numpy
