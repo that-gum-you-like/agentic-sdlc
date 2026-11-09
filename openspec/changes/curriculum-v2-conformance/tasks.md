@@ -579,7 +579,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-203
   - Complexity: S
 
-- [ ] **CV-207**: seed-queue-from-openspec.mjs: export `goalSafetyFindings(task)` returning `no-acceptance` (no Test:/acceptance line) and `unbounded-verb` (optimize, improve, clean up, refactor, simplify, "make better" with no file in Files:)
+- [x] **CV-207**: seed-queue-from-openspec.mjs: export `goalSafetyFindings(task)` returning `no-acceptance` (no Test:/acceptance line) and `unbounded-verb` (optimize, improve, clean up, refactor, simplify, "make better" with no file in Files:)
   - **Priority:** MEDIUM
   - Files: `agents/seed-queue-from-openspec.mjs, tests/seed-queue-from-openspec.test.mjs`
   - Spec: CV-REQ-062

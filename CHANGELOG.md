@@ -10,6 +10,7 @@
 - 2026-11-09 #120 feat(seed-queue): screen external-origin tasks for injection before writing (CV-204) (backend)
 - 2026-11-09 #121 feat(seed-openspec): screen every task block for prompt injection (CV-205) (backend)
 - 2026-11-09 #122 feat(sdlc-inbox): add prompt-injection screening step with red-team-tester --screen (CV-206) (docs-tests)
+- 2026-11-09 #123 feat(seed-queue-from-openspec): export goalSafetyFindings (CV-207 / CV-REQ-062) (backend)
 
 ## 2026-11-08
 
