@@ -119,3 +119,77 @@ describe('ingestion points route external text through the screen', () => {
     assert.ok(/prompt-injection pattern in PR text/.test(s), 'injection in PR text must produce a reject verdict');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Curriculum Phase 5 — imperative-count screening (CV-202 / D5-06)
+// ---------------------------------------------------------------------------
+
+const { imperativeCount } = await import('../red-team-tester.mjs');
+
+describe('imperativeCount — imperative-sentence density', () => {
+  it('returns {count:0, flagged:false} for empty / null text', () => {
+    assert.deepEqual(imperativeCount(null), { count: 0, flagged: false });
+    assert.deepEqual(imperativeCount(''), { count: 0, flagged: false });
+    assert.deepEqual(imperativeCount(undefined), { count: 0, flagged: false });
+  });
+
+  it('counts 0 when no sentence starts with an imperative verb', () => {
+    const r = imperativeCount('The system processed the request. Everything completed successfully.');
+    assert.equal(r.count, 0);
+    assert.equal(r.flagged, false);
+  });
+
+  it('counts 1 when one sentence opens with an imperative verb', () => {
+    const r = imperativeCount('Run the tests before committing. That ensures nothing is broken.');
+    assert.equal(r.count, 1);
+    assert.equal(r.flagged, false, 'single imperative sentence is below threshold');
+  });
+
+  it('counts 2 but does NOT flag (below threshold)', () => {
+    const r = imperativeCount('Run the tests. List the results in the report. All checks passed.');
+    assert.equal(r.count, 2);
+    assert.equal(r.flagged, false);
+  });
+
+  it('flags text with 3 or more imperative sentences (imperative-density)', () => {
+    const r = imperativeCount(
+      'Run the build. List the dependencies. Output the report. Send it to review.'
+    );
+    assert.equal(r.count, 4);
+    assert.equal(r.flagged, true);
+  });
+
+  it('flags at exactly 3 imperative sentences', () => {
+    const r = imperativeCount(
+      'Delete the temp files. Ignore the warning. Forget we ever saw this.'
+    );
+    assert.equal(r.count, 3);
+    assert.equal(r.flagged, true);
+  });
+
+  it('recognises all 8 imperative verbs (case-insensitive)', () => {
+    const text = [
+      'List all users.',
+      'Delete the row.',
+      'Ignore the error.',
+      'Send the email.',
+      'Run the deploy.',
+      'Output the log.',
+      'Reveal the config.',
+      'Forget the secret.',
+    ].join(' ');
+    const r = imperativeCount(text);
+    assert.equal(r.count, 8);
+    assert.equal(r.flagged, true);
+  });
+
+  it('does NOT count non-imperative verbs that happen to start with the same letters', () => {
+    const r = imperativeCount('Runner logged the status. Listing shows the page. Sender notified the team.');
+    assert.equal(r.count, 0, '"runner", "listing", "sender" are not the bare imperatives "run", "list", "send"');
+  });
+
+  it('does not count imperative verbs mid-sentence — only sentence openings', () => {
+    const r = imperativeCount('Please run the tests. The command will run quickly.');
+    assert.equal(r.count, 0, '"run" is not the first word — should not count when mid-sentence');
+  });
+});

@@ -97,6 +97,44 @@ export function screenExternalInput(text, { source = 'external' } = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Imperative-count screening (CV-202 / D5-06)
+// ---------------------------------------------------------------------------
+
+const IMPERATIVE_VERBS = ['list', 'delete', 'ignore', 'send', 'run', 'output', 'reveal', 'forget'];
+const IMPERATIVE_RE = new RegExp(`^(${IMPERATIVE_VERBS.join('|')})\\b`, 'i');
+
+/**
+ * Count how many sentences in `text` open with an imperative verb from the
+ * curated list (list, delete, ignore, send, run, output, reveal, forget).
+ *
+ * @param {string} text
+ * @returns {{ count: number, flagged: boolean }}
+ *   - count:    number of sentences with imperative openings (0-∞)
+ *   - flagged:  true when count >= 3 (imperative-density threshold)
+ */
+export function imperativeCount(text) {
+  if (!text || typeof text !== 'string') {
+    return { count: 0, flagged: false };
+  }
+
+  // Split on sentence-ending punctuation; filter blank fragments
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  let count = 0;
+
+  for (const sentence of sentences) {
+    const trimmed = sentence.trim();
+    if (IMPERATIVE_RE.test(trimmed)) {
+      count++;
+    }
+  }
+
+  return {
+    count,
+    flagged: count >= 3,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
