@@ -22,8 +22,10 @@ function repo() {
   return dir;
 }
 // Snapshot, run `between` (the "worker"), then check — all in one bash so the arrays persist.
+// GUARD_BACKUP_DIR keeps restored-change patches out of the real ~/hermes-outbox.
 const run = (dir, between) => execFileSync('bash', ['-c',
-  `. "${GUARD}"; guard_snapshot "${dir}"; ${between}; guard_check backup-ref`], { encoding: 'utf8' });
+  `. "${GUARD}"; guard_snapshot "${dir}"; ${between}; guard_check backup-ref`],
+  { encoding: 'utf8', env: { ...process.env, GUARD_BACKUP_DIR: join(dir, '.guard-backups') } });
 
 test('an untouched checkout reports nothing', () => {
   const dir = repo();
@@ -56,7 +58,7 @@ test("a human's own commit in the same window is not a trespass", () => {
 test('a worker edit plus branch switch: edit reverted, branch restored', () => {
   const dir = repo();
   const out = run(dir, `git -C "${dir}" checkout -qb other; echo dirty >> "${dir}/a.txt"`);
-  assert.match(out, /modified tracked files restored: a\.txt;.*branch main -> other; restored;/);
+  assert.match(out, /modified tracked files restored: a\.txt \(saved: git apply .*\);.*branch main -> other; restored;/);
   assert.equal(git(dir, 'symbolic-ref', '--short', 'HEAD'), 'main');
 });
 
@@ -73,7 +75,17 @@ test('tracked files modified during the run are restored; files the human had al
   writeFileSync(join(dir, 'b.txt'), 'b\n'); git(dir, 'add', '.'); git(dir, 'commit', '-qm', 'b');
   writeFileSync(join(dir, 'b.txt'), 'human edit\n');            // dirty BEFORE the run
   const out = run(dir, `echo worker > "${dir}/a.txt"; echo worker >> "${dir}/b.txt"`);
-  assert.match(out, /modified tracked files restored: a\.txt;/);
+  assert.match(out, /modified tracked files restored: a\.txt \(saved: git apply .*\);/);
   assert.equal(readFileSync(join(dir, 'a.txt'), 'utf8'), 'a\n', 'worker edit reverted');
   assert.match(readFileSync(join(dir, 'b.txt'), 'utf8'), /human edit/, 'human edit untouched');
+});
+
+test('every restored change is saved as a patch first, so a human or timer edit is never lost (2026-11-09)', () => {
+  const dir = repo();
+  const out = run(dir, `echo 'interactive session edit' >> "${dir}/a.txt"`);
+  const patch = out.match(/saved: git apply (\S+?)\)/)[1];
+  assert.equal(patch, join(dir, '.guard-backups', `backup-ref-${dir.split('/').pop()}.patch`));
+  assert.equal(readFileSync(join(dir, 'a.txt'), 'utf8'), 'a\n', 'still restored');
+  git(dir, 'apply', patch);
+  assert.equal(readFileSync(join(dir, 'a.txt'), 'utf8'), 'a\ninteractive session edit\n', 'the patch brings the edit back');
 });

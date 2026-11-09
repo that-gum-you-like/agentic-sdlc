@@ -22,13 +22,18 @@ guard_check() { # <backup-ref-name> → prints a one-line report, empty when cle
   for hc in "${!guard_branch[@]}"; do
     # Tracked files the run modified (e.g. a worker running `queue-drainer run` against the
     # human checkout, 2026-11-03) are restored — only files that were clean before the run.
-    local f restored=""
+    # The guard cannot tell a worker's edit from a human's or a timer's (2026-11-09: it
+    # reverted an interactive session's edits and the weekly REM-sleep memory writes),
+    # so every restored change is saved as a patch FIRST — nothing is ever lost.
+    local f restored="" patch
+    patch="${GUARD_BACKUP_DIR:-${HERMES_OUTBOX:-$HOME/hermes-outbox}}/${backup}-$(basename "$hc").patch"
     while IFS= read -r f; do
       [ -z "$f" ] && continue
       printf '%s\n' "${guard_dirty[$hc]}" | grep -qxF -- "$f" && continue
+      mkdir -p "$(dirname "$patch")" && git -C "$hc" diff HEAD -- "$f" >> "$patch" 2>/dev/null || continue
       git -C "$hc" checkout -q -- "$f" 2>/dev/null && restored="$restored $f"
     done < <(git -C "$hc" diff --name-only HEAD 2>/dev/null)
-    [ -n "$restored" ] && out="$out $hc: modified tracked files restored:$restored;"
+    [ -n "$restored" ] && out="$out $hc: modified tracked files restored:$restored (saved: git apply $patch);"
     now="$(git -C "$hc" symbolic-ref --short -q HEAD || echo DETACHED)"
     if [ "$now" != "${guard_branch[$hc]}" ]; then
       out="$out $hc: branch ${guard_branch[$hc]} -> $now;"

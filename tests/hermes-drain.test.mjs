@@ -375,8 +375,6 @@ test('bash substitution keeps &, backslash and / from AGENT.md verbatim (CV-802)
   assert(out === 'A x & y \\ z / w B', `got: ${out}`);
 });
 
-console.log(`\n${passed} passed, ${failed} failed`);
-if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
 
 test('a task the worker gave up on is skipped next time, not re-picked forever (skip ledger)', () => {
   const f = dryRunFixture([
@@ -391,3 +389,7 @@ test('a task the worker gave up on is skipped next time, not re-picked forever (
   const src = readFileSync(script, 'utf8');
   assert(/DRAIN: \(skipped\|blocked\) \$TASK_ID/.test(src) && />> "\$SKIP_LEDGER"/.test(src), 'a give-up is recorded in the ledger');
 });
+
+// Summary LAST (bug 2026-11-09): a test declared after it could fail without failing the suite.
+console.log(`\n${passed} passed, ${failed} failed`);
+if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
