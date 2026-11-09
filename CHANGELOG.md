@@ -6,6 +6,7 @@
 - 2026-11-09 #117 feat(red-team): add 6 new injection-detection rules (CV-REQ-060) (backend)
 - 2026-11-09 #116 feat(pii-scrub): add Presidio-based PII scrubbing with regex fallback (CV-708) (backend)
 - 2026-11-09 #118 feat(red-team): export imperativeCount() to flag imperative-density (CV-202) (backend)
+- 2026-11-09 #119 feat(red-team): add CLI --screen <text|-> printing verdict JSON and exiting 2 when flagged (CV-203) (backend)
 
 ## 2026-11-08
 

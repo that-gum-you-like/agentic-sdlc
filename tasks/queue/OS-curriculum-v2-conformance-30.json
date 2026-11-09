@@ -3,7 +3,7 @@
   "title": "red-team-tester.mjs: add CLI `--screen <text|->` printing the verdict JSON and exiting 2 when flagged",
   "description": "- [ ] **CV-203**: red-team-tester.mjs: add CLI `--screen <text|->` printing the verdict JSON and exiting 2 when flagged\n  - **Priority:** MEDIUM\n  - Files: `agents/red-team-tester.mjs, agents/__tests__/injection-screening.test.mjs`\n  - Spec: CV-REQ-061\n  - Gaps: D5-06\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: spawn with a flagged phrase -> exit 2 and JSON on stdout; benign text -> exit 0\n  - Parallel: blocked-by CV-202\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-29"
   ],
   "_file": "OS-curriculum-v2-conformance-30.json",
-  "claimedAt": "2026-11-09T14:37:29.310Z"
+  "claimedAt": "2026-11-09T14:37:29.310Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T14:53:45.821Z"
 }

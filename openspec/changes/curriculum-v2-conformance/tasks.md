@@ -535,7 +535,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-201
   - Complexity: S
 
-- [ ] **CV-203**: red-team-tester.mjs: add CLI `--screen <text|->` printing the verdict JSON and exiting 2 when flagged
+- [x] **CV-203**: red-team-tester.mjs: add CLI `--screen <text|->` printing the verdict JSON and exiting 2 when flagged
   - **Priority:** MEDIUM
   - Files: `agents/red-team-tester.mjs, agents/__tests__/injection-screening.test.mjs`
   - Spec: CV-REQ-061
