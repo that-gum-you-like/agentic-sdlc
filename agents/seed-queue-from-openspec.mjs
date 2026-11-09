@@ -577,7 +577,47 @@ function main() {
   }
 }
 
-export { assignAgent, patternMatches, parseTasksMd, estimateTokens, loadDomains };
+// ---------------------------------------------------------------------------
+// Goal safety — detect unbounded or untestable tasks
+// ---------------------------------------------------------------------------
+
+const UNBOUNDED_VERBS = /\b(?:optimize|improve|clean\s+up|refactor|simplify|make\s+better)\b/i;
+
+/**
+ * Inspect a task for goal-safety issues and return an array of finding IDs.
+ *
+ * @param {{ title?: string, description?: string }} task — a task object with
+ *   title (the heading/title line) and description (the full body text).
+ * @returns {string[]} — zero or more of:
+ *   - `'no-acceptance'`: task text contains no `Test:` or `acceptance` line.
+ *     Without a test, the task cannot be objectively verified as done.
+ *   - `'unbounded-verb'`: task uses an open-ended verb (optimize, improve, etc.)
+ *     with no `Files:` line to scope the work. An unscoped optimisation goal
+ *     has no natural stopping point (evil-genie problem).
+ */
+function goalSafetyFindings(task = {}) {
+  const findings = [];
+  const title = String(task.title || '');
+  const description = String(task.description || '');
+  const fullText = `${title}\n${description}`;
+
+  // no-acceptance — no Test:/acceptance line anywhere in the task text
+  const hasTestOrAcceptance = /\bTest\s*[:：]/i.test(fullText) || /\bacceptance\b/i.test(fullText);
+  if (!hasTestOrAcceptance) {
+    findings.push('no-acceptance');
+  }
+
+  // unbounded-verb — unbounded language without a Files: line to scope it
+  const hasUnboundedVerb = UNBOUNDED_VERBS.test(fullText);
+  const hasFiles = /^[ \t]*-[ \t]+Files?\s*[:：]/im.test(fullText);
+  if (hasUnboundedVerb && !hasFiles) {
+    findings.push('unbounded-verb');
+  }
+
+  return findings;
+}
+
+export { assignAgent, patternMatches, parseTasksMd, estimateTokens, loadDomains, goalSafetyFindings };
 
 // --- CLI ---
 const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;

@@ -192,3 +192,39 @@ test('clean task blocks still seed normally', () => {
   assert.doesNotMatch(out, /\[BLOCKED\]/);
   assert.match(out, /Skipped \(injection\):\s*0/);
 });
+
+// ---------------------------------------------------------------------------
+// Goal safety — goalSafetyFindings (CV-207 / CV-REQ-062)
+// ---------------------------------------------------------------------------
+
+import { goalSafetyFindings } from '../agents/seed-queue-from-openspec.mjs';
+
+test('goalSafetyFindings — no Test or acceptance line returns no-acceptance', () => {
+  const findings = goalSafetyFindings({ title: 'Add new feature' });
+  assert.ok(findings.includes('no-acceptance'), JSON.stringify(findings));
+});
+
+test('goalSafetyFindings — Test: line prevents no-acceptance', () => {
+  const findings = goalSafetyFindings({ title: 'Add login', description: '- Test: verify user can log in' });
+  assert.ok(!findings.includes('no-acceptance'), JSON.stringify(findings));
+});
+
+test('goalSafetyFindings — acceptance line prevents no-acceptance', () => {
+  const findings = goalSafetyFindings({ title: 'Fix auth', description: '- Acceptance: token refresh works' });
+  assert.ok(!findings.includes('no-acceptance'), JSON.stringify(findings));
+});
+
+test('goalSafetyFindings — "Improve performance" without Files returns unbounded-verb', () => {
+  const findings = goalSafetyFindings({ title: 'Improve performance' });
+  assert.ok(findings.includes('unbounded-verb'), JSON.stringify(findings));
+});
+
+test('goalSafetyFindings — "Improve performance" with Files line does NOT return unbounded-verb', () => {
+  const findings = goalSafetyFindings({ title: 'Improve performance', description: '- Files: src/optimizer/' });
+  assert.ok(!findings.includes('unbounded-verb'), JSON.stringify(findings));
+});
+
+test('goalSafetyFindings — safe task has no findings', () => {
+  const findings = goalSafetyFindings({ title: 'Add rate limiting', description: '- Test: rate limiter blocks after 100 requests\n- Files: src/middleware/' });
+  assert.equal(findings.length, 0, JSON.stringify(findings));
+});
