@@ -634,7 +634,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-210, CV-115
   - Complexity: S
 
-- [ ] **CV-221**: Create tests/planning-templates.test.mjs with helper `read(relPath)` and one test that every template path named in specs/planning-templates.md exists
+- [x] **CV-221**: Create tests/planning-templates.test.mjs with helper `read(relPath)` and one test that every template path named in specs/planning-templates.md exists
   - **Priority:** MEDIUM
   - Files: `tests/planning-templates.test.mjs`
   - Spec: CV-REQ-080

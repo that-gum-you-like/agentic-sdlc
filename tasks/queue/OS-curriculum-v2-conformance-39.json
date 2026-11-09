@@ -3,7 +3,7 @@
   "title": "Create tests/planning-templates.test.mjs with helper `read(relPath)` and one test that every template path named in specs/planning-templates.md exists",
   "description": "- [ ] **CV-221**: Create tests/planning-templates.test.mjs with helper `read(relPath)` and one test that every template path named in specs/planning-templates.md exists\n  - **Priority:** MEDIUM\n  - Files: `tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-080\n  - Gaps: D1-12\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: node --test tests/planning-templates.test.mjs passes (paths for not-yet-created files are listed in an array that later tasks extend)\n  - Parallel: yes\n  - Complexity: S\n  - Notes: Test file only; no production code.",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -11,5 +11,8 @@
   "claimedBy": "hermes-drain",
   "testStatus": null,
   "_file": "OS-curriculum-v2-conformance-39.json",
-  "claimedAt": "2026-11-09T16:01:32.298Z"
+  "claimedAt": "2026-11-09T16:01:32.298Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T16:06:00.227Z"
 }
