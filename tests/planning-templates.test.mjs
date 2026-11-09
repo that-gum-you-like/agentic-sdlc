@@ -271,7 +271,6 @@ const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-tem
 // future tasks as they implement the corresponding CV-REQ).  Later tasks add
 // to this array when they commit a file named in the spec.
 const NOT_YET_CREATED = [
-  'agents/templates/execution-agents/git-expert.md',     // CV-REQ-089
   'pm/coffeetalk.md',                                     // CV-REQ-083 (runtime log)
 ];
 
