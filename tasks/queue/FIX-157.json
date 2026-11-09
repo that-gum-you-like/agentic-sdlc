@@ -1,0 +1,24 @@
+{
+  "id": "FIX-157",
+  "phase": 1,
+  "title": "Fix rejected drain PR #157 (agent/drain/OS-curriculum-v2-conformance-72)",
+  "assignee": "sdlc-developer",
+  "priority": "CRITICAL",
+  "estimatedTokens": 16000,
+  "files": [],
+  "blockedBy": [],
+  "created": "2026-11-09T21:10:49.867Z",
+  "tags": [
+    "auto-fix"
+  ],
+  "description": "Drain PR #157 (branch `agent/drain/OS-curriculum-v2-conformance-72`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-72 && git checkout agent/drain/OS-curriculum-v2-conformance-72`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-72` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- [major] Scope creep: The implementation includes complex parsing logic for method shorthand, getters/setters, and async methods that goes beyond the specified requirement of 'brace-matching, JS/TS function and arrow forms' — The task only specified function declarations, function expressions, and arrow functions with block bodies, but the implementation adds method shorthand, getters/setters, and async method parsing which expands scope beyond requirements\n- [major] Fragile parsing: The implementation uses complex character-level scanning with numerous edge cases and assumptions about JavaScript syntax that are likely to fail on real-world code — The code includes multiple pattern matching approaches with complex backtracking and context checks that are error-prone and not robust for production use\n- [major] Silent fallbacks: The implementation has multiple continue statements that silently skip parsing failures without any error reporting or logging — This hides parsing errors and makes debugging difficult when the scanner fails to recognize valid function patterns\n- [minor] Code quality: The implementation is 300+ lines of complex parsing logic in a single function, violating the 'small files' principle — The function should be broken down into smaller, focused helper functions for better maintainability",
+  "attempts": 1,
+  "status": "pending",
+  "fixFor": {
+    "pr": 157,
+    "branch": "agent/drain/OS-curriculum-v2-conformance-72",
+    "headSha": "f193022eaa1279d24770dd2953d4af9067b24fee",
+    "sourceTask": "OS-curriculum-v2-conformance-72",
+    "rejectionKind": "llm-rejected"
+  }
+}
