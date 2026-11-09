@@ -11,14 +11,15 @@
   "tags": [
     "auto-fix"
   ],
-  "description": "Drain PR #157 (branch `agent/drain/OS-curriculum-v2-conformance-72`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-72 && git checkout agent/drain/OS-curriculum-v2-conformance-72`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-72` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- [major] Scope creep: The implementation includes complex parsing logic for method shorthand, getters/setters, and async methods that goes beyond the specified requirement of 'brace-matching, JS/TS function and arrow forms' — The task only specified function declarations, function expressions, and arrow functions with block bodies, but the implementation adds method shorthand, getters/setters, and async method parsing which expands scope beyond requirements\n- [major] Fragile parsing: The implementation uses complex character-level scanning with numerous edge cases and assumptions about JavaScript syntax that are likely to fail on real-world code — The code includes multiple pattern matching approaches with complex backtracking and context checks that are error-prone and not robust for production use\n- [major] Silent fallbacks: The implementation has multiple continue statements that silently skip parsing failures without any error reporting or logging — This hides parsing errors and makes debugging difficult when the scanner fails to recognize valid function patterns\n- [minor] Code quality: The implementation is 300+ lines of complex parsing logic in a single function, violating the 'small files' principle — The function should be broken down into smaller, focused helper functions for better maintainability",
-  "attempts": 1,
+  "description": "Drain PR #157 (branch `agent/drain/OS-curriculum-v2-conformance-72`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-72 && git checkout agent/drain/OS-curriculum-v2-conformance-72`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-72` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- [major] Scope creep: Added multiple helper functions (buildLineStarts, offsetToLine, countParams, matchBrace, matchParen, nearestOf, skipLiteralOrComment, scanFunctionDecl, scanArrowFn) that were not requested in the task — Remove all helper functions and implement scanFunctionMetrics as a focused export without internal complexity\n- [major] Weakened test coverage: Missing tests for method shorthand, getter/setter accessors, class method shorthand, and async method patterns mentioned in PR description — Add comprehensive tests covering all supported function types as claimed\n- [major] Silent fallback: The scanFunctionDecl function returns null on parsing failures instead of providing clear error information — Return structured errors or ensure robust parsing that doesn't silently fail\n- [minor] Code quality: Multiple nested if statements and complex parsing logic in scanArrowFn function — Simplify arrow function parsing logic for maintainability",
+  "attempts": 2,
   "status": "pending",
   "fixFor": {
     "pr": 157,
     "branch": "agent/drain/OS-curriculum-v2-conformance-72",
-    "headSha": "f193022eaa1279d24770dd2953d4af9067b24fee",
+    "headSha": "e2707df8aa2c814b37a5976050c9c8e86376629e",
     "sourceTask": "OS-curriculum-v2-conformance-72",
     "rejectionKind": "llm-rejected"
-  }
+  },
+  "refreshedAt": "2026-11-09T23:11:48.422Z"
 }
