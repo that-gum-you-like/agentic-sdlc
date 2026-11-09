@@ -85,6 +85,14 @@ test('braindump.md.template contains a ## Technical Constraints heading (CV-223)
     'braindump.md.template must have a Technical Constraints section');
 });
 
+// ── CV-225: requirements-engineer.md checks persona coverage ──────────────
+
+test('requirements-engineer.md contains a persona coverage check (CV-225)', () => {
+  const raw = read('agents/templates/planning-agents/requirements-engineer.md');
+  assert.match(raw, /persona coverage/,
+    'requirements-engineer.md must have a persona coverage check');
+});
+
 // ── CV-224: proposal.md.template has User Stories (by persona) heading ─────
 
 test('proposal.md.template contains a User Stories (by persona) heading (CV-224)', () => {
