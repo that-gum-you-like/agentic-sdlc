@@ -85,6 +85,24 @@ test('braindump.md.template contains a ## Technical Constraints heading (CV-223)
     'braindump.md.template must have a Technical Constraints section');
 });
 
+// ── CV-224: proposal.md.template has User Stories (by persona) heading ─────
+
+test('proposal.md.template contains a User Stories (by persona) heading (CV-224)', () => {
+  const raw = read('openspec/templates/proposal.md.template');
+  assert.match(raw, /## User Stories \(by persona\)/,
+    'proposal.md.template must have a User Stories (by persona) heading');
+});
+
+test('proposal.md.template has rows for all five personas (CV-224)', () => {
+  const raw = read('openspec/templates/proposal.md.template');
+  const personas = ['New', 'Regular', 'Power', 'Admin', 'Payer'];
+  for (const persona of personas) {
+    const storyPattern = new RegExp(`\\|\\s*${persona}\\s*\\|`);
+    assert.match(raw, storyPattern,
+      `proposal.md.template must contain a table row for "${persona}" persona`);
+  }
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
