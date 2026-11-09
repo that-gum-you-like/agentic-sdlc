@@ -822,7 +822,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221
   - Complexity: S
 
-- [ ] **CV-238**: framework/agent-routing.md: add "Disagreement is the finding" paragraph
+- [x] **CV-238**: framework/agent-routing.md: add "Disagreement is the finding" paragraph
   - **Priority:** MEDIUM
   - Files: `framework/agent-routing.md, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-089
