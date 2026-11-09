@@ -524,7 +524,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-202**: red-team-tester.mjs: export `imperativeCount(text)` and flag text with 3 or more sentences opening with an imperative verb (list, delete, ignore, send, run, output, reveal, forget) as `imperative-density`
+- [x] **CV-202**: red-team-tester.mjs: export `imperativeCount(text)` and flag text with 3 or more sentences opening with an imperative verb (list, delete, ignore, send, run, output, reveal, forget) as `imperative-density`
   - **Priority:** MEDIUM
   - Files: `agents/red-team-tester.mjs, agents/__tests__/injection-screening.test.mjs`
   - Spec: CV-REQ-060
