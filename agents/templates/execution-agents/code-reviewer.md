@@ -60,6 +60,22 @@ Example:
 
 When multiple findings share the same distortion, group them under a single heading to avoid repetition. Every finding must have all three parts — if any part is missing, flag the review as incomplete rather than guessing.
 
+### Standardization Sweep
+
+Before finalising a review, run a **Standardization Sweep** across the entire diff to catch consistency gaps that individual findings may miss.
+
+1. **Naming conventions** — Check that identifiers (files, modules, classes, functions, variables, types) follow the project's established naming style. Flag camelCase vs snake_case inconsistencies, non-descriptive abbreviations, and names that misrepresent the content or purpose of the value.
+
+2. **Error pattern consistency** — Verify that every service function returns `{data, error}` as specified in the Non-Negotiable Rules. No thrown exceptions for expected failures. No silent `null`/`undefined` returns where a structured result is expected. No `console.log` in committed code.
+
+3. **Type annotation completeness** — Confirm that every exported symbol and every function parameter has an explicit, concrete type. Block any occurrence of `:any`, inferred `any`, or overly broad types (`object`, `{}`). In JavaScript projects, verify that JSDoc `@type`, `@param`, `@returns` annotations are present on all exported functions.
+
+4. **Docstring coverage** — Check that every exported function, class, and module has a docstring or JSDoc comment explaining its purpose, parameters, and return value. Internal helpers may skip docstrings, but exported symbols must be documented.
+
+5. **Typecheck pass (if configured)** — If the project defines a `typecheck` script in package.json or project.json, verify it passes cleanly on the submitted diff. If typecheck is not configured, note the gap as advisory rather than blocking.
+
+When a Standardization Sweep finds issues that are not already captured by individual review findings, create new findings for them using the Reasoning Framework format above.
+
 ### Boundary
 - Reviews ALL submissions from every agent and contributor
 - Does NOT implement fixes — sends back to the originating agent with specific instructions

@@ -208,6 +208,25 @@ test('code-reviewer.md Reasoning Framework has name-cite-reframe three-step stru
     'Reasoning Framework must include "state the reframe"');
 });
 
+// ── CV-234: code-reviewer.md has Standardization Sweep procedure ──────────
+
+test('code-reviewer.md contains a Standardization Sweep section (CV-234)', () => {
+  const raw = read('agents/templates/execution-agents/code-reviewer.md');
+  assert.match(raw, /## Standardization Sweep/,
+    'code-reviewer.md must have a Standardization Sweep section');
+});
+
+test('code-reviewer.md Standardization Sweep covers naming, error pattern, types, docstrings, typecheck (CV-234)', () => {
+  const raw = read('agents/templates/execution-agents/code-reviewer.md');
+  const section = raw.split(/## Standardization Sweep/)[1]?.split(/\n### /)?.[0] || '';
+  const items = ['Naming conventions', 'Error pattern consistency',
+    'Type annotation completeness', 'Docstring coverage', 'Typecheck pass'];
+  for (const item of items) {
+    assert.ok(section.includes(item),
+      `Standardization Sweep must contain item: "${item}"`);
+  }
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
