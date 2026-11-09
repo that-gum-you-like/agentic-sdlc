@@ -50,11 +50,11 @@ const source = readFileSync(resolve(root, 'agents/pr-auto-review.mjs'), 'utf8');
 
 let passed = 0, failed = 0;
 const failures = [];
-function test(name, fn) {
-  process.stdout.write(`  ${name} ... `);
-  try { fn(); console.log('OK'); passed++; }
-  catch (err) { console.log('FAIL'); failures.push({ name, err: err.message }); failed++; }
-}
+// Tests are queued and awaited in order at the END of the file (bug 2026-11-09:
+// a synchronous runner with a mid-file summary let async tests and every test
+// declared after the summary fail without failing the suite).
+const queued = [];
+function test(name, fn) { queued.push({ name, fn }); }
 function assert(c, m) { if (!c) throw new Error(m); }
 
 console.log('pr-auto-review tests');
@@ -237,8 +237,8 @@ test('merge path is squash + delete-branch, rate-limited, and logged', () => {
 
 test('soft failures never auto-close and LLM cannot bypass the gates', () => {
   assert(!/pr', 'close'/.test(source) && !/'close',/.test(source), 'pipeline must never close PRs');
-  const gateIdx = source.indexOf('const gate = hardGate(');
-  const llmIdx = source.indexOf('await llmReview(');
+  const gateIdx = source.indexOf('const gate = (ctx.hardGate || hardGate)(');
+  const llmIdx = source.indexOf('await (ctx.llmReview || llmReview)(');
   assert(gateIdx > 0 && llmIdx > gateIdx, 'LLM review must run after the hard gate');
   assert(/treated as NOT approved|treated as not approved/i.test(source), 'LLM errors must not approve');
 });
@@ -280,7 +280,7 @@ test('all review-side git mutation happens in the dedicated clone, never the mai
 });
 
 test('hard gate builds its worktree from the review clone', () => {
-  assert(/hardGate\(ctx\.cloneDir/.test(source), 'hardGate must run against the clone');
+  assert(/hardGate\)\(ctx\.cloneDir/.test(source), 'hardGate must run against the clone');
 });
 
 test('the shared mutex records its holder for debuggability', () => {
@@ -675,8 +675,6 @@ test('resolve-flagged changes-requested files one FIX task, idempotently (CV-509
   assert(t3.status === 'blocked', 'three-attempt cap still applies');
 });
 
-console.log(`\n${passed} passed, ${failed} failed`);
-if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
 
 test('tickTaskInSpec ticks the merged task in its OpenSpec tasks.md', async () => {
   const { tickTaskInSpec } = await import('../agents/pr-auto-review.mjs');
@@ -702,3 +700,100 @@ test('buildFixTask counts attempts; the third rejection blocks for a human (CV-R
   const t3 = buildFixTask({ ...info, existing: t2 });
   assert(t3.attempts === 3 && t3.status === 'blocked' && /needs-human/.test(t3.blockedReason), 'third: blocked for a human');
 });
+
+// --- CV-321: severity-tagged review records feed pattern-hunt ----------------
+
+test('buildReviewPrompt asks for the three-step reasoning framework and a severity tag per reason (CV-233, CV-321)', () => {
+  const p = buildReviewPrompt({ task: null, title: 't', body: '', diff: 'd' });
+  for (const s of ['Name the distortion', 'Cite evidence', 'State the reframe', '[critical]', '[major]', '[minor]']) {
+    assert(p.includes(s), `prompt missing ${s}`);
+  }
+});
+
+test('parseVerdict tags issues; an untagged reason defaults to [minor] (CV-321)', () => {
+  const v = parseVerdict('{"verdict":"reject","reasons":["[MAJOR] scope creep: x.mjs — drop it","naming"]}');
+  assert(JSON.stringify(v.issues) === JSON.stringify([{ severity: 'major', text: 'scope creep: x.mjs — drop it' }, { severity: 'minor', text: 'naming' }]), JSON.stringify(v.issues));
+  assert(JSON.stringify(v.reasons) === JSON.stringify(['[MAJOR] scope creep: x.mjs — drop it', 'naming']), 'reasons keep the model wording (FIX tasks quote them)');
+});
+
+test('writeReviewRecord writes reviews/<pr>.md that pattern-hunt parses, and a re-review overwrites it (CV-321)', async () => {
+  const repoDir = mkdtempSync(join(tmpdir(), 'rr-'));
+  const v = parseVerdict('{"verdict":"reject","reasons":["[major] scope creep: unrelated file","naming is inconsistent"]}');
+  const path = M.writeReviewRecord(70, v, { repoDir, title: 'feat: x', headSha: 'abc1234', now: () => '2026-11-09T00:00:00Z' });
+  assert(path === join(repoDir, 'agents', REVIEW_AGENT, 'reviews', '70.md'), path);
+  const { parseReview } = await import('../agents/pattern-hunt.mjs');
+  const r = parseReview(path);
+  assert(r.verdict === 'REJECT' && r.commitHash === 'abc1234' && r.reviewedAt === '2026-11-09T00:00:00Z', JSON.stringify(r));
+  assert(r.issues.map(i => i.severity).join() === 'major,minor', JSON.stringify(r.issues));
+  M.writeReviewRecord(70, parseVerdict('{"verdict":"approve","reasons":[]}'), { repoDir, title: 'feat: x', headSha: 'def5678' });
+  const again = parseReview(path);
+  assert(again.verdict === 'APPROVE' && again.issues.length === 0, 'overwritten per PR, not appended');
+});
+
+// Shared fake context: no gh, no git, no LLM, no network.
+function fakeCtx(dir, extra = {}) {
+  return {
+    repoDir: dir, cloneDir: join(dir, 'clone'), log: () => {}, dryRun: false,
+    queuePath: join(dir, 'q.json'), notify: () => true, overlaps: [], mergedThisRun: new Set(),
+    alreadyReviewed: () => false, postReview: () => {}, hardGate: () => ({ passed: true }),
+    upsertFix: () => { throw new Error('no FIX task expected'); },
+    ...extra,
+  };
+}
+
+test('reviewPr: an empty diff is never sent to the model, writes no record and files no FIX task (bug 2026-11-09)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'rr-empty-'));
+  let llmCalls = 0;
+  const pr = { number: 80, headRefName: 'agent/drain/NOPE-1', headRefOid: 'abc1234', title: 't', files: [{ path: 'docs/x.md' }] };
+  const res = await M.reviewPr(pr, fakeCtx(dir, { getDiff: () => '', llmReview: async () => { llmCalls++; return { verdict: 'reject', reasons: ['No diff content provided'] }; } }));
+  assert(res.action === 'llm-unavailable', res.action);
+  assert(llmCalls === 0, 'model not called');
+  assert(!existsSync(join(dir, 'agents', REVIEW_AGENT, 'reviews', '80.md')), 'no review record for an unreviewed PR');
+});
+
+test('reviewPr: a model rejection writes the review record (CV-321)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'rr-rej-'));
+  const pr = { number: 81, headRefName: 'agent/drain/NOPE-2', headRefOid: 'abc1234', title: 't', files: [{ path: 'docs/x.md' }] };
+  const filed = [];
+  const res = await M.reviewPr(pr, fakeCtx(dir, {
+    getDiff: () => 'diff --git a/docs/x.md b/docs/x.md',
+    llmReview: async () => parseVerdict('{"verdict":"reject","reasons":["[major] scope creep"]}'),
+    upsertFix: (_r, info) => { filed.push(info); return { status: 'pending' }; },
+  }));
+  assert(res.action === 'llm-rejected', res.action);
+  assert(readFileSync(join(dir, 'agents', REVIEW_AGENT, 'reviews', '81.md'), 'utf8').includes('1. [major] scope creep'));
+  assert(filed.length === 1, 'FIX task still filed');
+  assert(M.listFlagged(join(dir, 'q.json')).length === 0, 'a pending FIX task is not flagged');
+});
+
+test('reviewPr: unsafe scope is queued for Claude review, not left invisible (bug 2026-11-09, PR #115)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'rr-unsafe-'));
+  const pr = { number: 115, headRefName: 'agent/drain/NOPE-3', headRefOid: 'abc1234', title: 't', files: [{ path: 'agents/secrets.mjs' }] };
+  const res = await M.reviewPr(pr, fakeCtx(dir));
+  assert(res.action === 'reject-unsafe', res.action);
+  const open = M.listFlagged(join(dir, 'q.json'));
+  assert(open.length === 1 && open[0].pr === 115, JSON.stringify(open));
+});
+
+test('fileFixTask: a FIX task blocked for a human (3rd rejection) queues the PR with one notice (bug 2026-11-09, PR #133)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'rr-exh-'));
+  const sent = [];
+  const pr = { number: 133, headRefName: 'agent/drain/NOPE-4', title: 't' };
+  const ctx = fakeCtx(dir, {
+    notify: (m) => { sent.push(m); return true; },
+    upsertFix: () => ({ status: 'blocked', blockedReason: 'needs-human: PR #133 rejected 3x' }),
+  });
+  M.fileFixTask(pr, 'abc1234', ['[minor] naming'], 'llm-rejected', ctx);
+  M.fileFixTask(pr, 'abc1234', ['[minor] naming'], 'llm-rejected', ctx);
+  const open = M.listFlagged(join(dir, 'q.json'));
+  assert(open.length === 1 && open[0].reasons[0].includes('rejected 3x'), JSON.stringify(open));
+  assert(sent.length === 1, `one notice, got ${sent.length}`);
+});
+
+for (const { name, fn } of queued) {
+  process.stdout.write(`  ${name} ... `);
+  try { await fn(); console.log('OK'); passed++; }
+  catch (err) { console.log('FAIL'); failures.push({ name, err: err.message }); failed++; }
+}
+console.log(`\n${passed} passed, ${failed} failed`);
+if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }

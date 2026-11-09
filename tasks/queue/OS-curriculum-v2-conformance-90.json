@@ -3,7 +3,7 @@
   "title": "pr-auto-review.mjs: make buildReviewPrompt ask for `[critical]`, `[major]`, `[minor]` per issue; add `writeReviewRecord(pr, verdict)` writing agents/sdlc-reviewer/reviews/<pr>.md (overwrite per PR); parseVerdict defaults untagged issues to [minor]",
   "description": "- [ ] **CV-321**: pr-auto-review.mjs: make buildReviewPrompt ask for `[critical]`, `[major]`, `[minor]` per issue; add `writeReviewRecord(pr, verdict)` writing agents/sdlc-reviewer/reviews/<pr>.md (overwrite per PR); parseVerdict defaults untagged issues to [minor]\n  - **Priority:** MEDIUM\n  - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`\n  - Spec: CV-REQ-037\n  - Gaps: D5-03\n  - Agent: Bryce + Claude Code (interactive)\n  - Lane: interactive\n  - Test: rejected verdict with two issues -> reviews/70.md has one [major] and one [minor]; rerun overwrites\n  - Parallel: blocked-by CV-306, CV-305, CV-233\n  - Complexity: M",
   "priority": "MEDIUM",
-  "status": "blocked",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -15,5 +15,7 @@
     "OS-curriculum-v2-conformance-74",
     "OS-curriculum-v2-conformance-51"
   ],
-  "blockedReason": "interactive-lane (lane=interactive): touches the machinery executing the drain or needs Bryce — done in an interactive session"
+  "test_status": "passing",
+  "completed_at": "2026-11-09T19:49:12.000Z",
+  "completedBy": "claude-interactive"
 }

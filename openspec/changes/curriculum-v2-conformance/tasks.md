@@ -767,7 +767,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221
   - Complexity: S
 
-- [ ] **CV-233**: pr-auto-review.mjs buildReviewPrompt: append the three-step reasoning framework text
+- [x] **CV-233**: pr-auto-review.mjs buildReviewPrompt: append the three-step reasoning framework text
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-086
@@ -1039,7 +1039,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Complexity: S
   - Notes: pattern-hunt reads agents/<reviewer>/checklist.md; keep the Auto-added heading it expects.
 
-- [ ] **CV-306**: .gitignore: ignore `agents/*/reviews/` (runtime review records)
+- [x] **CV-306**: .gitignore: ignore `agents/*/reviews/` (runtime review records)
   - **Priority:** MEDIUM
   - Files: `.gitignore`
   - Spec: CV-REQ-037
@@ -1204,7 +1204,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: blocked-by CV-318
   - Complexity: M
 
-- [ ] **CV-321**: pr-auto-review.mjs: make buildReviewPrompt ask for `[critical]`, `[major]`, `[minor]` per issue; add `writeReviewRecord(pr, verdict)` writing agents/sdlc-reviewer/reviews/<pr>.md (overwrite per PR); parseVerdict defaults untagged issues to [minor]
+- [x] **CV-321**: pr-auto-review.mjs: make buildReviewPrompt ask for `[critical]`, `[major]`, `[minor]` per issue; add `writeReviewRecord(pr, verdict)` writing agents/sdlc-reviewer/reviews/<pr>.md (overwrite per PR); parseVerdict defaults untagged issues to [minor]
   - **Priority:** MEDIUM
   - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
   - Spec: CV-REQ-037
@@ -1225,6 +1225,34 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Test: with a tmp agents dir containing sdlc-reviewer/reviews, findReviewsDir returns it (export the function for the test)
   - Parallel: blocked-by CV-321
   - Complexity: S
+
+- [x] **CV-323**: BUG (2026-11-09): pr-auto-review.mjs — unsafe-scope PRs and FIX tasks blocked for a human (3rd rejection or machinery) never reached the Claude review queue, so `list-flagged` was empty while PRs #115 and #133 waited. Both now `queueFlaggedPr` (one notice; upsertFixTaskInClone no longer notifies separately).
+  - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
+  - Spec: CV-REQ-100, CV-REQ-103
+  - Lane: interactive
+  - Test: reviewPr on agents/secrets.mjs → one open queue entry; fileFixTask with a blocked task twice → one entry, one notice
+
+- [x] **CV-324**: BUG (2026-11-09): pr-auto-review.mjs — an empty `gh pr diff` reached the model, which rejected "no diff content provided" and filed FIX tasks for unjudged PRs (3 in the log). Empty diff → `llm-unavailable`, no model call, no record, no FIX.
+  - Files: `agents/pr-auto-review.mjs, tests/pr-auto-review.test.mjs`
+  - Spec: CV-REQ-037
+  - Lane: interactive
+  - Test: reviewPr with getDiff → '' never calls llmReview and writes no reviews/<pr>.md
+
+- [x] **CV-325**: pattern-hunt.mjs — categories from real drain rejections (scope-creep, test-weakening, regex-fragility, stray-artifacts, review-infra); `other-*` and review-infra never count as recurring (three unrelated [major]s are not a pattern); reviewer-name-agnostic `_Reviewed by … at …_`; `__isMainModule` guard + exports.
+  - Files: `agents/pattern-hunt.mjs, agents/__tests__/pattern-hunt-categories.test.mjs`
+  - Spec: CV-REQ-037
+  - Lane: interactive
+  - Test: verbatim log reasons map to named categories; unclassified/infra issues in 3 reviews → no recurring pattern
+
+- [x] **CV-326**: BUG (2026-11-09): drain-trespass-guard.sh reverted ANY tracked edit made in the live checkout during a drain run — an interactive session's edits and the weekly REM-sleep memory writes were destroyed and reported as worker trespass. Every restored change is now saved to `<outbox>/<backup>-<checkout>.patch` before restore.
+  - Files: `agents/drain-trespass-guard.sh, tests/drain-trespass-guard.test.mjs`
+  - Lane: interactive
+  - Test: an edit during the run is restored AND `git apply <patch>` brings it back; tests write patches to GUARD_BACKUP_DIR, never ~/hermes-outbox
+
+- [x] **CV-327**: BUG (2026-11-09): tests/pr-auto-review.test.mjs and tests/hermes-drain.test.mjs printed their summary mid-file with a synchronous runner — async tests and tests declared after the summary could fail without failing the suite (9 tests in pr-auto-review were uncounted). Runner now awaits each test and summarizes last.
+  - Files: `tests/pr-auto-review.test.mjs, tests/hermes-drain.test.mjs`
+  - Lane: interactive
+  - Test: 59 counted in pr-auto-review (was 50); a deliberately failing late test now exits 1
 
 ### Phase 4: Release manager
 

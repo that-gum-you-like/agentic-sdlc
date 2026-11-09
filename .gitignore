@@ -17,3 +17,4 @@ agents/cost-log.json
 node_modules/
 package-lock.json
 
+agents/*/reviews/

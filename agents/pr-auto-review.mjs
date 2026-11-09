@@ -201,13 +201,36 @@ ${body || '(none)'}
 ${clippedDiff}
 \`\`\`
 
+## Reasoning framework — every reason uses three steps (CV-REQ-086)
+1. **Name the distortion** — the specific anti-pattern (e.g. scope creep, weakened test, silent fallback, fragile regex), never just "bad".
+2. **Cite evidence** — the file/line or quoted code that shows it.
+3. **State the reframe** — the concrete fix the author agent should make.
+
+## Severity — tag EVERY reason with exactly one (CV-REQ-037)
+- \`[critical]\` — unsafe or breaks behaviour (data loss, security, deleted tests, broken main)
+- \`[major]\` — wrong or out of scope; must be fixed before merge
+- \`[minor]\` — style or polish; would not block alone
+
 Respond with ONLY a JSON object, no prose before or after:
-{"verdict": "approve" | "reject", "reasons": ["<short reason>", ...]}`;
+{"verdict": "approve" | "reject", "reasons": ["[major] <distortion>: <evidence> — <reframe>", ...]}`;
+}
+
+export const SEVERITIES = ['critical', 'major', 'minor'];
+
+/**
+ * Split one reason into { severity, text }. An untagged reason defaults to
+ * minor (CV-REQ-037) — the model forgetting a tag must not inflate severity.
+ */
+export function tagIssue(reason) {
+  const s = String(reason).trim();
+  const m = s.match(/^\[(critical|major|minor)\]\s*/i);
+  return m ? { severity: m[1].toLowerCase(), text: s.slice(m[0].length) } : { severity: 'minor', text: s };
 }
 
 /**
  * Parse the LLM's verdict. Strict: anything unparseable or missing fields
- * returns null (treated as NOT approved by the caller).
+ * returns null (treated as NOT approved by the caller). `reasons` keep the
+ * model's wording; `issues` carry the normalized severity for review records.
  */
 export function parseVerdict(text) {
   if (!text || typeof text !== 'string') return null;
@@ -216,7 +239,52 @@ export function parseVerdict(text) {
   let obj;
   try { obj = JSON.parse(m[0]); } catch { return null; }
   if (obj?.verdict !== 'approve' && obj?.verdict !== 'reject') return null;
-  return { verdict: obj.verdict, reasons: Array.isArray(obj.reasons) ? obj.reasons.map(String) : [] };
+  const reasons = Array.isArray(obj.reasons) ? obj.reasons.map(String) : [];
+  return { verdict: obj.verdict, reasons, issues: reasons.map(tagIssue) };
+}
+
+/** Where review records live: the reviewer agent's reviews/ dir (pattern-hunt input). */
+export function reviewsDir(repoDir, agent = REVIEW_AGENT) {
+  return join(repoDir, 'agents', agent, 'reviews');
+}
+
+/**
+ * Pure: the markdown review record pattern-hunt.mjs parses (`## Review:`,
+ * `**Commit:**`, `**Verdict:**`, `### Issues Found` with `1. [sev] ...`).
+ */
+export function formatReviewRecord({ pr, title, headSha, verdict, issues, reviewedAt, reviewer = REVIEW_AGENT }) {
+  const list = (issues || []).length
+    ? issues.map((i, n) => `${n + 1}. [${i.severity}] ${i.text}`).join('\n')
+    : '_None._';
+  return [
+    `## Review: PR #${pr} — ${title || '(untitled)'}`,
+    '',
+    `**Commit:** ${headSha || 'unknown'}`,
+    `**Verdict:** ${String(verdict).toUpperCase()}`,
+    '',
+    '### Issues Found',
+    '',
+    list,
+    '',
+    `_Reviewed by ${reviewer} at ${reviewedAt}_`,
+    '',
+  ].join('\n');
+}
+
+/**
+ * CV-321: persist the LLM verdict as agents/<reviewer>/reviews/<pr>.md so the
+ * weekly pattern hunt (Find → Defeat → Teach) has input. One file per PR,
+ * overwritten on every re-review — recurrence is counted across PRs, so a PR
+ * rejected three times must not count as three occurrences.
+ */
+export function writeReviewRecord(pr, verdict, { repoDir, title, headSha, now = () => new Date().toISOString() }) {
+  const dir = reviewsDir(repoDir);
+  mkdirSync(dir, { recursive: true });
+  const path = join(dir, `${pr}.md`);
+  writeFileSync(path, formatReviewRecord({
+    pr, title, headSha, verdict: verdict.verdict, issues: verdict.issues || (verdict.reasons || []).map(tagIssue), reviewedAt: now(),
+  }));
+  return path;
 }
 
 function ensureOpenRouterKey() {
@@ -711,12 +779,12 @@ export function upsertFixTaskInClone(repoDir, prInfo, log) {
   // Non-ff push fails safe; the next run retries (same semantics as completion).
   run('git', ['-C', clone, 'push', 'origin', 'main'], { timeout: 120_000 });
   if (task.status === 'blocked') {
-    log(`${task.id} exhausted (${task.attempts} rejections) — blocked for a human`);
-    try { triggerNotification('blocker', `🙋 PR #${prInfo.pr} rejected ${task.attempts}x — the drain stopped retrying. Needs a human (or an interactive Claude session).`); } catch { /* best-effort */ }
-    return true;
+    // The caller queues the PR for Claude review, which sends the one notice.
+    log(`${task.id} blocked (${task.blockedReason}) — queued for a human`);
+    return task;
   }
   log(`filed ${task.id} (${prInfo.kind}) — the drain will repair PR #${prInfo.pr} on its existing branch`);
-  return true;
+  return task;
 }
 
 // ---------------------------------------------------------------------------
@@ -943,23 +1011,36 @@ function postReview(prNumber, headSha, lines, dryRun) {
 
 /** Best-effort self-healing hook: file/refresh the FIX task for a declined PR.
  *  Failure to file must never break the review run itself. */
-function fileFixTask(pr, headSha, reasons, kind, ctx) {
+export function fileFixTask(pr, headSha, reasons, kind, ctx) {
   if (ctx.dryRun) return;
+  const clean = (reasons || []).filter(Boolean);
+  let task;
   try {
-    upsertFixTaskInClone(ctx.repoDir, {
+    task = (ctx.upsertFix || upsertFixTaskInClone)(ctx.repoDir, {
       pr: pr.number,
       branch: pr.headRefName,
       headSha,
-      reasons: (reasons || []).filter(Boolean),
+      reasons: clean,
       kind,
     }, ctx.log);
   } catch (err) {
     ctx.log(`fix-task filing for PR #${pr.number} failed (non-fatal): ${err.message}`);
+    return;
+  }
+  // Bug 2026-11-09 (PR #133): an exhausted FIX task (3 rejections) or one on
+  // interactive machinery is blocked for a human, but the PR never reached the
+  // Claude review queue, so `list-flagged` showed nothing. Queue it (this also
+  // sends the single blocker notice — upsertFixTaskInClone no longer does).
+  if (task?.status === 'blocked') {
+    queueFlaggedPr(pr, headSha, [task.blockedReason, ...clean].filter(Boolean), ctx);
   }
 }
 
 export async function reviewPr(pr, ctx) {
   const { repoDir, log, dryRun } = ctx;
+  // Test seams (default to the real gh/git implementations).
+  const post = ctx.postReview || postReview;
+  const reviewed = ctx.alreadyReviewed || alreadyReviewed;
   const headSha = pr.headRefOid;
   const record = { ts: new Date().toISOString(), pr: pr.number, branch: pr.headRefName, sha: headSha, action: null, detail: null };
 
@@ -977,7 +1058,7 @@ export async function reviewPr(pr, ctx) {
     }
   }
 
-  if (alreadyReviewed(pr.number, headSha)) {
+  if (reviewed(pr.number, headSha)) {
     record.action = 'skip';
     record.detail = 'already reviewed at this head SHA';
     return record;
@@ -999,10 +1080,14 @@ export async function reviewPr(pr, ctx) {
   if (scope.rejects.length) {
     record.action = 'reject-unsafe';
     record.detail = scope.rejects.join('; ');
-    postReview(pr.number, headSha, [
+    post(pr.number, headSha, [
       '**Verdict: REJECTED (unsafe scope)** — this diff touches paths the pipeline may never merge:',
       ...scope.rejects.map(r => `- ${r}`),
     ], dryRun);
+    // Bug 2026-11-09 (PR #115): unsafe scope got a comment and nothing else —
+    // no FIX task (correct: the drain must not touch it) but no queue entry
+    // either, so it sat invisible. Only a human can decide it: queue it.
+    if (!dryRun) queueFlaggedPr(pr, headSha, scope.rejects, ctx);
     return record;
   }
 
@@ -1010,11 +1095,11 @@ export async function reviewPr(pr, ctx) {
   // created from the dedicated review CLONE so the main repo's .git is never
   // touched (no fetch, no worktree metadata, no FETCH_HEAD races).
   log(`PR #${pr.number} ${pr.headRefName}: running hard gate (clean worktree from review clone)…`);
-  const gate = hardGate(ctx.cloneDir, pr.headRefName, ctx.testCmd);
+  const gate = (ctx.hardGate || hardGate)(ctx.cloneDir, pr.headRefName, ctx.testCmd);
   if (!gate.passed) {
     record.action = 'gate-failed';
     record.detail = gate.step;
-    postReview(pr.number, headSha, [
+    post(pr.number, headSha, [
       `**Verdict: NOT MERGED** — hard gate failed at \`${gate.step}\` in a clean worktree.`,
       '```', gate.tail || '(no output captured)', '```',
     ], dryRun);
@@ -1026,7 +1111,7 @@ export async function reviewPr(pr, ctx) {
   if (scope.flags.length) {
     record.action = 'flagged';
     record.detail = scope.flags.join('; ');
-    postReview(pr.number, headSha, [
+    post(pr.number, headSha, [
       '**Verdict: FLAGGED for human/CTO review** — tests pass in a clean worktree, but this diff touches the guardrail surface, which is never auto-merged:',
       ...scope.flags.map(f => `- \`${f}\``),
     ], dryRun);
@@ -1039,13 +1124,24 @@ export async function reviewPr(pr, ctx) {
   const taskFile = taskId ? join(ctx.cloneDir, 'tasks', 'queue', `${taskId}.json`) : null;
   const task = taskFile && existsSync(taskFile) ? JSON.parse(readFileSync(taskFile, 'utf8')) : null;
   let diff = '';
-  try { diff = gh(['pr', 'diff', String(pr.number)], { maxBuffer: 16 * 1024 * 1024 }); } catch { /* reviewed without diff = soft fail below */ }
-  const review = await llmReview({ task, title: pr.title, body: pr.body, diff, repoDir: ctx.cloneDir || repoDir });
+  try { diff = (ctx.getDiff || ((n) => gh(['pr', 'diff', String(n)], { maxBuffer: 16 * 1024 * 1024 })))(pr.number); } catch { diff = ''; }
+  // Bug 2026-11-09: an empty diff used to reach the model, which rejected "no
+  // diff content provided" and filed a FIX task for a PR nobody had judged.
+  // A missing diff is OUR failure — retry next run, file nothing.
+  const review = diff.trim()
+    ? await (ctx.llmReview || llmReview)({ task, title: pr.title, body: pr.body, diff, repoDir: ctx.cloneDir || repoDir })
+    : { verdict: null, reasons: ['PR diff unavailable (gh pr diff failed or empty) — not reviewed, retried next run'] };
+
+  // CV-321: only a real model verdict is a review; infra failures (null) are not.
+  if (review.verdict && !dryRun) {
+    try { writeReviewRecord(pr.number, review, { repoDir, title: pr.title, headSha }); }
+    catch (err) { log(`review record for PR #${pr.number} failed (non-fatal): ${err.message}`); }
+  }
 
   if (review.verdict !== 'approve') {
     record.action = review.verdict === 'reject' ? 'llm-rejected' : 'llm-unavailable';
     record.detail = review.reasons.join('; ');
-    postReview(pr.number, headSha, [
+    post(pr.number, headSha, [
       `**Verdict: NOT MERGED** — hard gate passed, but the LLM review did ${review.verdict === 'reject' ? 'not approve' : 'not complete'}:`,
       ...review.reasons.map(r => `- ${r}`),
     ], dryRun);
