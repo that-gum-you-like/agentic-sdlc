@@ -844,7 +844,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-242**: memory-manager.mjs: add exported `renderCharacter(core)` (empty string when absent; capped at 400 chars) and include it in `recall` output
+- [x] **CV-242**: memory-manager.mjs: add exported `renderCharacter(core)` (empty string when absent; capped at 400 chars) and include it in `recall` output
   - **Priority:** MEDIUM
   - Files: `agents/memory-manager.mjs, agents/__tests__/character-render.test.mjs`
   - Spec: CV-REQ-070

@@ -3,7 +3,7 @@
   "title": "memory-manager.mjs: add exported `renderCharacter(core)` (empty string when absent; capped at 400 chars) and include it in `recall` output",
   "description": "- [ ] **CV-242**: memory-manager.mjs: add exported `renderCharacter(core)` (empty string when absent; capped at 400 chars) and include it in `recall` output\n  - **Priority:** MEDIUM\n  - Files: `agents/memory-manager.mjs, agents/__tests__/character-render.test.mjs`\n  - Spec: CV-REQ-070\n  - Gaps: D6-01\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: new test: no character -> recall output identical to before; with character -> block present and <= 400 chars\n  - Parallel: blocked-by CV-241\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-57"
   ],
   "_file": "OS-curriculum-v2-conformance-58.json",
-  "claimedAt": "2026-11-09T19:30:19.806Z"
+  "claimedAt": "2026-11-09T19:30:19.806Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T19:37:45.602Z"
 }
