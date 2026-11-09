@@ -1028,6 +1028,13 @@ function teachAgents(recurringPatterns, dryRun = false) {
         continue;
       }
 
+      // Map severity to feeling (CV-REQ-071)
+      const feelingMap = {
+        critical: 'embarrassed',
+        major: 'frustrated',
+        minor: 'mildly annoyed',
+      };
+
       const entry = {
         id: `PH-${pattern.category}-${Date.now()}`,
         content: `Recurring anti-pattern (${pattern.count}x in reviews): ${pattern.label}. ` +
@@ -1036,6 +1043,9 @@ function teachAgents(recurringPatterns, dryRun = false) {
         source: 'pattern-hunt',
         pattern: pattern.category,
         severity: pattern.worstSeverity,
+        feeling: feelingMap[pattern.worstSeverity] || 'mildly annoyed',
+        impact: `Recurred in ${pattern.count} reviews`,
+        whatIDoNow: 'ruleAdded',
       };
 
       if (!dryRun) {

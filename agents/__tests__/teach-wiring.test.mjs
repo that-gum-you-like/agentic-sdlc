@@ -56,7 +56,7 @@ describe('pattern-hunt — Teach step (curriculum Ph7)', () => {
     // Three reviews with the same recurring issue class (>= threshold 3)
     for (let n = 1; n <= 3; n++) {
       writeFileSync(join(TMP_PROJECT, 'agents', 'reviewer', 'reviews', `review-${n}.md`),
-        review(n, '[major] Service call is missing error handling — errors are silently swallowed'));
+        review(n, '[critical] Service call is missing error handling — errors are silently swallowed'));
     }
     // Give the fixture a git repo so git-log analysis paths run quietly
     execFileSync('git', ['init', '-q'], { cwd: TMP_PROJECT });
@@ -81,6 +81,9 @@ describe('pattern-hunt — Teach step (curriculum Ph7)', () => {
     assert.ok(taught.length >= 1, 'long-term memory must carry the lesson');
     assert.match(taught[0].content, /Recurring anti-pattern \(3x/);
     assert.ok(taught[0].pattern, 'entry carries the pattern category for idempotency');
+    assert.equal(taught[0].feeling, 'embarrassed', 'critical severity maps to feeling embarrassed');
+    assert.match(taught[0].impact, /3/, 'impact mentions recurrence count');
+    assert.equal(taught[0].whatIDoNow, 'ruleAdded', 'whatIDoNow is always ruleAdded');
   });
 
   it('is idempotent — re-running does not duplicate the lesson', () => {
