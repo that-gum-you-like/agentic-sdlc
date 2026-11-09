@@ -1676,7 +1676,7 @@ Spec: `specs/decisions-2026-11-03.md`. Hermes builds the code against mocks; the
   - Parallel: blocked-by CV-706
   - Complexity: M
 
-- [ ] **CV-708**: Add `agents/pii-scrub.py` (Presidio) with its `pii-scrub.mjs` wrapper, and call it from the LLM adapters before sending
+- [x] **CV-708**: Add `agents/pii-scrub.py` (Presidio) with its `pii-scrub.mjs` wrapper, and call it from the LLM adapters before sending
   - **Priority:** MEDIUM
   - Files: `agents/pii-scrub.py` (new), `agents/pii-scrub.mjs` (new), `agents/adapters/llm/openrouter.mjs`, `requirements-nlp.txt`, `tests/pii-scrub.test.mjs` (new)
   - Spec: CV-REQ-113

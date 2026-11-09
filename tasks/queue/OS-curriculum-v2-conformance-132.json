@@ -3,7 +3,7 @@
   "title": "Add `agents/pii-scrub.py` (Presidio) with its `pii-scrub.mjs` wrapper, and call it from the LLM adapters before sending",
   "description": "- [ ] **CV-708**: Add `agents/pii-scrub.py` (Presidio) with its `pii-scrub.mjs` wrapper, and call it from the LLM adapters before sending\n  - **Priority:** MEDIUM\n  - Files: `agents/pii-scrub.py` (new), `agents/pii-scrub.mjs` (new), `agents/adapters/llm/openrouter.mjs`, `requirements-nlp.txt`, `tests/pii-scrub.test.mjs` (new)\n  - Spec: CV-REQ-113\n  - Gaps: D5-11\n  - Lane: hermes\n  - Test: email, phone and name in a prompt become `<EMAIL>`, `<PHONE_NUMBER>` and `<PERSON>`; with Presidio missing, `customer-production` refuses and `scratch` warns (use a fake tier fixture)\n  - Complexity: M",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -11,5 +11,8 @@
   "claimedBy": "hermes-drain",
   "testStatus": null,
   "_file": "OS-curriculum-v2-conformance-132.json",
-  "claimedAt": "2026-11-09T00:13:20.448Z"
+  "claimedAt": "2026-11-09T00:13:20.448Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T14:29:05.864Z"
 }
