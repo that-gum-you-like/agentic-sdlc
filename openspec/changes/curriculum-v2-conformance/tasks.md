@@ -922,7 +922,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-247
   - Complexity: S
 
-- [ ] **CV-249**: memory-manager.mjs saveMemory: append {ts,agent,layer,bytesBefore,bytesAfter,sha256} to pm/memory-audit.jsonl; audit failure never fails the save
+- [x] **CV-249**: memory-manager.mjs saveMemory: append {ts,agent,layer,bytesBefore,bytesAfter,sha256} to pm/memory-audit.jsonl; audit failure never fails the save
   - **Priority:** MEDIUM
   - Files: `agents/memory-manager.mjs, agents/__tests__/memory-audit.test.mjs`
   - Spec: CV-REQ-072

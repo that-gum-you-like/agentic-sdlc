@@ -3,7 +3,7 @@
   "title": "memory-manager.mjs saveMemory: append {ts,agent,layer,bytesBefore,bytesAfter,sha256} to pm/memory-audit.jsonl; audit failure never fails the save",
   "description": "- [ ] **CV-249**: memory-manager.mjs saveMemory: append {ts,agent,layer,bytesBefore,bytesAfter,sha256} to pm/memory-audit.jsonl; audit failure never fails the save\n  - **Priority:** MEDIUM\n  - Files: `agents/memory-manager.mjs, agents/__tests__/memory-audit.test.mjs`\n  - Spec: CV-REQ-072\n  - Gaps: D6-05\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: save writes one audit line with correct sha256; unwritable audit path still saves the memory file\n  - Parallel: blocked-by CV-244\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-60"
   ],
   "_file": "OS-curriculum-v2-conformance-65.json",
-  "claimedAt": "2026-11-09T20:17:21.312Z"
+  "claimedAt": "2026-11-09T20:17:21.312Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T20:21:38.771Z"
 }
