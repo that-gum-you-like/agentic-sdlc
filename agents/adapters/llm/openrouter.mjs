@@ -7,7 +7,12 @@
  * This is the same OpenRouter account Hermes uses (the framework and Hermes share
  * OPENROUTER_API_KEY), so framework LLM calls draw on the same balance and the
  * same free→cheap ladder philosophy configured in ~/.hermes/config.yaml.
+ *
+ * PII scrubbing (CV-REQ-113): every prompt is passed through agents/pii-scrub.mjs
+ * before being sent to the API, unless PII_SCRUB_DISABLE=1 is set.
  */
+
+import { scrub } from '../../pii-scrub.mjs';
 
 // Curated affordable, coding-capable models (cost per 1K tokens). Free tiers
 // first. No OpenAI. Costs are indicative — OpenRouter is the source of truth.
@@ -32,6 +37,27 @@ export async function complete(prompt, options = {}) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY not set');
 
+  // ------------------------------------------------------------------
+  // PII scrubbing (CV-REQ-113): strip personal data before leaving the
+  // machine. Skipped when PII_SCRUB_DISABLE=1 (local development).
+  // ------------------------------------------------------------------
+  let scrubbedPrompt = prompt;
+  if (process.env.PII_SCRUB_DISABLE !== '1') {
+    const tier = options.tier || 'scratch';
+    try {
+      const result = scrub(prompt, { tier });
+      scrubbedPrompt = result.scrubbed;
+    } catch (err) {
+      // scrub() throws only for customer-production when Presidio is missing.
+      // Re-throw that so the caller knows the prompt was refused.
+      if (err.message && err.message.includes('customer-production')) {
+        throw err;
+      }
+      // For other tiers, log and continue unscanned.
+      console.warn(`[openrouter] PII scrubbing warning: ${err.message}`);
+    }
+  }
+
   const model = options.model || DEFAULT_MODEL;
   const res = await fetch(`${BASE_URL}/chat/completions`, {
     method: 'POST',
@@ -48,7 +74,7 @@ export async function complete(prompt, options = {}) {
       temperature: options.temperature ?? 1,
       messages: [
         ...(options.system ? [{ role: 'system', content: options.system }] : []),
-        { role: 'user', content: prompt },
+        { role: 'user', content: scrubbedPrompt },
       ],
       // OpenRouter falls back across upstream providers for a given model.
       // Prefer throughput/price; never silently upgrade to a pricier route.
