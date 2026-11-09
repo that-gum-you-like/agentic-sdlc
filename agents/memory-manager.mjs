@@ -64,6 +64,50 @@ function saveMemory(agent, layer, data) {
   writeFileSync(path, JSON.stringify(data, null, 2));
 }
 
+/**
+ * Render the optional character block from an agent's core memory (CV-REQ-070).
+ *
+ * Returns an empty string when `core` has no `character` object (or one with
+ * no rendered fields), and a formatted block capped at 400 characters when it
+ * does. `recall` prints the block only when present, so agents without a
+ * character sheet see byte-identical output to today; `worker.mjs` can reuse
+ * the same function to embed the block in prompts.
+ *
+ * @param {object} core - Parsed core.json for an agent
+ * @returns {string} Rendered character block, or '' when absent
+ */
+function renderCharacter(core) {
+  const ch = core?.character;
+  if (!ch || typeof ch !== 'object') return '';
+
+  const entries = [];
+  if (ch.personality) entries.push(`Personality: ${ch.personality}`);
+  if (ch.communicationStyle) entries.push(`Communication style: ${ch.communicationStyle}`);
+  if (Array.isArray(ch.quirks) && ch.quirks.length > 0) {
+    entries.push(`Quirks: ${ch.quirks.join('; ')}`);
+  }
+  if (Array.isArray(ch.relationships) && ch.relationships.length > 0) {
+    const rels = ch.relationships
+      .map(r => {
+        if (!r || typeof r !== 'object') return String(r);
+        const name = r.name ? String(r.name) : '';
+        const nature = r.nature ? ` (${r.nature})` : '';
+        const notes = r.notes ? ` — ${r.notes}` : '';
+        return `${name}${nature}${notes}` || JSON.stringify(r);
+      })
+      .join(', ');
+    entries.push(`Relationships: ${rels}`);
+  }
+  if (ch.inTheirOwnWords) entries.push(`In their own words: ${ch.inTheirOwnWords}`);
+  if (Array.isArray(ch.growthJourney) && ch.growthJourney.length > 0) {
+    entries.push(`Growth journey: ${ch.growthJourney.join('; ')}`);
+  }
+
+  if (entries.length === 0) return '';
+  const block = `🎭 CHARACTER:\n  ${entries.join('\n  ')}`;
+  return block.length <= 400 ? block : block.slice(0, 400);
+}
+
 function recall(agent) {
   if (!AGENTS.includes(agent)) {
     console.error(`Unknown agent: ${agent}. Available: ${AGENTS.join(', ')}`);
@@ -108,6 +152,12 @@ function recall(agent) {
   if (core.failures?.length > 0) {
     console.log('   Failures (LEARN FROM THESE):');
     core.failures.forEach(f => console.log(`     ❌ ${f.description} (${f.date})`));
+  }
+
+  // Optional character block — rendered only when core.json has one (CV-REQ-070)
+  const characterBlock = renderCharacter(core);
+  if (characterBlock) {
+    console.log(`\n${characterBlock}`);
   }
 
   // Long-term — full if within budget, otherwise up to remaining budget
@@ -417,7 +467,7 @@ function searchMemory(agent, query, topK = 5) {
 }
 
 // Export for use by other scripts
-export { recall, record, consolidate, compostEntry, searchMemory, loadMemory, saveMemory, estimateTokens };
+export { recall, record, consolidate, compostEntry, searchMemory, loadMemory, saveMemory, estimateTokens, renderCharacter };
 
 // CLI
 const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
