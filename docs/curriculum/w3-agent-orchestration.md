@@ -58,6 +58,8 @@ The solution: A team of specialist agents, each with a focused scope.
 
 When you move from coding to orchestrating agents, you're operating at a fundamentally different level of complexity. The **Model of Hierarchical Complexity** (MHC) provides a formal framework for understanding this shift.
 
+**Play with it:** [The Critical Thinking Ladder](https://themultiverse.school/x/critical-thinking-ladder) is the whole model as a zoomable map, with a raccoon and a die. Watch the numbers — the table below uses a shorter count where Systematic is 7, and the map uses the full 0 to 16 scale where Systematic is 12. Same names, different numbers.
+
 ### The Complexity Levels
 
 | Level | Name | Example | AI Capability |
