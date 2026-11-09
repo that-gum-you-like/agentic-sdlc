@@ -601,7 +601,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-207
   - Complexity: S
 
-- [ ] **CV-209**: AGENT.md.template and framework/prompt-playbook.md: add a five-line "Goal safety" section (tiny completable goal, named scope, explicit done-test, no open-ended verbs, stop when done)
+- [x] **CV-209**: AGENT.md.template and framework/prompt-playbook.md: add a five-line "Goal safety" section (tiny completable goal, named scope, explicit done-test, no open-ended verbs, stop when done)
   - **Priority:** MEDIUM
   - Files: `agents/templates/AGENT.md.template, framework/prompt-playbook.md, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-062

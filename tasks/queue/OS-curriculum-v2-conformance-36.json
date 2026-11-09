@@ -3,7 +3,7 @@
   "title": "AGENT.md.template and framework/prompt-playbook.md: add a five-line \"Goal safety\" section (tiny completable goal, named scope, explicit done-test, no open-ended verbs, stop when done)",
   "description": "- [ ] **CV-209**: AGENT.md.template and framework/prompt-playbook.md: add a five-line \"Goal safety\" section (tiny completable goal, named scope, explicit done-test, no open-ended verbs, stop when done)\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/AGENT.md.template, framework/prompt-playbook.md, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-062\n  - Gaps: D3-02\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: planning-templates test asserts both files contain `## Goal safety`\n  - Parallel: blocked-by CV-221\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-39"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-36.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T16:12:28.853Z"
 }

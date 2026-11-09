@@ -14,6 +14,7 @@
 - 2026-11-09 #124 feat(seed-queue-from-openspec): skip unbounded-verb tasks, record no-acceptance as goalSafety (CV-208) (backend)
 - 2026-11-09 #125 feat(red-team-tester): export findingsToTasks() and add --tasks CLI mode (CV-210) (backend)
 - 2026-11-09 #126 test(planning-templates): CV-221 — verify all spec-referenced template paths exist (docs-tests)
+- 2026-11-09 #127 feat(goal-safety): add Goal Safety section to AGENT.md.template and prompt-playbook.md (CV-209) (backend)
 
 ## 2026-11-08
 
