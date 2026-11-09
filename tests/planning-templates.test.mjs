@@ -32,6 +32,20 @@ test('RUNBOOK.md references the sdlc-review-flagged skill (CV-510)', () => {
     'RUNBOOK must reference the sdlc-review-flagged skill');
 });
 
+// ── CV-209: AGENT.md.template and prompt-playbook carry Goal safety ──────
+
+test('AGENT.md.template contains a ## Goal Safety section (CV-209)', () => {
+  const raw = read('agents/templates/AGENT.md.template');
+  assert.match(raw, /## Goal Safety/,
+    'AGENT.md.template must have a Goal Safety section');
+});
+
+test('framework/prompt-playbook.md contains a ## Goal Safety section (CV-209)', () => {
+  const raw = read('framework/prompt-playbook.md');
+  assert.match(raw, /## Goal Safety/,
+    'prompt-playbook.md must have a Goal Safety section');
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';

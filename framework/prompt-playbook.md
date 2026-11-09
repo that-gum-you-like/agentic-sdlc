@@ -206,6 +206,10 @@ Launch [AGENT_1] and [AGENT_2] in parallel. Have them work on
 interface contracts defined in plans/parallelization.md.
 ```
 
+## Goal Safety
+
+Goals must be tiny and completable — a single logical change that fits in one commit. Name the scope (files, functions, or modules) explicitly. Every goal needs a done-test you can run to confirm completion. Never use open-ended verbs (improve, optimize, clean up, refactor, simplify) without a concrete, measurable target. Stop when the done-test passes — do not expand scope.
+
 ## Anti-Patterns to Avoid
 
 | Don't Do This | Do This Instead |
