@@ -11,15 +11,16 @@
   "tags": [
     "auto-fix"
   ],
-  "description": "Drain PR #133 (branch `agent/drain/OS-curriculum-v2-conformance-45`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-45 && git checkout agent/drain/OS-curriculum-v2-conformance-45`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-45` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- Scope creep: added unrelated file tasks/queue/FIX-133.json\n- Test duplication: CV-226 test block appears twice in test file\n- Who Benefits test redundant: template already contained Who Benefits section",
-  "attempts": 2,
-  "status": "pending",
+  "description": "Drain PR #133 (branch `agent/drain/OS-curriculum-v2-conformance-45`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-45 && git checkout agent/drain/OS-curriculum-v2-conformance-45`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-45` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- Missing test for 'Who Benefits' requirement\n- Test for 'what-if-not-built' uses overly broad regex that could match unintended content\n- Inconsistent test naming convention",
+  "attempts": 3,
+  "status": "blocked",
   "fixFor": {
     "pr": 133,
     "branch": "agent/drain/OS-curriculum-v2-conformance-45",
-    "headSha": "5b98bf99d34dac1342fad9e7b5ae7619b332a9d9",
+    "headSha": "921bcbec15bb20bb2eeabb75b4c59210fe6e2df0",
     "sourceTask": "OS-curriculum-v2-conformance-45",
     "rejectionKind": "llm-rejected"
   },
-  "refreshedAt": "2026-11-09T17:48:37.734Z"
+  "refreshedAt": "2026-11-09T17:57:25.391Z",
+  "blockedReason": "needs-human: PR #133 rejected 3x (llm-rejected) — the drain will not retry it"
 }
