@@ -3,7 +3,7 @@
   "title": "worker.mjs: render the character block (via memory-manager `renderCharacter`) in the agent prompt when present",
   "description": "- [ ] **CV-243**: worker.mjs: render the character block (via memory-manager `renderCharacter`) in the agent prompt when present\n  - **Priority:** MEDIUM\n  - Files: `agents/worker.mjs, agents/__tests__/character-render.test.mjs`\n  - Spec: CV-REQ-070\n  - Gaps: D6-01\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: prompt builder output contains the block only when core.json has character\n  - Parallel: blocked-by CV-242\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-58"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-59.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T19:45:56.921Z"
 }
