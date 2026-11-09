@@ -9,6 +9,9 @@
  * estimatedTokens, and routes unknown projects to `personal` with the
  * original text preserved — so a Telegram agent that follows the skill never
  * writes a broken or misrouted capture.
+ *
+ * Since CV-206 / D5-06, the skill also mandates a prompt-injection screening
+ * step (red-team-tester.mjs --screen) before filing any inbox text.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -79,6 +82,26 @@ test('the documented capture template is schema-valid against task.schema.json',
   assert.ok(!('files' in template), 'example must not require files[]');
   assert.ok(!('test_status' in template), 'example must not require test_status');
   assert.ok(!('estimatedTokens' in template), 'example must not require estimatedTokens');
+});
+
+test('the skill references red-team-tester.mjs --screen for injection screening', () => {
+  const raw = readFileSync(SKILL_PATH, 'utf8');
+  assert.match(raw, /red-team-tester\.mjs --screen/,
+    'SKILL.md must reference red-team-tester.mjs --screen for injection screening');
+  // The injection screen step must appear before the write-task step (section 3 before 4).
+  const screenIdx = raw.indexOf('red-team-tester.mjs --screen');
+  const writeIdx = raw.indexOf('Write the task file');
+  assert.ok(screenIdx >= 0, 'screening reference must exist');
+  assert.ok(writeIdx >= 0, 'write-task heading must exist');
+  assert.ok(screenIdx < writeIdx, 'screening must appear before the write-task step');
+});
+
+test('the skill documents what to do when screen flags text', () => {
+  const raw = readFileSync(SKILL_PATH, 'utf8');
+  assert.match(raw, /flagged: true/,
+    'SKILL.md must mention the flagged: true condition');
+  assert.match(raw, /Do NOT file it/,
+    'SKILL.md must instruct not to file flagged text');
 });
 
 test('an unknown project falls back to personal preserving the original text', async () => {
