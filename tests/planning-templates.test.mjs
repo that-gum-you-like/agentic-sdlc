@@ -227,6 +227,20 @@ test('code-reviewer.md Standardization Sweep covers naming, error pattern, types
   }
 });
 
+// ── CV-235: seed-tasks.json.template standardization-sweep task ──────────
+
+test('seed-tasks.json.template parses as valid JSON and contains a Standardization sweep task (CV-235)', () => {
+  const raw = read('agents/templates/seed-tasks.json.template');
+  let parsed;
+  assert.doesNotThrow(() => { parsed = JSON.parse(raw); },
+    'seed-tasks.json.template must be valid JSON');
+  assert.ok(parsed.tasks, 'template must have a tasks array');
+  const found = parsed.tasks.find(t =>
+    t.title && t.title.toLowerCase().includes('standardization sweep'));
+  assert.ok(found,
+    'seed-tasks.json.template must contain a task whose title includes "Standardization sweep"');
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
