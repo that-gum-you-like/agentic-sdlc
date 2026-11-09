@@ -15,6 +15,7 @@
 - 2026-11-09 #125 feat(red-team-tester): export findingsToTasks() and add --tasks CLI mode (CV-210) (backend)
 - 2026-11-09 #126 test(planning-templates): CV-221 — verify all spec-referenced template paths exist (docs-tests)
 - 2026-11-09 #127 feat(goal-safety): add Goal Safety section to AGENT.md.template and prompt-playbook.md (CV-209) (backend)
+- 2026-11-09 #128 feat(requirements-engineer): add Requirements Rubric (5 rows) and gap-question loop (CV-222) (docs-tests)
 
 ## 2026-11-08
 

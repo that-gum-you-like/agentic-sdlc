@@ -3,7 +3,7 @@
   "title": "requirements-engineer.md: add \"Requirements Rubric\" (5 rows: purpose/scope, numeric business goals, user stories, technical constraints, NFRs) and a gap-question loop rule (ask until every row passes or the user stops)",
   "description": "- [ ] **CV-222**: requirements-engineer.md: add \"Requirements Rubric\" (5 rows: purpose/scope, numeric business goals, user stories, technical constraints, NFRs) and a gap-question loop rule (ask until every row passes or the user stops)\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/planning-agents/requirements-engineer.md, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-080\n  - Gaps: D1-12\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts heading `## Requirements Rubric` and all five row labels\n  - Parallel: blocked-by CV-221\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-39"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-40.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T16:20:02.185Z"
 }

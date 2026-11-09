@@ -646,7 +646,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Complexity: S
   - Notes: Test file only; no production code.
 
-- [ ] **CV-222**: requirements-engineer.md: add "Requirements Rubric" (5 rows: purpose/scope, numeric business goals, user stories, technical constraints, NFRs) and a gap-question loop rule (ask until every row passes or the user stops)
+- [x] **CV-222**: requirements-engineer.md: add "Requirements Rubric" (5 rows: purpose/scope, numeric business goals, user stories, technical constraints, NFRs) and a gap-question loop rule (ask until every row passes or the user stops)
   - **Priority:** MEDIUM
   - Files: `agents/templates/planning-agents/requirements-engineer.md, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-080
