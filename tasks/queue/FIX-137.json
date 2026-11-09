@@ -13,12 +13,16 @@
   ],
   "description": "Drain PR #137 (branch `agent/drain/OS-curriculum-v2-conformance-49`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-49 && git checkout agent/drain/OS-curriculum-v2-conformance-49`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-49` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- No diff content provided for review\n- Cannot verify changes without seeing the actual code modifications",
   "attempts": 1,
-  "status": "pending",
+  "status": "completed",
   "fixFor": {
     "pr": 137,
     "branch": "agent/drain/OS-curriculum-v2-conformance-49",
     "headSha": "658455550bdcffac4fe8ec3dea7ebd1179ff155f",
     "sourceTask": "OS-curriculum-v2-conformance-49",
     "rejectionKind": "llm-rejected"
-  }
+  },
+  "_file": "FIX-137.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T18:37:36.820Z"
 }
