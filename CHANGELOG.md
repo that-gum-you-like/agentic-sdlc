@@ -33,6 +33,7 @@
 - 2026-11-09 #144 feat(template): add optional character object to core.json.template + character-sheet.md (CV-241) (backend)
 - 2026-11-09 #145 feat(memory): add exported renderCharacter(core) + character block in recall (CV-242) (backend)
 - 2026-11-09 #146 feat(worker): render character block via renderCharacter in agent prompt (CV-243) (backend)
+- 2026-11-09 #147 feat(memory): add optional feeling, impact, whatIDoNow to failure schema (CV-244) (backend)
 
 ## 2026-11-08
 

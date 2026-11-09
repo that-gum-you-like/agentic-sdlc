@@ -3,7 +3,7 @@
   "title": "core.json.template failure schema: add optional `feeling`, `impact`, `whatIDoNow`; memory-manager.mjs `recall` renders them when present",
   "description": "- [ ] **CV-244**: core.json.template failure schema: add optional `feeling`, `impact`, `whatIDoNow`; memory-manager.mjs `recall` renders them when present\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/core.json.template, agents/memory-manager.mjs, agents/__tests__/character-render.test.mjs`\n  - Spec: CV-REQ-071\n  - Gaps: D6-03\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: failure without the fields renders exactly as before; with them, the three appear\n  - Parallel: blocked-by CV-242\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-58"
   ],
   "_file": "OS-curriculum-v2-conformance-60.json",
-  "claimedAt": "2026-11-09T19:46:25.691Z"
+  "claimedAt": "2026-11-09T19:46:25.691Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T19:51:55.173Z"
 }

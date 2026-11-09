@@ -866,7 +866,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-242
   - Complexity: S
 
-- [ ] **CV-244**: core.json.template failure schema: add optional `feeling`, `impact`, `whatIDoNow`; memory-manager.mjs `recall` renders them when present
+- [x] **CV-244**: core.json.template failure schema: add optional `feeling`, `impact`, `whatIDoNow`; memory-manager.mjs `recall` renders them when present
   - **Priority:** MEDIUM
   - Files: `agents/templates/core.json.template, agents/memory-manager.mjs, agents/__tests__/character-render.test.mjs`
   - Spec: CV-REQ-071
