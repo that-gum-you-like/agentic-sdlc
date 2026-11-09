@@ -32,12 +32,31 @@
 
 ---
 
+## Business Goals (numeric)
+
+<!-- Business goals expressed as concrete, measurable numbers. Revenue targets, user growth, performance SLAs, adoption rates — anything that can be counted. -->
+
+- **Goal 1:** {{BUSINESS_GOAL_1}}
+- **Goal 2:** {{BUSINESS_GOAL_2}}
+- **Goal 3:** {{BUSINESS_GOAL_3}}
+
+---
+
 ## Constraints & Non-Negotiables
 
 <!-- What MUST be true? Tech stack requirements, privacy rules, performance limits, legal requirements. -->
 
 - {{CONSTRAINT_1}}
 - {{NON_NEGOTIABLE_1}}
+
+---
+
+## Technical Constraints
+
+<!-- Technology-specific constraints: supported browsers, API compatibility, deployment environment limits, database sizing, latency budgets. -->
+
+- **Constraint 1:** {{TECH_CONSTRAINT_1}}
+- **Constraint 2:** {{TECH_CONSTRAINT_2}}
 
 ---
 

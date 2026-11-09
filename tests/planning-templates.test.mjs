@@ -71,6 +71,20 @@ test('requirements-engineer.md defines a gap-question loop (CV-222)', () => {
     'requirements-engineer.md must have a Gap-Question Loop subsection');
 });
 
+// ── CV-223: braindump.md.template has Business Goals and Technical Constraints ─
+
+test('braindump.md.template contains a ## Business Goals (numeric) heading (CV-223)', () => {
+  const raw = read('openspec/templates/braindump.md.template');
+  assert.match(raw, /## Business Goals \(numeric\)/,
+    'braindump.md.template must have a Business Goals (numeric) section');
+});
+
+test('braindump.md.template contains a ## Technical Constraints heading (CV-223)', () => {
+  const raw = read('openspec/templates/braindump.md.template');
+  assert.match(raw, /## Technical Constraints/,
+    'braindump.md.template must have a Technical Constraints section');
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
