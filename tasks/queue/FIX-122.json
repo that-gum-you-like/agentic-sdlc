@@ -13,12 +13,16 @@
   ],
   "description": "Drain PR #122 (branch `agent/drain/OS-curriculum-v2-conformance-33`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-33 && git checkout agent/drain/OS-curriculum-v2-conformance-33`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-33` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- Test file was completely rewritten instead of adding new tests\n- Removed all existing test functionality for schema validation and capture logic\n- Scope creep: task only required adding screening step, not rewriting entire test suite\n- Tests no longer validate the core inbox capture functionality",
   "attempts": 1,
-  "status": "pending",
+  "status": "completed",
   "fixFor": {
     "pr": 122,
     "branch": "agent/drain/OS-curriculum-v2-conformance-33",
     "headSha": "c792c418f9ef4b172da830e6234460b1ac35c0ce",
     "sourceTask": "OS-curriculum-v2-conformance-33",
     "rejectionKind": "llm-rejected"
-  }
+  },
+  "_file": "FIX-122.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T15:35:58.220Z"
 }
