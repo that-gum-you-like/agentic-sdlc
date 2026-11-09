@@ -33,5 +33,13 @@
     "weekStarted": "",
     "milestonesHit": [],
     "metrics": {}
+  },
+  "character": {
+    "personality": "{{PERSONALITY}}",
+    "communicationStyle": "{{COMMUNICATION_STYLE}}",
+    "quirks": [],
+    "relationships": [],
+    "inTheirOwnWords": "{{IN_THEIR_OWN_WORDS}}",
+    "growthJourney": []
   }
 }

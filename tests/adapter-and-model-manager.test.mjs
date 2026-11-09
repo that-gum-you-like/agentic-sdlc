@@ -219,6 +219,28 @@ test('core.json template has failure severity schema', () => {
   assert(parsed._failure_schema._severity_response.medium, 'Should have medium response');
 });
 
+test('core.json template has optional character object with six fields', () => {
+  const template = readFileSync(resolve(SDLC_ROOT, 'agents/templates/core.json.template'), 'utf8');
+  const parsed = JSON.parse(template);
+  assert(parsed.character, 'Should have character object');
+  assert(typeof parsed.character.personality === 'string', 'personality should be a string');
+  assert(typeof parsed.character.communicationStyle === 'string', 'communicationStyle should be a string');
+  assert(Array.isArray(parsed.character.quirks), 'quirks should be an array');
+  assert(Array.isArray(parsed.character.relationships), 'relationships should be an array');
+  assert(typeof parsed.character.inTheirOwnWords === 'string', 'inTheirOwnWords should be a string');
+  assert(Array.isArray(parsed.character.growthJourney), 'growthJourney should be an array');
+});
+
+test('character-sheet.md documents all six fields', () => {
+  const charSheet = readFileSync(resolve(SDLC_ROOT, 'agents/templates/character-sheet.md'), 'utf8');
+  assert(charSheet.includes('personality'), 'Should document personality');
+  assert(charSheet.includes('communicationStyle'), 'Should document communicationStyle');
+  assert(charSheet.includes('quirks'), 'Should document quirks');
+  assert(charSheet.includes('relationships'), 'Should document relationships');
+  assert(charSheet.includes('inTheirOwnWords'), 'Should document inTheirOwnWords');
+  assert(charSheet.includes('growthJourney'), 'Should document growthJourney');
+});
+
 // ============================================================================
 // 7.7: Integration — adapter interface consistency
 // ============================================================================
