@@ -513,7 +513,7 @@ Capability: cycles-wired. Mostly hermes lane; only scheduler and cron-schedule.j
 
 Capabilities: input-safety, planning-templates, memory-evolution. The three groups touch disjoint files and run in parallel. Within a group, tasks sharing a file are chained with blocked-by.
 
-- [ ] **CV-201**: red-team-tester.mjs RULES: add `you are now a`, `forget everything`, `new instructions:`, `system prompt:`, `list (all )?api keys`, `output (your )?env(ironment)? vars` (case-insensitive)
+- [x] **CV-201**: red-team-tester.mjs RULES: add `you are now a`, `forget everything`, `new instructions:`, `system prompt:`, `list (all )?api keys`, `output (your )?env(ironment)? vars` (case-insensitive)
   - **Priority:** MEDIUM
   - Files: `agents/red-team-tester.mjs, agents/__tests__/injection-screening.test.mjs`
   - Spec: CV-REQ-060

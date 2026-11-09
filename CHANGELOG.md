@@ -3,6 +3,7 @@
 ## 2026-11-09
 
 - 2026-11-09 #114 feat(queue): add error-source adapters and portfolio errorSources validation (backend)
+- 2026-11-09 #117 feat(red-team): add 6 new injection-detection rules (CV-REQ-060) (backend)
 
 ## 2026-11-08
 
