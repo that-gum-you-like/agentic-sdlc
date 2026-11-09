@@ -196,6 +196,39 @@ test('SHARED_PROTOCOL.md.template contains the ambiguous verbs and data safety r
     'SHARED_PROTOCOL.md.template must forbid authorising deletion without explicit scope');
 });
 
+// ── CV-302: Tests first and "never modify a committed test" rules ─────────
+
+test('AGENT.md.template contains the phrase "never modify a committed test" (CV-302)', () => {
+  const raw = read('agents/templates/AGENT.md.template');
+  assert.match(raw, /never modify a committed test/i,
+    'AGENT.md.template must contain the exact phrase "never modify a committed test"');
+});
+
+test('AGENT.md.template micro cycle has tests before implementation (CV-302)', () => {
+  const raw = read('agents/templates/AGENT.md.template');
+  // "Write tests first" must appear before "Implement" in the micro cycle
+  const microCycle = raw.split(/### Micro Cycle/)[1]?.split(/### /)[0] || '';
+  const writeTestsIdx = microCycle.indexOf('Write tests first');
+  const implementIdx = microCycle.indexOf('**Implement**');
+  assert.ok(writeTestsIdx >= 0 && implementIdx >= 0,
+    'Micro cycle must contain both "Write tests first" and "Implement" steps');
+  assert.ok(writeTestsIdx < implementIdx,
+    'In AGENT.md.template micro cycle, "Write tests first" must appear before "Implement" (tests first)');
+});
+
+test('worker.mjs prompt micro cycle has tests before implementation (CV-302)', () => {
+  const raw = read('agents/worker.mjs');
+  const microCycleSection = raw.split(/## Micro Cycle/)[1]?.split(/## /)[0] || '';
+  assert.match(microCycleSection, /derive.*failing.*tests/i,
+    'worker.mjs prompt micro cycle must instruct deriving failing tests from the spec first');
+});
+
+test('worker.mjs contains the phrase "never modify a committed test" (CV-302)', () => {
+  const raw = read('agents/worker.mjs');
+  assert.match(raw, /never modify a committed test/i,
+    'worker.mjs must contain the exact phrase "never modify a committed test"');
+});
+
 // ── CV-229: Frontend first-step bullets ───────────────────────────────────
 
 test('frontend-developer.md instructs searching the component library first (CV-229)', () => {

@@ -274,8 +274,8 @@ ${task.files ? `**Files:** ${task.files.join(', ')}` : ''}
 ${task.acceptance_criteria ? `**Acceptance Criteria:**\n${task.acceptance_criteria.map(c => `- ${c}`).join('\n')}` : ''}
 
 ## Micro Cycle — Execute This Loop
-1. Implement the code changes for this task
-2. Write tests covering happy path + at least one error case
+1. Derive failing tests from the task's spec — write them before any implementation code
+2. Implement the code changes for this task
 3. Run tests: \`cd ${config.appPath} && source ~/.nvm/nvm.sh && npm test\`
 4. If tests pass → stage and commit with descriptive message
 5. If tests fail → fix and re-run (max 3 attempts, then report as blocked)
@@ -310,6 +310,7 @@ Do NOT fabricate credentials, make irreversible design choices on behalf of the 
 - Do NOT stop to confirm — keep going
 - Small files, small commits
 - Every commit must include tests
+- Never modify a committed test. If a committed test fails, flag \`needs-human\` with the test path.
 ${capabilitySection}`;
 }
 
