@@ -811,7 +811,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221
   - Complexity: S
 
-- [ ] **CV-237**: Create execution-agents/git-expert.md (branching, rebases, conflict resolution, no force-push to shared branches), modelled on release-manager.md
+- [x] **CV-237**: Create execution-agents/git-expert.md (branching, rebases, conflict resolution, no force-push to shared branches), modelled on release-manager.md
   - **Priority:** MEDIUM
   - Files: `agents/templates/execution-agents/git-expert.md, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-089

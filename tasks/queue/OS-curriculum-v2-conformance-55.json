@@ -3,7 +3,7 @@
   "title": "Create execution-agents/git-expert.md (branching, rebases, conflict resolution, no force-push to shared branches), modelled on release-manager.md",
   "description": "- [ ] **CV-237**: Create execution-agents/git-expert.md (branching, rebases, conflict resolution, no force-push to shared branches), modelled on release-manager.md\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/execution-agents/git-expert.md, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-089\n  - Gaps: D7-18\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: file exists with `no force-push`\n  - Parallel: blocked-by CV-221\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-39"
   ],
   "_file": "OS-curriculum-v2-conformance-55.json",
-  "claimedAt": "2026-11-09T19:05:48.266Z"
+  "claimedAt": "2026-11-09T19:05:48.266Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T19:12:31.094Z"
 }
