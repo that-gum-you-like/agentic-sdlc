@@ -133,6 +133,24 @@ test('proposal.md.template Success Metrics table has metric, baseline, target, h
   }
 });
 
+// ── CV-228: Agent log (coffeetalk) section in SHARED_PROTOCOL.md ──────────
+
+test('SHARED_PROTOCOL.md contains the coffeetalk agent log protocol (CV-228)', () => {
+  const raw = read('agents/SHARED_PROTOCOL.md');
+  assert.match(raw, /pm\/coffeetalk\.md/,
+    'SHARED_PROTOCOL.md must reference pm/coffeetalk.md');
+  assert.match(raw, /append-only/,
+    'SHARED_PROTOCOL.md must state the log is append-only');
+});
+
+test('SHARED_PROTOCOL.md.template contains the coffeetalk agent log protocol (CV-228)', () => {
+  const raw = read('agents/templates/SHARED_PROTOCOL.md.template');
+  assert.match(raw, /pm\/coffeetalk\.md/,
+    'SHARED_PROTOCOL.md.template must reference pm/coffeetalk.md');
+  assert.match(raw, /append-only/,
+    'SHARED_PROTOCOL.md.template must state the log is append-only');
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
