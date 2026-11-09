@@ -3,7 +3,7 @@
   "title": "pattern-hunt.mjs teachAgents: fill feeling (critical=embarrassed, major=frustrated, minor=mildly annoyed), impact (recurrence count), whatIDoNow (= ruleAdded) on taught failures",
   "description": "- [ ] **CV-245**: pattern-hunt.mjs teachAgents: fill feeling (critical=embarrassed, major=frustrated, minor=mildly annoyed), impact (recurrence count), whatIDoNow (= ruleAdded) on taught failures\n  - **Priority:** MEDIUM\n  - Files: `agents/pattern-hunt.mjs, agents/__tests__/teach-wiring.test.mjs`\n  - Spec: CV-REQ-071\n  - Gaps: D6-03\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: critical pattern recurring 3 times -> feeling `embarrassed`, impact contains `3`\n  - Parallel: blocked-by CV-244\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-60"
   ],
   "_file": "OS-curriculum-v2-conformance-61.json",
-  "claimedAt": "2026-11-09T19:52:32.966Z"
+  "claimedAt": "2026-11-09T19:52:32.966Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T19:57:38.918Z"
 }

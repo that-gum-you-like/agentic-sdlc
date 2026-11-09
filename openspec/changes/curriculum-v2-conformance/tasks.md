@@ -877,7 +877,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-242
   - Complexity: S
 
-- [ ] **CV-245**: pattern-hunt.mjs teachAgents: fill feeling (critical=embarrassed, major=frustrated, minor=mildly annoyed), impact (recurrence count), whatIDoNow (= ruleAdded) on taught failures
+- [x] **CV-245**: pattern-hunt.mjs teachAgents: fill feeling (critical=embarrassed, major=frustrated, minor=mildly annoyed), impact (recurrence count), whatIDoNow (= ruleAdded) on taught failures
   - **Priority:** MEDIUM
   - Files: `agents/pattern-hunt.mjs, agents/__tests__/teach-wiring.test.mjs`
   - Spec: CV-REQ-071
