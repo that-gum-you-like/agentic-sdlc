@@ -7,6 +7,10 @@
  *   - recall output is byte-identical without a character (no extra section)
  *   - recall output contains the character block (<= 400 chars) when present
  *
+ * Also tests failure schema optional field rendering (CV-REQ-071, task CV-244):
+ *   - failures without feeling/impact/whatIDoNow render byte-identical to before
+ *   - failures with those fields render them
+ *
  * Runs against a temporary fixture project (via SDLC_PROJECT_DIR) so the tests
  * never read or write real agent memory.
  *
@@ -271,5 +275,95 @@ describe('generatePrompt — character present', () => {
     const block = end === -1 ? prompt.slice(start) : prompt.slice(start, end);
     assert.ok(block.length <= 400, `character block must be <= 400 chars, got ${block.length}`);
     assert.ok(block.length > 0, 'block must be non-empty');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. recall failure schema rendering (CV-244 / CV-REQ-071)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('recall output — failure schema fields', () => {
+  const FAILURE_BARE = {
+    id: 'F-1',
+    description: 'old failure',
+    date: '2026-01-01',
+  };
+
+  const FAILURE_FULL = {
+    id: 'F-2',
+    description: 'used await in non-async function',
+    date: '2026-04-07',
+    feeling: 'frustrated — should have checked the function signature',
+    impact: 'would have caused syntax error at runtime if deployed',
+    whatIDoNow: 'always verify async context before using await',
+  };
+
+  it('renders byte-identical to baseline when failures lack feeling/impact/whatIDoNow', () => {
+    writeCore('plain-agent', PLAIN_CORE);
+    const output = captureRecall('plain-agent');
+    assert.match(output, /❌ old failure \(2026-01-01\)/);
+    assert.doesNotMatch(output, /💭 Feeling/);
+    assert.doesNotMatch(output, /⚡ Impact/);
+    assert.doesNotMatch(output, /✅ What I do now/);
+  });
+
+  it('renders feeling, impact, and whatIDoNow when present on failure entries', () => {
+    const core = {
+      identity: { name: 'plain-agent', role: 'test fixture' },
+      values: ['value one'],
+      non_negotiable_rules: ['rule one'],
+      failures: [FAILURE_FULL],
+    };
+    writeCore('plain-agent', core);
+    const output = captureRecall('plain-agent');
+    assert.match(output, /❌ used await in non-async function \(2026-04-07\)/);
+    assert.match(output, /💭 Feeling: frustrated/);
+    assert.match(output, /⚡ Impact: would have caused syntax error/);
+    assert.match(output, /✅ What I do now: always verify async context/);
+  });
+
+  it('renders each field independently when only some are present', () => {
+    const core = {
+      identity: { name: 'plain-agent', role: 'test fixture' },
+      values: ['value one'],
+      non_negotiable_rules: ['rule one'],
+      failures: [
+        { ...FAILURE_BARE, feeling: 'just embarrassed' },
+        { ...FAILURE_BARE, impact: 'blocked the release' },
+        { ...FAILURE_BARE, whatIDoNow: 'add a pre-commit hook' },
+      ],
+    };
+    writeCore('plain-agent', core);
+    const output = captureRecall('plain-agent');
+    assert.match(output, /💭 Feeling: just embarrassed/);
+    assert.match(output, /⚡ Impact: blocked the release/);
+    assert.match(output, /✅ What I do now: add a pre-commit hook/);
+  });
+
+  it('interleaves correctly with character block when both are present', () => {
+    const core = {
+      identity: { name: 'char-agent', role: 'test fixture' },
+      values: ['value one'],
+      non_negotiable_rules: ['rule one'],
+      failures: [FAILURE_FULL],
+      character: CHAR_CORE.character,
+    };
+    writeCore('char-agent', core);
+    const output = captureRecall('char-agent');
+    assert.match(output, /📌 CORE/);
+    assert.match(output, /🎭 CHARACTER/);
+    assert.match(output, /❌ used await in non-async function/);
+    assert.match(output, /💭 Feeling: frustrated/);
+    assert.match(output, /⚡ Impact: would have caused syntax error/);
+    assert.match(output, /✅ What I do now: always verify async context/);
+    assert.match(output, /📚 LONG-TERM/);
+    const coreIdx = output.indexOf('📌 CORE');
+    const charIdx = output.indexOf('🎭 CHARACTER:');
+    const failIdx = output.indexOf('❌ used await');
+    const longTermIdx = output.indexOf('📚 LONG-TERM');
+    // Failures are printed inside the CORE section, so order is:
+    //   CORE header > failure line > CHARACTER > LONG-TERM
+    assert.ok(coreIdx < failIdx && failIdx < charIdx && charIdx < longTermIdx,
+      'order must be CORE > FAILURE > CHARACTER > LONG-TERM');
   });
 });
