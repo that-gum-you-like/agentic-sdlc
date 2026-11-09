@@ -657,7 +657,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221
   - Complexity: S
 
-- [ ] **CV-223**: braindump.md.template: add `## Business Goals (numeric)` and `## Technical Constraints` sections
+- [x] **CV-223**: braindump.md.template: add `## Business Goals (numeric)` and `## Technical Constraints` sections
   - **Priority:** MEDIUM
   - Files: `openspec/templates/braindump.md.template, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-080

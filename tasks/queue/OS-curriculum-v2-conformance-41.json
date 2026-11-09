@@ -3,7 +3,7 @@
   "title": "braindump.md.template: add `## Business Goals (numeric)` and `## Technical Constraints` sections",
   "description": "- [ ] **CV-223**: braindump.md.template: add `## Business Goals (numeric)` and `## Technical Constraints` sections\n  - **Priority:** MEDIUM\n  - Files: `openspec/templates/braindump.md.template, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-080\n  - Gaps: D1-12\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts both headings\n  - Parallel: blocked-by CV-221\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-39"
   ],
   "_file": "OS-curriculum-v2-conformance-41.json",
-  "claimedAt": "2026-11-09T16:21:01.350Z"
+  "claimedAt": "2026-11-09T16:21:01.350Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T16:24:33.833Z"
 }

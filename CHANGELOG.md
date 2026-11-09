@@ -16,6 +16,7 @@
 - 2026-11-09 #126 test(planning-templates): CV-221 — verify all spec-referenced template paths exist (docs-tests)
 - 2026-11-09 #127 feat(goal-safety): add Goal Safety section to AGENT.md.template and prompt-playbook.md (CV-209) (backend)
 - 2026-11-09 #128 feat(requirements-engineer): add Requirements Rubric (5 rows) and gap-question loop (CV-222) (docs-tests)
+- 2026-11-09 #129 feat(braindump-template): add Business Goals and Technical Constraints sections (CV-223) (docs-tests)
 
 ## 2026-11-08
 
