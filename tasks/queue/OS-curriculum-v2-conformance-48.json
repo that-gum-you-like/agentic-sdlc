@@ -3,7 +3,7 @@
   "title": "Create planning-agents/project-manager.md (role, prioritise by value, \"never one more thing\", capture idea -> BACKLOG REQ-xxx -> tell user to keep current focus), modelled on product-manager.md",
   "description": "- [ ] **CV-230**: Create planning-agents/project-manager.md (role, prioritise by value, \"never one more thing\", capture idea -> BACKLOG REQ-xxx -> tell user to keep current focus), modelled on product-manager.md\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/planning-agents/project-manager.md, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-085\n  - Gaps: D7-10\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: file exists and contains `BACKLOG.md` and `never one more thing`\n  - Parallel: blocked-by CV-221\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-39"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-48.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T18:17:30.660Z"
 }

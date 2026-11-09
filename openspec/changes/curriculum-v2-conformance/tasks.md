@@ -734,7 +734,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221
   - Complexity: S
 
-- [ ] **CV-230**: Create planning-agents/project-manager.md (role, prioritise by value, "never one more thing", capture idea -> BACKLOG REQ-xxx -> tell user to keep current focus), modelled on product-manager.md
+- [x] **CV-230**: Create planning-agents/project-manager.md (role, prioritise by value, "never one more thing", capture idea -> BACKLOG REQ-xxx -> tell user to keep current focus), modelled on product-manager.md
   - **Priority:** MEDIUM
   - Files: `agents/templates/planning-agents/project-manager.md, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-085
