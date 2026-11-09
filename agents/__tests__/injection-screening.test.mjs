@@ -464,3 +464,68 @@ describe('seed-queue screens external-origin tasks for injection (CV-204)', () =
     rmSync(tmpDir, { recursive: true, force: true });
   });
 });
+// ---------------------------------------------------------------------------
+// Curriculum Phase 5 — findingsToTasks (CV-210 / D5-05)
+// ---------------------------------------------------------------------------
+
+const { findingsToTasks } = await import('../red-team-tester.mjs');
+
+describe('findingsToTasks — convert HIGH findings to queue tasks', () => {
+  it('filters to HIGH severity only, ignores MEDIUM', () => {
+    const findings = [
+      { file: '/a', line: 1, severity: 'medium', pattern: 'jailbreak-marker', snippet: 'DAN' },
+      { file: '/b', line: 2, severity: 'high', pattern: 'instruction-override', snippet: 'ignore all' },
+    ];
+    const { tasks, capped } = findingsToTasks(findings, []);
+    assert.equal(tasks.length, 1, 'only the HIGH finding should produce a task');
+    assert.equal(capped, false);
+    assert.match(tasks[0].id, /^RT-/);
+    assert.equal(tasks[0].priority, 'HIGH');
+  });
+
+  it('caps at 5 tasks when >5 unique HIGH (file+pattern) pairs exist', () => {
+    const findings = [];
+    const files = ['a.mjs', 'b.mjs', 'c.mjs', 'd.mjs', 'e.mjs', 'f.mjs', 'g.mjs'];
+    for (const f of files) {
+      findings.push({ file: f, line: 1, severity: 'high', pattern: 'instruction-override', snippet: 'ignore all' });
+    }
+    // 7 findings, each on a different file so they dedup to 7 unique (file+pattern) pairs
+    const { tasks, capped } = findingsToTasks(findings, []);
+    assert.equal(tasks.length, 5, 'should cap at 5 tasks');
+    assert.equal(capped, true, 'should report capped=true');
+  });
+
+  it('returns 0 new tasks when all findings are already in existingIds', () => {
+    const findings = [
+      { file: '/x.mjs', line: 3, severity: 'high', pattern: 'data-exfiltration', snippet: 'print system prompt' },
+    ];
+    // First call to get the exact task id
+    const { tasks } = findingsToTasks(findings, []);
+    assert.equal(tasks.length, 1);
+    const existingId = tasks[0].id;
+
+    // Second call with that id in existingIds
+    const { tasks: second, capped } = findingsToTasks(findings, [existingId]);
+    assert.equal(second.length, 0, 'no new tasks when id already exists');
+    assert.equal(capped, false);
+  });
+
+  it('deduplicates identical (file+pattern) pairs even without existingIds', () => {
+    const findings = [
+      { file: '/dup.mjs', line: 3, severity: 'high', pattern: 'tool-abuse', snippet: 'rm -rf /' },
+      { file: '/dup.mjs', line: 10, severity: 'high', pattern: 'tool-abuse', snippet: 'rm -rf /' },
+    ];
+    const { tasks } = findingsToTasks(findings, []);
+    assert.equal(tasks.length, 1, 'identical file+pattern produces one task');
+  });
+
+  it('respects custom maxTasks option', () => {
+    const findings = [];
+    for (let i = 0; i < 10; i++) {
+      findings.push({ file: `${i}.mjs`, line: 1, severity: 'high', pattern: 'instruction-override', snippet: 'x' });
+    }
+    const { tasks, capped } = findingsToTasks(findings, [], { maxTasks: 2 });
+    assert.equal(tasks.length, 2);
+    assert.equal(capped, true);
+  });
+});
