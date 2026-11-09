@@ -701,7 +701,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-224
   - Complexity: S
 
-- [ ] **CV-227**: value-analyst.md: require success metrics, who benefits, and an answer to "what if we do not build this"
+- [x] **CV-227**: value-analyst.md: require success metrics, who benefits, and an answer to "what if we do not build this"
   - **Priority:** MEDIUM
   - Files: `agents/templates/planning-agents/value-analyst.md, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-082

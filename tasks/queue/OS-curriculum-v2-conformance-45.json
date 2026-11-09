@@ -3,7 +3,7 @@
   "title": "value-analyst.md: require success metrics, who benefits, and an answer to \"what if we do not build this\"",
   "description": "- [ ] **CV-227**: value-analyst.md: require success metrics, who benefits, and an answer to \"what if we do not build this\"\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/planning-agents/value-analyst.md, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-082\n  - Gaps: D1-14\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts the three phrases\n  - Parallel: blocked-by CV-221\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-39"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-45.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T19:56:31.389Z"
 }
