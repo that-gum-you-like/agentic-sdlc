@@ -55,7 +55,7 @@ function todayIso(now) {
 }
 
 function runShell(argv, { shell, cwd } = {}) {
-  const run = shell || (a => execFileSync(a[0], a.slice(1), { encoding: 'utf8', timeout: 30000, cwd }));
+  const run = shell || (a => execFileSync(a[0], a.slice(1), { encoding: 'utf8', timeout: 10000, cwd }));
   return run(argv);
 }
 
