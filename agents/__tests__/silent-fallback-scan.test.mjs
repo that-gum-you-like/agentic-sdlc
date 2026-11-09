@@ -91,3 +91,107 @@ describe('four-layer Layer 3 — silent-default fallback scan (curriculum Ph5)',
     assert.equal(code, 0);
   });
 });
+
+describe('scanFunctionMetrics — function metric scanning (CV-303)', () => {
+  it('60-line function declares lines=60 and 5 params', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    let src = 'function bigOne(a, b, c, d, e) {\n';
+    for (let i = 0; i < 58; i++) src += '  const x = ' + i + ';\n';
+    src += '}\n';
+    const r = scanFunctionMetrics(src);
+    assert.equal(r.length, 1);
+    assert.equal(r[0].lines, 60);
+    assert.equal(r[0].params, 5);
+    assert.equal(r[0].name, 'bigOne');
+  });
+
+  it('5-param function returns params=5', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    const r = scanFunctionMetrics('function manyParams(a, b, c, d, e) { return a + b + c + d + e; }\n');
+    assert.equal(r.length, 1);
+    assert.equal(r[0].params, 5);
+  });
+
+  it('nested arrow functions are counted separately', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    const r = scanFunctionMetrics(
+      'const outer = (x) => {\n  const inner = (y) => {\n    return x + y;\n  };\n  return inner(x);\n};\n'
+    );
+    assert.equal(r.length, 2, 'should detect both outer and inner arrows');
+    const outer = r.find(f => f.name === 'outer');
+    const inner = r.find(f => f.name === 'inner');
+    assert.ok(outer, 'outer arrow should have name: outer');
+    assert.ok(inner, 'inner arrow should have name: inner');
+    assert.equal(outer.params, 1);
+    assert.equal(inner.params, 1);
+    assert.equal(outer.startLine, 1);
+    assert.equal(inner.startLine, 2);
+  });
+
+  it('method shorthand in objects', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    const r = scanFunctionMetrics(
+      'const obj = {\n  method(a, b) {\n    return a + b;\n  }\n};\n'
+    );
+    assert.equal(r.length, 1);
+    assert.equal(r[0].name, 'method');
+    assert.equal(r[0].params, 2);
+    assert.equal(r[0].startLine, 2);
+  });
+
+  it('getter/setter accessors', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    const r = scanFunctionMetrics(
+      'const obj = {\n  get value() { return this._v; },\n  set value(v) { this._v = v; }\n};\n'
+    );
+    assert.equal(r.length, 2);
+    assert.ok(r.some(f => f.name === 'get value'));
+    assert.ok(r.some(f => f.name === 'set value'));
+  });
+
+  it('importing four-layer-validate.mjs does not run CLI', async () => {
+    const mod = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    assert.equal(typeof mod.scanFunctionMetrics, 'function');
+  });
+
+  it('class method shorthand', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    const r = scanFunctionMetrics(
+      'class Foo {\n  bar(a, b) {\n    return a + b;\n  }\n}\n'
+    );
+    assert.equal(r.length, 1);
+    assert.equal(r[0].name, 'bar');
+    assert.equal(r[0].params, 2);
+  });
+
+  it('async method does not include async in name', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    const r = scanFunctionMetrics(
+      'const obj = {\n  async fetch(url) {\n    return await get(url);\n  }\n};\n'
+    );
+    assert.equal(r.length, 1);
+    assert.equal(r[0].name, 'fetch');
+    assert.equal(r[0].params, 1);
+  });
+
+  it('empty source returns empty array', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    assert.deepEqual(scanFunctionMetrics(''), []);
+  });
+
+  it('named function expression uses the inner name', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    const r = scanFunctionMetrics('const f = function add(x, y) {\n  return x + y;\n};\n');
+    assert.equal(r.length, 1);
+    assert.equal(r[0].name, 'add');
+    assert.equal(r[0].params, 2);
+  });
+
+  it('async function declaration', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    const r = scanFunctionMetrics('async function fetchData(url) {\n  const res = await fetch(url);\n  return res.json();\n}\n');
+    assert.equal(r.length, 1);
+    assert.equal(r[0].name, 'fetchData');
+    assert.equal(r[0].params, 1);
+  });
+});
