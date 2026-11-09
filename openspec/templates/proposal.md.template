@@ -35,6 +35,21 @@
 
 ## Value Analysis
 
+### Success Metrics
+
+<!-- How will we know this change worked? Each metric needs a baseline, a target, and a concrete way to measure it. -->
+
+| Metric | Baseline | Target | How Measured |
+|--------|----------|--------|--------------|
+| {{METRIC_1}} | {{BASELINE_1}} | {{TARGET_1}} | {{HOW_MEASURED_1}} |
+
+### Who Benefits
+
+<!-- Who benefits from this change and how? Be specific about personas and roles. -->
+
+- {{BENEFICIARY_1}}
+- {{BENEFICIARY_2}}
+
 ### Benefits
 
 <!-- What does this change make better? List concrete, measurable improvements where possible. -->

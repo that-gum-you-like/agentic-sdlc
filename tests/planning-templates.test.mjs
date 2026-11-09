@@ -111,6 +111,28 @@ test('proposal.md.template has rows for all five personas (CV-224)', () => {
   }
 });
 
+// ── CV-226: proposal.md.template Value Analysis has Success Metrics + Who Benefits ─
+
+test('proposal.md.template Value Analysis has Success Metrics and Who Benefits headings (CV-226)', () => {
+  const raw = read('openspec/templates/proposal.md.template');
+  const valueAnalysis = raw.split(/## Value Analysis/)[1]?.split(/\n## /)[0] || '';
+  assert.match(valueAnalysis, /### Success Metrics/,
+    'Value Analysis must contain a Success Metrics heading');
+  assert.match(valueAnalysis, /### Who Benefits/,
+    'Value Analysis must contain a Who Benefits heading');
+});
+
+test('proposal.md.template Success Metrics table has metric, baseline, target, how measured (CV-226)', () => {
+  const raw = read('openspec/templates/proposal.md.template');
+  const valueAnalysis = raw.split(/## Value Analysis/)[1]?.split(/\n## /)[0] || '';
+  const metricsSection = valueAnalysis.split(/### Success Metrics/)[1]?.split(/\n### /)[0] || '';
+  const columns = ['Metric', 'Baseline', 'Target', 'How Measured'];
+  for (const column of columns) {
+    assert.match(metricsSection, new RegExp(column),
+      `Success Metrics section must contain column: "${column}"`);
+  }
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
