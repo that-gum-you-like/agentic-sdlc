@@ -391,6 +391,7 @@ function main() {
   let totalSkippedDupe = 0;
   let totalSkippedLane = 0;
   let totalSkippedInjection = 0;
+  let totalSkippedUnbounded = 0;
   let totalChangesProcessed = 0;
 
   for (const entry of changeEntries) {
@@ -512,6 +513,14 @@ function main() {
         continue;
       }
 
+      // Goal safety — CV-208 / CV-REQ-062: skip unbounded-verb tasks
+      const goalFindings = goalSafetyFindings({ title: task.title, description });
+      if (goalFindings.includes('unbounded-verb')) {
+        console.log(`  [unbounded] ${taskId}: ${task.title} (unbounded goal — reason: unbounded-goal)`);
+        totalSkippedUnbounded++;
+        continue;
+      }
+
       // Dependencies: map sibling raw ids to their queue ids; checked-off ones are satisfied.
       const blockedBy = (task.blockedByRaw || [])
         .filter(raw => !(tasks.doneIds && tasks.doneIds.has(raw)))
@@ -532,6 +541,10 @@ function main() {
         claimedBy: null,
         testStatus: null,
       };
+      // Goal safety — CV-208 / CV-REQ-062: record no-acceptance as a warning
+      if (goalFindings.includes('no-acceptance')) {
+        taskJson.goalSafety = ['no-acceptance'];
+      }
       if (blockedBy.length) taskJson.blockedBy = blockedBy;
       // Interactive-lane tasks are queued visible but BLOCKED: the drain only claims
       // `pending`, and dependents resolve once a human marks this one completed.
@@ -570,6 +583,7 @@ function main() {
   console.log(`  Skipped (done)    : ${totalSkippedDone}`);
   console.log(`  Skipped (dupe)    : ${totalSkippedDupe}`);
   console.log(`  Skipped (injection): ${totalSkippedInjection}`);
+  console.log(`  Skipped (unbounded): ${totalSkippedUnbounded}`);
   console.log(`  Interactive (blocked): ${totalSkippedLane}`);
   if (!isDryRun && totalCreated > 0) {
     console.log(`\n[seed] Task queue: ${TASK_QUEUE_DIR}`);

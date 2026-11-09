@@ -20,7 +20,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -227,4 +227,67 @@ test('goalSafetyFindings — "Improve performance" with Files line does NOT retu
 test('goalSafetyFindings — safe task has no findings', () => {
   const findings = goalSafetyFindings({ title: 'Add rate limiting', description: '- Test: rate limiter blocks after 100 requests\n- Files: src/middleware/' });
   assert.equal(findings.length, 0, JSON.stringify(findings));
+});
+
+// ---------------------------------------------------------------------------
+// Goal safety enforcement — CV-208 / CV-REQ-062
+// ---------------------------------------------------------------------------
+
+// Non-dry-run variant: writes files so we can inspect the created JSON.
+function seedFixtureReal(tasksMd, status = { status: 'in-progress', phase: 'implement', readiness: 'ready-for-dev' }) {
+  const dir = mkdtempSync(join(tmpdir(), 'seed-fixture-real-'));
+  try {
+    mkdirSync(join(dir, 'agents'), { recursive: true });
+    mkdirSync(join(dir, 'tasks', 'queue'), { recursive: true });
+    const change = join(dir, 'openspec', 'changes', 'demo');
+    mkdirSync(change, { recursive: true });
+    writeFileSync(join(dir, 'agents', 'project.json'), JSON.stringify({
+      projectName: 'fixture', agents: ['backend'], tasksDir: 'tasks/queue',
+    }));
+    writeFileSync(join(change, 'status.json'), JSON.stringify(status));
+    writeFileSync(join(change, 'tasks.md'), tasksMd);
+    writeFileSync(join(change, 'proposal.md'), '# Proposal: demo\n');
+    const out = execFileSync('node', [SCRIPT, '--project-dir', dir], { encoding: 'utf8' });
+    // Read created task JSONs
+    const queueDir = join(dir, 'tasks', 'queue');
+    const taskFiles = readdirSync(queueDir).filter(f => f.endsWith('.json'));
+    const tasks = taskFiles.map(f => JSON.parse(readFileSync(join(queueDir, f), 'utf8')));
+    return { out, tasks, dir };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test('goal safety — unbounded-verb task is skipped with reason unbounded-goal in dry-run', () => {
+  const { count, out } = seedFixture(`- [ ] **T1**: Improve performance\n`);
+  assert.equal(count, 0, out);
+  assert.match(out, /unbounded-goal/);
+  assert.match(out, /Skipped \(unbounded\):\s*1/);
+});
+
+test('goal safety — unbounded-verb task is not created in real run', () => {
+  const { out, tasks } = seedFixtureReal(`- [ ] **T1**: Improve performance\n`);
+  assert.equal(tasks.length, 0, JSON.stringify(tasks));
+  assert.match(out, /unbounded-goal/);
+});
+
+test('goal safety — no-acceptance task carries goalSafety warning on created JSON', () => {
+  const { tasks } = seedFixtureReal(`- [ ] **T1**: Add login form\n  - Complexity: S\n`);
+  assert.equal(tasks.length, 1);
+  assert.deepEqual(tasks[0].goalSafety, ['no-acceptance']);
+  assert.equal(tasks[0].title, 'Add login form');
+});
+
+test('goal safety — task with both unbounded-verb and no-acceptance is skipped (unbounded wins)', () => {
+  // "Improve performance" without Test: and without Files: -> both unbounded-verb and no-acceptance
+  const { count, out } = seedFixture(`- [ ] **T1**: Improve performance\n`);
+  assert.equal(count, 0, out);
+  assert.match(out, /unbounded-goal/);
+  assert.doesNotMatch(out, /goalSafety/);
+});
+
+test('goal safety — safe task has no goalSafety field', () => {
+  const { tasks } = seedFixtureReal(`- [ ] **T1**: Add rate limiting\n  - Test: rate limiter blocks after 100 requests\n  - Files: src/middleware/\n`);
+  assert.equal(tasks.length, 1);
+  assert.equal(tasks[0].goalSafety, undefined, JSON.stringify(tasks[0]));
 });
