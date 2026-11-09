@@ -3,7 +3,7 @@
   "title": "seed-queue-from-openspec.mjs: skip `unbounded-verb` tasks with reason `unbounded-goal`; store `no-acceptance` as `goalSafety` warning on the queue task JSON",
   "description": "- [ ] **CV-208**: seed-queue-from-openspec.mjs: skip `unbounded-verb` tasks with reason `unbounded-goal`; store `no-acceptance` as `goalSafety` warning on the queue task JSON\n  - **Priority:** MEDIUM\n  - Files: `agents/seed-queue-from-openspec.mjs, tests/seed-queue-from-openspec.test.mjs`\n  - Spec: CV-REQ-062\n  - Gaps: D3-02\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: dry-run reports `unbounded-goal`; created task JSON carries goalSafety for a no-acceptance task\n  - Parallel: blocked-by CV-207\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-34"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-35.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T15:49:10.817Z"
 }

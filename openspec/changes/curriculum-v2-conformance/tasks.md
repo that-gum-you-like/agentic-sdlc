@@ -590,7 +590,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-205
   - Complexity: S
 
-- [ ] **CV-208**: seed-queue-from-openspec.mjs: skip `unbounded-verb` tasks with reason `unbounded-goal`; store `no-acceptance` as `goalSafety` warning on the queue task JSON
+- [x] **CV-208**: seed-queue-from-openspec.mjs: skip `unbounded-verb` tasks with reason `unbounded-goal`; store `no-acceptance` as `goalSafety` warning on the queue task JSON
   - **Priority:** MEDIUM
   - Files: `agents/seed-queue-from-openspec.mjs, tests/seed-queue-from-openspec.test.mjs`
   - Spec: CV-REQ-062
