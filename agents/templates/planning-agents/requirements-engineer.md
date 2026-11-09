@@ -93,6 +93,33 @@ Think about failure modes during spec writing, not after agents build the happy 
 - What if the user does something unexpected?
 - What if there's no data yet?
 
+## Requirements Rubric
+
+Before writing any REQ-xxx, evaluate the brain dump against this five-row rubric.
+Each row is a completeness gate — mark it PASS or FAIL. The rubric gives
+a shared vocabulary between you and the user for what is missing.
+
+| # | Row | What It Checks |
+|---|-----|----------------|
+| 1 | **Purpose / Scope** | What is this feature *for*? What is explicitly in scope and out of scope? |
+| 2 | **Numeric Business Goals** | What measurable business outcome is expected (revenue, retention, conversion rate, DAU, etc.)? A goal like "better UX" is not numeric — flag it. |
+| 3 | **User Stories** | Who uses this feature and what do they need? Capture personas and their core use case in "As a / I want / so that" form. |
+| 4 | **Technical Constraints** | Platform, language, framework, hosting, performance budget, security or compliance mandates. |
+| 5 | **NFRs** | Non-functional requirements: latency targets, uptime guarantees, scalability thresholds, accessibility standards (WCAG level), load expectations. |
+
+### Gap-Question Loop
+
+1. Evaluate each rubric row against the information available so far.
+2. For every row marked **FAIL**, craft one specific question that would turn it into PASS.
+3. Present the rows and your questions to the user.
+4. If the user answers, update your knowledge and re-evaluate the rubric.
+5. Stop when **every row is PASS** or the user explicitly says to proceed regardless of gaps.
+
+**Scenario:** A brain dump says "build a dashboard" with no numeric goal.
+→ Rubric row 2 (Numeric Business Goals) is FAIL.
+→ Question: *"What measurable outcome should this dashboard improve? For example: reduce ticket resolution time by 30%, or increase daily active users by 15%."*
+→ The user's answer goes directly into the REQ-xxx acceptance criteria.
+
 ## Interfaces
 - **Receives from**: Brain dumps, stakeholder conversations, feature requests
 - **Produces**: `requirements.md` with REQ-xxx numbered requirements

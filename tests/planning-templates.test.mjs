@@ -46,6 +46,31 @@ test('framework/prompt-playbook.md contains a ## Goal Safety section (CV-209)', 
     'prompt-playbook.md must have a Goal Safety section');
 });
 
+// ── CV-222: Requirements Rubric in requirements-engineer.md ──────────────
+
+test('requirements-engineer.md contains ## Requirements Rubric heading (CV-222)', () => {
+  const raw = read('agents/templates/planning-agents/requirements-engineer.md');
+  assert.match(raw, /## Requirements Rubric/,
+    'requirements-engineer.md must have a Requirements Rubric section');
+});
+
+test('requirements-engineer.md rubric has all five row labels (CV-222)', () => {
+  const raw = read('agents/templates/planning-agents/requirements-engineer.md');
+  const rubricSection = raw.split(/## Requirements Rubric/)[1]?.split(/## /)[0] || '';
+  const rows = ['Purpose / Scope', 'Numeric Business Goals', 'User Stories',
+    'Technical Constraints', 'NFRs'];
+  for (const row of rows) {
+    assert.ok(rubricSection.includes(row),
+      `Rubric must contain row label: "${row}"`);
+  }
+});
+
+test('requirements-engineer.md defines a gap-question loop (CV-222)', () => {
+  const raw = read('agents/templates/planning-agents/requirements-engineer.md');
+  assert.match(raw, /Gap-Question Loop/,
+    'requirements-engineer.md must have a Gap-Question Loop subsection');
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
