@@ -37,6 +37,7 @@
 - 2026-11-09 #148 feat(pattern-hunt): teachAgents fills feeling, impact, whatIDoNow on taught failures (CV-245) (backend)
 - 2026-11-09 #149 feat(pattern-hunt): cross-teach learnedFrom entries to agents sharing a domain (CV-246) (backend)
 - 2026-11-09 #151 feat(memory-manager): audit every memory save to pm/memory-audit.jsonl (CV-REQ-072) (backend)
+- 2026-11-09 #152 feat(template): add Version History and Breaking Changes sections (CV-250) (backend)
 
 ## 2026-11-08
 

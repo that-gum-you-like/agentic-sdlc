@@ -3,7 +3,7 @@
   "title": "AGENT.md.template: add `## Version History` and `## Breaking Changes` sections",
   "description": "- [ ] **CV-250**: AGENT.md.template: add `## Version History` and `## Breaking Changes` sections\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/AGENT.md.template, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-074\n  - Gaps: D6-07\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts both headings\n  - Parallel: blocked-by CV-221, CV-209\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -13,5 +13,9 @@
   "blockedBy": [
     "OS-curriculum-v2-conformance-39",
     "OS-curriculum-v2-conformance-36"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-66.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T20:26:45.335Z"
 }

@@ -933,7 +933,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-244
   - Complexity: S
 
-- [ ] **CV-250**: AGENT.md.template: add `## Version History` and `## Breaking Changes` sections
+- [x] **CV-250**: AGENT.md.template: add `## Version History` and `## Breaking Changes` sections
   - **Priority:** MEDIUM
   - Files: `agents/templates/AGENT.md.template, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-074
