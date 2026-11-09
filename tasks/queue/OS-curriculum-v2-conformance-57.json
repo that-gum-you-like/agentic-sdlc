@@ -3,7 +3,7 @@
   "title": "core.json.template: add optional `character` object (personality, communicationStyle, quirks[], relationships[], inTheirOwnWords, growthJourney[]); create agents/templates/character-sheet.md documenting each field",
   "description": "- [ ] **CV-241**: core.json.template: add optional `character` object (personality, communicationStyle, quirks[], relationships[], inTheirOwnWords, growthJourney[]); create agents/templates/character-sheet.md documenting each field\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/core.json.template, agents/templates/character-sheet.md`\n  - Spec: CV-REQ-070\n  - Gaps: D6-01\n  - Agent: sdlc-documentarian\n  - Lane: hermes\n  - Test: core.json.template still parses; migrate-memory.mjs --check unaffected; character-sheet.md names all six fields\n  - Parallel: yes\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -11,5 +11,8 @@
   "claimedBy": "hermes-drain",
   "testStatus": null,
   "_file": "OS-curriculum-v2-conformance-57.json",
-  "claimedAt": "2026-11-09T19:21:14.491Z"
+  "claimedAt": "2026-11-09T19:21:14.491Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T19:29:51.888Z"
 }

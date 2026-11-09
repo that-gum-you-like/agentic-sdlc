@@ -30,6 +30,7 @@
 - 2026-11-09 #141 docs(claude-quickstart): state /schedule and /loop are interactive-only (CV-236) (docs-tests)
 - 2026-11-09 #142 feat(execution-agents): add git-expert.md template (CV-237 / CV-REQ-089) (docs-tests)
 - 2026-11-09 #143 feat(framework): add Disagreement Resolution section (CV-238) (docs-tests)
+- 2026-11-09 #144 feat(template): add optional character object to core.json.template + character-sheet.md (CV-241) (backend)
 
 ## 2026-11-08
 

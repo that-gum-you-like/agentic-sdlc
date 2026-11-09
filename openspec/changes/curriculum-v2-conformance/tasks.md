@@ -833,7 +833,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221
   - Complexity: S
 
-- [ ] **CV-241**: core.json.template: add optional `character` object (personality, communicationStyle, quirks[], relationships[], inTheirOwnWords, growthJourney[]); create agents/templates/character-sheet.md documenting each field
+- [x] **CV-241**: core.json.template: add optional `character` object (personality, communicationStyle, quirks[], relationships[], inTheirOwnWords, growthJourney[]); create agents/templates/character-sheet.md documenting each field
   - **Priority:** MEDIUM
   - Files: `agents/templates/core.json.template, agents/templates/character-sheet.md`
   - Spec: CV-REQ-070
