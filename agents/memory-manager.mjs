@@ -151,7 +151,12 @@ function recall(agent) {
   }
   if (core.failures?.length > 0) {
     console.log('   Failures (LEARN FROM THESE):');
-    core.failures.forEach(f => console.log(`     ❌ ${f.description} (${f.date})`));
+    core.failures.forEach(f => {
+      console.log(`     ❌ ${f.description} (${f.date})`);
+      if (f.feeling) console.log(`       💭 Feeling: ${f.feeling}`);
+      if (f.impact) console.log(`       ⚡ Impact: ${f.impact}`);
+      if (f.whatIDoNow) console.log(`       ✅ What I do now: ${f.whatIDoNow}`);
+    });
   }
 
   // Optional character block — rendered only when core.json has one (CV-REQ-070)

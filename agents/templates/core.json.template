@@ -22,6 +22,9 @@
     "description": "What happened and why it was a problem",
     "lesson": "Specific action taken to prevent recurrence",
     "ruleAdded": "Reference to rule added (critical only), null otherwise",
+    "feeling": "Optional: emotional context of the failure (e.g., frustrated, embarrassed, surprised)",
+    "impact": "Optional: what the failure affected (e.g., delayed release, broke build, confused reviewer)",
+    "whatIDoNow": "Optional: specific action taken forward to prevent recurrence",
     "_severity_response": {
       "critical": "Add immediate rule to AGENT.md non-negotiable rules",
       "high": "Add check item to reviewer checklist",
