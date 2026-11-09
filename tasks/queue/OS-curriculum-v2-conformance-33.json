@@ -3,7 +3,7 @@
   "title": "skills/sdlc-inbox/SKILL.md: add a step to run `node agents/red-team-tester.mjs --screen \"<text>\"` on pasted text before filing",
   "description": "- [ ] **CV-206**: skills/sdlc-inbox/SKILL.md: add a step to run `node agents/red-team-tester.mjs --screen \"<text>\"` on pasted text before filing\n  - **Priority:** MEDIUM\n  - Files: `skills/sdlc-inbox/SKILL.md, tests/sdlc-inbox-skill.test.mjs`\n  - Spec: CV-REQ-061\n  - Gaps: D5-06\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: skill test asserts the SKILL.md contains `red-team-tester.mjs --screen`\n  - Parallel: blocked-by CV-203\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-30"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-33.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T15:31:09.662Z"
 }

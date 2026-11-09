@@ -9,6 +9,7 @@
 - 2026-11-09 #119 feat(red-team): add CLI --screen <text|-> printing verdict JSON and exiting 2 when flagged (CV-203) (backend)
 - 2026-11-09 #120 feat(seed-queue): screen external-origin tasks for injection before writing (CV-204) (backend)
 - 2026-11-09 #121 feat(seed-openspec): screen every task block for prompt injection (CV-205) (backend)
+- 2026-11-09 #122 feat(sdlc-inbox): add prompt-injection screening step with red-team-tester --screen (CV-206) (docs-tests)
 
 ## 2026-11-08
 

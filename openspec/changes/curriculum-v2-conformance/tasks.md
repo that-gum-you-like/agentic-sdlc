@@ -568,7 +568,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-202
   - Complexity: S
 
-- [ ] **CV-206**: skills/sdlc-inbox/SKILL.md: add a step to run `node agents/red-team-tester.mjs --screen "<text>"` on pasted text before filing
+- [x] **CV-206**: skills/sdlc-inbox/SKILL.md: add a step to run `node agents/red-team-tester.mjs --screen "<text>"` on pasted text before filing
   - **Priority:** MEDIUM
   - Files: `skills/sdlc-inbox/SKILL.md, tests/sdlc-inbox-skill.test.mjs`
   - Spec: CV-REQ-061
