@@ -158,6 +158,8 @@ test('the skill routes `idea:` prefix to openspec/BACKLOG.md', () => {
     'skill must document the Idea: field in the backlog entry format');
   assert.match(raw, /Complexity:/,
     'skill must document the Complexity: field in the backlog entry format');
+  assert.match(raw, /Example:/,
+    'skill must include a worked example of an idea: capture');
 });
 
 test('the skill teaches `idea` as a third capture kind', () => {

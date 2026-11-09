@@ -95,6 +95,11 @@ task file. Instead, capture it to the framework's idea backlog:
 The entry format follows the existing conventions in `openspec/BACKLOG.md` —
 see the "Remaining Ideas" entries for the canonical structure.
 
+> **Example:** `idea: add a `gh pr list` dashboard widget`
+>
+> Creates entry `### 42. Add a `gh pr list` dashboard widget` in BACKLOG.md
+> with Problem/Idea/Complexity fields.
+
 ## 5. Write the task file
 
 Create `tasks/queue/<id>.json` in `~/agentic-sdlc/`, schema-valid against
