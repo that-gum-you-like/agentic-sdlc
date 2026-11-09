@@ -3,7 +3,7 @@
   "title": "proposal.md.template: add `### Success Metrics` (metric, baseline, target, how measured) and `### Who Benefits` inside Value Analysis",
   "description": "- [ ] **CV-226**: proposal.md.template: add `### Success Metrics` (metric, baseline, target, how measured) and `### Who Benefits` inside Value Analysis\n  - **Priority:** MEDIUM\n  - Files: `openspec/templates/proposal.md.template, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-082\n  - Gaps: D1-14\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts both headings appear after `## Value Analysis`\n  - Parallel: blocked-by CV-224\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-42"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-44.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T17:16:07.804Z"
 }

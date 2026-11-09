@@ -690,7 +690,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-222
   - Complexity: S
 
-- [ ] **CV-226**: proposal.md.template: add `### Success Metrics` (metric, baseline, target, how measured) and `### Who Benefits` inside Value Analysis
+- [x] **CV-226**: proposal.md.template: add `### Success Metrics` (metric, baseline, target, how measured) and `### Who Benefits` inside Value Analysis
   - **Priority:** MEDIUM
   - Files: `openspec/templates/proposal.md.template, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-082
