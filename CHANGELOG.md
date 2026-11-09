@@ -41,6 +41,7 @@
 - 2026-11-09 #153 feat(template): create agent-proposal.md with five required headings (CV-252) (docs-tests)
 - 2026-11-09 #154 feat(agent-lifecycle): link to agent-proposal.md in the 'when to create' section (CV-253) (docs-tests)
 - 2026-11-09 #155 feat(protocol): add ambiguous verbs and data safety rule to SHARED_PROTOCOL.md [CV-301] (backend)
+- 2026-11-09 #156 feat(protocol): add tests-first micro cycle and "never modify a committed test" rule (CV-302) (backend)
 
 ## 2026-11-08
 

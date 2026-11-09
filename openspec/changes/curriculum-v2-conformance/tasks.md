@@ -992,7 +992,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: blocked-by CV-228
   - Complexity: S
 
-- [ ] **CV-302**: AGENT.md.template and worker.mjs micro-cycle text: tests first (derive failing tests from the spec) and the exact phrase `never modify a committed test` (flag needs-human instead)
+- [x] **CV-302**: AGENT.md.template and worker.mjs micro-cycle text: tests first (derive failing tests from the spec) and the exact phrase `never modify a committed test` (flag needs-human instead)
   - **Priority:** MEDIUM
   - Files: `agents/templates/AGENT.md.template, agents/worker.mjs, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-034
