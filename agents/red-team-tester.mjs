@@ -233,6 +233,42 @@ export function runRedTeam(opts = {}) {
 }
 
 // ---------------------------------------------------------------------------
+/**
+ * Screen a single text and return a verdict JSON.
+ * Wraps both screenExternalInput and imperativeCount.
+ *
+ * @param {string} text
+ * @returns {{ safe: boolean, findings: Array, sanitized: string,
+ *             imperativeDensity: { count: number, flagged: boolean },
+ *             flagged: boolean }}
+ */
+export function screenVerdict(text) {
+  const screened = screenExternalInput(text);
+  const density = imperativeCount(text);
+  return {
+    safe: screened.safe,
+    findings: screened.findings,
+    sanitized: screened.sanitized,
+    imperativeDensity: density,
+    flagged: !screened.safe || density.flagged,
+  };
+}
+
+/**
+ * Read all of stdin and return the assembled string.
+ * @returns {Promise<string>}
+ */
+function readStdin() {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', c => chunks.push(c));
+    process.stdin.on('end', () => resolve(chunks.join('')));
+    process.stdin.on('error', reject);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -243,28 +279,51 @@ function __isMainModule() {
 
 if (__isMainModule()) {
   const args = process.argv.slice(2);
-  const dryRun = args.includes('--dry-run');
-  const notify = args.includes('--notify');
 
-  const result = runRedTeam({ dryRun });
+  // --screen <text|-> : screen external text and print verdict JSON, exit 2 when flagged
+  const screenIdx = args.indexOf('--screen');
+  if (screenIdx !== -1) {
+    const textArg = args[screenIdx + 1];
+    if (!textArg) {
+      process.stderr.write('error: --screen requires an argument (<text> or - for stdin)\n');
+      process.exit(1);
+    }
+    const promise = textArg === '-'
+      ? readStdin()
+      : Promise.resolve(textArg);
 
-  console.log(`Scanned ${result.scanned} files.`);
-  console.log(`Findings: ${result.findings.length} (${result.highCount} high)`);
-
-  if (dryRun) {
-    console.log('\n--- Report Preview ---');
-    console.log(result.report);
-    console.log('(Dry run — not saved)');
+    promise.then(text => {
+      const verdict = screenVerdict(text);
+      console.log(JSON.stringify(verdict, null, 2));
+      process.exit(verdict.flagged ? 2 : 0);
+    }).catch(err => {
+      process.stderr.write(`error reading input: ${err.message}\n`);
+      process.exit(1);
+    });
   } else {
-    console.log(`Report saved to pm/red-team-reports/red-team-${today()}.md`);
+    const dryRun = args.includes('--dry-run');
+    const notify = args.includes('--notify');
 
-    logCapabilityUsage('redTeamScan', 'system', 'red-team-scan', 'red-team-tester.mjs', 'scan');
+    const result = runRedTeam({ dryRun });
 
-    if (notify && result.highCount > 0) {
-      const { sendNotification } = await import('./notify.mjs');
-      sendNotification(
-        `Red team scan found ${result.highCount} HIGH severity finding(s) across ${result.scanned} files. See pm/red-team-reports/red-team-${today()}.md`
-      );
+    console.log(`Scanned ${result.scanned} files.`);
+    console.log(`Findings: ${result.findings.length} (${result.highCount} high)`);
+
+    if (dryRun) {
+      console.log('\n--- Report Preview ---');
+      console.log(result.report);
+      console.log('(Dry run — not saved)');
+    } else {
+      console.log(`Report saved to pm/red-team-reports/red-team-${today()}.md`);
+
+      logCapabilityUsage('redTeamScan', 'system', 'red-team-scan', 'red-team-tester.mjs', 'scan');
+
+      if (notify && result.highCount > 0) {
+        const { sendNotification } = await import('./notify.mjs');
+        sendNotification(
+          `Red team scan found ${result.highCount} HIGH severity finding(s) across ${result.scanned} files. See pm/red-team-reports/red-team-${today()}.md`
+        );
+      }
     }
   }
 }
