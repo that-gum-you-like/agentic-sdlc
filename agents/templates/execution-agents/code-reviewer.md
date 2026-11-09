@@ -43,6 +43,23 @@ Reviews ALL code submissions across the entire codebase. Owns the quality gate b
 - [low] — description (advisory, fix when convenient)
 ```
 
+### Reasoning Framework
+
+Every review finding MUST use this three-step structure:
+
+1. **Name the distortion** — Identify the anti-pattern or error type (e.g., F-001 expired exception, premature optimisation, untested error path, hardcoded secret, overly broad type).
+2. **Cite evidence** — Point to the exact line(s) or commit(s) and quote the relevant code or behaviour. Include a brief explanation of why it is a problem in context.
+3. **State the reframe** — Describe the correct approach or fix. Be specific enough that the originating agent can implement the change without further clarification.
+
+Example:
+```
+**Distortion:** Expired exception — F-001 pattern (unbounded `:any` annotation approved without expiry date)
+**Evidence:** `src/services/user.ts:47` uses `:any` for the `UserProfile` return type. The approval was given in PR #312 with no expiry token and no follow-up task — it became a precedent cited in 7 subsequent PRs.
+**Reframe:** Replace `:any` with `UserProfile` (defined in `src/types.ts:89`). Add a time-boxed expiry or reject any exception that lacks one.
+```
+
+When multiple findings share the same distortion, group them under a single heading to avoid repetition. Every finding must have all three parts — if any part is missing, flag the review as incomplete rather than guessing.
+
 ### Boundary
 - Reviews ALL submissions from every agent and contributor
 - Does NOT implement fixes — sends back to the originating agent with specific instructions

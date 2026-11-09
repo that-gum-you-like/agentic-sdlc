@@ -189,6 +189,25 @@ test('project-manager.md exists and references BACKLOG.md (CV-085)', () => {
     'project-manager.md must enforce the "never one more thing" rule');
 });
 
+// ── CV-232: code-reviewer.md has a Reasoning Framework section ─────────────
+
+test('code-reviewer.md contains a Reasoning Framework section (CV-232)', () => {
+  const raw = read('agents/templates/execution-agents/code-reviewer.md');
+  assert.match(raw, /#{2,3} Reasoning Framework/,
+    'code-reviewer.md must have a Reasoning Framework section');
+});
+
+test('code-reviewer.md Reasoning Framework has name-cite-reframe three-step structure (CV-232)', () => {
+  const raw = read('agents/templates/execution-agents/code-reviewer.md');
+  const section = raw.split(/#{2,3} Reasoning Framework/)[1]?.split(/\n### /)[0] || '';
+  assert.match(section, /Name the distortion/i,
+    'Reasoning Framework must include "name the distortion"');
+  assert.match(section, /Cite evidence/i,
+    'Reasoning Framework must include "cite evidence"');
+  assert.match(section, /State the reframe/i,
+    'Reasoning Framework must include "state the reframe"');
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
