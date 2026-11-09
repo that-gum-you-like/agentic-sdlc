@@ -612,7 +612,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221
   - Complexity: S
 
-- [ ] **CV-210**: red-team-tester.mjs: export `findingsToTasks(findings, existingIds)` (HIGH only, id `RT-<hash of file+rule>`, priority HIGH, max 5) and add `--tasks` mode that writes them to tasks/queue
+- [x] **CV-210**: red-team-tester.mjs: export `findingsToTasks(findings, existingIds)` (HIGH only, id `RT-<hash of file+rule>`, priority HIGH, max 5) and add `--tasks` mode that writes them to tasks/queue
   - **Priority:** MEDIUM
   - Files: `agents/red-team-tester.mjs, agents/__tests__/injection-screening.test.mjs`
   - Spec: CV-REQ-063

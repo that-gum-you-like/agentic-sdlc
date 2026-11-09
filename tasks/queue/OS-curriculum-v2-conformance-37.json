@@ -3,7 +3,7 @@
   "title": "red-team-tester.mjs: export `findingsToTasks(findings, existingIds)` (HIGH only, id `RT-<hash of file+rule>`, priority HIGH, max 5) and add `--tasks` mode that writes them to tasks/queue",
   "description": "- [ ] **CV-210**: red-team-tester.mjs: export `findingsToTasks(findings, existingIds)` (HIGH only, id `RT-<hash of file+rule>`, priority HIGH, max 5) and add `--tasks` mode that writes them to tasks/queue\n  - **Priority:** MEDIUM\n  - Files: `agents/red-team-tester.mjs, agents/__tests__/injection-screening.test.mjs`\n  - Spec: CV-REQ-063\n  - Gaps: D5-05\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: 7 HIGH findings -> 5 tasks + `capped` note; second call with same findings -> 0; MEDIUM ignored\n  - Parallel: blocked-by CV-204\n  - Complexity: M",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-31"
   ],
   "_file": "OS-curriculum-v2-conformance-37.json",
-  "claimedAt": "2026-11-09T15:50:09.316Z"
+  "claimedAt": "2026-11-09T15:50:09.316Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T15:55:58.766Z"
 }
