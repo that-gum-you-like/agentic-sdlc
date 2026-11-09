@@ -789,7 +789,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-232
   - Complexity: S
 
-- [ ] **CV-235**: seed-tasks.json.template: add one standardization-sweep seed task
+- [x] **CV-235**: seed-tasks.json.template: add one standardization-sweep seed task
   - **Priority:** MEDIUM
   - Files: `agents/templates/seed-tasks.json.template, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-087
