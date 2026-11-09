@@ -35,6 +35,7 @@
 - 2026-11-09 #146 feat(worker): render character block via renderCharacter in agent prompt (CV-243) (backend)
 - 2026-11-09 #147 feat(memory): add optional feeling, impact, whatIDoNow to failure schema (CV-244) (backend)
 - 2026-11-09 #148 feat(pattern-hunt): teachAgents fills feeling, impact, whatIDoNow on taught failures (CV-245) (backend)
+- 2026-11-09 #149 feat(pattern-hunt): cross-teach learnedFrom entries to agents sharing a domain (CV-246) (backend)
 
 ## 2026-11-08
 

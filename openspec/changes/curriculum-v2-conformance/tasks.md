@@ -888,7 +888,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-244
   - Complexity: S
 
-- [ ] **CV-246**: pattern-hunt.mjs teachAgents: also record a `long-term` entry with `learnedFrom: <agent>` on other agents sharing a domain in agents/domains.json; idempotent per (category, agent); dry-run writes nothing
+- [x] **CV-246**: pattern-hunt.mjs teachAgents: also record a `long-term` entry with `learnedFrom: <agent>` on other agents sharing a domain in agents/domains.json; idempotent per (category, agent); dry-run writes nothing
   - **Priority:** MEDIUM
   - Files: `agents/pattern-hunt.mjs, agents/__tests__/teach-wiring.test.mjs`
   - Spec: CV-REQ-073
