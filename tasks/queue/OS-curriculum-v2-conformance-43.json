@@ -3,7 +3,7 @@
   "title": "requirements-engineer.md: add a persona-coverage checklist line (every persona has a story or an explicit \"not applicable\")",
   "description": "- [ ] **CV-225**: requirements-engineer.md: add a persona-coverage checklist line (every persona has a story or an explicit \"not applicable\")\n  - **Priority:** MEDIUM\n  - Files: `agents/templates/planning-agents/requirements-engineer.md, tests/planning-templates.test.mjs`\n  - Spec: CV-REQ-081\n  - Gaps: D1-13\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test asserts the phrase `persona coverage`\n  - Parallel: blocked-by CV-222\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-40"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-43.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-09T16:50:16.796Z"
 }

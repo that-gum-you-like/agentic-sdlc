@@ -679,7 +679,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221
   - Complexity: S
 
-- [ ] **CV-225**: requirements-engineer.md: add a persona-coverage checklist line (every persona has a story or an explicit "not applicable")
+- [x] **CV-225**: requirements-engineer.md: add a persona-coverage checklist line (every persona has a story or an explicit "not applicable")
   - **Priority:** MEDIUM
   - Files: `agents/templates/planning-agents/requirements-engineer.md, tests/planning-templates.test.mjs`
   - Spec: CV-REQ-081

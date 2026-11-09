@@ -18,6 +18,7 @@
 - 2026-11-09 #128 feat(requirements-engineer): add Requirements Rubric (5 rows) and gap-question loop (CV-222) (docs-tests)
 - 2026-11-09 #129 feat(braindump-template): add Business Goals and Technical Constraints sections (CV-223) (docs-tests)
 - 2026-11-09 #130 feat(proposal-template): add User Stories (by persona) section (CV-224) (docs-tests)
+- 2026-11-09 #131 feat(requirements-engineer): add persona-coverage checklist line (CV-225) (docs-tests)
 
 ## 2026-11-08
 
