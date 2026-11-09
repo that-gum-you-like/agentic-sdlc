@@ -546,7 +546,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-202
   - Complexity: S
 
-- [ ] **CV-204**: seed-queue.mjs: in the function that writes tasks/queue/<id>.json, call `screenExternalInput` when `task.origin` is inbox, mailbox, issue or error; flagged -> do not write, raise a human task via notifyHumanTask, log `injectionScreen`
+- [x] **CV-204**: seed-queue.mjs: in the function that writes tasks/queue/<id>.json, call `screenExternalInput` when `task.origin` is inbox, mailbox, issue or error; flagged -> do not write, raise a human task via notifyHumanTask, log `injectionScreen`
   - **Priority:** MEDIUM
   - Files: `agents/seed-queue.mjs, agents/__tests__/injection-screening.test.mjs`
   - Spec: CV-REQ-061

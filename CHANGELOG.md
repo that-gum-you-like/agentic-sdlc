@@ -7,6 +7,7 @@
 - 2026-11-09 #116 feat(pii-scrub): add Presidio-based PII scrubbing with regex fallback (CV-708) (backend)
 - 2026-11-09 #118 feat(red-team): export imperativeCount() to flag imperative-density (CV-202) (backend)
 - 2026-11-09 #119 feat(red-team): add CLI --screen <text|-> printing verdict JSON and exiting 2 when flagged (CV-203) (backend)
+- 2026-11-09 #120 feat(seed-queue): screen external-origin tasks for injection before writing (CV-204) (backend)
 
 ## 2026-11-08
 
