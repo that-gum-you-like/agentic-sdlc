@@ -40,6 +40,18 @@ test('AGENT.md.template contains a ## Goal Safety section (CV-209)', () => {
     'AGENT.md.template must have a Goal Safety section');
 });
 
+test('AGENT.md.template contains a ## Version History section (CV-250)', () => {
+  const raw = read('agents/templates/AGENT.md.template');
+  assert.match(raw, /## Version History/,
+    'AGENT.md.template must have a Version History section');
+});
+
+test('AGENT.md.template contains a ## Breaking Changes section (CV-250)', () => {
+  const raw = read('agents/templates/AGENT.md.template');
+  assert.match(raw, /## Breaking Changes/,
+    'AGENT.md.template must have a Breaking Changes section');
+});
+
 test('framework/prompt-playbook.md contains a ## Goal Safety section (CV-209)', () => {
   const raw = read('framework/prompt-playbook.md');
   assert.match(raw, /## Goal Safety/,
