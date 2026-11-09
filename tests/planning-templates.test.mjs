@@ -122,6 +122,17 @@ test('proposal.md.template Value Analysis has Success Metrics and Who Benefits h
     'Value Analysis must contain a Who Benefits heading');
 });
 
+// ── CV-227: value-analyst.md output format requires metrics, beneficiaries, cost of not building ─
+
+test('value-analyst.md Output Format requires Success Metrics, Who Benefits and Cost of Not Building (CV-227)', () => {
+  const raw = read('agents/templates/planning-agents/value-analyst.md');
+  const outputFormat = raw.split(/^## Output Format$/m)[1]?.split(/^## /m)[0] || '';
+  assert.ok(outputFormat, 'value-analyst.md must have an ## Output Format section');
+  for (const label of ['**Success Metrics:**', '**Who Benefits:**', '**Cost of Not Building:**']) {
+    assert.ok(outputFormat.includes(label), `Output Format must require ${label}`);
+  }
+});
+
 test('proposal.md.template Success Metrics table has metric, baseline, target, how measured (CV-226)', () => {
   const raw = read('openspec/templates/proposal.md.template');
   const valueAnalysis = raw.split(/## Value Analysis/)[1]?.split(/\n## /)[0] || '';

@@ -61,6 +61,8 @@ Your job is to evaluate every requirement through the lens of real user value an
 **Complexity:** [1-10] — [justification]
 **Risk:** [Low/Medium/High] — [what could go wrong]
 
+**Success Metrics:** [quantitative success criteria — metric, baseline, target]
+
 **Who Benefits:**
 - Primary: [who]
 - Secondary: [who]
