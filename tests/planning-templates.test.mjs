@@ -294,6 +294,24 @@ test('agent-routing.md contains the phrase "disagreement is the finding" (CV-238
     'agent-routing.md must state that when reviewers disagree, the disagreement is the finding');
 });
 
+// ── CV-252: agent-proposal.md has the five required headings ─────────────
+
+test('agent-proposal.md exists and contains all five required headings (CV-252)', () => {
+  const f = 'agents/templates/agent-proposal.md';
+  assert.ok(existsSync(join(ROOT, f)), `agent-proposal.md must exist at ${f}`);
+  const raw = read(f);
+  assert.match(raw, /## Observed Pattern/,
+    'agent-proposal.md must have an Observed Pattern heading');
+  assert.match(raw, /## Proposed Agent/,
+    'agent-proposal.md must have a Proposed Agent heading');
+  assert.match(raw, /## Evidence \(task ids\)/,
+    'agent-proposal.md must have an Evidence (task ids) heading');
+  assert.match(raw, /## Trial Period/,
+    'agent-proposal.md must have a Trial Period heading');
+  assert.match(raw, /## Exit Criterion/,
+    'agent-proposal.md must have an Exit Criterion heading');
+});
+
 // ── CV-221: Every template path named in planning-templates.md exists ─────
 
 const SPEC_FILE = 'openspec/changes/curriculum-v2-conformance/specs/planning-templates.md';
