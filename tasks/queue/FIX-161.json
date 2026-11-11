@@ -11,14 +11,15 @@
   "tags": [
     "auto-fix"
   ],
-  "description": "Drain PR #161 (branch `agent/drain/OS-curriculum-v2-conformance-76`) was NOT merged by pr-auto-review (gate-failed).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-76 && git checkout agent/drain/OS-curriculum-v2-conformance-76`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-76` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- hard gate failed at node --test 'tests/*.test.mjs' 'agents/__tests__/*.test.mjs'\n- ✔ absent readiness resolves to draft, never to ready (2.274973ms)\n✔ all five states are recognized, case- and whitespace-insensitively (0.292651ms)\n✔ an unrecognized readiness is invalid, not silently permissive (0.288661ms)\n✔ only ready-for-dev authorizes the dev loop (0.256128ms)\n✔ readiness is orthogonal to phase — specced with tasks is still not authorized (0.260046ms)\n✔ a done change is not re-authorized by its phase (0.20711ms)\n✔ recordSent appends one JSON line per delivered message (5.834037ms)\n✔ an unconfigured send is not logged (0.681033ms)\n✔ real sends are suppressed under node --test; an injected transport still works (0.752394ms)\n✔ wave 2 preflight audit exists (2.382655ms)\n✔ report names every drained repo (0.667608ms)\n✔ report shows queue depth for each repo (0.299427ms)\n✔ report shows open PR count for each repo (0.287414ms)\n✔ report shows last-deployed sha vs origin/<base> for each repo (0.302307ms)\nℹ tests 1088\nℹ suites 150\nℹ pass 1080\nℹ fail 1\nℹ cancelled 0\nℹ skipped 7\nℹ todo 0\nℹ duration_ms 24294.377771\n\n✖ failing tests:\n\ntest at tests/adapter-and-model-manager.test.mjs:1:1\n✖ tests/adapter-and-model-manager.test.mjs (333.615626ms)\n  'test failed'\n\n",
-  "attempts": 1,
+  "description": "Drain PR #161 (branch `agent/drain/OS-curriculum-v2-conformance-76`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-76 && git checkout agent/drain/OS-curriculum-v2-conformance-76`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-76` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- [major] Scope creep: The PR adds extensive unrelated functionality to four-layer-validate.mjs (layer5AllowlistViolations function) and numerous unrelated test changes throughout tests/adapter-and-model-manager.test.mjs — the task only asked for documentation of allowedExtensions in project.json.template\n- [major] Test pollution: The PR adds 18+ unrelated test cases covering cost-tracker, notify.mjs, error signatures, load-config, memory scaling, done checklist, deploy pipeline, humanWellness, and provider key resolution — these are outside the scope of the allowedExtensions documentation task\n- [critical] Safety violation: The PR exports a new function layer5AllowlistViolations that appears to be security/validation related but was not part of the requested change and lacks proper review for such functionality",
+  "attempts": 2,
   "status": "pending",
   "fixFor": {
     "pr": 161,
     "branch": "agent/drain/OS-curriculum-v2-conformance-76",
-    "headSha": "663b245b9fc58fb1df0db6816993b54a0c88b7a6",
+    "headSha": "9f4b1a1d8272e7d2e9c31b19ed85bac9b3987407",
     "sourceTask": "OS-curriculum-v2-conformance-76",
-    "rejectionKind": "gate-failed"
-  }
+    "rejectionKind": "llm-rejected"
+  },
+  "refreshedAt": "2026-11-11T17:43:47.272Z"
 }
