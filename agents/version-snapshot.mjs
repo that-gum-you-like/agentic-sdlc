@@ -107,16 +107,35 @@ function list() {
   }
 }
 
-function restore(date) {
-  const snapshotDir = join(VERSIONS_DIR, date);
+function restore(date, opts = {}) {
+  const agents = (opts.agents && opts.agents.length > 0) ? opts.agents : AGENTS;
+  const agentsDir = opts.agentsDir || AGENTS_DIR;
+  const versionsDir = resolve(agentsDir, 'versions');
+  const snapshotDir = join(versionsDir, date);
+
   if (!existsSync(snapshotDir)) {
-    console.error(`Snapshot ${date} not found. Use 'list' to see available snapshots.`);
+    const msg = `Snapshot ${date} not found. Use 'list' to see available snapshots.`;
+    if (opts._throwOnError) throw new Error(msg);
+    console.error(msg);
     process.exit(1);
   }
 
-  for (const agent of AGENTS) {
+  const restoreMemory = opts.memory === true;
+
+  if (restoreMemory) {
+    const memSnapshotDir = join(snapshotDir, 'memory');
+    if (!existsSync(memSnapshotDir)) {
+      const msg = `Snapshot ${date} has no memory snapshot. Run 'snapshot' first or omit --memory.`;
+      if (opts._throwOnError) throw new Error(msg);
+      console.error(msg);
+      process.exit(1);
+    }
+  }
+
+  // Restore AGENT.md files (always)
+  for (const agent of agents) {
     const src = join(snapshotDir, `${agent}.md`);
-    const dest = resolve(AGENTS_DIR, agent, 'AGENT.md');
+    const dest = resolve(agentsDir, agent, 'AGENT.md');
     if (existsSync(src)) {
       copyFileSync(src, dest);
       console.log(`  🔄 Restored ${agent}/AGENT.md from ${date}`);
@@ -125,7 +144,26 @@ function restore(date) {
     }
   }
 
-  console.log(`\n✅ Restored all agents from snapshot ${date}`);
+  // Restore memory files (when --memory)
+  if (restoreMemory) {
+    for (const agent of agents) {
+      const agentMemSrcDir = join(snapshotDir, 'memory', agent);
+      if (existsSync(agentMemSrcDir)) {
+        const memFiles = readdirSync(agentMemSrcDir).filter(f => f.endsWith('.json'));
+        const destMemDir = resolve(agentsDir, agent, 'memory');
+        if (!existsSync(destMemDir)) mkdirSync(destMemDir, { recursive: true });
+        for (const memFile of memFiles) {
+          const src = join(agentMemSrcDir, memFile);
+          const dest = join(destMemDir, memFile);
+          copyFileSync(src, dest);
+          console.log(`  🔄 Restored ${agent}/memory/${memFile} from ${date}`);
+        }
+      }
+    }
+    console.log(`\n✅ Restored all agents from snapshot ${date} (including memory)`);
+  } else {
+    console.log(`\n✅ Restored all agents from snapshot ${date}`);
+  }
 }
 
 export { snapshot, list, restore, memoryFilesFor };
@@ -144,13 +182,15 @@ if (__isMainModule) {
       list();
       break;
     case 'restore':
-      if (!args[0]) { console.error('Usage: version-snapshot.mjs restore <date>'); break; }
-      restore(args[0]);
+      if (!args[0]) { console.error('Usage: version-snapshot.mjs restore <date> [--memory]'); break; }
+      const memoryFlag = args.includes('--memory');
+      restore(args[0], { memory: memoryFlag });
       break;
     default:
       console.log(`Usage:
-  version-snapshot.mjs snapshot       # Save current AGENT.md files
+  version-snapshot.mjs snapshot       # Save current AGENT.md + memory files
   version-snapshot.mjs list           # List all snapshots
-  version-snapshot.mjs restore <date> # Restore from a snapshot`);
+  version-snapshot.mjs restore <date> # Restore AGENT.md from a snapshot
+  version-snapshot.mjs restore <date> --memory # Restore AGENT.md + memory`);
   }
 }

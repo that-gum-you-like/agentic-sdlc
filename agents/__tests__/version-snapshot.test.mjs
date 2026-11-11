@@ -10,7 +10,7 @@
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync, rmSync, existsSync, readdirSync } from 'fs';
+import { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, readdirSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
@@ -21,14 +21,16 @@ const SCRIPT_PATH = resolve(AGENTS_DIR, 'version-snapshot.mjs');
 const TMP_ROOT = join(tmpdir(), `sdlc-version-test-${process.pid}`);
 const TMP_AGENTS = join(TMP_ROOT, 'agents');
 
-describe('version-snapshot.mjs — memory snapshot (CV-247)', () => {
+describe('version-snapshot.mjs — memory snapshot and restore (CV-247, CV-248)', () => {
   let snapshot;
   let memoryFilesFor;
+  let restore;
 
   before(async () => {
     const mod = await import(SCRIPT_PATH);
     snapshot = mod.snapshot;
     memoryFilesFor = mod.memoryFilesFor;
+    restore = mod.restore;
 
     // Create temp agent directories
     mkdirSync(join(TMP_AGENTS, 'agent-a', 'memory'), { recursive: true });
@@ -170,5 +172,93 @@ describe('version-snapshot.mjs — memory snapshot (CV-247)', () => {
     const aMem = join(sDir, 'memory', 'agent-a');
     const aFiles = readdirSync(aMem);
     assert.strictEqual(aFiles.length >= 3, true, 'agent-a still has its memory files');
+  });
+
+  // ─── restore: AGENT.md (existing behaviour unchanged) ────────────
+
+  it('restore without memory flag restores AGENT.md only (existing behaviour)', () => {
+    // Modify an AGENT.md to confirm restore puts it back
+    writeFileSync(join(TMP_AGENTS, 'agent-a', 'AGENT.md'), '# Agent A - CORRUPTED');
+
+    const versionsDir = join(TMP_AGENTS, 'versions');
+    const snapshots = readdirSync(versionsDir)
+      .filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f))
+      .sort();
+    const date = snapshots[snapshots.length - 1];
+
+    restore(date, { agents: ['agent-a', 'agent-b', 'agent-c'], agentsDir: TMP_AGENTS });
+
+    const restored = readFileSync(join(TMP_AGENTS, 'agent-a', 'AGENT.md'), 'utf8');
+    assert.strictEqual(restored, '# Agent A\nContent A', 'AGENT.md restored to original content');
+  });
+
+  // ─── restore: with --memory flag ──────────────────────────────────
+
+  it('restore with memory flag copies memory JSON files back', () => {
+    // Corrupt memory files
+    writeFileSync(join(TMP_AGENTS, 'agent-a', 'memory', 'core.json'), JSON.stringify({ corrupted: true }));
+    writeFileSync(join(TMP_AGENTS, 'agent-b', 'memory', 'core.json'), JSON.stringify({ corrupted: true }));
+
+    const versionsDir = join(TMP_AGENTS, 'versions');
+    const snapshots = readdirSync(versionsDir)
+      .filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f))
+      .sort();
+    const date = snapshots[snapshots.length - 1];
+
+    restore(date, { agents: ['agent-a', 'agent-b', 'agent-c'], agentsDir: TMP_AGENTS, memory: true });
+
+    // agent-a core.json should be restored to original
+    const aCore = JSON.parse(readFileSync(join(TMP_AGENTS, 'agent-a', 'memory', 'core.json'), 'utf8'));
+    assert.deepStrictEqual(aCore, { key: 'a-core' }, 'agent-a core.json restored');
+
+    // agent-a recent.json should be restored too
+    const aRecent = JSON.parse(readFileSync(join(TMP_AGENTS, 'agent-a', 'memory', 'recent.json'), 'utf8'));
+    assert.deepStrictEqual(aRecent, { last: 'task' }, 'agent-a recent.json restored');
+
+    // agent-b core.json restored
+    const bCore = JSON.parse(readFileSync(join(TMP_AGENTS, 'agent-b', 'memory', 'core.json'), 'utf8'));
+    assert.deepStrictEqual(bCore, { key: 'b-core' }, 'agent-b core.json restored');
+
+    // agent-c has no memory dir — should not cause error, just be skipped
+  });
+
+  it('restore with memory flag refuses a date with no memory snapshot', () => {
+    // Create a snapshot date with NO memory/ subdirectory
+    const versionsDir = join(TMP_AGENTS, 'versions');
+    const noMemDate = '2020-01-01';
+    const noMemSnapshotDir = join(versionsDir, noMemDate);
+    mkdirSync(noMemSnapshotDir, { recursive: true });
+    writeFileSync(join(noMemSnapshotDir, 'agent-a.md'), '# stub');
+
+    assert.throws(
+      () => {
+        restore(noMemDate, { agents: ['agent-a'], agentsDir: TMP_AGENTS, memory: true, _throwOnError: true });
+      },
+      { name: 'Error', message: /no memory snapshot/ },
+      'should throw on restore --memory when snapshot has no memory dir'
+    );
+  });
+
+  it('restore with memory flag: corrupted file equals snapshot copy after restore', () => {
+    // Fresh snapshot to a known date
+    const testDate = '2025-06-15';
+    const versionsDir = join(TMP_AGENTS, 'versions');
+    const sDir = join(versionsDir, testDate);
+    mkdirSync(join(sDir, 'memory', 'agent-a'), { recursive: true });
+
+    // Create a snapshot with a known memory file
+    const originalContent = JSON.stringify({ key: 'snapshot-value', nested: { a: 1 } });
+    writeFileSync(join(sDir, 'memory', 'agent-a', 'core.json'), originalContent);
+    writeFileSync(join(sDir, 'agent-a.md'), '# Agent A\nOriginal');
+
+    // Now corrupt the live memory file
+    writeFileSync(join(TMP_AGENTS, 'agent-a', 'memory', 'core.json'), JSON.stringify({ corrupted: true, original: 'gone' }));
+
+    // Restore with memory flag
+    restore(testDate, { agents: ['agent-a'], agentsDir: TMP_AGENTS, memory: true });
+
+    // Verify the file now equals the snapshot copy
+    const restoredContent = readFileSync(join(TMP_AGENTS, 'agent-a', 'memory', 'core.json'), 'utf8');
+    assert.strictEqual(restoredContent, originalContent, 'corrupted file equals snapshot copy after restore');
   });
 });
