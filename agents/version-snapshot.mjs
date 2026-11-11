@@ -8,7 +8,7 @@
  *   node agents/version-snapshot.mjs restore <date>    # Restore from a snapshot
  */
 
-import { existsSync, readdirSync, mkdirSync, copyFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -39,6 +39,103 @@ function memoryFilesFor(agent, agentsDir) {
 }
 
 /**
+ * Find the most recent snapshot date before the given date.
+ *
+ * @param {string} versionsDir - Versions directory
+ * @param {string} currentDate - Current date string (YYYY-MM-DD)
+ * @returns {string|null} Previous snapshot date string, or null if none
+ */
+function previousSnapshotDate(versionsDir, currentDate) {
+  if (!existsSync(versionsDir)) return null;
+  const dates = readdirSync(versionsDir)
+    .filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f) && f < currentDate)
+    .sort();
+  return dates.length > 0 ? dates[dates.length - 1] : null;
+}
+
+/**
+ * Compute approximate line diff stats (added/removed) between two texts
+ * using a longest-common-subsequence approach.
+ *
+ * @param {string} oldText - Previous text
+ * @param {string} newText - Current text
+ * @returns {{ added: number, removed: number }}
+ */
+function lineDiffStats(oldText, newText) {
+  const oldLines = oldText === '' ? [] : oldText.split('\n');
+  const newLines = newText === '' ? [] : newText.split('\n');
+  const m = oldLines.length;
+  const n = newLines.length;
+
+  // Build LCS table — O(m*n), acceptable for AGENT.md files (<300 lines)
+  const dp = Array.from({ length: m + 1 }, () => new Uint16Array(n + 1));
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (oldLines[i - 1] === newLines[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+
+  const lcs = dp[m][n];
+  return {
+    added: n - lcs,
+    removed: m - lcs
+  };
+}
+
+/**
+ * Append a version history entry to the live AGENT.md for an agent, if:
+ * - The AGENT.md differs from the previous snapshot copy
+ * - The AGENT.md has a `## Version History` section
+ * - The current date does not already have an entry (idempotent)
+ *
+ * @param {string} agent - Agent name
+ * @param {string} agentsDir - Agents root directory
+ * @param {string} prevSnapshotDir - Previous snapshot directory path
+ * @param {string} date - Current date string (YYYY-MM-DD)
+ */
+function appendVersionHistoryEntry(agent, agentsDir, prevSnapshotDir, date) {
+  const agentMDPath = resolve(agentsDir, agent, 'AGENT.md');
+  const prevSnapshotPath = join(prevSnapshotDir, `${agent}.md`);
+
+  if (!existsSync(agentMDPath) || !existsSync(prevSnapshotPath)) return;
+
+  const currentContent = readFileSync(agentMDPath, 'utf8');
+  const prevContent = readFileSync(prevSnapshotPath, 'utf8');
+
+  // No change — nothing to record
+  if (currentContent === prevContent) return;
+
+  // Must have a ## Version History section
+  const vhRegex = /^## Version History\s*$/m;
+  const vhMatch = currentContent.match(vhRegex);
+  if (!vhMatch) return;
+
+  // Check idempotency — if this date already has an entry, skip
+  const dateLine = `- ${date}: changed`;
+  const vhStartIndex = vhMatch.index;
+  const sectionEndMatch = currentContent.slice(vhStartIndex + vhMatch[0].length).match(/\n(?=## )/);
+  const sectionEnd = sectionEndMatch
+    ? vhStartIndex + vhMatch[0].length + sectionEndMatch.index
+    : currentContent.length;
+
+  const sectionContent = currentContent.slice(vhStartIndex, sectionEnd);
+  if (sectionContent.includes(dateLine)) return;
+
+  // Compute diff stats
+  const { added, removed } = lineDiffStats(prevContent, currentContent);
+  const entry = `- ${date}: changed (+${added}/-${removed} lines)`;
+
+  // Insert the entry before the end of the Version History section
+  const newContent = currentContent.slice(0, sectionEnd) + '\n' + entry + currentContent.slice(sectionEnd);
+  writeFileSync(agentMDPath, newContent, 'utf8');
+  console.log(`  📝 ${agent}/AGENT.md: appended version history entry`);
+}
+
+/**
  * Snapshot current agent state (AGENT.md + memory/*.json) into agents/versions/<date>/.
  *
  * @param {object} [opts] - Optional parameterization for testing
@@ -65,6 +162,15 @@ function snapshot(opts = {}) {
       console.log(`  📸 ${agent}/AGENT.md → versions/${date}/${agent}.md`);
     } else {
       console.log(`  ⚠️  ${agent}/AGENT.md not found, skipping`);
+    }
+  }
+
+  // Version history: append entry for each changed AGENT.md (CV-251)
+  const prevDate = previousSnapshotDate(versionsDir, date);
+  if (prevDate) {
+    const prevSnapshotDir = join(versionsDir, prevDate);
+    for (const agent of agents) {
+      appendVersionHistoryEntry(agent, agentsDir, prevSnapshotDir, date);
     }
   }
 
@@ -166,7 +272,7 @@ function restore(date, opts = {}) {
   }
 }
 
-export { snapshot, list, restore, memoryFilesFor };
+export { snapshot, list, restore, memoryFilesFor, previousSnapshotDate, lineDiffStats, appendVersionHistoryEntry };
 
 // CLI
 const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
