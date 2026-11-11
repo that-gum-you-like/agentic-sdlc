@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * Agent Version Snapshot — Snapshot and restore agent AGENT.md files.
+ * Agent Version Snapshot — Snapshot and restore agent AGENT.md and memory files.
  *
  * Usage:
- *   node agents/version-snapshot.mjs snapshot          # Save current AGENT.md files
+ *   node agents/version-snapshot.mjs snapshot          # Save current AGENT.md + memory/*.json
  *   node agents/version-snapshot.mjs list              # List all snapshots
  *   node agents/version-snapshot.mjs restore <date>    # Restore from a snapshot
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, copyFileSync } from 'fs';
+import { existsSync, readdirSync, mkdirSync, copyFileSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -22,21 +22,66 @@ const AGENTS = config.agents;
 const AGENTS_DIR = config.agentsDir;
 const VERSIONS_DIR = resolve(AGENTS_DIR, 'versions');
 
-function snapshot() {
-  const date = new Date().toISOString().split('T')[0];
-  const snapshotDir = join(VERSIONS_DIR, date);
+/**
+ * Return sorted list of memory JSON filenames for a given agent.
+ * Pure function — no filesystem side effects beyond reading the directory.
+ *
+ * @param {string} agent - Agent name (directory under agentsDir)
+ * @param {string} agentsDir - Root agents directory
+ * @returns {string[]} Sorted list of .json filenames
+ */
+function memoryFilesFor(agent, agentsDir) {
+  const memoryDir = resolve(agentsDir, agent, 'memory');
+  if (!existsSync(memoryDir)) return [];
+  return readdirSync(memoryDir)
+    .filter(f => f.endsWith('.json'))
+    .sort();
+}
 
-  if (!existsSync(VERSIONS_DIR)) mkdirSync(VERSIONS_DIR, { recursive: true });
+/**
+ * Snapshot current agent state (AGENT.md + memory/*.json) into agents/versions/<date>/.
+ *
+ * @param {object} [opts] - Optional parameterization for testing
+ * @param {string[]} [opts.agents] - Agent list (defaults to config.agents)
+ * @param {string} [opts.agentsDir] - Agents root dir (defaults to config.agentsDir)
+ */
+function snapshot(opts = {}) {
+  const agents = (opts.agents && opts.agents.length > 0) ? opts.agents : AGENTS;
+  const agentsDir = opts.agentsDir || AGENTS_DIR;
+  const versionsDir = resolve(agentsDir, 'versions');
+
+  const date = new Date().toISOString().split('T')[0];
+  const snapshotDir = join(versionsDir, date);
+
+  if (!existsSync(versionsDir)) mkdirSync(versionsDir, { recursive: true });
   if (!existsSync(snapshotDir)) mkdirSync(snapshotDir, { recursive: true });
 
-  for (const agent of AGENTS) {
-    const src = resolve(AGENTS_DIR, agent, 'AGENT.md');
+  // Copy AGENT.md files (existing behaviour unchanged)
+  for (const agent of agents) {
+    const src = resolve(agentsDir, agent, 'AGENT.md');
     const dest = join(snapshotDir, `${agent}.md`);
     if (existsSync(src)) {
       copyFileSync(src, dest);
       console.log(`  📸 ${agent}/AGENT.md → versions/${date}/${agent}.md`);
     } else {
       console.log(`  ⚠️  ${agent}/AGENT.md not found, skipping`);
+    }
+  }
+
+  // Copy memory/*.json files
+  for (const agent of agents) {
+    const memFiles = memoryFilesFor(agent, agentsDir);
+    if (memFiles.length > 0) {
+      const memSnapshotDir = join(snapshotDir, 'memory', agent);
+      if (!existsSync(memSnapshotDir)) mkdirSync(memSnapshotDir, { recursive: true });
+      for (const memFile of memFiles) {
+        const src = resolve(agentsDir, agent, 'memory', memFile);
+        const dest = join(memSnapshotDir, memFile);
+        copyFileSync(src, dest);
+        console.log(`  📸 ${agent}/memory/${memFile} → versions/${date}/memory/${agent}/${memFile}`);
+      }
+    } else {
+      console.log(`  ⚠️  ${agent}/memory/ not found or empty, skipping`);
     }
   }
 
@@ -83,7 +128,7 @@ function restore(date) {
   console.log(`\n✅ Restored all agents from snapshot ${date}`);
 }
 
-export { snapshot, list, restore };
+export { snapshot, list, restore, memoryFilesFor };
 
 // CLI
 const __isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
