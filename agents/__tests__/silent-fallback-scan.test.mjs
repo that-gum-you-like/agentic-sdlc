@@ -92,7 +92,7 @@ describe('four-layer Layer 3 — silent-default fallback scan (curriculum Ph5)',
 });
 
 describe('scanFunctionMetrics — function metric scanning (CV-303)', () => {
-  it('60-line function declares lines=60 and 5 params', async () => {
+  it('60-line function declaration with 5 params', async () => {
     const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
     let src = 'function bigOne(a, b, c, d, e) {\n';
     for (let i = 0; i < 58; i++) src += '  const x = ' + i + ';\n';
@@ -151,5 +151,58 @@ describe('scanFunctionMetrics — function metric scanning (CV-303)', () => {
     assert.equal(r.length, 1);
     assert.equal(r[0].name, 'fetchData');
     assert.equal(r[0].params, 1);
+  });
+
+  it('method shorthand inside object literal', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    const r = scanFunctionMetrics('const obj = {\n  greet(name) {\n    return "Hello, " + name;\n  }\n};\n');
+    assert.equal(r.length, 1);
+    assert.equal(r[0].name, 'greet');
+    assert.equal(r[0].params, 1);
+    assert.equal(r[0].startLine, 2);
+  });
+
+  it('getter accessor', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    const r = scanFunctionMetrics('const obj = {\n  get fullName() {\n    return this.first + " " + this.last;\n  }\n};\n');
+    assert.equal(r.length, 1);
+    assert.equal(r[0].name, 'get fullName');
+    assert.equal(r[0].params, 0);
+    assert.equal(r[0].startLine, 2);
+  });
+
+  it('setter accessor', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    const r = scanFunctionMetrics('const obj = {\n  set fullName(value) {\n    const parts = value.split(" ");\n  }\n};\n');
+    assert.equal(r.length, 1);
+    assert.equal(r[0].name, 'set fullName');
+    assert.equal(r[0].params, 1);
+    assert.equal(r[0].startLine, 2);
+  });
+
+  it('class method shorthand', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    const r = scanFunctionMetrics('class MyClass {\n  constructor(name) {\n    this.name = name;\n  }\n  greet() {\n    return "Hi";\n  }\n}\n');
+    assert.equal(r.length, 2);
+    const ctor = r.find(f => f.name === 'constructor');
+    assert.ok(ctor, 'should find constructor method');
+    const greet = r.find(f => f.name === 'greet');
+    assert.ok(greet, 'should find greet method');
+    assert.equal(greet.params, 0);
+  });
+
+  it('async method shorthand', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    const r = scanFunctionMetrics('const svc = {\n  async fetch(url) {\n    const res = await get(url);\n    return res.json();\n  }\n};\n');
+    assert.equal(r.length, 1);
+    assert.equal(r[0].name, 'async fetch');
+    assert.equal(r[0].params, 1);
+    assert.equal(r[0].startLine, 2);
+  });
+
+  it('no false positives on if/while/for keywords adjacent to brace', async () => {
+    const { scanFunctionMetrics } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'));
+    const r = scanFunctionMetrics('if (x) { doSomething(); }\nwhile (y) { loop(); }\nfor (let i = 0; i < n; i++) { sum(); }\n');
+    assert.equal(r.length, 0, 'control flow keywords should not be counted as methods');
   });
 });
