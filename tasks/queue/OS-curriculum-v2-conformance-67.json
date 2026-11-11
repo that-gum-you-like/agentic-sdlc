@@ -3,7 +3,7 @@
   "title": "version-snapshot.mjs snapshot(): when an AGENT.md differs from the previous snapshot copy and has a `## Version History` section, append `- <date>: changed (+N/-M lines)` once per date",
   "description": "- [ ] **CV-251**: version-snapshot.mjs snapshot(): when an AGENT.md differs from the previous snapshot copy and has a `## Version History` section, append `- <date>: changed (+N/-M lines)` once per date\n  - **Priority:** MEDIUM\n  - Files: `agents/version-snapshot.mjs, agents/__tests__/version-snapshot.test.mjs`\n  - Spec: CV-REQ-074\n  - Gaps: D6-07\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: edited AGENT.md gets exactly one line; rerun same date adds none; agent without the section untouched\n  - Parallel: blocked-by CV-248, CV-250\n  - Complexity: M",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -13,5 +13,9 @@
   "blockedBy": [
     "OS-curriculum-v2-conformance-64",
     "OS-curriculum-v2-conformance-66"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-67.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-11T17:25:09.167Z"
 }

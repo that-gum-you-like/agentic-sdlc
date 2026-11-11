@@ -944,7 +944,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221, CV-209
   - Complexity: S
 
-- [ ] **CV-251**: version-snapshot.mjs snapshot(): when an AGENT.md differs from the previous snapshot copy and has a `## Version History` section, append `- <date>: changed (+N/-M lines)` once per date
+- [x] **CV-251**: version-snapshot.mjs snapshot(): when an AGENT.md differs from the previous snapshot copy and has a `## Version History` section, append `- <date>: changed (+N/-M lines)` once per date
   - **Priority:** MEDIUM
   - Files: `agents/version-snapshot.mjs, agents/__tests__/version-snapshot.test.mjs`
   - Spec: CV-REQ-074
