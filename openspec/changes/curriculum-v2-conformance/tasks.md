@@ -899,7 +899,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-245
   - Complexity: M
 
-- [ ] **CV-247**: version-snapshot.mjs snapshot(): also copy each agent's memory/*.json to agents/versions/<date>/memory/<agent>/; export a pure `memoryFilesFor(agent)` for testing
+- [x] **CV-247**: version-snapshot.mjs snapshot(): also copy each agent's memory/*.json to agents/versions/<date>/memory/<agent>/; export a pure `memoryFilesFor(agent)` for testing
   - **Priority:** MEDIUM
   - Files: `agents/version-snapshot.mjs, agents/__tests__/version-snapshot.test.mjs`
   - Spec: CV-REQ-072

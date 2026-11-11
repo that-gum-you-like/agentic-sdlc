@@ -3,6 +3,7 @@
 ## 2026-11-11
 
 - 2026-11-11 #158 feat(checklist): add Security Checks and Simulation sections to checklist.md.template; create sdlc-reviewer/checklist.md (backend)
+- 2026-11-11 #150 feat(version-snapshot): snapshot() copies memory/*.json; export memoryFilesFor(agent) (CV-247) (backend)
 
 ## 2026-11-09
 
