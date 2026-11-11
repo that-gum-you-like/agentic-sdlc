@@ -193,6 +193,179 @@ export function ingestErrors(lines, opts = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// scaffoldBugChange — create bug-<id> OpenSpec change from templates (CV-308 / CV-REQ-036)
+// ---------------------------------------------------------------------------
+
+/**
+ * Scaffold an OpenSpec bug change directory from the task's failure info.
+ *
+ * Creates openspec/changes/bug-<id>/{proposal.md,tasks.md,status.json} from
+ * the OpenSpec templates with readiness `draft`, embedding the task id, title,
+ * and last failure description. Idempotent: a second call with the same inputs
+ * leaves existing files byte-identical.
+ *
+ * @param {object} task - Queue task object with id, title, description
+ * @param {object} [opts]
+ * @param {string} opts.templatesDir - Path to OpenSpec templates dir (e.g. openspec/templates)
+ * @param {string} opts.changesDir  - Path to OpenSpec changes dir (e.g. openspec/changes)
+ * @returns {string} The absolute path to the created bug change directory
+ */
+export function scaffoldBugChange(task, opts = {}) {
+  const { templatesDir, changesDir } = opts;
+
+  if (!templatesDir || !changesDir) {
+    throw new Error('scaffoldBugChange: templatesDir and changesDir are required');
+  }
+
+  const bugId = `bug-${task.id}`;
+  const bugDir = join(changesDir, bugId);
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const failureText = task.description || 'No failure details provided.';
+
+  mkdirSync(bugDir, { recursive: true });
+
+  // Build proposal.md from template
+  const proposalTemplate = readFileSync(join(templatesDir, 'proposal.md.template'), 'utf8');
+  const proposalContent = proposalTemplate
+    .replace(/\{\{CHANGE_NAME\}\}/g, bugId)
+    .replace(/\{\{DATE\}\}/g, dateStr)
+    .replace(/\{\{AUTHOR\}\}/g, 'hermes-drain')
+    .replace(/\{\{PROBLEM_DESCRIPTION\}\}/g,
+      `Task \`${task.id}\` failed: **${task.title}**\n\n` +
+      `Last failure:\n\`\`\`\n${failureText}\n\`\`\``)
+    .replace(/\{\{FILES_EXAMINED\}\}/g, 'N/A — automated bug scaffold')
+    .replace(/\{\{EXISTING_PATTERNS\}\}/g, 'See parent change for context')
+    .replace(/\{\{EXISTING_TESTS\}\}/g, 'N/A — automated bug scaffold')
+    .replace(/\{\{DISCOVERY_FINDINGS\}\}/g, 'Bug filed automatically by the drain on task failure')
+    .replace(/\{\{SOLUTION_DESCRIPTION\}\}/g,
+      `Investigate and fix the failure in task \`${task.id}\`: ${task.title}`)
+    // Value Analysis
+    .replace(/\{\{METRIC_1\}\}/g, 'Task passes on next attempt')
+    .replace(/\{\{BASELINE_1\}\}/g, 'Task failed')
+    .replace(/\{\{TARGET_1\}\}/g, 'Task passes')
+    .replace(/\{\{HOW_MEASURED_1\}\}/g, 'Queue task status')
+    .replace(/\{\{BENEFICIARY_1\}\}/g, 'sdlc-developer — can retry with a focused bug fix')
+    .replace(/\{\{BENEFICIARY_2\}\}/g, 'Bryce — reduced manual triage')
+    .replace(/\{\{BENEFIT_1\}\}/g, 'Captures the failure context before it is lost')
+    .replace(/\{\{BENEFIT_2\}\}/g, 'Provides a structured OpenSpec change for the fix')
+    .replace(/\{\{EFFORT_ESTIMATE\}\}/g, 'Triage + fix, variable')
+    .replace(/\{\{RISK_DESCRIPTION\}\}/g, 'Low — isolated bug change')
+    .replace(/\{\{DEPENDENCIES\}\}/g, 'None')
+    .replace(/\{\{ALT_1\}\}/g, 'Manual bug tracking')
+    .replace(/\{\{REASON_1\}\}/g, 'Would lose failure context from the drain')
+    .replace(/\{\{REASON_DO_NOTHING\}\}/g, 'Bug would remain unfiled')
+    .replace(/\{\{DECISION\}\}/g, 'Yes — scaffold the bug change')
+    // Scope
+    .replace(/\{\{IN_SCOPE_1\}\}/g, `Fix the failure in ${task.id}`)
+    .replace(/\{\{IN_SCOPE_2\}\}/g, 'Tests that reproduce the failure')
+    .replace(/\{\{OUT_OF_SCOPE_1\}\}/g, 'Refactoring beyond the bug fix')
+    .replace(/\{\{OUT_OF_SCOPE_2\}\}/g, 'Related but unrelated issues')
+    // User Stories
+    .replace(/\{\{NEW_USER_STORY\}\}/g, 'bugs are tracked in OpenSpec')
+    .replace(/\{\{NEW_USER_RATIONALE\}\}/g, 'I can see the fix progress')
+    .replace(/\{\{REGULAR_USER_STORY\}\}/g, 'failed tasks produce a bug change')
+    .replace(/\{\{REGULAR_USER_RATIONALE\}\}/g, 'I know the failure was captured')
+    .replace(/\{\{POWER_USER_STORY\}\}/g, 'bug changes have task context')
+    .replace(/\{\{POWER_USER_RATIONALE\}\}/g, 'I can triage from the proposal')
+    .replace(/\{\{ADMIN_STORY\}\}/g, 'bug changes have readiness draft')
+    .replace(/\{\{ADMIN_RATIONALE\}\}/g, 'I can review before work starts')
+    .replace(/\{\{PAYER_STORY\}\}/g, 'bugs are not lost')
+    .replace(/\{\{PAYER_RATIONALE\}\}/g, 'quality improves over time');
+
+  // Build tasks.md from template
+  const tasksTemplate = readFileSync(join(templatesDir, 'tasks.md.template'), 'utf8');
+  const tasksContent = tasksTemplate
+    .replace(/\{\{CHANGE_NAME\}\}/g, bugId)
+    .replace(/\{\{DATE\}\}/g, dateStr)
+    .replace(/\{\{AUTHOR\}\}/g, 'hermes-drain')
+    .replace(/\{\{TASKS_OVERVIEW\}\}/g,
+      `Bug fix for failed task \`${task.id}\`: ${task.title}\n\n` +
+      `Last failure:\n\`\`\`\n${failureText}\n\`\`\``)
+    .replace(/\{\{PREREQUISITE_1\}\}/g, 'Proposal is reviewed')
+    .replace(/\{\{PREREQUISITE_2\}\}/g, 'Design is approved')
+    .replace(/\{\{STREAM_1_NAME\}\}/g, 'Bug fix')
+    .replace(/\{\{STREAM_1_AGENT\}\}/g, task.agent || 'sdlc-developer')
+    .replace(/\{\{STREAM_1_TASK_IDS\}\}/g, task.id)
+    .replace(/\{\{STREAM_1_PARALLEL\}\}/g, 'none')
+    .replace(/\{\{STREAM_2_NAME\}\}/g, '')
+    .replace(/\{\{STREAM_2_AGENT\}\}/g, '')
+    .replace(/\{\{STREAM_2_TASK_IDS\}\}/g, '')
+    .replace(/\{\{STREAM_2_PARALLEL\}\}/g, '')
+    .replace(/\{\{STREAM_3_NAME\}\}/g, '')
+    .replace(/\{\{STREAM_3_AGENT\}\}/g, '')
+    .replace(/\{\{STREAM_3_TASK_IDS\}\}/g, '')
+    .replace(/\{\{STREAM_3_PARALLEL\}\}/g, '')
+    .replace(/\{\{PHASE_1_NAME\}\}/g, 'Bug fix')
+    .replace(/\{\{TASK_1_ID\}\}/g, task.id)
+    .replace(/\{\{TASK_1_DESCRIPTION\}\}/g, `Fix: ${task.title}`)
+    .replace(/\{\{TASK_1_FILES\}\}/g, 'TBD')
+    .replace(/\{\{TASK_1_REQ_REF\}\}/g, 'BUG')
+    .replace(/\{\{TASK_1_AGENT\}\}/g, task.agent || 'sdlc-developer')
+    .replace(/\{\{YES_NO_OR_BLOCKED_BY_TASK_ID\}\}/g, 'yes')
+    .replace(/\{\{S_M_L_XL\}\}/g, 'S')
+    .replace(/\{\{TASK_1_NOTES\}\}/g, 'Bug fix scaffolded from drain failure')
+    .replace(/\{\{TASK_2_ID\}\}/g, '')
+    .replace(/\{\{TASK_2_DESCRIPTION\}\}/g, '')
+    .replace(/\{\{TASK_2_FILES\}\}/g, '')
+    .replace(/\{\{TASK_2_REQ_REF\}\}/g, '')
+    .replace(/\{\{TASK_2_AGENT\}\}/g, '')
+    .replace(/\{\{TASK_3_ID\}\}/g, '')
+    .replace(/\{\{TASK_3_DESCRIPTION\}\}/g, '')
+    .replace(/\{\{TASK_3_FILES\}\}/g, '')
+    .replace(/\{\{TASK_3_REQ_REF\}\}/g, '')
+    .replace(/\{\{TASK_3_AGENT\}\}/g, '')
+    .replace(/\{\{TASK_4_ID\}\}/g, '')
+    .replace(/\{\{TASK_4_DESCRIPTION\}\}/g, '')
+    .replace(/\{\{TASK_4_FILES\}\}/g, '')
+    .replace(/\{\{TASK_4_REQ_REF\}\}/g, '')
+    .replace(/\{\{TASK_4_AGENT\}\}/g, '')
+    .replace(/\{\{TASK_5_ID\}\}/g, '')
+    .replace(/\{\{UNIT_TEST_SUBJECT\}\}/g, '')
+    .replace(/\{\{UNIT_TEST_FILES\}\}/g, '')
+    .replace(/\{\{UNIT_TEST_REQS\}\}/g, '')
+    .replace(/\{\{TASK_5_AGENT\}\}/g, '')
+    .replace(/\{\{TASK_6_ID\}\}/g, '')
+    .replace(/\{\{INTEGRATION_TEST_SUBJECT\}\}/g, '')
+    .replace(/\{\{INTEGRATION_TEST_FILES\}\}/g, '')
+    .replace(/\{\{INTEGRATION_TEST_REQS\}\}/g, '')
+    .replace(/\{\{TASK_6_AGENT\}\}/g, '')
+    .replace(/\{\{TASK_7_ID\}\}/g, '')
+    .replace(/\{\{TEST_CMD\}\}/g, 'npm test')
+    .replace(/\{\{TASK_8_ID\}\}/g, '')
+    .replace(/\{\{DOCS_FILES\}\}/g, '')
+    .replace(/\{\{TASK_9_ID\}\}/g, '')
+    .replace(/\{\{ADDITIONAL_NOTES\}\}/g, `Scaffolded from drain failure of task ${task.id}`);
+
+  // Build status.json from template
+  const statusTemplate = readFileSync(join(templatesDir, 'status.json.template'), 'utf8');
+  const statusContent = statusTemplate
+    .replace(/\{\{DATE\}\}/g, dateStr);
+
+  // Parse and set readiness to draft
+  const statusObj = JSON.parse(statusContent);
+  statusObj.readiness = 'draft';
+  statusObj.phase = 'proposal';
+  const finalStatusJson = JSON.stringify(statusObj, null, 2) + '\n';
+
+  // Write files idempotently
+  const outputs = [
+    { path: join(bugDir, 'proposal.md'), content: proposalContent },
+    { path: join(bugDir, 'tasks.md'), content: tasksContent },
+    { path: join(bugDir, 'status.json'), content: finalStatusJson },
+  ];
+
+  for (const out of outputs) {
+    if (existsSync(out.path)) {
+      const existing = readFileSync(out.path, 'utf8');
+      if (existing === out.content) continue;
+    }
+    writeFileSync(out.path, out.content);
+  }
+
+  return resolve(bugDir);
+}
+
+// ---------------------------------------------------------------------------
 // CLI guard
 // ---------------------------------------------------------------------------
 
