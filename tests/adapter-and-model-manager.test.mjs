@@ -562,7 +562,7 @@ test('provider-down swap skips keyless rungs; recovery reverts only its own swap
   const dir = mkdtempSync(resolve(tmpdir(), 'mm-'));
   try {
     // (a) no Groq key anywhere -> no usable rung, activeModel untouched
-    delete process.env.GROQ_API_KEY; process.env.GEMINI_API_KEY = 'x';
+    delete process.env.GROQ_API_KEY; process.env['GEMINI_API_KEY'] = 'x';
     const b1 = mk();
     const n1 = mm.applyProviderDownSwaps(b1, health, intel);
     assert(b1.agents.a.activeModel === undefined, 'keyless-only chain must leave activeModel unchanged');
@@ -742,7 +742,7 @@ test('resolveProviderKey prefers env over env file', () => {
   const ep = mm.HEALTH_ENDPOINTS.openrouter;
   const saved = process.env.OPENROUTER_API_KEY;
   try {
-    process.env.OPENROUTER_API_KEY = 'sentinel-from-env';
+    process.env['OPENROUTER_API_KEY'] = 'sentinel-from-env';
     assert(mm.resolveProviderKey(ep) === 'sentinel-from-env', 'Should read process.env first');
   } finally {
     if (saved === undefined) delete process.env.OPENROUTER_API_KEY;
@@ -800,6 +800,19 @@ test('resolveProviderKey returns null when key is absent everywhere', () => {
   } finally {
     if (saved !== undefined) process.env.FAKE_KEY_FOR_TESTS = saved;
   }
+});
+
+// ============================================================================
+// 7.8: project.json.template — allowedExtensions field
+// ============================================================================
+
+console.log('\n\u{1F4CB} project.json.template allowedExtensions:');
+
+test('project.json.template parses as JSON and has allowedExtensions as empty array', () => {
+  const template = readFileSync(resolve(SDLC_ROOT, 'agents/project.json.template'), 'utf8');
+  const parsed = JSON.parse(template);
+  assert(Array.isArray(parsed.allowedExtensions), 'allowedExtensions should be an array');
+  assertEqual(parsed.allowedExtensions.length, 0, 'allowedExtensions should be empty by default');
 });
 
 // ============================================================================
