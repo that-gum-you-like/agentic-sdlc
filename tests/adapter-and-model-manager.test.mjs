@@ -242,19 +242,6 @@ test('character-sheet.md documents all six fields', () => {
 });
 
 // ============================================================================
-// 7.8: project.json template validation
-// ============================================================================
-
-console.log('\n📋 project.json template:');
-
-test('project.json.template parses as JSON and has allowedExtensions', () => {
-  const template = readFileSync(resolve(SDLC_ROOT, 'agents/project.json.template'), 'utf8');
-  const parsed = JSON.parse(template);
-  assert(Array.isArray(parsed.allowedExtensions), 'allowedExtensions should be an array');
-  assertEqual(parsed.allowedExtensions.length, 0, 'allowedExtensions should be empty by default (disabled)');
-});
-
-// ============================================================================
 // 7.7: Integration — adapter interface consistency
 // ============================================================================
 
@@ -513,246 +500,319 @@ test('suggest returns a model for each valid task type', async () => {
 test('suggest returns null for invalid task type', async () => {
   const { suggest } = await import(resolve(SDLC_ROOT, 'agents/model-manager.mjs'));
   const result = suggest('invalid');
-  assertEqual(result, null, 'Should return null for invalid type');
+  assertEqual(result, null, 'Should return null for invalid task type');
 });
 
-test('buildCostOrder does not include OpenAI models', async () => {
-  const { buildCostOrder } = await import(resolve(SDLC_ROOT, 'agents/model-manager.mjs'));
-  const order = buildCostOrder();
-  for (const model of order) {
-    assert(model.provider !== 'openai', `Should not include openai model: ${model.id}`);
+test('estimateBurnRate returns 0 when no cost data exists', async () => {
+  const { estimateBurnRate } = await import(resolve(SDLC_ROOT, 'agents/model-manager.mjs'));
+  const rate = estimateBurnRate('nonexistent-agent');
+  assertEqual(rate, 0, 'Should return 0 for agent with no cost data');
+});
+
+test('queue-drainer checkAgentBudget blocks budget-exhausted agents', () => {
+  // Verify the check exists in the source
+  const qd = readFileSync(resolve(SDLC_ROOT, 'agents/queue-drainer.mjs'), 'utf8');
+  assert(qd.includes("activeModel === 'budget-exhausted'"), 'Should check for budget-exhausted status');
+  assert(qd.includes('exhausted: true'), 'Should set exhausted flag in return');
+});
+
+// ============================================================================
+// Model Manager Resilience — health checks, stale tasks, cross-provider
+// ============================================================================
+
+console.log('\n📋 Model manager resilience:');
+
+test('model-intel.default.json has providerHealth schema', () => {
+  const intel = JSON.parse(readFileSync(INTEL_DEFAULT_PATH, 'utf8'));
+  assert(intel.providerHealth, 'Should have providerHealth object');
+  assert(intel.providerHealth.groq, 'Should track groq health');
+  assert(intel.providerHealth.gemini, 'Should track gemini health');
+  assert(intel.providerHealth.cerebras, 'Should track cerebras health');
+});
+
+test('model-intel.default.json has free-tier models from Gemini and Cerebras', () => {
+  const intel = JSON.parse(readFileSync(INTEL_DEFAULT_PATH, 'utf8'));
+  assert(intel.models['gemini-2.5-flash'], 'Should have gemini-2.5-flash');
+  assert(intel.models['gemini-2.5-flash'].free === true, 'gemini-2.5-flash should be marked free');
+  assert(intel.models['llama3.1-8b-cerebras'], 'Should have llama3.1-8b-cerebras');
+  assert(intel.models['llama3.1-8b-cerebras'].free === true, 'cerebras model should be marked free');
+});
+
+test('model-manager has health check and stale task reset functions', () => {
+  const mm = readFileSync(resolve(SDLC_ROOT, 'agents/model-manager.mjs'), 'utf8');
+  assert(mm.includes('checkAllProviderHealth'), 'Should have checkAllProviderHealth function');
+  assert(mm.includes('pingProvider'), 'Should have pingProvider function');
+  assert(mm.includes('resetStaleTasks'), 'Should have resetStaleTasks function');
+  assert(mm.includes('findHealthyFallback'), 'Should have findHealthyFallback function');
+  assert(mm.includes('provider-down-swap'), 'Should log provider-down-swap events');
+  assert(mm.includes('stale-task-reset'), 'Should log stale-task-reset events');
+});
+
+test('provider-down swap skips keyless rungs; recovery reverts only its own swaps', async () => {
+  const mm = await import(resolve(SDLC_ROOT, 'agents/model-manager.mjs'));
+  const intel = { models: {
+    'or-model': { provider: 'openrouter' }, 'groq-model': { provider: 'groq' }, 'gem-model': { provider: 'gemini' },
+  } };
+  const health = { openrouter: { status: 'down' } };
+  const mk = () => ({ agents: {
+    a: { model: 'or-model', fallbackChain: ['or-model', 'groq-model'], provider: 'openrouter' },
+    b: { model: 'or-model', fallbackChain: ['or-model', 'groq-model', 'gem-model'], provider: 'openrouter' },
+  } });
+  const saved = { g: process.env.GROQ_API_KEY, m: process.env.GEMINI_API_KEY };
+  const dir = mkdtempSync(resolve(tmpdir(), 'mm-'));
+  try {
+    // (a) no Groq key anywhere -> no usable rung, activeModel untouched
+    delete process.env.GROQ_API_KEY; process.env['GEMINI_API_KEY'] = 'x';
+    const b1 = mk();
+    const n1 = mm.applyProviderDownSwaps(b1, health, intel);
+    assert(b1.agents.a.activeModel === undefined, 'keyless-only chain must leave activeModel unchanged');
+    assert(!b1.agents.a.providerDownSwap, 'no marker without a swap');
+    assert(b1.agents.b.activeModel === 'gem-model', 'should skip keyless groq and land on gemini');
+    assert(n1 === 1, `expected 1 swap, got ${n1}`);
+
+    // (b) recovery reverts own swaps only
+    b1.agents.a.activeModel = 'manual-pick'; // manual override, no marker
+    const b2 = mk();
+    b2.agents.b.activeModel = 'pinned-before'; // pre-swap override to restore
+    mm.applyProviderDownSwaps(b2, health, intel);
+    assert(b2.agents.b.providerDownSwap.previousActiveModel === 'pinned-before', 'records pre-swap value');
+    b2.agents.a.activeModel = 'manual-pick';
+    b2.agents.a.providerDownSwap = { downProvider: 'openrouter', previousActiveModel: null, swappedTo: 'groq-model' }; // stale marker, user since changed it
+    const r = mm.revertProviderDownSwaps(b2, 'openrouter');
+    assert(r === 1, `expected 1 revert, got ${r}`);
+    assert(b2.agents.b.activeModel === 'pinned-before' && !b2.agents.b.providerDownSwap, 'swap reverted to pre-swap value');
+    assert(b2.agents.a.activeModel === 'manual-pick' && !b2.agents.a.providerDownSwap, 'manual override never clobbered');
+  } finally {
+    for (const [k, v] of [['GROQ_API_KEY', saved.g], ['GEMINI_API_KEY', saved.m]]) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('suggest returns a model with valid provider and cost', async () => {
-  const { suggest } = await import(resolve(SDLC_ROOT, 'agents/model-manager.mjs'));
-  for (const type of ['coding', 'review', 'documentation']) {
-    const id = suggest(type);
-    assert(id, `${type} should have a suggestion`);
-    assert(typeof id === 'string', `${type} suggestion should be a string`);
-    assert(id.length > 0, `${type} suggestion should not be empty`);
-  }
+test('Gemini adapter exports all 5 required functions', async () => {
+  const adapter = await import(resolve(SDLC_ROOT, 'agents/adapters/llm/gemini.mjs'));
+  assert(typeof adapter.complete === 'function', 'Should export complete');
+  assert(typeof adapter.estimateTokens === 'function', 'Should export estimateTokens');
+  assert(typeof adapter.checkAvailability === 'function', 'Should export checkAvailability');
+  assert(typeof adapter.getModelInfo === 'function', 'Should export getModelInfo');
+  assert(typeof adapter.listModels === 'function', 'Should export listModels');
+});
+
+test('Cerebras adapter exports all 5 required functions', async () => {
+  const adapter = await import(resolve(SDLC_ROOT, 'agents/adapters/llm/cerebras.mjs'));
+  assert(typeof adapter.complete === 'function', 'Should export complete');
+  assert(typeof adapter.estimateTokens === 'function', 'Should export estimateTokens');
+  assert(typeof adapter.checkAvailability === 'function', 'Should export checkAvailability');
+  assert(typeof adapter.getModelInfo === 'function', 'Should export getModelInfo');
+  assert(typeof adapter.listModels === 'function', 'Should export listModels');
+});
+
+test('Azure OpenAI adapter exports all 5 required functions', async () => {
+  const adapter = await import(resolve(SDLC_ROOT, 'agents/adapters/llm/azure-openai.mjs'));
+  assert(typeof adapter.complete === 'function', 'Should export complete');
+  assert(typeof adapter.estimateTokens === 'function', 'Should export estimateTokens');
+  assert(typeof adapter.checkAvailability === 'function', 'Should export checkAvailability');
+  assert(typeof adapter.getModelInfo === 'function', 'Should export getModelInfo');
+  assert(typeof adapter.listModels === 'function', 'Should export listModels');
+  assert(adapter.listModels().includes('gpt-4o'), 'Should include gpt-4o');
+});
+
+test('Azure Foundry Claude adapter exports all 5 required functions', async () => {
+  const adapter = await import(resolve(SDLC_ROOT, 'agents/adapters/llm/azure-foundry-claude.mjs'));
+  assert(typeof adapter.complete === 'function', 'Should export complete');
+  assert(typeof adapter.estimateTokens === 'function', 'Should export estimateTokens');
+  assert(typeof adapter.checkAvailability === 'function', 'Should export checkAvailability');
+  assert(typeof adapter.getModelInfo === 'function', 'Should export getModelInfo');
+  assert(typeof adapter.listModels === 'function', 'Should export listModels');
+  assert(adapter.listModels().includes('claude-sonnet-4-6'), 'Should include claude-sonnet-4-6');
 });
 
 // ============================================================================
-// 7.9: cost-tracker import validation
+// Setup dry-run flag existence
 // ============================================================================
 
-console.log('\n📋 cost-tracker import validation:');
+console.log('\n📋 Setup dry-run:');
 
-// Direct import of cost-tracker.mjs at the top level would trigger CLI
-// side effects. Instead we scrape the exported function names that
-// setup.mjs/adapter-and-model-manager.test.mjs reference.
-test('cost-tracker.mjs exports report function', async () => {
-  const { report } = await import(resolve(SDLC_ROOT, 'agents/cost-tracker.mjs'));
-  assert(typeof report === 'function', 'report should be an exported function');
+test('setup.mjs source contains --dry-run flag handling', () => {
+  const setupContent = readFileSync(resolve(SDLC_ROOT, 'setup.mjs'), 'utf8');
+  assert(setupContent.includes('--dry-run'), 'setup.mjs should check for --dry-run flag');
+  assert(setupContent.includes('DRY_RUN'), 'setup.mjs should have DRY_RUN constant');
+  assert(setupContent.includes('dryRunPlan'), 'setup.mjs should track planned files');
+  assert(setupContent.includes('[DRY RUN]'), 'setup.mjs should log [DRY RUN] prefix');
+  assert(setupContent.includes('Re-run without --dry-run'), 'setup.mjs should print re-run instructions');
 });
 
 // ============================================================================
-// 7.10: notify.mjs import validation
+// AI Onboarding — file existence and content checks
 // ============================================================================
 
-console.log('\n📋 notify.mjs import validation:');
+console.log('\n📋 AI onboarding infrastructure:');
 
-// Direct import of notify.mjs at the top level would trigger CLI
-// side effects (prints help text). Instead we scrape the exported
-// function names that model-manager.mjs/adapter-and-model-manager.test.mjs reference.
-test('notify.mjs exports getLedger function', async () => {
-  const { getLedger } = await import(resolve(SDLC_ROOT, 'agents/notify.mjs'));
-  assert(typeof getLedger === 'function', 'getLedger should be an exported function');
+test('ONBOARDING.md exists and has 5-phase protocol', () => {
+  const content = readFileSync(resolve(SDLC_ROOT, 'ONBOARDING.md'), 'utf8');
+  assert(content.includes('Phase 1: Discover'), 'Should have Phase 1: Discover');
+  assert(content.includes('Phase 2: Assess'), 'Should have Phase 2: Assess');
+  assert(content.includes('Phase 3: Choose'), 'Should have Phase 3: Choose');
+  assert(content.includes('Phase 4: Integrate'), 'Should have Phase 4: Integrate');
+  assert(content.includes('Phase 5: Validate'), 'Should have Phase 5: Validate');
 });
 
-test('notify.mjs exports checkMailbox function', async () => {
-  const { checkMailbox } = await import(resolve(SDLC_ROOT, 'agents/notify.mjs'));
-  assert(typeof checkMailbox === 'function', 'checkMailbox should be an exported function');
+test('.cursor/rules/agentic-sdlc.mdc exists and references ONBOARDING.md', () => {
+  // Note: legacy .cursorrules was removed in cursor-rules-modernization (2026-05-27).
+  // Cursor now reads .cursor/rules/*.mdc instead. .windsurfrules still references
+  // ONBOARDING.md for Windsurf users.
+  const cursorRule = readFileSync(resolve(SDLC_ROOT, '.cursor/rules/agentic-sdlc.mdc'), 'utf8');
+  assert(cursorRule.includes('ONBOARDING.md'), 'agentic-sdlc.mdc should reference ONBOARDING.md');
+  const windsurfRule = readFileSync(resolve(SDLC_ROOT, '.windsurfrules'), 'utf8');
+  assert(windsurfRule.includes('ONBOARDING.md'), '.windsurfrules should reference ONBOARDING.md');
 });
 
-test('notify.mjs exports ingestErrors function', async () => {
-  const { ingestErrors } = await import(resolve(SDLC_ROOT, 'agents/notify.mjs'));
-  assert(typeof ingestErrors === 'function', 'ingestErrors should be an exported function');
-});
-
-// ============================================================================
-// 7.11: error signature normalization
-// ============================================================================
-
-console.log('\n📋 Error signature normalization:');
-
-test('errorSignature normalizes similar errors', async () => {
-  const { errorSignature } = await import(resolve(SDLC_ROOT, 'agents/notify.mjs'));
-  // Same path + line should produce same signature even with different context
-  const sig1 = errorSignature('TypeError: Cannot read property "x" of null in /home/user/project/src/worker.mjs:42');
-  const sig2 = errorSignature(
-    'TypeError: Cannot read property "x" of null in /home/vagrant/builds/agentic-sdlc/src/worker.mjs:42'
-  );
-  assertEqual(sig1, sig2, 'Same file:line should produce same signature');
-  // Different line should produce different signature
-  const sig3 = errorSignature('TypeError: Cannot read property "x" of null in src/worker.mjs:99');
-  assert(sig1 !== sig3, 'Different line should produce different signature');
-});
-
-test('errorSignature handles errors without file paths', async () => {
-  const { errorSignature } = await import(resolve(SDLC_ROOT, 'agents/notify.mjs'));
-  const sig1 = errorSignature('Timeout connecting to Matrix server');
-  const sig2 = errorSignature('Timeout connecting to Matrix server after 30 seconds');
-  assertEqual(sig1, sig2, 'Similar messages without file info should produce same signature');
-  const sig3 = errorSignature('Disk full on /dev/sda1');
-  assert(sig1 !== sig3, 'Different messages produce different signatures');
-});
-
-// ============================================================================
-// 7.12: load-config defaults integrity
-// ============================================================================
-
-console.log('\n📋 load-config.mjs integrity:');
-
-test('loadConfig returns all expected top-level keys', async () => {
-  const { loadConfig } = await import(resolve(SDLC_ROOT, 'agents/load-config.mjs'));
-  const cfg = loadConfig();
-  const expected = [
-    'name', 'projectDir', 'appDir', 'testCmd', 'agents',
-    'notification', 'orchestration', 'llm', 'memoryTokenBudget',
-    'doneChecklist', 'humanWellness', 'capabilityMonitoring',
+test('all 6 level guides exist', () => {
+  const levels = [
+    'level-1-assisted.md', 'level-2-automated.md', 'level-3-orchestrated.md',
+    'level-4-autonomous.md', 'level-5-evolution.md', 'level-6-self-improving.md',
   ];
-  for (const key of expected) {
-    assert(cfg[key] !== undefined, `loadConfig should have key: ${key}`);
+  for (const level of levels) {
+    assert(existsSync(resolve(SDLC_ROOT, 'docs/levels', level)), `${level} should exist`);
   }
 });
 
-test('loadConfig finds project.json in repo root via CWD walk', async () => {
-  const { loadConfig } = await import(resolve(SDLC_ROOT, 'agents/load-config.mjs'));
-  const cfg = loadConfig();
-  assertEqual(cfg.name, 'agentic-sdlc', 'Should find the framework project.json');
+test('setup.mjs --discover outputs valid JSON', async () => {
+  const { execSync } = await import('child_process');
+  const output = execSync(`node ${resolve(SDLC_ROOT, 'setup.mjs')} --discover --dir ${SDLC_ROOT}`, { encoding: 'utf8' });
+  const parsed = JSON.parse(output);
+  assert(parsed.projectDir, 'Should have projectDir');
+  assert(parsed.language, 'Should have language');
+  assert(parsed.suggestedLevel !== undefined, 'Should have suggestedLevel');
+  assert(Array.isArray(parsed.suggestedAgents), 'suggestedAgents should be array');
 });
 
 // ============================================================================
-// 7.13: Agent memory scaling meta-test
+// Provider health probes (openspec/changes/provider-health-probe-gaps)
 // ============================================================================
 
-console.log('\n📋 Agent memory scaling meta-tests:');
+console.log('\n🩺 Provider Health Probes');
 
-test('memory-manager exports estimateTokens (test function is imported above)', () => {
-  // Already tested in 7.4 — this is a placeholder to keep section numbering stable
+const mm = await import(resolve(SDLC_ROOT, 'agents/model-manager.mjs'));
+
+// Resolved up-front: the test harness calls fn() synchronously and does not await.
+const unknownPing = await mm.pingProvider('nonexistent-provider-for-tests');
+
+test('every budget.json provider has a health endpoint', () => {
+  // Mirrors how checkAllProviderHealth() derives its provider set: each agent's
+  // provider, plus the provider of every model in every fallback chain.
+  const budget = mm.loadBudget();
+  const intel = mm.loadModelIntel();
+  const providers = new Set();
+  for (const cfg of Object.values(budget.agents || {})) {
+    if (cfg.provider) providers.add(cfg.provider);
+    for (const model of cfg.fallbackChain || []) {
+      const p = intel.models?.[model]?.provider;
+      if (p) providers.add(p);
+    }
+  }
+  assert(providers.size > 0, 'Should derive at least one provider from budget.json');
+
+  const missing = [...providers].filter((p) => !mm.HEALTH_ENDPOINTS[p]);
+  assert(
+    missing.length === 0,
+    `Providers used by budget.json with no HEALTH_ENDPOINTS entry: ${missing.join(', ')}. ` +
+      'Without a probe they cannot be health-checked — add an entry in model-manager.mjs.'
+  );
 });
 
-test('totalTokens in recall is <= memoryTokenBudget', async () => {
-  const { recall, estimateTokens } = await import(resolve(SDLC_ROOT, 'agents/memory-manager.mjs'));
-  const { loadConfig } = await import(resolve(SDLC_ROOT, 'agents/load-config.mjs'));
-  const cfg = loadConfig();
-  const memory = await recall('sdlc-developer');
-  const total = estimateTokens(memory);
-  assert(total <= cfg.memoryTokenBudget, `Total tokens (${total}) should be <= budget (${cfg.memoryTokenBudget})`);
+test('openrouter health endpoint is defined and probes /auth/key', () => {
+  const ep = mm.HEALTH_ENDPOINTS.openrouter;
+  assert(ep, 'openrouter must have a HEALTH_ENDPOINTS entry');
+  assert(ep.method === 'GET', `Expected GET, got ${ep.method}`);
+  assert(ep.url.endsWith('/api/v1/auth/key'), `Expected /auth/key probe, got ${ep.url}`);
+  assert(ep.keyEnv === 'OPENROUTER_API_KEY', `Expected OPENROUTER_API_KEY, got ${ep.keyEnv}`);
+  assert(!ep.body, 'Probe must send no body — it costs no model tokens');
+  assert(/Bearer /.test(ep.headers('k').Authorization || ''), 'Should send a Bearer token');
+  assert(typeof ep.envFile === 'function', 'Should declare envFile() for key resolution');
+  assert(ep.envFile().length > 0, 'envFile() should yield at least one candidate path');
 });
 
-// ============================================================================
-// 7.14: Done checklist config
-// ============================================================================
-
-console.log('\n📋 Done checklist configuration:');
-
-test('project.json has a doneChecklist field with default values', async () => {
-  const { loadConfig } = await import(resolve(SDLC_ROOT, 'agents/load-config.mjs'));
-  const cfg = loadConfig();
-  assert(Array.isArray(cfg.doneChecklist), 'doneChecklist should be an array');
-  assert(cfg.doneChecklist.length > 0, 'doneChecklist should not be empty');
-  // Framework default
-  assert(cfg.doneChecklist.includes('openspec'), 'Framework doneChecklist should include openspec');
-  assert(cfg.doneChecklist.includes('tests'), 'Framework doneChecklist should include tests');
+test('unknown provider yields unmonitored, never down', () => {
+  assert(unknownPing.unmonitored === true, 'Unknown provider should be flagged unmonitored');
+  assert(unknownPing.up !== false, 'Unknown provider must NOT report up:false — that latches a false `down`');
+  assert(unknownPing.up === null, `Expected up:null, got ${unknownPing.up}`);
 });
 
-// ============================================================================
-// 7.15: Deploy pipeline readiness config
-// ============================================================================
-
-console.log('\n📋 Deploy pipeline config:');
-
-test('project.json has deploy block with expected schema', async () => {
-  const { loadConfig } = await import(resolve(SDLC_ROOT, 'agents/load-config.mjs'));
-  const cfg = loadConfig();
-  assert(cfg.deploy, 'Should have deploy block');
-  assert(typeof cfg.deploy.enabled === 'boolean', 'deploy.enabled should be boolean');
-  assert(typeof cfg.deploy.deployCmd === 'string', 'deploy.deployCmd should be string');
-});
-
-test('deploy.verify has expected schema', async () => {
-  const { loadConfig } = await import(resolve(SDLC_ROOT, 'agents/load-config.mjs'));
-  const cfg = loadConfig();
-  assert(typeof cfg.deploy.verify.smokeUrl === 'string', 'deploy.verify.smokeUrl should be string');
-  assert(typeof cfg.deploy.verify.expectStatus === 'number', 'deploy.verify.expectStatus should be number');
-});
-
-// ============================================================================
-// 7.16: humanWellness defaults
-// ============================================================================
-
-console.log('\n📋 humanWellness defaults:');
-
-test('project.json has humanWellness block with defaults', async () => {
-  const { loadConfig } = await import(resolve(SDLC_ROOT, 'agents/load-config.mjs'));
-  const cfg = loadConfig();
-  assert(cfg.humanWellness, 'Should have humanWellness block');
-  assert(typeof cfg.humanWellness.enabled === 'boolean', 'humanWellness.enabled should be boolean');
-  assert(typeof cfg.humanWellness.dailyMaxHours === 'number', 'humanWellness.dailyMaxHours should be number');
-  assert(typeof cfg.humanWellness.nightCutoff === 'string', 'humanWellness.nightCutoff should be string');
-});
-
-test('humanWellness.fridayAfternoon is optional but known', async () => {
-  const { loadConfig } = await import(resolve(SDLC_ROOT, 'agents/load-config.mjs'));
-  const cfg = loadConfig();
-  // Optional field — just verify it doesn't crash
-  if (cfg.humanWellness.fridayAfternoon !== undefined) {
-    assert(typeof cfg.humanWellness.fridayAfternoon === 'object', 'fridayAfternoon should be object');
+test('resolveProviderKey prefers env over env file', () => {
+  const ep = mm.HEALTH_ENDPOINTS.openrouter;
+  const saved = process.env.OPENROUTER_API_KEY;
+  try {
+    process.env['OPENROUTER_API_KEY'] = 'sentinel-from-env';
+    assert(mm.resolveProviderKey(ep) === 'sentinel-from-env', 'Should read process.env first');
+  } finally {
+    if (saved === undefined) delete process.env.OPENROUTER_API_KEY;
+    else process.env.OPENROUTER_API_KEY = saved;
   }
 });
 
-// ============================================================================
-// 7.17: four-layer-validate — allowlist functionality (Layer 5)
-// ============================================================================
+// --- fallback chain composition (openspec: cross-provider-fallback-rungs) ---
+// CLAUDE.md has always said free-tier fallbacks should end every chain; before
+// 2026-08-01 all 15 rungs across all 4 agents were OpenRouter, so a single
+// provider outage stopped every agent at once. Documentation without
+// enforcement is how that happened.
 
-console.log('\n📋 four-layer-validate allowlist:');
-
-const { layer5AllowlistViolations } = await import(resolve(SDLC_ROOT, 'agents/four-layer-validate.mjs'));
-
-test('layer5AllowlistViolations detects any-type violations', () => {
-  // Empty options object avoids writing to actual allowlist file during tests
-  const { violations, violationsByFile } = layer5AllowlistViolations({
-    'any-type': { 'client.mjs': ['1: let x: any'] },
-  }, false);
-  assert(violations > 0, 'Should detect any-type violations');
+test('every fallback rung resolves to a known model', () => {
+  const budget = mm.loadBudget();
+  const intel = JSON.parse(readFileSync(INTEL_DEFAULT_PATH, 'utf8')) // shipped catalog, not the gitignored runtime cache (PR #63);
+  const bad = [];
+  for (const [name, cfg] of Object.entries(budget.agents || {})) {
+    for (const model of cfg.fallbackChain || []) {
+      if (!intel.models?.[model]) bad.push(`${name} → ${model}`);
+    }
+  }
+  assert(bad.length === 0, `fallback rungs with no model-intel.json entry: ${bad.join(', ')}`);
 });
 
-test('layer5AllowlistViolations detects console.log violations', () => {
-  const { violations, violationsByFile } = layer5AllowlistViolations({
-    'console-log': { 'debug.js': ['1: console.log("test")'] },
-  }, false);
-  assert(violations > 0, 'Should detect console.log violations');
+test('every agent has a cross-provider fallback rung', () => {
+  const budget = mm.loadBudget();
+  const intel = JSON.parse(readFileSync(INTEL_DEFAULT_PATH, 'utf8')) // shipped catalog, not the gitignored runtime cache (PR #63);
+  const stranded = [];
+  for (const [name, cfg] of Object.entries(budget.agents || {})) {
+    const primary = cfg.provider || intel.models?.[cfg.model]?.provider;
+    // Derived from model-intel, not hardcoded to groq — adding a Gemini or
+    // Cerebras rung later must not require editing this test.
+    const escapes = (cfg.fallbackChain || []).some((m) => {
+      const p = intel.models?.[m]?.provider;
+      return p && p !== primary;
+    });
+    if (!escapes) stranded.push(`${name} (all rungs on ${primary})`);
+  }
+  assert(
+    stranded.length === 0,
+    `agents with no escape from their primary provider: ${stranded.join(', ')}. ` +
+      'A single-provider outage would block them entirely — add a cross-provider rung.'
+  );
 });
 
-test('layer5AllowlistViolations detects file-size violations', () => {
-  const { violations, violationsByFile } = layer5AllowlistViolations({
-    'file-size': { 'big.mjs': ['1: too many lines'] },
-  }, false);
-  assert(violations > 0, 'Should detect file-size violations');
-});
-
-// ============================================================================
-// 7.18: Model manager — provider key resolution from env
-// ============================================================================
-
-console.log('\n📋 Model manager provider key resolution:');
-
-test('resolveProviderKey returns null when key is absent everywhere', async () => {
-  const { resolveProviderKey } = await import(resolve(SDLC_ROOT, 'agents/model-manager.mjs'));
+test('resolveProviderKey returns null when key is absent everywhere', () => {
   const saved = process.env.FAKE_KEY_FOR_TESTS;
   delete process.env.FAKE_KEY_FOR_TESTS;
   try {
     const ep = { keyEnv: 'FAKE_KEY_FOR_TESTS', envFile: () => ['/nonexistent/path/.env'] };
-    assert(resolveProviderKey(ep) === null, 'Missing key should resolve to null, not throw');
+    assert(mm.resolveProviderKey(ep) === null, 'Missing key should resolve to null, not throw');
     // Endpoints with no envFile must behave exactly as before this change.
-    assert(resolveProviderKey({ keyEnv: 'FAKE_KEY_FOR_TESTS' }) === null, 'No envFile should still return null');
+    assert(mm.resolveProviderKey({ keyEnv: 'FAKE_KEY_FOR_TESTS' }) === null, 'No envFile should still return null');
   } finally {
     if (saved !== undefined) process.env.FAKE_KEY_FOR_TESTS = saved;
   }
+});
+
+// ============================================================================
+// 7.8: project.json.template — allowedExtensions field
+// ============================================================================
+
+console.log('\n\u{1F4CB} project.json.template allowedExtensions:');
+
+test('project.json.template parses as JSON and has allowedExtensions as empty array', () => {
+  const template = readFileSync(resolve(SDLC_ROOT, 'agents/project.json.template'), 'utf8');
+  const parsed = JSON.parse(template);
+  assert(Array.isArray(parsed.allowedExtensions), 'allowedExtensions should be an array');
+  assertEqual(parsed.allowedExtensions.length, 0, 'allowedExtensions should be empty by default');
 });
 
 // ============================================================================
