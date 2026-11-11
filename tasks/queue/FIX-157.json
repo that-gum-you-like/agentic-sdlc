@@ -11,15 +11,16 @@
   "tags": [
     "auto-fix"
   ],
-  "description": "Drain PR #157 (branch `agent/drain/OS-curriculum-v2-conformance-72`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-72 && git checkout agent/drain/OS-curriculum-v2-conformance-72`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-72` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- [major] Scope creep: Added multiple helper functions (buildLineStarts, offsetToLine, countParams, matchBrace, matchParen, nearestOf, skipLiteralOrComment, scanFunctionDecl, scanArrowFn) that were not requested in the task — Remove all helper functions and implement scanFunctionMetrics as a focused export without internal complexity\n- [major] Weakened test coverage: Missing tests for method shorthand, getter/setter accessors, class method shorthand, and async method patterns mentioned in PR description — Add comprehensive tests covering all supported function types as claimed\n- [major] Silent fallback: The scanFunctionDecl function returns null on parsing failures instead of providing clear error information — Return structured errors or ensure robust parsing that doesn't silently fail\n- [minor] Code quality: Multiple nested if statements and complex parsing logic in scanArrowFn function — Simplify arrow function parsing logic for maintainability",
-  "attempts": 2,
-  "status": "pending",
+  "description": "Drain PR #157 (branch `agent/drain/OS-curriculum-v2-conformance-72`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-72 && git checkout agent/drain/OS-curriculum-v2-conformance-72`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-72` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- [major] scope creep: The PR adds a `__filename` import and uses `path.resolve()` for the main module guard check — this is unnecessary complexity beyond the simple `import.meta.url` check pattern established elsewhere in the codebase — Remove the `__filename` import and use `fileURLToPath(import.meta.url) === process.argv[1]` like other modules\n- [major] silent fallback: The `countParams` function uses a simplistic comma-counting approach that fails on nested parentheses, default parameters, and destructuring — this will give incorrect parameter counts for complex function signatures — Replace with a proper token-aware parameter parser or at least handle nested structures correctly\n- [major] fragile parsing: The arrow function name extraction uses unreliable backward scanning that fails with complex expressions and doesn't handle common patterns like `const fn = (x) => {` correctly — This will miss many arrow function names or extract incorrect names — Use a more robust forward-scanning approach or accept that arrow functions often won't have reliable names",
+  "attempts": 3,
+  "status": "blocked",
   "fixFor": {
     "pr": 157,
     "branch": "agent/drain/OS-curriculum-v2-conformance-72",
-    "headSha": "e2707df8aa2c814b37a5976050c9c8e86376629e",
+    "headSha": "963770840e8710039c7e5ae0c27664cea62d9f36",
     "sourceTask": "OS-curriculum-v2-conformance-72",
     "rejectionKind": "llm-rejected"
   },
-  "refreshedAt": "2026-11-09T23:11:48.422Z"
+  "refreshedAt": "2026-11-11T01:20:24.612Z",
+  "blockedReason": "needs-human: PR #157 rejected 3x (llm-rejected) — the drain will not retry it"
 }
