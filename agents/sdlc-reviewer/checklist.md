@@ -1,0 +1,75 @@
+# Review Checklist
+
+Use this checklist before marking any task complete or submitting work for review.
+
+## Code Quality
+
+- [ ] No `any` types — every value has an explicit, meaningful type
+- [ ] No `console.log` left in production code — use a logger or remove debug output
+- [ ] No services over 150 lines, no screens over 200 lines — split large files into focused modules
+- [ ] No commented-out code — delete it; git history preserves it if needed
+- [ ] No magic numbers or strings — extract to named constants
+
+## Return Patterns
+
+- [ ] All functions have explicit return types declared
+- [ ] No implicit `undefined` returns in functions that should return a value
+- [ ] Error paths return or throw consistently — no silent failures
+- [ ] Async functions are awaited at all call sites
+
+## Test Coverage
+
+- [ ] Every new function has at least one test
+- [ ] Every bug fix has a regression test
+- [ ] Tests describe behavior, not implementation details
+- [ ] Test names are readable as plain English sentences
+- [ ] No tests that always pass regardless of code behavior
+
+## Commits
+
+- [ ] Commit message follows `type(scope): description` format
+- [ ] Each commit is atomic — one logical change per commit
+- [ ] No merge commits in feature work — rebase instead
+- [ ] No sensitive values (tokens, passwords, keys) in committed files
+
+## Spec Format Compliance
+
+- [ ] Requirements use REQ-xxx numbering format (REQ-001, REQ-002, etc.)
+- [ ] Each requirement has: Statement, Acceptance Criteria, Dependencies, Complexity, Value
+- [ ] Acceptance criteria are checkbox items (testable conditions)
+- [ ] Complexity is one of S/M/L/XL — nothing marked XL without being split
+- [ ] Dependencies are explicit — no hidden coupling between requirements
+- [ ] Each requirement is atomic — one testable behavior, not multiple bundled
+- [ ] No vague qualifiers ("user-friendly", "fast", "good") — use measurable criteria
+- [ ] Multi-phase work has a roadmap with demo sentences and handoff conditions
+
+## Security Checks
+
+- [ ] No hardcoded secrets, API keys, tokens, or passwords in source code
+- [ ] Input validation on all user-facing entry points — reject unexpected types, lengths, and characters
+- [ ] Error messages do not leak internal paths, stack traces, or connection strings to the user
+- [ ] File paths are sanitised and restricted to allowed directories — no path traversal
+- [ ] HTTP endpoints validate Content-Type and reject unexpected payloads before processing
+- [ ] Database queries use parameterised statements — no string concatenation of user input into SQL/NoSQL
+
+## Simulation
+
+- [ ] Tested with realistic edge cases (empty inputs, maximum-length inputs, null values, concurrent access)
+- [ ] Behaviour verified under failure conditions (network timeouts, disk full, service unavailable)
+- [ ] Fallback paths produce degraded-but-safe output instead of crashing or exposing raw errors
+- [ ] Resource limits applied and tested: max file size, max request body, max concurrent connections
+
+## Field-Proven Guards
+
+- [ ] **Exception normalization** — Approved exceptions MUST be time-boxed with an expiry date or logged as tech debt with a removal plan. One-time approvals MUST NOT become permanent patterns.
+- [ ] **Merge safety** — Run full test suite against the merged state before deploy. Clean git merge != safe merge. TypeScript compilation must succeed on merged output.
+- [ ] **Doc-as-code** — API changes, signature changes, and interface changes require documentation updates in the SAME commit, not as follow-on work.
+- [ ] **Allowlist hygiene** — No new entries added to defeat test allowlists. If a violation is fixed, remove the allowlist entry.
+
+## General
+
+- [ ] The task spec is fully addressed — nothing left half-done
+- [ ] No regressions in existing tests
+- [ ] Memory updated with what changed and why
+
+## Auto-added by pattern-hunt
