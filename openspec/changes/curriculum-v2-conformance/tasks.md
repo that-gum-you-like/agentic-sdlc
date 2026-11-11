@@ -1027,7 +1027,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Complexity: M
   - Notes: Advisory only so existing repo code does not fail npm test; if existing code produces findings, add them to the allowlist in this task.
 
-- [ ] **CV-305**: checklist.md.template: add `Security Checks` and `Simulation` sections; create agents/sdlc-reviewer/checklist.md from it
+- [x] **CV-305**: checklist.md.template: add `Security Checks` and `Simulation` sections; create agents/sdlc-reviewer/checklist.md from it
   - **Priority:** MEDIUM
   - Files: `agents/templates/checklist.md.template, agents/sdlc-reviewer/checklist.md`
   - Spec: CV-REQ-031, CV-REQ-037

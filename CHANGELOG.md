@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-11
+
+- 2026-11-11 #158 feat(checklist): add Security Checks and Simulation sections to checklist.md.template; create sdlc-reviewer/checklist.md (backend)
+
 ## 2026-11-09
 
 - 2026-11-09 #114 feat(queue): add error-source adapters and portfolio errorSources validation (backend)
