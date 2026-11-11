@@ -13,7 +13,7 @@
   ],
   "description": "Drain PR #161 (branch `agent/drain/OS-curriculum-v2-conformance-76`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-76 && git checkout agent/drain/OS-curriculum-v2-conformance-76`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-76` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- [major] Scope creep: The PR adds extensive unrelated functionality to four-layer-validate.mjs (layer5AllowlistViolations function) and numerous unrelated test changes throughout tests/adapter-and-model-manager.test.mjs — the task only asked for documentation of allowedExtensions in project.json.template\n- [major] Test pollution: The PR adds 18+ unrelated test cases covering cost-tracker, notify.mjs, error signatures, load-config, memory scaling, done checklist, deploy pipeline, humanWellness, and provider key resolution — these are outside the scope of the allowedExtensions documentation task\n- [critical] Safety violation: The PR exports a new function layer5AllowlistViolations that appears to be security/validation related but was not part of the requested change and lacks proper review for such functionality",
   "attempts": 2,
-  "status": "pending",
+  "status": "completed",
   "fixFor": {
     "pr": 161,
     "branch": "agent/drain/OS-curriculum-v2-conformance-76",
@@ -21,5 +21,9 @@
     "sourceTask": "OS-curriculum-v2-conformance-76",
     "rejectionKind": "llm-rejected"
   },
-  "refreshedAt": "2026-11-11T17:43:47.272Z"
+  "refreshedAt": "2026-11-11T17:43:47.272Z",
+  "_file": "FIX-161.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-11T18:23:20.180Z"
 }
