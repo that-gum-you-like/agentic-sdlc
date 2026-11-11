@@ -911,7 +911,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Complexity: M
   - Notes: Parameterize the root dir (default config.agentsDir) so the test does not touch real agents.
 
-- [ ] **CV-248**: version-snapshot.mjs restore(date, {memory}): `restore <date> --memory` copies snapshot memory back; refuse a date with no memory snapshot
+- [x] **CV-248**: version-snapshot.mjs restore(date, {memory}): `restore <date> --memory` copies snapshot memory back; refuse a date with no memory snapshot
   - **Priority:** MEDIUM
   - Files: `agents/version-snapshot.mjs, agents/__tests__/version-snapshot.test.mjs`
   - Spec: CV-REQ-072
