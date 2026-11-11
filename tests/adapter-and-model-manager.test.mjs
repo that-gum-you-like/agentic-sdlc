@@ -741,14 +741,15 @@ test('layer5AllowlistViolations detects file-size violations', () => {
 
 console.log('\n📋 Model manager provider key resolution:');
 
-test('resolveProviderKey returns null when key is absent everywhere', () => {
+test('resolveProviderKey returns null when key is absent everywhere', async () => {
+  const { resolveProviderKey } = await import(resolve(SDLC_ROOT, 'agents/model-manager.mjs'));
   const saved = process.env.FAKE_KEY_FOR_TESTS;
   delete process.env.FAKE_KEY_FOR_TESTS;
   try {
     const ep = { keyEnv: 'FAKE_KEY_FOR_TESTS', envFile: () => ['/nonexistent/path/.env'] };
-    assert(mm.resolveProviderKey(ep) === null, 'Missing key should resolve to null, not throw');
+    assert(resolveProviderKey(ep) === null, 'Missing key should resolve to null, not throw');
     // Endpoints with no envFile must behave exactly as before this change.
-    assert(mm.resolveProviderKey({ keyEnv: 'FAKE_KEY_FOR_TESTS' }) === null, 'No envFile should still return null');
+    assert(resolveProviderKey({ keyEnv: 'FAKE_KEY_FOR_TESTS' }) === null, 'No envFile should still return null');
   } finally {
     if (saved !== undefined) process.env.FAKE_KEY_FOR_TESTS = saved;
   }

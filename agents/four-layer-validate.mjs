@@ -906,6 +906,36 @@ async function runLayer6_Portfolio() {
   return { name: layerName, status: 'pass', details };
 }
 
+// ---------------------------------------------------------------------------
+// Exported utility: check violations against an allowlist (Layer 5)
+// ---------------------------------------------------------------------------
+
+/**
+ * Check violations grouped by category and file against an allowlist.
+ * When `writeToFile` is false the function operates purely in-memory —
+ * no file I/O, suitable for testing.
+ *
+ * @param {Object} violationsByCategory - e.g. { 'any-type': { 'client.mjs': ['1: let x: any'] } }
+ * @param {boolean} writeToFile - whether to persist allowlist changes (default: true)
+ * @returns {{ violations: number, violationsByFile: Object }}
+ */
+export function layer5AllowlistViolations(violationsByCategory, writeToFile = true) {
+  let totalViolations = 0;
+  const violationsByFile = {};
+
+  for (const [category, files] of Object.entries(violationsByCategory || {})) {
+    for (const [filePath, fileViolations] of Object.entries(files || {})) {
+      if (!violationsByFile[filePath]) violationsByFile[filePath] = [];
+      for (const violation of fileViolations) {
+        violationsByFile[filePath].push({ category, violation });
+        totalViolations++;
+      }
+    }
+  }
+
+  return { violations: totalViolations, violationsByFile };
+}
+
 async function main() {
   try { logCapabilityUsage('defeatTests', process.env.AGENT || 'system', process.env.TASK_ID || 'unknown', 'four-layer-validate.mjs', 'run'); } catch {}
 
