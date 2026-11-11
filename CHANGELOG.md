@@ -6,6 +6,7 @@
 - 2026-11-11 #150 feat(version-snapshot): snapshot() copies memory/*.json; export memoryFilesFor(agent) (CV-247) (backend)
 - 2026-11-11 #159 feat(version-snapshot): restore --memory copies memory back; refuse no-memory date (CV-248) (backend)
 - 2026-11-11 #160 feat(version-snapshot): snapshot() appends version history entry to changed AGENT.md (CV-251) (backend)
+- 2026-11-11 #161 project.json.template: document allowedExtensions (empty array disables) (backend)
 
 ## 2026-11-09
 

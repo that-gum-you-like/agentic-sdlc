@@ -1050,7 +1050,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-307**: project.json.template: document `allowedExtensions` (empty array disables)
+- [x] **CV-307**: project.json.template: document `allowedExtensions` (empty array disables)
   - **Priority:** MEDIUM
   - Files: `agents/project.json.template`
   - Spec: CV-REQ-032
