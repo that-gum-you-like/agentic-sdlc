@@ -21,7 +21,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { resolve, join } from 'path';
 import { execSync } from 'child_process';
 import { loadConfig } from './load-config.mjs';
-import { triggerNotification, notifyHumanTask, runWellnessCheck } from './notify.mjs';
+import { triggerNotification, triggerNotificationOnce, notifyHumanTask, runWellnessCheck } from './notify.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
 import { loadOrchestrationAdapter } from './adapters/load-adapter.mjs';
 import { pickNextTask } from './lib/next-task.mjs';
@@ -417,7 +417,7 @@ function showStatus(tasks) {
       }
       console.log(`  [${t.id}] ${t.title} → ${getAgentName(t.assignee)} [${perm}]${claimed}${tokens}${staleStr}${escalationStr}`);
       if (stale) {
-        triggerNotification('blocker', `🚫 Task ${t.id} "${t.title}" has a stale claim (${t.claimedBy}, started ${t.claimedAt})`);
+        triggerNotificationOnce(`stale-claim:${t.id}:${t.claimedAt}`, 'blocker', `🚫 Task ${t.id} "${t.title}" has a stale claim (${t.claimedBy}, started ${t.claimedAt})`);
       }
     }
   }
