@@ -559,9 +559,9 @@ test('CC-003 REQ-002: subtask cards are parented to THEIR project\'s change card
   assertEqual(sa[sa.indexOf('--parent') + 1], 't_projA:openspec:alpha');
   assertEqual(sb[sb.indexOf('--parent') + 1], 't_projB:openspec:alpha');
 });
-test('CC-003 REQ-003: a missing path warns (by name) and never aborts the run', () => {
-  assert(rAll.warnings.some((w) => w.includes('projMissing')), `warning names the project: ${rAll.warnings.join(' | ')}`);
-  assertEqual(rAll.warnings.length, 1, 'only the missing-path project warns');
+test('CC-003 REQ-003: a project with no tasks/queue is skipped quietly (recorded, no warning) and never aborts the run', () => {
+  assert(rAll.skipped.some((n) => n.includes('projMissing')), `skipped names the project: ${rAll.skipped.join(' | ')}`);
+  assertEqual(rAll.warnings.length, 0, `no warning for a queue-less project: ${rAll.warnings.join(' | ')}`);
 });
 test('CC-003 REQ-003/REQ-001: disabled project is skipped silently; stray project absent from the portfolio never syncs', () => {
   assert(!rAll.warnings.some((w) => w.includes('projDisabled')), 'disabled project does not warn');

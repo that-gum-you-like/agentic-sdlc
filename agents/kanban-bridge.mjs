@@ -82,9 +82,14 @@ export function mapPriority(p) {
 
 /** Shell out to `hermes kanban`. Fails clean if the binary is missing. */
 export function runKanban(args, { json = false } = {}) {
-  const r = spawnSync('hermes', ['kanban', ...args], { encoding: 'utf8' });
+  // maxBuffer: `kanban list --json` is >1MB on a busy board; Node's 1MB default
+  // kills the child (ENOBUFS, status null) and the sync reported it as a failure.
+  const r = spawnSync(process.env.HERMES_BIN || 'hermes', ['kanban', ...args], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
   if (r.error && r.error.code === 'ENOENT') {
     throw new Error("hermes binary not found on PATH — cannot reach the kanban board");
+  }
+  if (r.error) {
+    throw new Error(`hermes kanban ${args[0]} could not run: ${r.error.code || r.error.message}`);
   }
   if (r.status !== 0) {
     throw new Error(`hermes kanban ${args[0]} failed: ${(r.stderr || r.stdout || '').trim().slice(0, 300)}`);
