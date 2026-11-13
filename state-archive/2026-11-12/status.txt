@@ -1,0 +1,327 @@
+ M agents/command-center-sync.mjs
+ M agents/jony-aive/memory/compost.json
+ M agents/jony-aive/memory/core.json
+ M agents/jony-aive/memory/medium-term.json
+ M agents/kanban-bridge.mjs
+ M agents/sdlc-developer/memory/compost.json
+ M agents/sdlc-developer/memory/core.json
+ M agents/sdlc-developer/memory/long-term.json
+ M agents/sdlc-developer/memory/medium-term.json
+ M agents/sdlc-developer/memory/recent.json
+ M agents/sdlc-documentarian/memory/compost.json
+ M agents/sdlc-documentarian/memory/core.json
+ M agents/sdlc-documentarian/memory/medium-term.json
+ M agents/sdlc-reviewer/memory/compost.json
+ M agents/sdlc-reviewer/memory/core.json
+ M agents/sdlc-reviewer/memory/medium-term.json
+ D tasks/queue/CC-001.json
+ D tasks/queue/CC-002.json
+ D tasks/queue/CC-003.json
+ D tasks/queue/FIX-103.json
+ D tasks/queue/FIX-106.json
+ D tasks/queue/FIX-119.json
+ D tasks/queue/FIX-122.json
+ D tasks/queue/FIX-131.json
+ D tasks/queue/FIX-132.json
+ D tasks/queue/FIX-133.json
+ D tasks/queue/FIX-137.json
+ D tasks/queue/FIX-76.json
+ D tasks/queue/FIX-80.json
+ D tasks/queue/FIX-83.json
+ D tasks/queue/FIX-84.json
+ D tasks/queue/FIX-85.json
+ D tasks/queue/FIX-86.json
+ D tasks/queue/FIX-88.json
+ D tasks/queue/FIX-93.json
+ D tasks/queue/H-001.json
+ D tasks/queue/H-002.json
+ D tasks/queue/H-003.json
+ D tasks/queue/H-004.json
+ D tasks/queue/H-005.json
+ D tasks/queue/H-006.json
+ D tasks/queue/H-007.json
+ D tasks/queue/H-008.json
+ D tasks/queue/OS-business-os-10.json
+ D tasks/queue/OS-business-os-11.json
+ D tasks/queue/OS-business-os-12.json
+ D tasks/queue/OS-business-os-13.json
+ D tasks/queue/OS-business-os-14.json
+ D tasks/queue/OS-business-os-15.json
+ D tasks/queue/OS-business-os-18.json
+ D tasks/queue/OS-business-os-19.json
+ D tasks/queue/OS-business-os-20.json
+ D tasks/queue/OS-business-os-21.json
+ D tasks/queue/OS-business-os-22.json
+ D tasks/queue/OS-business-os-23.json
+ D tasks/queue/OS-business-os-3.json
+ D tasks/queue/OS-business-os-4.json
+ D tasks/queue/OS-business-os-5.json
+ D tasks/queue/OS-business-os-6.json
+ D tasks/queue/OS-business-os-7.json
+ D tasks/queue/OS-business-os-8.json
+ D tasks/queue/OS-business-os-9.json
+ D tasks/queue/OS-curriculum-v2-conformance-1.json
+ D tasks/queue/OS-curriculum-v2-conformance-10.json
+ D tasks/queue/OS-curriculum-v2-conformance-102.json
+ D tasks/queue/OS-curriculum-v2-conformance-103.json
+ D tasks/queue/OS-curriculum-v2-conformance-104.json
+ D tasks/queue/OS-curriculum-v2-conformance-105.json
+ D tasks/queue/OS-curriculum-v2-conformance-106.json
+ D tasks/queue/OS-curriculum-v2-conformance-107.json
+ D tasks/queue/OS-curriculum-v2-conformance-108.json
+ D tasks/queue/OS-curriculum-v2-conformance-109.json
+ D tasks/queue/OS-curriculum-v2-conformance-11.json
+ D tasks/queue/OS-curriculum-v2-conformance-110.json
+ D tasks/queue/OS-curriculum-v2-conformance-111.json
+ M tasks/queue/OS-curriculum-v2-conformance-114.json
+ D tasks/queue/OS-curriculum-v2-conformance-115.json
+ M tasks/queue/OS-curriculum-v2-conformance-117.json
+ M tasks/queue/OS-curriculum-v2-conformance-118.json
+ D tasks/queue/OS-curriculum-v2-conformance-12.json
+ D tasks/queue/OS-curriculum-v2-conformance-125.json
+ D tasks/queue/OS-curriculum-v2-conformance-126.json
+ D tasks/queue/OS-curriculum-v2-conformance-127.json
+ D tasks/queue/OS-curriculum-v2-conformance-128.json
+ D tasks/queue/OS-curriculum-v2-conformance-13.json
+ D tasks/queue/OS-curriculum-v2-conformance-130.json
+ D tasks/queue/OS-curriculum-v2-conformance-132.json
+ M tasks/queue/OS-curriculum-v2-conformance-133.json
+ D tasks/queue/OS-curriculum-v2-conformance-14.json
+ D tasks/queue/OS-curriculum-v2-conformance-15.json
+ D tasks/queue/OS-curriculum-v2-conformance-16.json
+ D tasks/queue/OS-curriculum-v2-conformance-17.json
+ D tasks/queue/OS-curriculum-v2-conformance-18.json
+ D tasks/queue/OS-curriculum-v2-conformance-19.json
+ D tasks/queue/OS-curriculum-v2-conformance-2.json
+ D tasks/queue/OS-curriculum-v2-conformance-20.json
+ D tasks/queue/OS-curriculum-v2-conformance-21.json
+ D tasks/queue/OS-curriculum-v2-conformance-22.json
+ D tasks/queue/OS-curriculum-v2-conformance-23.json
+ D tasks/queue/OS-curriculum-v2-conformance-24.json
+ D tasks/queue/OS-curriculum-v2-conformance-25.json
+ D tasks/queue/OS-curriculum-v2-conformance-26.json
+ D tasks/queue/OS-curriculum-v2-conformance-27.json
+ D tasks/queue/OS-curriculum-v2-conformance-28.json
+ D tasks/queue/OS-curriculum-v2-conformance-29.json
+ D tasks/queue/OS-curriculum-v2-conformance-3.json
+ D tasks/queue/OS-curriculum-v2-conformance-30.json
+ D tasks/queue/OS-curriculum-v2-conformance-31.json
+ D tasks/queue/OS-curriculum-v2-conformance-32.json
+ D tasks/queue/OS-curriculum-v2-conformance-33.json
+ D tasks/queue/OS-curriculum-v2-conformance-34.json
+ D tasks/queue/OS-curriculum-v2-conformance-35.json
+ D tasks/queue/OS-curriculum-v2-conformance-36.json
+ D tasks/queue/OS-curriculum-v2-conformance-37.json
+ D tasks/queue/OS-curriculum-v2-conformance-39.json
+ D tasks/queue/OS-curriculum-v2-conformance-4.json
+ D tasks/queue/OS-curriculum-v2-conformance-40.json
+ D tasks/queue/OS-curriculum-v2-conformance-41.json
+ D tasks/queue/OS-curriculum-v2-conformance-42.json
+ D tasks/queue/OS-curriculum-v2-conformance-43.json
+ D tasks/queue/OS-curriculum-v2-conformance-44.json
+ D tasks/queue/OS-curriculum-v2-conformance-45.json
+ D tasks/queue/OS-curriculum-v2-conformance-46.json
+ D tasks/queue/OS-curriculum-v2-conformance-47.json
+ D tasks/queue/OS-curriculum-v2-conformance-48.json
+ D tasks/queue/OS-curriculum-v2-conformance-49.json
+ D tasks/queue/OS-curriculum-v2-conformance-5.json
+ D tasks/queue/OS-curriculum-v2-conformance-50.json
+ D tasks/queue/OS-curriculum-v2-conformance-51.json
+ D tasks/queue/OS-curriculum-v2-conformance-52.json
+ D tasks/queue/OS-curriculum-v2-conformance-53.json
+ D tasks/queue/OS-curriculum-v2-conformance-54.json
+ D tasks/queue/OS-curriculum-v2-conformance-55.json
+ D tasks/queue/OS-curriculum-v2-conformance-56.json
+ D tasks/queue/OS-curriculum-v2-conformance-57.json
+ D tasks/queue/OS-curriculum-v2-conformance-58.json
+ D tasks/queue/OS-curriculum-v2-conformance-59.json
+ D tasks/queue/OS-curriculum-v2-conformance-6.json
+ D tasks/queue/OS-curriculum-v2-conformance-60.json
+ D tasks/queue/OS-curriculum-v2-conformance-61.json
+ M tasks/queue/OS-curriculum-v2-conformance-62.json
+ D tasks/queue/OS-curriculum-v2-conformance-63.json
+ M tasks/queue/OS-curriculum-v2-conformance-64.json
+ D tasks/queue/OS-curriculum-v2-conformance-7.json
+ M tasks/queue/OS-curriculum-v2-conformance-72.json
+ M tasks/queue/OS-curriculum-v2-conformance-74.json
+ D tasks/queue/OS-curriculum-v2-conformance-75.json
+ M tasks/queue/OS-curriculum-v2-conformance-76.json
+ M tasks/queue/OS-curriculum-v2-conformance-77.json
+ D tasks/queue/OS-curriculum-v2-conformance-78.json
+ D tasks/queue/OS-curriculum-v2-conformance-79.json
+ D tasks/queue/OS-curriculum-v2-conformance-8.json
+ D tasks/queue/OS-curriculum-v2-conformance-82.json
+ D tasks/queue/OS-curriculum-v2-conformance-83.json
+ D tasks/queue/OS-curriculum-v2-conformance-84.json
+ D tasks/queue/OS-curriculum-v2-conformance-85.json
+ D tasks/queue/OS-curriculum-v2-conformance-87.json
+ D tasks/queue/OS-curriculum-v2-conformance-89.json
+ D tasks/queue/OS-curriculum-v2-conformance-9.json
+ D tasks/queue/OS-curriculum-v2-conformance-90.json
+ D tasks/queue/OS-curriculum-v2-conformance-92.json
+ D tasks/queue/OS-curriculum-v2-conformance-93.json
+ D tasks/queue/OS-curriculum-v2-conformance-94.json
+ D tasks/queue/OS-curriculum-v2-conformance-95.json
+ D tasks/queue/OS-curriculum-v2-conformance-96.json
+ D tasks/queue/OS-curriculum-v2-conformance-97.json
+ D tasks/queue/OS-curriculum-v2-conformance-98.json
+ D tasks/queue/Q-101.json
+ D tasks/queue/Q-102.json
+ D tasks/queue/Q-103.json
+ D tasks/queue/Q-104.json
+ D tasks/queue/Q-105.json
+?? agents/secrets.mjs
+?? agents/versions/2026-10-08/jony-aive.md
+?? agents/versions/2026-10-08/sdlc-developer.md
+?? agents/versions/2026-10-08/sdlc-documentarian.md
+?? agents/versions/2026-10-08/sdlc-reviewer.md
+?? agents/versions/2026-11-03/jony-aive.md
+?? agents/versions/2026-11-03/sdlc-developer.md
+?? agents/versions/2026-11-03/sdlc-documentarian.md
+?? agents/versions/2026-11-03/sdlc-reviewer.md
+?? tasks/completed/CC-001.json
+?? tasks/completed/CC-002.json
+?? tasks/completed/CC-003.json
+?? tasks/completed/FIX-103.json
+?? tasks/completed/FIX-106.json
+?? tasks/completed/FIX-119.json
+?? tasks/completed/FIX-122.json
+?? tasks/completed/FIX-131.json
+?? tasks/completed/FIX-132.json
+?? tasks/completed/FIX-133.json
+?? tasks/completed/FIX-137.json
+?? tasks/completed/FIX-76.json
+?? tasks/completed/FIX-80.json
+?? tasks/completed/FIX-83.json
+?? tasks/completed/FIX-84.json
+?? tasks/completed/FIX-85.json
+?? tasks/completed/FIX-86.json
+?? tasks/completed/FIX-88.json
+?? tasks/completed/FIX-93.json
+?? tasks/completed/H-001.json
+?? tasks/completed/H-002.json
+?? tasks/completed/H-003.json
+?? tasks/completed/H-004.json
+?? tasks/completed/H-005.json
+?? tasks/completed/H-006.json
+?? tasks/completed/H-007.json
+?? tasks/completed/H-008.json
+?? tasks/completed/OS-business-os-10.json
+?? tasks/completed/OS-business-os-11.json
+?? tasks/completed/OS-business-os-12.json
+?? tasks/completed/OS-business-os-13.json
+?? tasks/completed/OS-business-os-14.json
+?? tasks/completed/OS-business-os-15.json
+?? tasks/completed/OS-business-os-18.json
+?? tasks/completed/OS-business-os-19.json
+?? tasks/completed/OS-business-os-20.json
+?? tasks/completed/OS-business-os-21.json
+?? tasks/completed/OS-business-os-22.json
+?? tasks/completed/OS-business-os-23.json
+?? tasks/completed/OS-business-os-3.json
+?? tasks/completed/OS-business-os-4.json
+?? tasks/completed/OS-business-os-5.json
+?? tasks/completed/OS-business-os-6.json
+?? tasks/completed/OS-business-os-7.json
+?? tasks/completed/OS-business-os-8.json
+?? tasks/completed/OS-business-os-9.json
+?? tasks/completed/OS-curriculum-v2-conformance-1.json
+?? tasks/completed/OS-curriculum-v2-conformance-10.json
+?? tasks/completed/OS-curriculum-v2-conformance-102.json
+?? tasks/completed/OS-curriculum-v2-conformance-103.json
+?? tasks/completed/OS-curriculum-v2-conformance-104.json
+?? tasks/completed/OS-curriculum-v2-conformance-105.json
+?? tasks/completed/OS-curriculum-v2-conformance-106.json
+?? tasks/completed/OS-curriculum-v2-conformance-107.json
+?? tasks/completed/OS-curriculum-v2-conformance-108.json
+?? tasks/completed/OS-curriculum-v2-conformance-109.json
+?? tasks/completed/OS-curriculum-v2-conformance-11.json
+?? tasks/completed/OS-curriculum-v2-conformance-110.json
+?? tasks/completed/OS-curriculum-v2-conformance-111.json
+?? tasks/completed/OS-curriculum-v2-conformance-115.json
+?? tasks/completed/OS-curriculum-v2-conformance-12.json
+?? tasks/completed/OS-curriculum-v2-conformance-125.json
+?? tasks/completed/OS-curriculum-v2-conformance-126.json
+?? tasks/completed/OS-curriculum-v2-conformance-127.json
+?? tasks/completed/OS-curriculum-v2-conformance-128.json
+?? tasks/completed/OS-curriculum-v2-conformance-13.json
+?? tasks/completed/OS-curriculum-v2-conformance-130.json
+?? tasks/completed/OS-curriculum-v2-conformance-132.json
+?? tasks/completed/OS-curriculum-v2-conformance-14.json
+?? tasks/completed/OS-curriculum-v2-conformance-15.json
+?? tasks/completed/OS-curriculum-v2-conformance-16.json
+?? tasks/completed/OS-curriculum-v2-conformance-17.json
+?? tasks/completed/OS-curriculum-v2-conformance-18.json
+?? tasks/completed/OS-curriculum-v2-conformance-19.json
+?? tasks/completed/OS-curriculum-v2-conformance-2.json
+?? tasks/completed/OS-curriculum-v2-conformance-20.json
+?? tasks/completed/OS-curriculum-v2-conformance-21.json
+?? tasks/completed/OS-curriculum-v2-conformance-22.json
+?? tasks/completed/OS-curriculum-v2-conformance-23.json
+?? tasks/completed/OS-curriculum-v2-conformance-24.json
+?? tasks/completed/OS-curriculum-v2-conformance-25.json
+?? tasks/completed/OS-curriculum-v2-conformance-26.json
+?? tasks/completed/OS-curriculum-v2-conformance-27.json
+?? tasks/completed/OS-curriculum-v2-conformance-28.json
+?? tasks/completed/OS-curriculum-v2-conformance-29.json
+?? tasks/completed/OS-curriculum-v2-conformance-3.json
+?? tasks/completed/OS-curriculum-v2-conformance-30.json
+?? tasks/completed/OS-curriculum-v2-conformance-31.json
+?? tasks/completed/OS-curriculum-v2-conformance-32.json
+?? tasks/completed/OS-curriculum-v2-conformance-33.json
+?? tasks/completed/OS-curriculum-v2-conformance-34.json
+?? tasks/completed/OS-curriculum-v2-conformance-35.json
+?? tasks/completed/OS-curriculum-v2-conformance-36.json
+?? tasks/completed/OS-curriculum-v2-conformance-37.json
+?? tasks/completed/OS-curriculum-v2-conformance-39.json
+?? tasks/completed/OS-curriculum-v2-conformance-4.json
+?? tasks/completed/OS-curriculum-v2-conformance-40.json
+?? tasks/completed/OS-curriculum-v2-conformance-41.json
+?? tasks/completed/OS-curriculum-v2-conformance-42.json
+?? tasks/completed/OS-curriculum-v2-conformance-43.json
+?? tasks/completed/OS-curriculum-v2-conformance-44.json
+?? tasks/completed/OS-curriculum-v2-conformance-45.json
+?? tasks/completed/OS-curriculum-v2-conformance-46.json
+?? tasks/completed/OS-curriculum-v2-conformance-47.json
+?? tasks/completed/OS-curriculum-v2-conformance-48.json
+?? tasks/completed/OS-curriculum-v2-conformance-49.json
+?? tasks/completed/OS-curriculum-v2-conformance-5.json
+?? tasks/completed/OS-curriculum-v2-conformance-50.json
+?? tasks/completed/OS-curriculum-v2-conformance-51.json
+?? tasks/completed/OS-curriculum-v2-conformance-52.json
+?? tasks/completed/OS-curriculum-v2-conformance-53.json
+?? tasks/completed/OS-curriculum-v2-conformance-54.json
+?? tasks/completed/OS-curriculum-v2-conformance-55.json
+?? tasks/completed/OS-curriculum-v2-conformance-56.json
+?? tasks/completed/OS-curriculum-v2-conformance-57.json
+?? tasks/completed/OS-curriculum-v2-conformance-58.json
+?? tasks/completed/OS-curriculum-v2-conformance-59.json
+?? tasks/completed/OS-curriculum-v2-conformance-6.json
+?? tasks/completed/OS-curriculum-v2-conformance-60.json
+?? tasks/completed/OS-curriculum-v2-conformance-61.json
+?? tasks/completed/OS-curriculum-v2-conformance-63.json
+?? tasks/completed/OS-curriculum-v2-conformance-7.json
+?? tasks/completed/OS-curriculum-v2-conformance-75.json
+?? tasks/completed/OS-curriculum-v2-conformance-78.json
+?? tasks/completed/OS-curriculum-v2-conformance-79.json
+?? tasks/completed/OS-curriculum-v2-conformance-8.json
+?? tasks/completed/OS-curriculum-v2-conformance-82.json
+?? tasks/completed/OS-curriculum-v2-conformance-83.json
+?? tasks/completed/OS-curriculum-v2-conformance-84.json
+?? tasks/completed/OS-curriculum-v2-conformance-85.json
+?? tasks/completed/OS-curriculum-v2-conformance-87.json
+?? tasks/completed/OS-curriculum-v2-conformance-89.json
+?? tasks/completed/OS-curriculum-v2-conformance-9.json
+?? tasks/completed/OS-curriculum-v2-conformance-90.json
+?? tasks/completed/OS-curriculum-v2-conformance-92.json
+?? tasks/completed/OS-curriculum-v2-conformance-93.json
+?? tasks/completed/OS-curriculum-v2-conformance-94.json
+?? tasks/completed/OS-curriculum-v2-conformance-95.json
+?? tasks/completed/OS-curriculum-v2-conformance-96.json
+?? tasks/completed/OS-curriculum-v2-conformance-97.json
+?? tasks/completed/OS-curriculum-v2-conformance-98.json
+?? tasks/completed/Q-101.json
+?? tasks/completed/Q-102.json
+?? tasks/completed/Q-103.json
+?? tasks/completed/Q-104.json
+?? tasks/completed/Q-105.json
