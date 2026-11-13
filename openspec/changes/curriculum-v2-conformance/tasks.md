@@ -1341,7 +1341,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
   - Parallel: blocked-by CV-406
   - Complexity: M
 
-- [ ] **CV-408**: seed-queue-from-openspec.mjs: export `detectBlockedByCycle(tasks)` (DFS; self-reference, 2-cycles, longer; unknown ids ignored; returns member ids per cycle)
+- [x] **CV-408**: seed-queue-from-openspec.mjs: export `detectBlockedByCycle(tasks)` (DFS; self-reference, 2-cycles, longer; unknown ids ignored; returns member ids per cycle)
   - **Priority:** MEDIUM
   - Files: `agents/seed-queue-from-openspec.mjs, tests/seed-queue-from-openspec.test.mjs`
   - Spec: CV-REQ-054

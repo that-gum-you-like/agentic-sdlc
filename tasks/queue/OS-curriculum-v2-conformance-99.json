@@ -3,7 +3,7 @@
   "title": "seed-queue-from-openspec.mjs: export `detectBlockedByCycle(tasks)` (DFS; self-reference, 2-cycles, longer; unknown ids ignored; returns member ids per cycle)",
   "description": "- [ ] **CV-408**: seed-queue-from-openspec.mjs: export `detectBlockedByCycle(tasks)` (DFS; self-reference, 2-cycles, longer; unknown ids ignored; returns member ids per cycle)\n  - **Priority:** MEDIUM\n  - Files: `agents/seed-queue-from-openspec.mjs, tests/seed-queue-from-openspec.test.mjs`\n  - Spec: CV-REQ-054\n  - Gaps: D4-05\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: A<->B -> [[A,B]]; self-block -> [[A]]; DAG -> []; unknown blockedBy ignored\n  - Parallel: blocked-by CV-208\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-35"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-99.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-13T01:41:51.969Z"
 }
