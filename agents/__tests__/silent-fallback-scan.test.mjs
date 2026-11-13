@@ -166,16 +166,16 @@ describe('four-layer Layer 3 — function metrics advisory (CV-304)', () => {
     }
   }
 
-  it('WARNS on a function over 50 lines with [fn-length] advisory, exit 0', () => {
+  it('reports [fn-length] advisory for a function over 50 lines, exit 0', () => {
     writeFileSync(join(TMP_PROJECT, 'fixture-long.mjs'),
-      'function bigFn(a, b) {\n' + '  const x = 1;\n'.repeat(53) + '}\n');
+      'function bigFn(a, b) {\n' + '  const x = 1;\n'.repeat(55) + '}\n');
     const { code, report } = runValidator('fixture-long.mjs');
     assert.equal(code, 0, 'advisory-only findings must not fail');
     const layer3 = report.layers.find(l => l.name.startsWith('Code'));
     assert.ok(layer3.details.some(d => d.includes('[fn-length]') && d.includes('bigFn')), JSON.stringify(layer3.details));
   });
 
-  it('WARNS on a function with over 4 params with [param-count] advisory, exit 0', () => {
+  it('reports [param-count] advisory for a function with over 4 params, exit 0', () => {
     writeFileSync(join(TMP_PROJECT, 'fixture-params.mjs'),
       'function manyParams(a, b, c, d, e, f) {\n  return a + b + c + d + e + f;\n}\n');
     const { code, report } = runValidator('fixture-params.mjs');
@@ -186,7 +186,7 @@ describe('four-layer Layer 3 — function metrics advisory (CV-304)', () => {
 
   it('allowlisted file produces no [fn-length] or [param-count] advisory', () => {
     writeFileSync(join(TMP_PROJECT, 'fixture-allowlisted.mjs'),
-      'function bigFn(a, b, c, d, e, f) {\n' + '  const x = 1;\n'.repeat(53) + '}\n');
+      'function bigFn(a, b, c, d, e, f) {\n' + '  const x = 1;\n'.repeat(55) + '}\n');
     writeFileSync(join(TMP_PROJECT, 'defeat-allowlist.json'), JSON.stringify({
       'fn-length': ['fixture-allowlisted.mjs'],
       'param-count': ['fixture-allowlisted.mjs'],
@@ -200,7 +200,7 @@ describe('four-layer Layer 3 — function metrics advisory (CV-304)', () => {
 
   it('silent-fallback PLUS advisory still fails with [fn-length] in details', () => {
     writeFileSync(join(TMP_PROJECT, 'mixed.mjs'),
-      'function bigFn(a, b) {\n' + '  const total = computeTotal(x) || 0;\n'.repeat(53) + '}\n');
+      'function bigFn(a, b) {\n' + '  const total = computeTotal(x) || 0;\n'.repeat(55) + '}\n');
     const { code, report } = runValidator('mixed.mjs');
     assert.equal(code, 1, 'blocking issue must still fail');
     const layer3 = report.layers.find(l => l.name.startsWith('Code'));
