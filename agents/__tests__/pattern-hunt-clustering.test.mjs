@@ -10,8 +10,8 @@
 
 import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { readFileSync, existsSync, mkdirSync, rmSync } from 'fs';
+import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
 
@@ -226,5 +226,47 @@ describe('Pattern hunt clustering with real embeddings (requires sentence-transf
     // console.log entries should be more similar to each other than to error handling or file size
     assert.ok(sim01 > sim02, `console.log entries (${sim01.toFixed(3)}) should be more similar than console.log vs error handling (${sim02.toFixed(3)})`);
     assert.ok(sim01 > sim03, `console.log entries (${sim01.toFixed(3)}) should be more similar than console.log vs file size (${sim03.toFixed(3)})`);
+  });
+});
+
+describe('findReviewsDir — sdlc-reviewer preference (CV-322)', () => {
+  let src;
+  before(() => {
+    src = readFileSync(resolve(AGENTS_DIR, 'pattern-hunt.mjs'), 'utf8');
+  });
+
+  it('checks sdlc-reviewer/reviews before iterating agents', () => {
+    assert.ok(src.includes('sdlc-reviewer'));
+    assert.ok(src.includes('for (const agent of config.agents)'));
+  });
+
+  it('returns sdlc-reviewer/reviews when it exists', async () => {
+    const tmpId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const tmpDir = join('/tmp', `pattern-hunt-test-${tmpId}`);
+    const reviewsDir = resolve(tmpDir, 'sdlc-reviewer', 'reviews');
+    mkdirSync(reviewsDir, { recursive: true });
+
+    try {
+      const { findReviewsDir } = await import(resolve(AGENTS_DIR, 'pattern-hunt.mjs'));
+      const result = findReviewsDir(tmpDir);
+      assert.equal(result, reviewsDir);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('falls back to richmond/reviews when no agent has reviews', async () => {
+    const tmpId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const tmpDir = join('/tmp', `pattern-hunt-test-${tmpId}`);
+    const reviewsDir = resolve(tmpDir, 'richmond', 'reviews');
+    mkdirSync(reviewsDir, { recursive: true });
+
+    try {
+      const { findReviewsDir } = await import(resolve(AGENTS_DIR, 'pattern-hunt.mjs'));
+      const result = findReviewsDir(tmpDir);
+      assert.equal(result, reviewsDir);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 });
