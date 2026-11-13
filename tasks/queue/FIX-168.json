@@ -11,14 +11,15 @@
   "tags": [
     "auto-fix"
   ],
-  "description": "Drain PR #168 (branch `agent/drain/OS-curriculum-v2-conformance-73-1794530672`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-73-1794530672 && git checkout agent/drain/OS-curriculum-v2-conformance-73-1794530672`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-73-1794530672` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- [major] scope creep: defeat-allowlist.json includes files that weren't scanned in this task — the PR description says 'pre-populated with all existing repo findings' but this should be done in a separate inventory task, not bundled with the validation logic\n- [major] fragile implementation: four-layer-validate.mjs line 625-642 — the advisory scan runs before TS availability check but uses scanFunctionMetrics which may not exist if TS is unavailable, creating a potential runtime error\n- [minor] inconsistent output: four-layer-validate.mjs line 656-657 — advisory findings are shown with different formatting when TS is unavailable vs available, creating inconsistent user experience",
-  "attempts": 1,
+  "description": "Drain PR #168 (branch `agent/drain/OS-curriculum-v2-conformance-73-1794530672`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-73-1794530672 && git checkout agent/drain/OS-curriculum-v2-conformance-73-1794530672`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-73-1794530672` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- [major] scope creep: agents/four-layer-validate.mjs line 778-783 — advisory findings are being added to the issues list and affecting layer status logic, but the task specifies these should be advisory-only without affecting failure status. The reframe is to keep advisory findings separate from blocking issues and only display them in details without changing the layer status logic.\n- [major] incorrect allowlist handling: agents/four-layer-validate.mjs line 644-653 — the allowlist filtering is being applied twice (before TS block and after), and the shrinkAllowlist call may modify the allowlist file during advisory scans. The reframe is to apply allowlist filtering only once in the proper location and ensure advisory scans don't modify the allowlist.\n- [minor] test fragility: agents/__tests__/silent-fallback-scan.test.mjs line 189-190 — the test uses hardcoded line number expectations that may break if the file changes. The reframe is to use more robust assertions that don't depend on specific line numbers.",
+  "attempts": 2,
   "status": "pending",
   "fixFor": {
     "pr": 168,
     "branch": "agent/drain/OS-curriculum-v2-conformance-73-1794530672",
-    "headSha": "97dcb4c8ef5a22dcc50f034f0993499a19c1310e",
+    "headSha": "56f6853f0c84dfd2197e469bf6f520c3219621f3",
     "sourceTask": "OS-curriculum-v2-conformance-73",
     "rejectionKind": "llm-rejected"
-  }
+  },
+  "refreshedAt": "2026-11-13T00:58:32.110Z"
 }
