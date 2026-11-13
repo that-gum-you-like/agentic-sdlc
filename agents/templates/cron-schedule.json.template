@@ -81,6 +81,13 @@
       "session": "isolated"
     },
     {
+      "name": "memory-publish-weekly",
+      "cron": "45 23 * * 0",
+      "script": "node ~/agentic-sdlc/agents/memory-publish.mjs",
+      "description": "Weekly batched PR exporting runtime agent memory (state dir) to the tracked seeds; scrubbed with pii-scrub + secrets check, never self-merged (runtime-state-isolation)",
+      "session": "isolated"
+    },
+    {
       "name": "doc-sync-daily",
       "cron": "15 6 * * *",
       "script": "node ~/agentic-sdlc/agents/document-sync.mjs",

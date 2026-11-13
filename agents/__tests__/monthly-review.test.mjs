@@ -21,6 +21,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const AGENTS_DIR = resolve(__dirname, '..');
 const SCRIPT = join(AGENTS_DIR, 'cycles', 'monthly-review.mjs');
 const TMP_PROJECT = join(tmpdir(), `sdlc-monthly-test-${process.pid}`);
+const STATE = join(TMP_PROJECT, 'state'); // runtime memory lives here, not in the tracked agents/ seeds
+const STATE_COMPOST = join(STATE, 'memory', 'tester', 'compost.json');
 
 const OLD = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 const RECENT = new Date().toISOString().split('T')[0];
@@ -57,7 +59,7 @@ describe('monthly-review — the executed monthly cycle', () => {
   it('runs all four steps and reports each', () => {
     const out = execFileSync(process.execPath, [SCRIPT, '--dry-run'], {
       encoding: 'utf8', cwd: TMP_PROJECT,
-      env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT },
+      env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT, SDLC_STATE_DIR: STATE },
     });
     assert.match(out, /Behavior audit/);
     assert.match(out, /drift/i);
@@ -72,21 +74,23 @@ describe('monthly-review — the executed monthly cycle', () => {
   it('compost cleanup removes entries past retention (and keeps recent ones)', () => {
     execFileSync(process.execPath, [SCRIPT], {
       encoding: 'utf8', cwd: TMP_PROJECT,
-      env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT },
+      env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT, SDLC_STATE_DIR: STATE },
     });
-    const compost = JSON.parse(readFileSync(join(TMP_PROJECT, 'agents', 'tester', 'memory', 'compost.json'), 'utf8'));
+    const compost = JSON.parse(readFileSync(STATE_COMPOST, 'utf8'));
     assert.deepEqual(compost.entries.map(e => e.id), ['C-new'], 'stale entry removed, recent kept');
+    const seed = JSON.parse(readFileSync(join(TMP_PROJECT, 'agents', 'tester', 'memory', 'compost.json'), 'utf8'));
+    assert.equal(seed.entries.length, 2, 'the tracked seed is never written');
   });
 
   it('dry-run never mutates compost', () => {
-    writeFileSync(join(TMP_PROJECT, 'agents', 'tester', 'memory', 'compost.json'), JSON.stringify({
+    writeFileSync(STATE_COMPOST, JSON.stringify({
       entries: [{ id: 'C-old2', content: 'ancient', date: OLD }],
     }));
     execFileSync(process.execPath, [SCRIPT, '--dry-run'], {
       encoding: 'utf8', cwd: TMP_PROJECT,
-      env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT },
+      env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT, SDLC_STATE_DIR: STATE },
     });
-    const compost = JSON.parse(readFileSync(join(TMP_PROJECT, 'agents', 'tester', 'memory', 'compost.json'), 'utf8'));
+    const compost = JSON.parse(readFileSync(STATE_COMPOST, 'utf8'));
     assert.equal(compost.entries.length, 1, 'dry-run must not delete');
   });
 
@@ -147,7 +151,7 @@ describe('monthly-review — the executed monthly cycle', () => {
 
     const out = execFileSync(process.execPath, [SCRIPT], {
       encoding: 'utf8', cwd: TMP_PROJECT,
-      env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT },
+      env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT, SDLC_STATE_DIR: STATE },
     });
 
     assert.match(out, /Re-record baseline/, 'baseline re-record step must appear in output');
@@ -167,7 +171,7 @@ describe('monthly-review — the executed monthly cycle', () => {
 
     const out = execFileSync(process.execPath, [SCRIPT], {
       encoding: 'utf8', cwd: TMP_PROJECT,
-      env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT },
+      env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT, SDLC_STATE_DIR: STATE },
     });
 
     assert.ok(!out.includes('Re-record baseline'), 'baseline step must be skipped on drift failure');

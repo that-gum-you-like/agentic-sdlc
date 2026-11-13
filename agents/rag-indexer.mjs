@@ -95,14 +95,19 @@ function collectFiles(dir) {
   return results;
 }
 
-/** Find agents/<agent>/memory/ directories under projectDir/agents. */
-function collectMemoryDirs(agentsRoot) {
+/**
+ * Find memory directories to index: per agent, the live state-dir layers when
+ * present, else the tracked seed dir agents/<agent>/memory/.
+ */
+function collectMemoryDirs(agentsRoot, stateDir) {
   const dirs = [];
   if (!existsSync(agentsRoot)) return dirs;
   for (const entry of readdirSync(agentsRoot, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    const memDir = resolve(agentsRoot, entry.name, 'memory');
-    if (existsSync(memDir)) dirs.push(memDir);
+    const live = stateDir && stateDir !== 'legacy' ? resolve(stateDir, 'memory', entry.name) : null;
+    const seed = resolve(agentsRoot, entry.name, 'memory');
+    if (live && existsSync(live)) dirs.push(live);
+    else if (existsSync(seed)) dirs.push(seed);
   }
   return dirs;
 }
@@ -164,7 +169,7 @@ export function runIndexer(opts = {}) {
   const sourceDirs = [
     resolve(projectDir, 'docs'),
     resolve(projectDir, 'openspec'),
-    ...collectMemoryDirs(config.agentsDir),
+    ...collectMemoryDirs(config.agentsDir, config.stateDir),
   ];
 
   const files = sourceDirs.flatMap(collectFiles);

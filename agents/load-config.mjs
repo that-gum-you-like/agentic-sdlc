@@ -19,6 +19,7 @@
 import { readFileSync, existsSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { resolveStateDir, slugifyProject } from './state-dir.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -147,6 +148,9 @@ export function loadConfig() {
     scriptsDir: __dirname,
     // Project-specific agent data lives in the project
     agentsDir: projectAgentsDir,
+    // Runtime state (memory etc.) lives outside the git checkout (RS-REQ-010).
+    // 'legacy' (SDLC_STATE_DIR=legacy) restores in-tree behaviour.
+    stateDir: resolveStateDir(process.env, slugifyProject(raw.name)),
     tasksDir: resolve(raw.projectDir, 'tasks/queue'),
     completedDir: resolve(raw.projectDir, 'tasks/completed'),
     budgetPath: resolve(projectAgentsDir, 'budget.json'),

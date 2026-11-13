@@ -162,6 +162,8 @@ node ~/agentic-sdlc/agents/memory-manager.mjs consolidate <agent>
 node ~/agentic-sdlc/agents/memory-manager.mjs compost <agent> <entry-id>
 ```
 
+Runtime memory lives in the per-project state dir `~/.local/state/sdlc/<project>/` (`SDLC_STATE_DIR` override, `=legacy` rollback), NOT in git: the tracked `agents/*/memory/*.json` are frozen seeds that change only via the weekly `memory-publish` PR (RUNBOOK §15).
+
 Semantic search uses local vector embeddings when `sentence-transformers` is installed (`pip install -r agents/requirements-nlp.txt`); falls back to full recall otherwise.
 
 ## Agent Evolution Protocol

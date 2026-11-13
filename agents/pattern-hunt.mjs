@@ -17,6 +17,7 @@ import { execSync } from 'child_process';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { loadConfig } from './load-config.mjs';
+import { createMemoryStore } from './memory-store.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
 
 // Optional semantic clustering via embeddings
@@ -30,6 +31,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const config = loadConfig();
 const AGENTS_DIR = config.agentsDir;
+// Memory goes through the state dir; the tracked files are seeds (runtime-state-isolation)
+const memStore = createMemoryStore({ stateDir: config.stateDir, agentsDir: AGENTS_DIR, projectDir: config.projectDir });
 const PROJECT_DIR = config.projectDir;
 
 // Find the reviewer agent's reviews directory
@@ -1053,11 +1056,8 @@ function teachAgents(recurringPatterns, dryRun = false) {
     }
 
     for (const agent of responsible) {
-      const memPath = resolve(AGENTS_DIR, agent, 'memory', 'long-term.json');
       let memory = { entries: [] };
-      if (existsSync(memPath)) {
-        try { memory = JSON.parse(readFileSync(memPath, 'utf8')); } catch { memory = { entries: [] }; }
-      }
+      try { memory = memStore.loadMemory(agent, 'long-term'); } catch { memory = { entries: [] }; }
       memory.entries = memory.entries || [];
 
       const alreadyTaught = memory.entries.some(
@@ -1090,17 +1090,14 @@ function teachAgents(recurringPatterns, dryRun = false) {
 
       if (!dryRun) {
         memory.entries.push(entry);
-        writeFileSync(memPath, JSON.stringify(memory, null, 2));
+        memStore.saveMemory(agent, 'long-term', memory);
         try { logCapabilityUsage('memoryRecord', agent, 'pattern-hunt-teach', 'pattern-hunt.mjs', 'teach'); } catch { /* advisory */ }
 
         // Cross-teach: record a learnedFrom entry on other agents sharing a domain
         const peers = findSharedDomainAgents(agent, domains);
         for (const peer of peers) {
-          const peerMemPath = resolve(AGENTS_DIR, peer, 'memory', 'long-term.json');
           let peerMemory = { entries: [] };
-          if (existsSync(peerMemPath)) {
-            try { peerMemory = JSON.parse(readFileSync(peerMemPath, 'utf8')); } catch { peerMemory = { entries: [] }; }
-          }
+          try { peerMemory = memStore.loadMemory(peer, 'long-term'); } catch { peerMemory = { entries: [] }; }
           peerMemory.entries = peerMemory.entries || [];
 
           // Idempotent per (category, learnedFrom) — a rerun adds none
@@ -1127,7 +1124,7 @@ function teachAgents(recurringPatterns, dryRun = false) {
           };
 
           peerMemory.entries.push(crossEntry);
-          writeFileSync(peerMemPath, JSON.stringify(peerMemory, null, 2));
+          memStore.saveMemory(peer, 'long-term', peerMemory);
           try { logCapabilityUsage('memoryRecord', peer, 'pattern-hunt-cross-teach', 'pattern-hunt.mjs', 'teach'); } catch { /* advisory */ }
           details.push({ agent: peer, pattern: pattern.category, action: 'cross-taught', learnedFrom: agent });
         }

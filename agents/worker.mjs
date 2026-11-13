@@ -40,6 +40,7 @@ const CANONICAL_CAPABILITIES = [
 import { loadConfig } from './load-config.mjs';
 import { computeEfficiencyMetrics } from './cost-tracker.mjs';
 import { renderCharacter } from './memory-manager.mjs';
+import { createMemoryStore } from './memory-store.mjs';
 
 let semanticSearch = null;
 try {
@@ -137,15 +138,15 @@ ${JSON.stringify({
 `;
 }
 
+const memoryStore = createMemoryStore({ stateDir: config.stateDir, agentsDir: AGENTS_DIR, projectDir: config.projectDir });
+
 function loadMemory(agentName) {
-  const memDir = resolve(AGENTS_DIR, agentName, 'memory');
   const memories = {};
 
   for (const layer of ['core', 'long-term', 'medium-term', 'recent']) {
-    const path = resolve(memDir, `${layer}.json`);
-    if (existsSync(path)) {
-      memories[layer] = JSON.parse(readFileSync(path, 'utf8'));
-    }
+    // State dir first, tracked seed as read-only fallback (RS-REQ-011)
+    const path = [memoryStore.memoryPath(agentName, layer), memoryStore.seedPath(agentName, layer)].find(existsSync);
+    if (path) memories[layer] = JSON.parse(readFileSync(path, 'utf8'));
   }
 
   return memories;

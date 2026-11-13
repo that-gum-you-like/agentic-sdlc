@@ -11,6 +11,10 @@
 | `agents/seed-queue.mjs` | Initialize task queue from seed-tasks.json template |
 | `agents/review-hook.mjs` | Post-commit review hook (install/run) |
 | `agents/memory-manager.mjs` | 5-layer memory CRUD + maturation tracking |
+| `agents/state-dir.mjs` | Runtime state dir resolver (`SDLC_STATE_DIR`, `legacy` rollback), ownership check |
+| `agents/memory-store.mjs` | Atomic, per-agent-locked memory read/write through the state dir (seed fallback) |
+| `agents/migrate-runtime-state.mjs` | One-shot verified non-destructive copy of memory seeds into the state dir (`--dry-run`) |
+| `agents/memory-publish.mjs` | Weekly scrubbed, never-self-merged PR exporting runtime memory to the tracked seeds |
 | `agents/rem-sleep.mjs` | Automated memory consolidation (+ similarity dedup) |
 | `agents/migrate-memory.mjs` | Memory migration on prompt upgrades |
 | `agents/version-snapshot.mjs` | Agent version snapshots |

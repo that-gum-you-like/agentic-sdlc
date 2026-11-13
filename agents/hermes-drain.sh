@@ -49,6 +49,14 @@ FRAMEWORK_REPO="$(dirname "$SCRIPTS_DIR")"
 REPO="${SDLC_REPO:-$FRAMEWORK_REPO}"
 PROJECT_NAME="$(basename "$REPO")"
 
+# Runtime state dir of the HOST project (runtime-state-isolation RS-REQ-013). Resolved from the
+# host repo's own config, never the clone's, and exported to the worker below so agent memory
+# written from inside the drain clone lands OUTSIDE it and survives the next reset --hard/clean.
+HOST_STATE_DIR="${SDLC_STATE_DIR:-}"
+if [ -z "$HOST_STATE_DIR" ]; then
+  HOST_STATE_DIR="$(SDLC_PROJECT_DIR="$REPO" node --input-type=module -e "import('$SCRIPTS_DIR/load-config.mjs').then(m=>process.stdout.write(m.loadConfig().stateDir||''))" 2>/dev/null || true)"
+fi
+
 DRAIN_HOME="${HERMES_DRAIN_HOME:-/home/bryce/.hermes-drain}"
 DRAIN_CLONE="${SDLC_DRAIN_CLONE:-$HOME/.sdlc-drain-clone-$PROJECT_NAME}"
 
@@ -287,7 +295,7 @@ log "$ready ready task(s) — invoking Hermes drain worker in clone (log: $logfi
 guard_snapshot "$FRAMEWORK_REPO" "$REPO"
 
 ( cd "$DRAIN_CLONE" && HERMES_HOME="$DRAIN_HOME" TERMINAL_ENV=local TERMINAL_CWD="$DRAIN_CLONE" \
-  SDLC_PROJECT_DIR="$DRAIN_CLONE" \
+  SDLC_PROJECT_DIR="$DRAIN_CLONE" SDLC_STATE_DIR="$HOST_STATE_DIR" \
   timeout 3600 hermes -z "$prompt_text" --cli --yolo ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} ) > "$logfile" 2>&1
 rc=$?
 tail -3 "$logfile" 2>/dev/null | sed 's/^/[hermes-drain]   /'

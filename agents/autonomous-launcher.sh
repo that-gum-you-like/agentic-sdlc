@@ -74,7 +74,7 @@ fi
 if [[ -n "$AGENT" ]]; then
   PROMPT="$PROMPT
 4. Read the agent system prompt: agents/$AGENT/AGENT.md
-5. Read agent memory: agents/$AGENT/memory/core.json, agents/$AGENT/memory/recent.json"
+5. Read agent memory: node $SDLC_DIR/agents/memory-manager.mjs recall $AGENT (runtime memory lives in the state dir, not in agents/$AGENT/memory/)"
 fi
 
 PROMPT="$PROMPT

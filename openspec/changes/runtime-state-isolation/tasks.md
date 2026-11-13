@@ -65,58 +65,66 @@ Node stdlib only, zero new dependencies, no OpenAI, no Anthropic API. Tests run 
 
 ### Phase 1: State directory and memory (RS-REQ-010..017)
 
-- [ ] **RS-001**: Write failing tests, then `agents/state-dir.mjs` (`resolveStateDir`, `memoryPath`, `isLegacyMode`, ownership check, 0700 create) and wire `config.stateDir` in `load-config.mjs`
+- [x] **RS-001**: Write failing tests, then `agents/state-dir.mjs` (`resolveStateDir`, `memoryPath`, `isLegacyMode`, ownership check, 0700 create) and wire `config.stateDir` in `load-config.mjs`
   - Files: `agents/state-dir.mjs`, `agents/load-config.mjs`, `tests/state-dir.test.mjs`
   - Spec: RS-REQ-010, RS-REQ-043
   - Tests: `state-dir.test.mjs` "default path has project segment", "legacy mode returns tracked path", "foreign-owned dir refused, nothing written", "env override wins"
   - Lane: hermes | Parallel: yes | Complexity: S
 
-- [ ] **RS-002**: Route `getMemoryPath`/`loadMemory`/`saveMemory` through the resolver with seed fallback, seed-copy-on-first-write, atomic write; move audit append to the state dir
+- [x] **RS-002**: Route `getMemoryPath`/`loadMemory`/`saveMemory` through the resolver with seed fallback, seed-copy-on-first-write, atomic write; move audit append to the state dir
   - Files: `agents/memory-manager.mjs`, `agents/__tests__/memory-state.test.mjs`, `agents/__tests__/memory-audit.test.mjs`
   - Spec: RS-REQ-011
   - Tests: `memory-state.test.mjs` "read falls back to seed", "save never touches seed (git status unchanged)", "truncated write impossible (kill simulation)", "audit failure never fails save"
   - Lane: hermes | Parallel: blocked-by RS-001 | Complexity: M
 
-- [ ] **RS-003**: Per-agent `mkdir` advisory lock around read-modify-write (stale 10 min; timer skips after 5 s, worker retries)
+- [x] **RS-003**: Per-agent `mkdir` advisory lock around read-modify-write (stale 10 min; timer skips after 5 s, worker retries)
   - Files: `agents/memory-manager.mjs`, `agents/__tests__/memory-state.test.mjs`
   - Spec: RS-REQ-012
   - Tests: "two concurrent writers both persist", "stale lock broken", "timer skip is non-fatal"
   - Lane: hermes | Parallel: blocked-by RS-002 | Complexity: M
 
-- [ ] **RS-004**: `migrate-runtime-state.mjs` (copy, sha256 verify, manifest, `--dry-run`, idempotent, pre-snapshot, never deletes seeds)
+- [x] **RS-004**: `migrate-runtime-state.mjs` (copy, sha256 verify, manifest, `--dry-run`, idempotent, pre-snapshot, never deletes seeds)
   - Files: `agents/migrate-runtime-state.mjs`, `tests/migrate-runtime-state.test.mjs`
   - Spec: RS-REQ-015
   - Tests: "20 layers -> 20 matching hashes", "mismatch exits non-zero, no manifest, seeds intact", "second run is a no-op", "newer state never overwritten", "dry-run writes nothing"
   - Lane: hermes | Parallel: blocked-by RS-002 | Complexity: M
 
-- [ ] **RS-005**: `version-snapshot` and `rem-sleep`, `worker`, `rag-indexer` read/write via the resolver; gitignore and untrack `vectors.json`
+- [x] **RS-005**: `version-snapshot` and `rem-sleep`, `worker`, `rag-indexer` read/write via the resolver; gitignore and untrack `vectors.json`
   - Files: `agents/version-snapshot.mjs`, `agents/rem-sleep.mjs`, `agents/worker.mjs`, `agents/rag-indexer.mjs`, `.gitignore`, `agents/__tests__/memory-state.test.mjs`
   - Spec: RS-REQ-014, RS-REQ-017
   - Tests: "restore --memory writes state not seed", "vectors.json recreated outside checkout", "snapshot reads state, writes agents/versions"
   - Lane: hermes | Parallel: blocked-by RS-002 | Complexity: M
 
-- [ ] **RS-006**: `hermes-drain.sh` exports host `SDLC_STATE_DIR` to the worker; `pr-auto-review.mjs` recall uses it
+- [x] **RS-006**: `hermes-drain.sh` exports host `SDLC_STATE_DIR` to the worker; `pr-auto-review.mjs` recall uses it
   - Files: `agents/hermes-drain.sh`, `agents/pr-auto-review.mjs`, `tests/hermes-drain.test.mjs`, `tests/pr-auto-review.test.mjs`
   - Spec: RS-REQ-013, RS-REQ-052
   - Tests: "worker env contains SDLC_STATE_DIR", "clone memory write leaves clone clean", "recall survives clone reset", "reviewer recall reads state dir"
   - Lane: interactive | Parallel: blocked-by RS-002 | Complexity: M
 
-- [ ] **RS-007**: `memory-publish.mjs` (scratch worktree, diff, pii-scrub + secrets check, branch, PR, one-open-PR rule, never merges) and `memory-publish-weekly` schedule entry
+- [x] **RS-007**: `memory-publish.mjs` (scratch worktree, diff, pii-scrub + secrets check, branch, PR, one-open-PR rule, never merges) and `memory-publish-weekly` schedule entry
   - Files: `agents/memory-publish.mjs`, `agents/cron-schedule.json`, `agents/templates/cron-schedule.json.template`, `tests/memory-publish.test.mjs`
   - Spec: RS-REQ-016, RS-REQ-053
   - Tests: "no diff -> no PR", "secret in diff -> refusal, nothing pushed, one alert", "two changed layers -> one PR with exactly two files", "skips when a publish PR is open", "no merge call exists"
   - Lane: interactive (cron-schedule is guardrail surface) | Parallel: blocked-by RS-002 | Complexity: L
 
-- [ ] **RS-008**: Run migration on this host (Bryce session): dry-run, real run, verify manifest, confirm PR #164 lesson present, set `SDLC_STATE_DIR` unit env if a non-default location is wanted (default needs none)
+- [ ] **RS-008** (NOT DONE: operational cutover, run by Bryce; see Implementation notes below): Run migration on this host (Bryce session): dry-run, real run, verify manifest, confirm PR #164 lesson present, set `SDLC_STATE_DIR` unit env if a non-default location is wanted (default needs none)
   - Files: none (operational); results noted in `docs/RUNBOOK.md`
   - Spec: RS-REQ-015
   - Lane: interactive | Parallel: blocked-by RS-004, RS-005, RS-006 | Complexity: S
   - Notes: rollback is `SDLC_STATE_DIR=legacy`; state dir and seeds both retained.
 
-- [ ] **RS-009**: Docs: RUNBOOK section "Where runtime state lives", state-dir layout, publish PR review, rollback
+- [x] **RS-009**: Docs: RUNBOOK section "Where runtime state lives", state-dir layout, publish PR review, rollback
   - Files: `docs/RUNBOOK.md`, `docs/appendix/script-reference.md`, `CLAUDE.md` Memory System section (one line)
   - Spec: RS-REQ-010, RS-REQ-016
   - Lane: hermes | Parallel: blocked-by RS-005 | Complexity: S
+
+### Implementation notes (RS-001..RS-007, RS-009; branch feat/rs-runtime-state)
+
+- RS-002/003 live in a new `agents/memory-store.mjs` (`createMemoryStore`: seed-fallback read, atomic write, per-agent `mkdir` lock, audit) rather than inline in `memory-manager.mjs`, so `rem-sleep`, `worker`, `semantic-index`, `version-snapshot`, `pattern-hunt`, `migrate-memory`, `monthly-review`, `weekly-review` and the migration share one implementation. Tests: `agents/__tests__/memory-state.test.mjs`.
+- RS-004: the "pre-migration snapshot" is written under `<stateDir>/migration/pre-migration-snapshot/` (not tracked `agents/versions/`), so migration leaves `git status` clean. Migration additionally merges the PR #164 `state-archive/*/agent-memory-local-state` entries by id (a higher-layer archive position is a promotion, composted ids stay composted) and fails if any archived sdlc-developer long-term lesson is absent afterwards.
+- RS-005 also routed the other in-tree memory writers (`pattern-hunt` teach, `migrate-memory`, `monthly-review` compost cleanup, `weekly-review` maturation metrics) through the store; without that the checkout would still be dirtied by the weekly/monthly cycles. `autonomous-launcher.sh` prompt now says `memory-manager.mjs recall` instead of reading seed files.
+- RS-007: pii-scrub entities block a publish only for high-risk types (email except `noreply@`, phone, SSN, card, IBAN, bank, passport, licence, crypto, IP); PERSON/LOCATION/DATE are normal memory content. `rem-sleep` locks per layer save (skip-after-5s), not across the whole async consolidation.
+- RS-008 cutover (Bryce): see RUNBOOK section 15.
 
 ### Phase 2: Task archive (RS-REQ-020..022)
 

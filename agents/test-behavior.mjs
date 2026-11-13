@@ -56,6 +56,7 @@ function readAgentMd(agent) {
 }
 
 function readCoreJson(agent) {
+  // Seed is the framework's reviewed baseline; behaviour tests assert against it, not runtime drift
   const path = resolve(AGENTS_DIR, agent, 'memory', 'core.json');
   if (!existsSync(path)) return {};
   return JSON.parse(readFileSync(path, 'utf8'));
