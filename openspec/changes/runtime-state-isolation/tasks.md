@@ -45,19 +45,19 @@ Node stdlib only, zero new dependencies, no OpenAI, no Anthropic API. Tests run 
   - Tests: verified by RS-602 guard (rc 0 on the new config) and RS-603 doctor against the recreated containers
   - Lane: interactive (Bryce session only; outside the repo, guardrail surface) | Parallel: NO, blocks all other tasks | Complexity: M
 
-- [ ] **RS-602**: Config guard: extend `agents/hermes-cron-guard.mjs` or add `agents/hermes-config-guard.mjs`; wire into `health-check.mjs`
+- [x] **RS-602**: Config guard: extend `agents/hermes-cron-guard.mjs` or add `agents/hermes-config-guard.mjs`; wire into `health-check.mjs`
   - Files: `agents/hermes-cron-guard.mjs` or `agents/hermes-config-guard.mjs`, `agents/health-check.mjs`, `tests/hermes-config-guard.test.mjs`
   - Spec: RS-REQ-063, RS-REQ-060, RS-REQ-061
   - Tests: `hermes-config-guard.test.mjs` "flag true + home cwd -> fail", "flag true + dedicated workspace cwd -> pass", "rw volume of live checkout -> fail", "ro volume permitted only when listed", "missing config -> pass with note", "never writes the config", "workspace mount is per project", "mount source is not the live checkout"
   - Lane: interactive | Parallel: blocked-by RS-601 for the live verification, tests can be written first | Complexity: M
 
-- [ ] **RS-603**: `checkout-doctor` inspects running `hermes-*` containers' Mounts for rw home/ancestor/live-checkout; `health-check` alerts once per container-id set
+- [x] **RS-603**: `checkout-doctor` inspects running `hermes-*` containers' Mounts for rw home/ancestor/live-checkout; `health-check` alerts once per container-id set
   - Files: `agents/checkout-doctor.mjs`, `agents/health-check.mjs`, `tests/checkout-doctor.test.mjs`, `tests/health-check.test.mjs`
   - Spec: RS-REQ-064
   - Tests: `checkout-doctor.test.mjs` "rw home mount reported", "dedicated workspace mount clean", "docker missing is a note"; `health-check.test.mjs` "new exposed container alerts once"
   - Lane: hermes | Parallel: blocked-by RS-301 (doctor skeleton) | Complexity: S
 
-- [ ] **RS-604**: Output-via-git check and docs: test that a sandbox write leaves the live checkout status unchanged; RUNBOOK section on the dedicated workspace and how to collect sandbox output (branch/PR, bundle fallback)
+- [x] **RS-604**: Output-via-git check and docs: test that a sandbox write leaves the live checkout status unchanged; RUNBOOK section on the dedicated workspace and how to collect sandbox output (branch/PR, bundle fallback)
   - Files: `tests/hermes-config-guard.test.mjs`, `docs/RUNBOOK.md`
   - Spec: RS-REQ-062
   - Tests: "live checkout status unchanged after sandbox write"

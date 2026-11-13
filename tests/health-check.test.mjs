@@ -287,3 +287,25 @@ test('checkCycles: live-shaped history with no monthly run reports ONLY monthly 
   assert.equal(res.status, 'degraded');
   assert.equal(res.detail, 'process-erosion: monthly never-run');
 });
+
+import { checkHermesContainers, checkHermesSandboxConfig } from '../agents/health-check.mjs';
+
+test('new exposed container alerts once', () => {
+  const sent = [];
+  const seen = new Set();
+  const notify = (key, trigger, msg) => { if (seen.has(key)) return false; seen.add(key); sent.push({ key, trigger, msg }); return true; };
+  const mk = (ids) => ({ home: '/home/t', checkouts: [], run: () => ids.map(id => ({ Id: id.padEnd(64, '0'), Name: `/hermes-${id}`, Mounts: [{ Source: '/home/t', Destination: '/workspace', RW: true }] })) });
+  const a = checkHermesContainers({ mounts: mk(['aaa']), notify });
+  checkHermesContainers({ mounts: mk(['aaa']), notify });
+  assert.equal(a.status, 'down');
+  assert.equal(sent.length, 1);
+  checkHermesContainers({ mounts: mk(['aaa', 'bbb']), notify });
+  assert.equal(sent.length, 2);
+  const clean = checkHermesContainers({ mounts: { run: () => [] }, notify });
+  assert.equal(clean.status, 'ok');
+  assert.equal(sent.length, 2);
+});
+
+test('hermes sandbox config check is down on exposure, ok when config missing', () => {
+  assert.equal(checkHermesSandboxConfig({ configPath: '/nonexistent/c.yaml' }).status, 'ok');
+});

@@ -20,6 +20,9 @@ import { fileURLToPath } from 'url';
 import { loadConfig } from './load-config.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
 import { checkEgress } from './net-doctor.mjs';
+import { checkHermesConfig, FIX as HERMES_CONFIG_FIX } from './hermes-config-guard.mjs';
+import { checkContainerMounts } from './checkout-doctor.mjs';
+import { triggerNotificationOnce } from './notify.mjs';
 
 const QUEUE_DEPTH_WARN = 50;
 const DISK_FREE_DEGRADED_PCT = 15;
@@ -241,6 +244,32 @@ function checkCron() {
   return { name: 'cron', status: 'degraded', detail: 'no OpenClaw cron config or report found (best-effort check)' };
 }
 
+/** RS-REQ-063: Hermes config must not let a sandbox mount the home or a live checkout rw. */
+export function checkHermesSandboxConfig(opts = {}) {
+  let r;
+  try { r = checkHermesConfig(opts); } catch (e) {
+    return { name: 'hermes-config', status: 'degraded', detail: `guard failed to run: ${e.message}` };
+  }
+  if (!r.ok) return { name: 'hermes-config', status: 'down', detail: `${r.failures.map(f => `${f.key}=${f.value}`).join('; ')} — ${HERMES_CONFIG_FIX}` };
+  return { name: 'hermes-config', status: 'ok', detail: r.notes[0] || 'sandbox mounts isolated' };
+}
+
+/**
+ * RS-REQ-064: running hermes-* containers must not mount home/checkouts rw.
+ * Alerts once per exposed container-id set (a new set re-alerts).
+ */
+export function checkHermesContainers({ mounts = {}, notify = triggerNotificationOnce, notifyOpts } = {}) {
+  let r;
+  try { r = checkContainerMounts(mounts); } catch (e) {
+    return { name: 'hermes-containers', status: 'degraded', detail: `doctor failed to run: ${e.message}` };
+  }
+  if (!r.exposed.length) return { name: 'hermes-containers', status: 'ok', detail: r.notes[0] || `${r.containers.length} container(s), mounts clean` };
+  const ids = [...new Set(r.exposed.map(e => e.container))].sort();
+  const detail = `${r.exposed.map(e => `${e.name} mounts ${e.source} rw`).join('; ')} — ${r.exposed[0].fix}`;
+  notify(`hermes-containers-exposed:${ids.join(',')}`, 'blocker', `Hermes sandbox exposed: ${detail}`, notifyOpts);
+  return { name: 'hermes-containers', status: 'down', detail };
+}
+
 /**
  * Outbound egress to the LLM provider and the notification channel.
  *
@@ -301,6 +330,8 @@ export async function runHealthCheck(opts = {}) {
     egress = () => checkEgress({ timeoutMs: EGRESS_TIMEOUT_MS }),
     cycleHistory,
     now,
+    hermesConfig = {},
+    hermesContainers = {},
   } = opts;
   const config = loadConfig();
 
@@ -310,6 +341,8 @@ export async function runHealthCheck(opts = {}) {
     checkDisk(config),
     checkCron(config),
     checkCycles(config, cycleHistory, now),
+    checkHermesSandboxConfig(hermesConfig),
+    checkHermesContainers(hermesContainers),
     await checkEgressHealth(egress),
   ];
 
