@@ -180,11 +180,20 @@ export function checkCycles(config, history, now = new Date()) {
   return { name: 'cycles', status: 'ok', detail: 'daily, weekly, monthly within cadence' };
 }
 
-function checkQueue(config) {
+export function checkQueue(config) {
   if (!existsSync(config.tasksDir)) {
     return { name: 'queue', status: 'ok', detail: 'tasks/queue not present (no queue in use)' };
   }
-  const depth = readdirSync(config.tasksDir).filter(f => f.endsWith('.json')).length;
+  // Open work only: finished tasks stay in tasks/queue (status completed/done) and are
+  // stamped archived_at in place (runtime-state-isolation RS-101), so counting every file
+  // would warn forever.
+  const depth = readdirSync(config.tasksDir).filter(f => {
+    if (!f.endsWith('.json')) return false;
+    try {
+      const t = JSON.parse(readFileSync(resolve(config.tasksDir, f), 'utf8'));
+      return !(t.archived_at || t.status === 'completed' || t.status === 'done');
+    } catch { return true; }
+  }).length;
   if (depth > QUEUE_DEPTH_WARN) {
     return { name: 'queue', status: 'degraded', detail: `queue depth ${depth} exceeds ${QUEUE_DEPTH_WARN}` };
   }

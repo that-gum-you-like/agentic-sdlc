@@ -336,3 +336,28 @@ test('clean checkout is ok and silent; foreign state dir counts; doctor crash is
   assert.equal(sent.length, 1);
   assert.equal(checkCheckoutHygiene({ run: () => { throw new Error('boom'); }, notify }).status, 'degraded');
 });
+
+import { checkQueue } from '../agents/health-check.mjs';
+
+test('checkQueue counts only open tasks, not completed/done/archived ones kept in place (RS-101)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'hc-queue-'));
+  try {
+    for (let i = 0; i < 60; i++) writeFileSync(join(dir, `C-${i}.json`), JSON.stringify({ id: `C-${i}`, status: 'completed' }));
+    writeFileSync(join(dir, 'D-1.json'), JSON.stringify({ id: 'D-1', status: 'done' }));
+    writeFileSync(join(dir, 'A-1.json'), JSON.stringify({ id: 'A-1', status: 'pending', archived_at: '2026-11-12' }));
+    writeFileSync(join(dir, 'P-1.json'), JSON.stringify({ id: 'P-1', status: 'pending' }));
+    writeFileSync(join(dir, 'B-1.json'), JSON.stringify({ id: 'B-1', status: 'blocked' }));
+    writeFileSync(join(dir, 'bad.json'), '{not json');
+    const r = checkQueue({ tasksDir: dir });
+    assert.equal(r.status, 'ok');
+    assert.match(r.detail, /queue depth 3\b/); // pending + blocked + unparseable
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('checkQueue still degrades when open tasks exceed the threshold', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'hc-queue-'));
+  try {
+    for (let i = 0; i < 55; i++) writeFileSync(join(dir, `P-${i}.json`), JSON.stringify({ id: `P-${i}`, status: 'pending' }));
+    assert.equal(checkQueue({ tasksDir: dir }).status, 'degraded');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
