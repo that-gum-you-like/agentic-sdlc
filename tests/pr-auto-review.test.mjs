@@ -790,6 +790,37 @@ test('fileFixTask: a FIX task blocked for a human (3rd rejection) queues the PR 
   assert(sent.length === 1, `one notice, got ${sent.length}`);
 });
 
+// --- notify escape under dash (/bin/sh) + merge robustness (2026-11-12) -----
+test('flagged-PR notice survives /bin/sh (dash) intact: backticks, parens, quotes', async () => {
+  const { shellEscapeDq } = await import('../agents/notify.mjs');
+  const text = M.claudeNoticeText({ pr: 157, reasons: ['uses `fn(source)` and $HOME', 'a "q"'] },
+    'feat(validate): add scanFunctionMetrics(source) export `x`');
+  const out = execFileSync('/bin/sh', ['-c', `printf %s "${shellEscapeDq(text)}"`]).toString();
+  assert(out === text, out);
+});
+
+test('mergePr tolerates a post-merge local-branch-delete failure when PR is MERGED', () => {
+  const calls = [];
+  const fake = (args) => {
+    calls.push(args.join(' '));
+    if (args[1] === 'merge') throw new Error('failed to delete local branch');
+    if (args[1] === 'view') return JSON.stringify({ state: 'MERGED', headRefName: 'agent/drain/X-1' });
+    return '';
+  };
+  assert(M.mergePr(9, { gh: fake }) === true);
+  assert(calls.some(c => c.startsWith('api -X DELETE')), calls.join(' | '));
+});
+
+test('mergePr rethrows when the PR is not actually merged', () => {
+  const fake = (args) => {
+    if (args[1] === 'merge') throw new Error('not mergeable');
+    return JSON.stringify({ state: 'OPEN' });
+  };
+  let threw = false;
+  try { M.mergePr(9, { gh: fake }); } catch (e) { threw = /not mergeable/.test(e.message); }
+  assert(threw);
+});
+
 for (const { name, fn } of queued) {
   process.stdout.write(`  ${name} ... `);
   try { await fn(); console.log('OK'); passed++; }
@@ -797,3 +828,4 @@ for (const { name, fn } of queued) {
 }
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) { for (const f of failures) console.log(`  ✗ ${f.name}: ${f.err}`); process.exit(1); }
+

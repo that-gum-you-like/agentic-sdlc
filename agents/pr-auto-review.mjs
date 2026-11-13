@@ -1036,6 +1036,31 @@ export function fileFixTask(pr, headSha, reasons, kind, ctx) {
   }
 }
 
+/**
+ * Squash-merge a PR. `gh pr merge --delete-branch` exits non-zero when the
+ * merge SUCCEEDED but the local branch cannot be deleted (e.g. it is checked
+ * out in another worktree) — observed live 2026-11-12 on PR #163. Treating
+ * that as failure skipped task completion and notification, so verify the
+ * PR state and carry on when it is MERGED; the remote branch is cleaned up
+ * best-effort.
+ */
+export function mergePr(number, deps = {}) {
+  const run_ = deps.gh || gh;
+  try {
+    run_(['pr', 'merge', String(number), '--squash', '--delete-branch'], { timeout: 180_000 });
+    return true;
+  } catch (err) {
+    let state = '';
+    try { state = JSON.parse(run_(['pr', 'view', String(number), '--json', 'state,headRefName'])).state; } catch { /* fall through */ }
+    if (state !== 'MERGED') throw err;
+    try {
+      const head = JSON.parse(run_(['pr', 'view', String(number), '--json', 'headRefName'])).headRefName;
+      run_(['api', '-X', 'DELETE', `repos/{owner}/{repo}/git/refs/heads/${head}`]);
+    } catch { /* branch already gone or undeletable — harmless */ }
+    return true;
+  }
+}
+
 export async function reviewPr(pr, ctx) {
   const { repoDir, log, dryRun } = ctx;
   // Test seams (default to the real gh/git implementations).
@@ -1158,7 +1183,7 @@ export async function reviewPr(pr, ctx) {
     record.action = 'would-merge';
     return record;
   }
-  gh(['pr', 'merge', String(pr.number), '--squash', '--delete-branch'], { timeout: 180_000 });
+  mergePr(pr.number);
   {
     const changelog = {
       date: new Date().toISOString().slice(0, 10),
