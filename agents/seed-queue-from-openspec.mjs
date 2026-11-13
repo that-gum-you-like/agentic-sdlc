@@ -631,6 +631,79 @@ function goalSafetyFindings(task = {}) {
   return findings;
 }
 
+/**
+ * Detect cycles in task blockedBy dependencies using DFS.
+ *
+ * Builds an adjacency map from task `blockedBy` arrays, ignoring references to
+ * ids that are not present in the task list. Performs a DFS with coloring to
+ * find back-edges (cycles), normalises each cycle to a canonical rotation
+ * (smallest id first), and returns the deduplicated cycles sorted by first member.
+ *
+ * @param {Array<{id: string, blockedBy?: string[]}>} tasks — task objects
+ * @returns {string[][]} — array of cycles; each cycle is the member ids in
+ *   dependency-follow order rotated so the smallest id is first. Empty array
+ *   when no cycles exist.
+ */
+export function detectBlockedByCycle(tasks) {
+  const idSet = new Set(tasks.map(t => t.id));
+
+  /** adjacency: task id → its blockedBy ids filtered to those that exist */
+  const adj = new Map();
+  for (const t of tasks) {
+    adj.set(t.id, (t.blockedBy || []).filter(id => idSet.has(id)));
+  }
+
+  const WHITE = 0, GRAY = 1, BLACK = 2;
+  const color = new Map(tasks.map(t => [t.id, WHITE]));
+  const cycles = [];
+
+  function dfs(nodeId, path) {
+    color.set(nodeId, GRAY);
+    path.push(nodeId);
+
+    for (const neighbor of adj.get(nodeId) || []) {
+      const nc = color.get(neighbor);
+      if (nc === GRAY) {
+        // Back edge — cycle found. Slice from the first occurrence of neighbor.
+        const start = path.indexOf(neighbor);
+        cycles.push(path.slice(start));
+      } else if (nc === WHITE) {
+        dfs(neighbor, path);
+      }
+      // BLACK → already fully processed, no cycle.
+    }
+
+    path.pop();
+    color.set(nodeId, BLACK);
+  }
+
+  for (const t of tasks) {
+    if (color.get(t.id) === WHITE) {
+      dfs(t.id, []);
+    }
+  }
+
+  // Normalise each cycle to a canonical rotation (smallest id first), dedup.
+  const seen = new Set();
+  const result = [];
+  for (const cycle of cycles) {
+    // Find index of the minimum element.
+    let minIdx = 0;
+    for (let i = 1; i < cycle.length; i++) {
+      if (cycle[i] < cycle[minIdx]) minIdx = i;
+    }
+    const norm = [...cycle.slice(minIdx), ...cycle.slice(0, minIdx)];
+    const key = norm.join('\x00');
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(norm);
+    }
+  }
+
+  result.sort((a, b) => a[0].localeCompare(b[0]));
+  return result;
+}
+
 export { assignAgent, patternMatches, parseTasksMd, estimateTokens, loadDomains, goalSafetyFindings };
 
 // --- CLI ---
