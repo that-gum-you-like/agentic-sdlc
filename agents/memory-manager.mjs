@@ -15,15 +15,13 @@
  *   node agents/memory-manager.mjs consolidate <agent>
  *   node agents/memory-manager.mjs compost <agent> <entry-id>
  */
-
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createHash } from 'crypto';
 
 import { loadConfig } from './load-config.mjs';
 import { triggerNotification } from './notify.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
+import { createMemoryStore } from './memory-store.mjs';
 
 let semanticIndex = null;
 try {
@@ -49,51 +47,20 @@ function estimateTokens(text) {
   return Math.ceil(text.length / 4);
 }
 
-function getMemoryPath(agent, layer) {
-  return resolve(AGENTS_DIR, agent, 'memory', `${layer}.json`);
-}
+// Runtime memory resolves through the state dir (RS-REQ-010/011); the tracked
+// agents/<agent>/memory/*.json files are frozen seeds (read-only fallback).
+const store = createMemoryStore({
+  stateDir: config.stateDir,
+  agentsDir: AGENTS_DIR,
+  projectDir: config.projectDir,
+});
 
 function loadMemory(agent, layer) {
-  const path = getMemoryPath(agent, layer);
-  if (!existsSync(path)) return layer === 'core' ? {} : { entries: [] };
-  return JSON.parse(readFileSync(path, 'utf8'));
+  return store.loadMemory(agent, layer);
 }
 
 function saveMemory(agent, layer, data) {
-  const path = getMemoryPath(agent, layer);
-  const content = JSON.stringify(data, null, 2);
-
-  // bytesBefore: size of existing file content (0 if not exists)
-  const bytesBefore = existsSync(path) ? readFileSync(path).length : 0;
-
-  // Write the memory file first (primary operation)
-  writeFileSync(path, content);
-
-  // Audit write — MUST NEVER FAIL the save (CV-REQ-072)
-  try {
-    const sha256 = createHash('sha256').update(content, 'utf8').digest('hex');
-    const bytesAfter = content.length;
-    const auditPath = resolve(config.projectDir, 'pm/memory-audit.jsonl');
-
-    // Ensure pm/ directory exists
-    const auditDir = dirname(auditPath);
-    if (!existsSync(auditDir)) {
-      mkdirSync(auditDir, { recursive: true });
-    }
-
-    appendFileSync(auditPath, JSON.stringify({
-      ts: new Date().toISOString(),
-      agent,
-      layer,
-      bytesBefore,
-      bytesAfter,
-      sha256,
-    }) + '\n');
-  } catch {
-    // Audit failure must never fail the memory save
-    // Log a warning for debugging but don't propagate
-    console.error(`  ⚠ Warning: audit log write failed for ${agent}/${layer}`);
-  }
+  return store.saveMemory(agent, layer, data);
 }
 
 /**
@@ -339,6 +306,10 @@ function checkMaturationAdvancement(agent, content) {
 }
 
 function record(agent, layer, content) {
+  return store.withAgentLock(agent, () => _record(agent, layer, content));
+}
+
+function _record(agent, layer, content) {
   if (!AGENTS.includes(agent)) {
     console.error(`Unknown agent: ${agent}`);
     process.exit(1);
@@ -397,6 +368,10 @@ function record(agent, layer, content) {
 }
 
 function consolidate(agent) {
+  return store.withAgentLock(agent, () => _consolidate(agent));
+}
+
+function _consolidate(agent) {
   if (!AGENTS.includes(agent)) {
     console.error(`Unknown agent: ${agent}`);
     process.exit(1);
@@ -446,6 +421,10 @@ function consolidate(agent) {
 }
 
 function compostEntry(agent, entryId) {
+  return store.withAgentLock(agent, () => _compostEntry(agent, entryId));
+}
+
+function _compostEntry(agent, entryId) {
   if (!AGENTS.includes(agent)) {
     console.error(`Unknown agent: ${agent}`);
     process.exit(1);

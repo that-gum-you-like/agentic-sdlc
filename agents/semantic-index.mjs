@@ -20,12 +20,14 @@ import { execSync } from 'child_process';
 
 import { loadConfig } from './load-config.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
+import { createMemoryStore } from './memory-store.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const config = loadConfig();
 const AGENTS_DIR = config.agentsDir;
+const store = createMemoryStore({ stateDir: config.stateDir, agentsDir: AGENTS_DIR, projectDir: config.projectDir });
 const EMBED_SCRIPT = resolve(__dirname, 'embed.py');
 const VENV_PYTHON = resolve(__dirname, '..', '.venv', 'bin', 'python3');
 
@@ -52,7 +54,8 @@ function pythonAvailable() {
 }
 
 function getVectorsPath(agent) {
-  return resolve(AGENTS_DIR, agent, 'memory', 'vectors.json');
+  // Derived artifact: lives in the state dir, never in the checkout (RS-REQ-017)
+  return store.memoryPath(agent, 'vectors');
 }
 
 function loadVectors(agent) {
@@ -69,9 +72,7 @@ function saveVectors(agent, vectors) {
 }
 
 function loadMemory(agent, layer) {
-  const path = resolve(AGENTS_DIR, agent, 'memory', `${layer}.json`);
-  if (!existsSync(path)) return layer === 'core' ? {} : { entries: [] };
-  return JSON.parse(readFileSync(path, 'utf8'));
+  return store.loadMemory(agent, layer);
 }
 
 // Locally-cached model only — no HF Hub network calls (privacy-first).

@@ -13,6 +13,8 @@ import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 import { loadConfig } from './load-config.mjs';
+import { writeAtomic } from './memory-store.mjs';
+import { memoryDir, LEGACY } from './state-dir.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -30,12 +32,21 @@ const VERSIONS_DIR = resolve(AGENTS_DIR, 'versions');
  * @param {string} agentsDir - Root agents directory
  * @returns {string[]} Sorted list of .json filenames
  */
-function memoryFilesFor(agent, agentsDir) {
-  const memoryDir = resolve(agentsDir, agent, 'memory');
-  if (!existsSync(memoryDir)) return [];
-  return readdirSync(memoryDir)
-    .filter(f => f.endsWith('.json'))
-    .sort();
+function memoryFilesFor(agent, agentsDir, stateDir = LEGACY) {
+  const list = dir => (existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')) : []);
+  const seeds = list(resolve(agentsDir, agent, 'memory'));
+  // Live memory is in the state dir (derived vectors.json is never snapshotted from there)
+  const live = stateDir === LEGACY ? [] : list(memoryDir(agent, { stateDir, agentsDir })).filter(f => f !== 'vectors.json');
+  return [...new Set([...seeds, ...live])].sort();
+}
+
+/**
+ * Where live memory is read/written. An explicit agentsDir (tests, tools) without
+ * an explicit stateDir means "that directory is the whole world": legacy layout.
+ */
+function resolveStateOpt(opts) {
+  if (opts.stateDir) return opts.stateDir;
+  return opts.agentsDir ? LEGACY : config.stateDir;
 }
 
 /**
@@ -145,6 +156,7 @@ function appendVersionHistoryEntry(agent, agentsDir, prevSnapshotDir, date) {
 function snapshot(opts = {}) {
   const agents = (opts.agents && opts.agents.length > 0) ? opts.agents : AGENTS;
   const agentsDir = opts.agentsDir || AGENTS_DIR;
+  const stateDir = resolveStateOpt(opts);
   const versionsDir = resolve(agentsDir, 'versions');
 
   const date = new Date().toISOString().split('T')[0];
@@ -176,12 +188,13 @@ function snapshot(opts = {}) {
 
   // Copy memory/*.json files
   for (const agent of agents) {
-    const memFiles = memoryFilesFor(agent, agentsDir);
+    const memFiles = memoryFilesFor(agent, agentsDir, stateDir);
     if (memFiles.length > 0) {
       const memSnapshotDir = join(snapshotDir, 'memory', agent);
       if (!existsSync(memSnapshotDir)) mkdirSync(memSnapshotDir, { recursive: true });
       for (const memFile of memFiles) {
-        const src = resolve(agentsDir, agent, 'memory', memFile);
+        const stateSrc = stateDir === LEGACY ? null : join(memoryDir(agent, { stateDir, agentsDir }), memFile);
+        const src = stateSrc && existsSync(stateSrc) ? stateSrc : resolve(agentsDir, agent, 'memory', memFile);
         const dest = join(memSnapshotDir, memFile);
         copyFileSync(src, dest);
         console.log(`  📸 ${agent}/memory/${memFile} → versions/${date}/memory/${agent}/${memFile}`);
@@ -216,6 +229,7 @@ function list() {
 function restore(date, opts = {}) {
   const agents = (opts.agents && opts.agents.length > 0) ? opts.agents : AGENTS;
   const agentsDir = opts.agentsDir || AGENTS_DIR;
+  const stateDir = resolveStateOpt(opts);
   const versionsDir = resolve(agentsDir, 'versions');
   const snapshotDir = join(versionsDir, date);
 
@@ -256,12 +270,14 @@ function restore(date, opts = {}) {
       const agentMemSrcDir = join(snapshotDir, 'memory', agent);
       if (existsSync(agentMemSrcDir)) {
         const memFiles = readdirSync(agentMemSrcDir).filter(f => f.endsWith('.json'));
-        const destMemDir = resolve(agentsDir, agent, 'memory');
-        if (!existsSync(destMemDir)) mkdirSync(destMemDir, { recursive: true });
+        // Restore writes the STATE dir, never the tracked seed (RS-REQ-014)
+        const destMemDir = memoryDir(agent, { stateDir, agentsDir });
+        if (!existsSync(destMemDir)) mkdirSync(destMemDir, { recursive: true, mode: 0o700 });
         for (const memFile of memFiles) {
           const src = join(agentMemSrcDir, memFile);
           const dest = join(destMemDir, memFile);
-          copyFileSync(src, dest);
+          if (stateDir === LEGACY) copyFileSync(src, dest);
+          else writeAtomic(dest, readFileSync(src));
           console.log(`  🔄 Restored ${agent}/memory/${memFile} from ${date}`);
         }
       }

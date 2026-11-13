@@ -12,7 +12,7 @@
  *   node agents/rem-sleep.mjs --similarity # Also deduplicate near-duplicates by cosine similarity (requires semantic-index)
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { createMemoryStore } from './memory-store.mjs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -41,20 +41,16 @@ const MEDIUM_AGE_DAYS = 30;
 let dryRun = false;
 let useSimilarity = false;
 
-function getMemoryPath(agent, layer) {
-  return resolve(AGENTS_DIR, agent, 'memory', `${layer}.json`);
-}
+const store = createMemoryStore({ stateDir: config.stateDir, agentsDir: AGENTS_DIR, projectDir: config.projectDir });
 
 function loadMemory(agent, layer) {
-  const path = getMemoryPath(agent, layer);
-  if (!existsSync(path)) return { entries: [] };
-  return JSON.parse(readFileSync(path, 'utf8'));
+  return store.loadMemory(agent, layer);
 }
 
 function saveMemory(agent, layer, data) {
   if (dryRun) return;
-  const path = getMemoryPath(agent, layer);
-  writeFileSync(path, JSON.stringify(data, null, 2));
+  // Timer-side writer: skip (non-fatal) if a worker holds the agent lock for >5 s
+  store.saveMemory(agent, layer, data, { lockMode: 'skip' });
 }
 
 function daysSince(dateStr) {

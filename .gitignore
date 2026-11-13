@@ -18,3 +18,6 @@ node_modules/
 package-lock.json
 
 agents/*/reviews/
+
+# Derived memory artifact (rebuilt into the state dir; runtime-state-isolation RS-REQ-017)
+agents/*/memory/vectors.json
