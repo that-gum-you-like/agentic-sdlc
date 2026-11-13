@@ -3,6 +3,8 @@
  * silent-default fallback class (the NaN Fallback Disaster) must be caught
  * by four-layer Layer 3, without needing the TypeScript compiler.
  *
+ * Also covers CV-304: advisory fn-length and param-count via scanFunctionMetrics.
+ *
  * Runs the validator CLI in a subprocess against fixture files.
  *
  * Run with:
@@ -11,7 +13,7 @@
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFileSync, mkdirSync, rmSync } from 'fs';
+import { writeFileSync, mkdirSync, rmSync, existsSync, readFileSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
@@ -94,7 +96,9 @@ describe('four-layer Layer 3 — silent-default fallback scan (curriculum Ph5)',
 
 describe('scanFunctionMetrics (CV-303)', () => {
   let scan;
-  before(async () => { ({ scanFunctionMetrics: scan } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'))); });
+  before(async () => {
+    ({ scanFunctionMetrics: scan } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs')));
+  });
 
   it('importing the module does not run the CLI and exports the scanner', () => {
     assert.equal(typeof scan, 'function');
@@ -135,5 +139,72 @@ describe('scanFunctionMetrics (CV-303)', () => {
 
   it('expression-bodied arrows are not reported', () => {
     assert.deepEqual(scan('const k = (a) => a + 1;\n'), []);
+  });
+});
+
+describe('Layer 3 advisory — fn-length and param-count via scanFunctionMetrics (CV-304)', () => {
+  before(() => {
+    mkdirSync(join(TMP_PROJECT, 'agents'), { recursive: true });
+    writeFileSync(join(TMP_PROJECT, 'agents', 'project.json'), JSON.stringify({
+      name: 'metrics-fixture', projectDir: TMP_PROJECT, appDir: '.', testCmd: 'true',
+      agents: ['tester'],
+    }));
+  });
+
+  after(() => {
+    rmSync(TMP_PROJECT, { recursive: true, force: true });
+  });
+
+  it('60-line function yields an advisory [fn-length] warning and exit 0', () => {
+    const lines = [];
+    for (let i = 0; i < 58; i++) lines.push('  const x = 1;');
+    writeFileSync(join(TMP_PROJECT, 'long-fn.mjs'),
+      'export function big(a, b) {\n' + lines.join('\n') + '\n}\n');
+    const { code, report } = runValidator('long-fn.mjs');
+    assert.equal(code, 0, 'advisory findings must not change exit code');
+    const layer3 = report.layers.find(l => l.name.startsWith('Code'));
+    assert.ok(layer3.details.some(d => d.includes('[fn-length]') && d.includes('long-fn.mjs')), JSON.stringify(layer3.details));
+  });
+
+  it('function with 5 params yields an advisory [param-count] warning and exit 0', () => {
+    writeFileSync(join(TMP_PROJECT, 'many-params.mjs'),
+      'export function tooMany(a, b, c, d, e) {\n  return a + b + c + d + e;\n}\n');
+    const { code, report } = runValidator('many-params.mjs');
+    assert.equal(code, 0, 'advisory findings must not change exit code');
+    const layer3 = report.layers.find(l => l.name.startsWith('Code'));
+    assert.ok(layer3.details.some(d => d.includes('[param-count]') && d.includes('many-params.mjs')), JSON.stringify(layer3.details));
+  });
+
+  it('hard failure still exits 1 even alongside advisory findings', () => {
+    // Build a file with both a long function and a silent-fallback bug
+    const lines = [];
+    for (let i = 0; i < 58; i++) lines.push('  const x = 1;');
+    writeFileSync(join(TMP_PROJECT, 'hybrid.mjs'),
+      'export function big(a, b) {\n' + lines.join('\n') + '\n' +
+      '  const total = computeTotal(a, b) || 0;\n}\n');
+    const { code, report } = runValidator('hybrid.mjs');
+    assert.equal(code, 1, 'hard failure (silent-fallback) must still cause non-zero exit');
+    const layer3 = report.layers.find(l => l.name.startsWith('Code'));
+    assert.ok(layer3.details.some(d => d.includes('[fn-length]')), JSON.stringify(layer3.details));
+  });
+
+  it('advisory findings pass overall validation even with allowlist file', () => {
+    const lines = [];
+    for (let i = 0; i < 58; i++) lines.push('  const x = 1;');
+    writeFileSync(join(TMP_PROJECT, 'allowlisted.mjs'),
+      'export function big(a, b) {\n' + lines.join('\n') + '\n}\n');
+    writeFileSync(join(TMP_PROJECT, 'defeat-allowlist.json'), JSON.stringify({
+      'fn-length': ['allowlisted.mjs'],
+      'param-count': [],
+    }));
+    const out = execFileSync(process.execPath, [VALIDATOR, '--files', 'allowlisted.mjs', '--json',
+      '--allowlist', join(TMP_PROJECT, 'defeat-allowlist.json')], {
+      encoding: 'utf8',
+      cwd: TMP_PROJECT,
+      env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT },
+    });
+    const report = JSON.parse(out);
+    // Advisory-only findings never fail the build
+    assert.equal(report.passed, true);
   });
 });

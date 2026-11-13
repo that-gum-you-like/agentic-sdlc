@@ -612,13 +612,58 @@ async function runLayer3(targetFiles) {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Advisory: function length and parameter count via scanFunctionMetrics
+  // ---------------------------------------------------------------------------
+  const advisoryIssues = [];
+  const advSourceFiles = targetFiles.filter(
+    (f) => !isTestFile(f) && /\.(ts|tsx|mjs|js|jsx)$/.test(f) && fs.existsSync(f),
+  );
+  for (const filePath of advSourceFiles) {
+    const relPath = rel(filePath);
+    const content = fs.readFileSync(filePath, 'utf8');
+    const metrics = scanFunctionMetrics(content);
+    for (const m of metrics) {
+      if (m.lines > 50) {
+        advisoryIssues.push(`[fn-length] ${relPath}:${m.startLine} - function '${m.name}' is ${m.lines} lines (advisory limit: 50)`);
+      }
+      if (m.params > 4) {
+        advisoryIssues.push(`[param-count] ${relPath}:${m.startLine} - function '${m.name}' has ${m.params} parameters (advisory limit: 4)`);
+      }
+    }
+  }
+
+  // Apply allowlist filtering to advisory findings
+  let advisoryWarnings = [];
+  if (allowlist && advisoryIssues.length > 0) {
+    for (const category of ['fn-length', 'param-count']) {
+      const catViolations = advisoryIssues.filter(v => v.startsWith(`[${category}]`));
+      const { newViolations, fixedEntries } = applyAllowlist(catViolations, category);
+      advisoryWarnings.push(...newViolations);
+      shrinkAllowlist(category, fixedEntries);
+    }
+    // Non-categorized (shouldn't happen but just in case)
+    const categorized = advisoryWarnings;
+    const uncategorized = advisoryIssues.filter(v => !categorized.some(c => c === v));
+    advisoryWarnings.push(...uncategorized);
+  } else {
+    advisoryWarnings = advisoryIssues;
+  }
+
   let ts;
   try {
     const requireFn = createRequire(import.meta.url);
     ts = requireFn(path.join(LINGUAFLOW_ROOT, 'node_modules', 'typescript'));
   } catch (e) {
     if (issues.length > 0) {
-      return { name: layerName, status: 'fail', details: issues };
+      return { name: layerName, status: 'fail', details: [...advisoryWarnings, ...issues] };
+    }
+    if (advisoryWarnings.length > 0) {
+      return {
+        name: layerName,
+        status: 'warn',
+        details: [`TypeScript compiler not available for AST analysis: ${e.message}`, ...advisoryWarnings],
+      };
     }
     return {
       name: layerName,
@@ -727,7 +772,18 @@ async function runLayer3(targetFiles) {
   }
 
   if (issues.length > 0) {
-    return { name: layerName, status: 'fail', details: issues };
+    return { name: layerName, status: 'fail', details: [...advisoryWarnings, ...issues] };
+  }
+
+  if (advisoryWarnings.length > 0) {
+    return {
+      name: layerName,
+      status: 'warn',
+      details: [
+        `AST-analysed ${productionFiles.length} production file(s) — ${advisoryWarnings.length} advisory finding(s)`,
+        ...advisoryWarnings,
+      ],
+    };
   }
 
   return {
