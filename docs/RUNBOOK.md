@@ -398,3 +398,12 @@ To verify nothing is stuck:
 ```bash
 node agents/pr-auto-review.mjs list-flagged   # should be empty
 ```
+
+## 13. Hermes sandbox isolation (runtime-state-isolation RS-601..604)
+
+Hermes Docker sandboxes must never mount `/home/bryce`, an ancestor, or a live checkout read-write (a root-run container once did, and left root-owned files in `~/agentic-sdlc`).
+
+- **Config**: `~/.hermes/config.yaml` has `terminal.docker_mount_cwd_to_workspace: false`. With that, `/workspace` in a sandbox is `~/.hermes/sandboxes/docker/<name>/workspace`, a dedicated directory, not the live tree.
+- **Guard**: `node agents/hermes-config-guard.mjs [config.yaml] [--cwd dir]` exits 1 naming the offending key, value and fix (flag true with cwd at home/checkout, or an rw `docker_volumes` entry of home/a checkout). Read-only; a missing config passes with a note. Runs in `health-check.mjs` as `hermes-config` (down on exposure).
+- **Doctor**: `node agents/checkout-doctor.mjs [--json]` inspects running `hermes-*` containers' Mounts for rw home/ancestor/checkout. `health-check.mjs` reports it as `hermes-containers` and alerts once per exposed container-id set. Fix: stop and recreate the container after correcting the config. Docker unavailable or no containers is a note.
+- **Collecting sandbox output**: work leaves a sandbox only through git. Push a feature branch and open a PR from inside the sandbox. For unpushed work use the bundle fallback: `git -C <sandbox workspace> bundle create /tmp/out.bundle <branch>`, then `git fetch /tmp/out.bundle <branch>` in a worktree and `chown` the files to the human user. Never copy files into a live checkout. The live checkout's `git status --porcelain` must be unchanged by sandbox activity (covered by `tests/hermes-config-guard.test.mjs`).
