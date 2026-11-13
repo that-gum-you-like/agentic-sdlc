@@ -36,13 +36,19 @@ const memStore = createMemoryStore({ stateDir: config.stateDir, agentsDir: AGENT
 const PROJECT_DIR = config.projectDir;
 
 // Find the reviewer agent's reviews directory
-function findReviewsDir() {
+function findReviewsDir(agentsDir = null) {
+  const baseDir = agentsDir || AGENTS_DIR;
+
+  // Prefer sdlc-reviewer when it exists (CV-322)
+  const sdlcReviewerPath = resolve(baseDir, 'sdlc-reviewer', 'reviews');
+  if (existsSync(sdlcReviewerPath)) return sdlcReviewerPath;
+
   for (const agent of config.agents) {
-    const reviewsPath = resolve(AGENTS_DIR, agent, 'reviews');
+    const reviewsPath = resolve(baseDir, agent, 'reviews');
     if (existsSync(reviewsPath)) return reviewsPath;
   }
   // Fallback to richmond (common name)
-  return resolve(AGENTS_DIR, 'richmond', 'reviews');
+  return resolve(baseDir, 'richmond', 'reviews');
 }
 const REVIEWS_DIR = findReviewsDir();
 const RECURRENCE_THRESHOLD = 3;
