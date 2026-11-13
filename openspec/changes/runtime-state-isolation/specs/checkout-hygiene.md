@@ -66,4 +66,4 @@ Prefix `RS` (see `openspec/REQUIREMENT-PREFIXES.md`). Scenarios are Given/When/T
 
 ## Out of Scope
 
-- Finding out how root gained a write path (open question 1); disposing of `agents/secrets.mjs` (separate change).
+- Disposing of `agents/secrets.mjs` (separate change). How root gained a write path is settled (Hermes Docker home mount); the fix is `specs/sandbox-isolation.md`.

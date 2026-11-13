@@ -2,7 +2,7 @@
 
 **Date**: 2026-11-12
 **Author**: Claude with Bryce
-**Status**: proposed
+**Status**: proposed (decisions finalised 2026-11-12)
 
 ---
 
@@ -30,13 +30,12 @@ therefore permanently dirty, and every safety mechanism that assumes a clean tre
    *Correction to the premise that "drains run in the live checkout":* the drain WORKER already runs in a dedicated clone (`hermes-drain.sh:41,160-188`, `~/.sdlc-drain-clone-<project>`) and
    `pr-auto-review.mjs` reviews in a clone (`:674-679`). What runs in the live checkout is everything on the scheduler (`cron-schedule.json` scripts are all `node ~/agentic-sdlc/agents/...`)
    and, in practice, something that ran as root: `agents/secrets.mjs` (`-rwx--x--x root:root`, unreadable by the user, untracked, 2026-11-11 11:24, a VaultWarden resolver whose origin is the unmerged
-   branch `agent/drain/OS-curriculum-v2-conformance-130`) and `tasks/completed/` (root, 2026-11-12 11:28). How root got a write path into the live checkout is **not established** (open question 1).
+   branch `agent/drain/OS-curriculum-v2-conformance-130`) and `tasks/completed/` (root, 2026-11-12 11:28). **Root cause CONFIRMED (2026-11-12):** three running Hermes Docker containers (`hermes-a08d6519`, `hermes-3ea76145`, `hermes-ed0a7fff`) bind-mount `/home/bryce` -> `/workspace` READ-WRITE and run as root (`docker inspect`); `~/.hermes/config.yaml` ~line 72 `docker_mount_cwd_to_workspace: true` plus the `terminal.docker_*` keys produce the mount. Container writes land on the host as root. This also corrects the earlier claim that `/workspace/agentic-sdlc` is a different copy: it IS the live checkout.
 4. **`sdlc-update` has no dirty-tree guard.** `~/.config/systemd/user/sdlc-update.service` is a bare `ExecStart=/usr/bin/git pull --ff-only`. The log it appends to
    (`~/.config/systemd/user/sdlc-crons.log`) ends in git's `Please commit your changes or stash them before you merge. Aborting` (Nov 9, 11, 12 per the investigation), the unit still reports a
    plain failure that nobody reads, and the repo drifted 31 commits behind origin/main. The unit lives outside the repo and outside the `sdlc-sched-*` namespace that `scheduler-install.mjs`
    manages, so nothing in the repo describes or tests it.
-5. **The Docker Hermes cron lane could not see host paths** and was paused 2026-11-12 in favour of the host `sdlc-drain-supervisor` (guard: `agents/hermes-cron-guard.mjs`). That fixed the symptom
-   (spam), not the cause: any process that can write into the live checkout, by any route, dirties it.
+5. **The Docker Hermes sandboxes have root read-write on the human home.** The cron lane was paused 2026-11-12 in favour of the host `sdlc-drain-supervisor` (guard: `agents/hermes-cron-guard.mjs`), which fixed the spam symptom but not the cause: the running containers still mount `/home/bryce` -> `/workspace` rw as root, so any sandboxed agent can write, as root, into the live checkout and every other project. This is the confirmed source of the root-owned paths in symptom 3.
 
 ## Discovery
 
@@ -70,6 +69,7 @@ false-positive class disappears and any change it sees really is trespass.
 | `sdlc-update` failures that go unannounced | 3 of last 4 days | 0 (alerted once per distinct cause per 24h) | `tests/sdlc-update.test.mjs`; `pm/error-signatures`-style ledger |
 | Commits behind origin/main on the live checkout | 31 | <= 5 at any scheduled tick, or one alert outstanding | `checkout-doctor` |
 | Root-owned paths in the live checkout | 2 | 0, and any new one alerts within one tick | `checkout-doctor` |
+| Running hermes containers with the human home mounted rw | 3 | 0 | `checkout-doctor` container check; `hermes-config-guard` |
 | Guard false-positive TRESPASS (rc=97) caused by a non-worker writer | 1 known (2026-11-09) | 0 | `tests/drain-trespass-guard.test.mjs` timer-writer case |
 
 ### Who Benefits
@@ -86,7 +86,7 @@ false-positive class disappears and any change it sees really is trespass.
 
 ### Costs
 
-- **Effort**: M. About 14 tasks. One load-config resolver, one memory-manager/version-snapshot path change, two small new scripts (`sdlc-update.mjs`, `checkout-doctor.mjs`), one migration script, one unit-file change outside the repo, guard test.
+- **Effort**: M. About 18 tasks. One load-config resolver, one memory-manager/version-snapshot path change, two small new scripts (`sdlc-update.mjs`, `checkout-doctor.mjs`), one migration script, one unit-file change outside the repo, guard test.
 - **Risk**: losing or forking agent memory during migration (mitigated: copy-verify-then-flip, seeds kept, one-env-var rollback); a state dir that diverges between hosts (accepted: only one machine runs the timers, per host-primary-box rule); touching `hermes-drain.sh`, `drain-trespass-guard.sh` and `pr-auto-review.mjs` consumers, which are guardrail-surface files and need the interactive lane.
 - **Dependencies**: none external. No new npm dependency; no OpenAI; no Anthropic API; node stdlib only. Systemd unit install touches `~/.config/systemd/user/`, which only Bryce's session may do.
 
@@ -119,6 +119,7 @@ This is new capability (a state-location contract and two new tools), so it take
 - `tasks/completed/` abolition: `archive` stamps `archived_at`, readers count archived-in-queue; one-time restore of the 146 moved files.
 - `agents/sdlc-update.mjs` and a repo-owned unit template; alert via `triggerNotificationOnce`.
 - `agents/checkout-doctor.mjs`; refusal to drain as root in `hermes-drain.sh` and `drain-supervisor.mjs`.
+- Sandbox isolation (RS-REQ-060..064): Hermes config change to a dedicated per-project workspace mount (FIRST task, interactive lane), config guard (`hermes-cron-guard.mjs` extended or `hermes-config-guard.mjs`), and a doctor check of running `hermes-*` containers' Mounts.
 - Trespass guard: keep behaviour, add "no legitimate writer remains" assertion and a regression test for a timer writer.
 
 ### Out of Scope
@@ -128,6 +129,7 @@ This is new capability (a state-location contract and two new tools), so it take
 - Rewriting `agents/secrets.mjs` or deciding whether the VaultWarden resolver lands (separate change; here it is only reported, never touched).
 - A general multi-host state sync. One host runs the timers.
 - Re-enabling the Docker Hermes cron lane.
+- Rootless/userns hardening of the container user beyond workspace ownership mapping.
 
 ---
 
@@ -143,6 +145,17 @@ This is new capability (a state-location contract and two new tools), so it take
 
 ---
 
+## Decisions (final, 2026-11-12)
+
+Bryce has decided every open question; there are none outstanding.
+
+1. **Root write source: FOUND** (Docker bind-mount of the home, see Problem item 3 and symptom 5). Remedy is RS-REQ-060..064.
+2. **State dir** `~/.local/state/sdlc/<project>/` and the **Sunday 23:45 weekly `memory-publish`** are accepted.
+3. **`sdlc-update` is ALERT-ONLY** (no stash, ever).
+4. **PR #164 merged first**; its preserved lessons are on main, so migration RS-004 asserts them from the seed.
+
+---
+
 ## Next Step
 
-If approved: `design.md`, `specs/`, `tasks.md` are drafted alongside this proposal in the same PR. Implementation is NOT started; Bryce reviews the specs first.
+Specs approved by Bryce's delegated decisions (2026-11-12). Implementation starts with RS-601 (the Hermes mount change, interactive lane), which must land before anything else.

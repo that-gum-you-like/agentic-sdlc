@@ -8,7 +8,7 @@
 
 ## Overview
 
-Implements `design.md` and the five specs under `specs/` (prefix `RS`). Authored artifacts only; **nothing here is implemented**, and the change stays readiness `draft` until Bryce approves the specs.
+Implements `design.md` and the six specs under `specs/` (prefix `RS`). Authored artifacts only; **nothing here is implemented**. Specs approved 2026-11-12 (Bryce delegated all decisions); readiness is `approved`. **RS-601 (the Hermes mount change) is the FIRST task and must land before every other task.**
 Node stdlib only, zero new dependencies, no OpenAI, no Anthropic API. Tests run with `node --test <file>` (full: `npm test`). Tasks that touch the guardrail surface (`hermes-drain.sh`,
 `pr-auto-review.mjs`, `cron-schedule.json`, the trespass guard) are `Lane: interactive` so the cheap drain never claims them; the rest are `Lane: hermes`. All timing and ownership inputs are injectable so tests need no root, no systemd, no network.
 
@@ -16,9 +16,9 @@ Node stdlib only, zero new dependencies, no OpenAI, no Anthropic API. Tests run 
 
 ## Prerequisites
 
-- [ ] Bryce approves proposal, design and specs (PR review)
-- [ ] Open questions 1-4 in the PR description answered or defaulted
-- [ ] PR #164 (preserved dirty-tree state) merged or its lesson content confirmed in a seed, so migration RS-004 can assert it
+- [x] Bryce approves proposal, design and specs (decisions delegated 2026-11-12)
+- [x] Open questions 1-4 decided and final: root source found (Docker home mount); state dir + Sunday 23:45 publish accepted; `sdlc-update` alert-only; PR #164 merged first
+- [x] PR #164 (preserved dirty-tree state) merged; lesson content is on main, so migration RS-004 can assert it
 
 ---
 
@@ -26,6 +26,7 @@ Node stdlib only, zero new dependencies, no OpenAI, no Anthropic API. Tests run 
 
 | Work Stream | Lane | Tasks | Parallel With |
 |---|---|---|---|
+| Sandbox isolation | interactive (RS-601..603), hermes (RS-604) | RS-601..RS-604 | FIRST; nothing else starts before RS-601 |
 | State dir + memory | hermes (+ interactive RS-006, RS-007) | RS-001..RS-009 | task archive, update, doctor |
 | Task archive | hermes | RS-101..RS-103 | state dir, update, doctor |
 | Update safety | hermes (+ Bryce for RS-203) | RS-201..RS-203 | all others |
@@ -35,6 +36,32 @@ Node stdlib only, zero new dependencies, no OpenAI, no Anthropic API. Tests run 
 ---
 
 ## Implementation Tasks
+
+### Phase 0: Sandbox isolation (RS-REQ-060..064). DO THIS FIRST
+
+- [ ] **RS-601** (FIRST): Change Hermes so sandboxes no longer mount the home: create `~/.hermes/workspaces/<project>` worktrees, set `docker_mount_cwd_to_workspace: false` and the `terminal.docker_*` volume to mount only that workspace at `/workspace`, stop and recreate `hermes-a08d6519`, `hermes-3ea76145`, `hermes-ed0a7fff`, verify with `docker inspect` that no mount sources `/home/bryce` rw and that a container-written file is human-owned
+  - Files: none in repo (`~/.hermes/config.yaml`, containers); results noted in `docs/RUNBOOK.md`
+  - Spec: RS-REQ-060, RS-REQ-061, RS-REQ-062
+  - Tests: verified by RS-602 guard (rc 0 on the new config) and RS-603 doctor against the recreated containers
+  - Lane: interactive (Bryce session only; outside the repo, guardrail surface) | Parallel: NO, blocks all other tasks | Complexity: M
+
+- [ ] **RS-602**: Config guard: extend `agents/hermes-cron-guard.mjs` or add `agents/hermes-config-guard.mjs`; wire into `health-check.mjs`
+  - Files: `agents/hermes-cron-guard.mjs` or `agents/hermes-config-guard.mjs`, `agents/health-check.mjs`, `tests/hermes-config-guard.test.mjs`
+  - Spec: RS-REQ-063, RS-REQ-060, RS-REQ-061
+  - Tests: `hermes-config-guard.test.mjs` "flag true + home cwd -> fail", "flag true + dedicated workspace cwd -> pass", "rw volume of live checkout -> fail", "ro volume permitted only when listed", "missing config -> pass with note", "never writes the config", "workspace mount is per project", "mount source is not the live checkout"
+  - Lane: interactive | Parallel: blocked-by RS-601 for the live verification, tests can be written first | Complexity: M
+
+- [ ] **RS-603**: `checkout-doctor` inspects running `hermes-*` containers' Mounts for rw home/ancestor/live-checkout; `health-check` alerts once per container-id set
+  - Files: `agents/checkout-doctor.mjs`, `agents/health-check.mjs`, `tests/checkout-doctor.test.mjs`, `tests/health-check.test.mjs`
+  - Spec: RS-REQ-064
+  - Tests: `checkout-doctor.test.mjs` "rw home mount reported", "dedicated workspace mount clean", "docker missing is a note"; `health-check.test.mjs` "new exposed container alerts once"
+  - Lane: hermes | Parallel: blocked-by RS-301 (doctor skeleton) | Complexity: S
+
+- [ ] **RS-604**: Output-via-git check and docs: test that a sandbox write leaves the live checkout status unchanged; RUNBOOK section on the dedicated workspace and how to collect sandbox output (branch/PR, bundle fallback)
+  - Files: `tests/hermes-config-guard.test.mjs`, `docs/RUNBOOK.md`
+  - Spec: RS-REQ-062
+  - Tests: "live checkout status unchanged after sandbox write"
+  - Lane: hermes | Parallel: blocked-by RS-602 | Complexity: S
 
 ### Phase 1: State directory and memory (RS-REQ-010..017)
 
@@ -191,6 +218,6 @@ Node stdlib only, zero new dependencies, no OpenAI, no Anthropic API. Tests run 
 
 ## Notes
 
-- Sequence matters: land RS-001..RS-005 and RS-101 before RS-006/RS-008; the migration (RS-008) is the only step that changes behaviour on this host and is reversible by one env var.
+- Order: RS-601 first (stops the root writes at the source), then RS-602/RS-603/RS-604, then the rest. Within the rest: land RS-001..RS-005 and RS-101 before RS-006/RS-008; the migration (RS-008) is the only step that changes behaviour on this host and is reversible by one env var.
 - Do not touch `agents/secrets.mjs` here; it is reported by the doctor, owned by a separate decision about the VaultWarden resolver.
 - Run drains and tests for this change from a worktree (`agents/worktree.mjs`), never the live checkout.

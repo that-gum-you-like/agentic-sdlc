@@ -116,7 +116,7 @@ Alerts go through `triggerNotificationOnce('sdlc-update:<cause>', 'highSeverityF
 this matches the channel policy in `hermes-drain.sh` ("success is deliberately silent"). Exit code is always 0 unless the script itself crashes, because a non-zero exit is the current failure that nobody reads.
 **Never** stash, reset, checkout, clean or chown in this script.
 
-The unit file lives in `~/.config/systemd/user/` and installing the new `ExecStart` is a Bryce-only step (task RS-013); the repo ships the template and a test asserts the template calls `sdlc-update.mjs`.
+The unit file lives in `~/.config/systemd/user/` and installing the new `ExecStart` is a Bryce-only step (task RS-203); the repo ships the template and a test asserts the template calls `sdlc-update.mjs`.
 
 #### Checkout doctor and no-root rule
 
@@ -126,6 +126,15 @@ The unit file lives in `~/.config/systemd/user/` and installing the new `ExecSta
 dir is owned correctly. It is read-only and prints, for each foreign path, the exact command a human can run (`sudo chown -R bryce:bryce <path>`). `health-check.mjs` calls it and raises the existing non-ok notification path.
 `hermes-drain.sh` and `drain-supervisor.mjs` exit immediately with rc 98 and a one-line message when `id -u` is 0 (the drain has no legitimate reason to be root: the user units already run as the user), notifying once.
 `agents/secrets.mjs` (root, unreadable, untracked) is reported by name as the standing example, not touched.
+
+#### Sandbox isolation (RS-REQ-060..064)
+
+**File(s)**: `~/.hermes/config.yaml` (outside the repo, interactive), `agents/hermes-cron-guard.mjs` (extend) or `agents/hermes-config-guard.mjs` (new), `agents/checkout-doctor.mjs`, `agents/health-check.mjs`
+
+1. Config: set `terminal.docker_mount_cwd_to_workspace: false` and configure the `terminal.docker_*` volume key to mount `~/.hermes/workspaces/<project>:/workspace`. The workspace is a git worktree created with `agents/worktree.mjs` conventions off `origin/<base>`, owned by the human uid (container user mapped so host-side files are not root-owned). Existing containers must be stopped and recreated; mounts are fixed at container creation.
+2. Config guard: parse `~/.hermes/config.yaml` (injectable path), resolve the effective cwd, and fail (rc 1) when `docker_mount_cwd_to_workspace` is true and cwd is the home, an ancestor, or a live checkout, or when any rw volume entry mounts one. Stderr names key, value and fix. Missing file: pass with a note. The guard never edits the file.
+3. Doctor: `docker inspect` the running `hermes-*` containers (injectable runner) and report any `Mounts` entry with `RW: true` whose `Source` is the home, an ancestor, or a live checkout. Docker absent is a note. `health-check.mjs` alerts once per container-id set.
+4. Output path: a sandbox commits on a feature branch inside its worktree; the existing git-bundle extraction (memory: Hermes sandbox extraction) stays valid for that worktree; nothing in a sandbox needs the live checkout path.
 
 #### Guard and review interaction
 
@@ -188,9 +197,9 @@ export function classifyTree({ branch, ahead, behind, dirty, incoming, midOp }) 
 
 **Chosen**: classify, pull only when git itself would succeed, otherwise one deduped alert naming the cause and the colliding paths.
 
-**Considered**: labelled stash-then-pull (proposed in the brief); fail loudly via systemd `OnFailure`.
+**Considered**: labelled stash-then-pull (proposed in the brief; rejected by Bryce); fail loudly via systemd `OnFailure`.
 
-**Rationale**: a stash in a human checkout hides work and is exactly what the standing rule forbids; a labelled stash is still a surprise to whoever opens `git stash list` next week. With runtime state moved out, the dirty cases that remain are the human's own, and the human is the right person to resolve them. The "safe subset" rule (dirty files not in the incoming diff still fast-forward) keeps the common case working with no alert at all. If Bryce prefers the labelled stash, it is a single branch in `classifyTree` (open question 3).
+**Rationale**: a stash in a human checkout hides work and is exactly what the standing rule forbids; a labelled stash is still a surprise to whoever opens `git stash list` next week. With runtime state moved out, the dirty cases that remain are the human's own, and the human is the right person to resolve them. The "safe subset" rule (dirty files not in the incoming diff still fast-forward) keeps the common case working with no alert at all. **Final (Bryce, 2026-11-12): alert-only.**
 
 ### Decision 4: Refuse to drain as root and report foreign ownership; do not repair it
 
@@ -198,7 +207,15 @@ export function classifyTree({ branch, ahead, behind, dirty, incoming, midOp }) 
 
 **Considered**: auto-`chown` via sudo (no: needs privilege and hides the cause); ignore root files (they already broke `git clean` and left an unreadable module).
 
-**Rationale**: the user units already run unprivileged, so a root-owned write means a second path (container bind-mount, a manual `sudo`) that must be found and closed, not papered over. Origin is unestablished (open question 1), so the design makes the symptom visible and blocks the one place the framework controls.
+**Rationale**: the user units already run unprivileged, so a root-owned write means a second path (container bind-mount, a manual `sudo`) that must be found and closed, not papered over. The origin is now confirmed (Hermes Docker bind-mount of the home, Decision 6), so the real fix is RS-REQ-060..064; the no-root rule and doctor remain as defence in depth for any other path.
+
+### Decision 6: Hermes Docker sandboxes mount a dedicated per-project worktree, never the home
+
+**Chosen**: `docker_mount_cwd_to_workspace: false`; mount only `~/.hermes/workspaces/<project>` (a worktree off `origin/<base>`) at `/workspace`; output returns via branch/PR; guard + doctor detect regression.
+
+**Considered**: leave the mount and rely on the no-root rule and the doctor (the writer is the container, which the no-root rule cannot see); mount the home read-only (agents then cannot write their own work and most tasks need a writable tree); run the containers rootless only (does not stop a user-owned write into the live checkout).
+
+**Rationale**: confirmed by `docker inspect` on three running containers: `/home/bryce -> /workspace` rw as root, driven by `docker_mount_cwd_to_workspace: true` in `~/.hermes/config.yaml` (~line 72). That is the write path behind root-owned `tasks/completed/` and `agents/secrets.mjs`, and `/workspace/agentic-sdlc` is the live checkout itself (an earlier belief that it was a separate copy was wrong). A sandbox that can write the human home is not a sandbox; the dedicated worktree gives agents a real tree to work in while git is the only way out. The config change is outside the repo and in the guardrail surface, so it is the first task and interactive-lane only. Detection (doctor + guard) is read-only: neither edits the config nor restarts containers.
 
 ### Decision 5: Do not loosen the trespass guard
 
