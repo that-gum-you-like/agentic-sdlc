@@ -3,7 +3,7 @@
   "title": "Delete agents/adapters/llm/openai.mjs and azure-openai.mjs; first `grep -rn \"adapters/llm/openai\\|azure-openai\" agents tests docs scripts` and remove each reference (load-adapter.mjs registration, tests, docs/adapter-guide.md)",
   "description": "- [ ] **CV-601**: Delete agents/adapters/llm/openai.mjs and azure-openai.mjs; first `grep -rn \"adapters/llm/openai\\|azure-openai\" agents tests docs scripts` and remove each reference (load-adapter.mjs registration, tests, docs/adapter-guide.md)\n  - **Priority:** LOW\n  - Files: `agents/adapters/llm/openai.mjs, agents/adapters/llm/azure-openai.mjs, agents/adapters/load-adapter.mjs, tests/adapter-and-model-manager.test.mjs, docs/adapter-guide.md`\n  - Spec: hygiene (no-OpenAI rule)\n  - Gaps: D3-10 note\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: the grep above returns nothing; `npm test` green; loadAdapter(\"openai\") throws a clear \"unknown adapter\" error\n  - Parallel: yes\n  - Complexity: M\n  - Notes: Keep azure-foundry-claude.mjs (Claude on Azure, not OpenAI).",
   "priority": "LOW",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -11,5 +11,8 @@
   "claimedBy": "hermes-drain",
   "testStatus": null,
   "_file": "OS-curriculum-v2-conformance-114.json",
-  "claimedAt": "2026-11-13T01:55:25.294Z"
+  "claimedAt": "2026-11-13T01:55:25.294Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-13T02:02:17.768Z"
 }

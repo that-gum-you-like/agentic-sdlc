@@ -1516,7 +1516,7 @@ Capability: claude-review-lane. Queue and skill first; the headless timer (CV-RE
 
 Hygiene tasks cite gap ids and carry no spec. Conformance rows are downgraded first, strengthened by test, and re-upgraded only after Phases 1-5 are verified.
 
-- [ ] **CV-601**: Delete agents/adapters/llm/openai.mjs and azure-openai.mjs; first `grep -rn "adapters/llm/openai\|azure-openai" agents tests docs scripts` and remove each reference (load-adapter.mjs registration, tests, docs/adapter-guide.md)
+- [x] **CV-601**: Delete agents/adapters/llm/openai.mjs and azure-openai.mjs; first `grep -rn "adapters/llm/openai\|azure-openai" agents tests docs scripts` and remove each reference (load-adapter.mjs registration, tests, docs/adapter-guide.md)
   - **Priority:** LOW
   - Files: `agents/adapters/llm/openai.mjs, agents/adapters/llm/azure-openai.mjs, agents/adapters/load-adapter.mjs, tests/adapter-and-model-manager.test.mjs, docs/adapter-guide.md`
   - Spec: hygiene (no-OpenAI rule)

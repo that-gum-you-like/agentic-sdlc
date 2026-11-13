@@ -6,6 +6,7 @@
 - 2026-11-13 #172 CV-322: pattern-hunt.mjs findReviewsDir() prefers sdlc-reviewer/reviews (backend)
 - 2026-11-13 #175 feat(seed-queue): export detectBlockedByCycle(tasks) [OS-curriculum-v2-conformance-99] (backend)
 - 2026-11-13 #176 feat(seed-queue): skip tasks in blockedBy cycle with reason blockedBy-cycle (backend)
+- 2026-11-13 #177 chore(adapters): delete openai.mjs and azure-openai.mjs (CV-601, drain) (backend)
 
 ## 2026-11-11
 
