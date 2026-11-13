@@ -392,6 +392,7 @@ function main() {
   let totalSkippedLane = 0;
   let totalSkippedInjection = 0;
   let totalSkippedUnbounded = 0;
+  let totalSkippedCycle = 0;
   let totalChangesProcessed = 0;
 
   for (const entry of changeEntries) {
@@ -449,6 +450,29 @@ function main() {
 
     console.log(`[seed] Processing ${changeName} (${tasks.length} tasks, priority: ${priority})`);
 
+    // CV-409 / CV-REQ-054: detect blockedBy cycles among sibling tasks
+    const safeChangeName = changeName.replace(/[^a-zA-Z0-9]/g, '-');
+    const cycleMemberIds = new Set();
+    if (tasks.length > 0) {
+      const cycleInputs = tasks.map(task => {
+        const qid = `OS-${safeChangeName}-${task.taskNumber}`;
+        const blockedBy = (task.blockedByRaw || [])
+          .filter(raw => !(tasks.doneIds && tasks.doneIds.has(raw)))
+          .map(raw => tasks.find(t => t.rawNumber === raw))
+          .filter(Boolean)
+          .map(t => `OS-${safeChangeName}-${t.taskNumber}`);
+        return { id: qid, blockedBy };
+      });
+      const cycles = detectBlockedByCycle(cycleInputs);
+      for (const cycle of cycles) {
+        const cycleStr = cycle.join(' -> ');
+        console.log(`[seed] CYCLE: ${cycleStr} — tasks will not be seeded`);
+        for (const memberId of cycle) {
+          cycleMemberIds.add(memberId);
+        }
+      }
+    }
+
     for (const task of tasks) {
       // Skip if ALL subtasks are done (or there are no pending subtasks at all
       // and at least one done subtask exists — means the whole task is complete)
@@ -484,8 +508,6 @@ function main() {
       const taskPriority = task.inlinePriority || priority;
 
       // Build task ID: OS-<change-name>-<taskNumber>
-      // Sanitize change name: replace non-alphanumeric with hyphens
-      const safeChangeName = changeName.replace(/[^a-zA-Z0-9]/g, '-');
       const taskId = `OS-${safeChangeName}-${task.taskNumber}`;
 
       // CV-205 (CV-REQ-061): screen every task block before writing. An
@@ -518,6 +540,13 @@ function main() {
       if (goalFindings.includes('unbounded-verb')) {
         console.log(`  [unbounded] ${taskId}: ${task.title} (unbounded goal — reason: unbounded-goal)`);
         totalSkippedUnbounded++;
+        continue;
+      }
+
+      // CV-409 / CV-REQ-054: skip tasks in blockedBy cycles
+      if (cycleMemberIds.has(taskId)) {
+        console.log(`  [cycle]  ${taskId}: ${task.title} (blockedBy cycle — reason: blockedBy-cycle)`);
+        totalSkippedCycle++;
         continue;
       }
 
@@ -584,6 +613,7 @@ function main() {
   console.log(`  Skipped (dupe)    : ${totalSkippedDupe}`);
   console.log(`  Skipped (injection): ${totalSkippedInjection}`);
   console.log(`  Skipped (unbounded): ${totalSkippedUnbounded}`);
+  console.log(`  Skipped (cycle)   : ${totalSkippedCycle}`);
   console.log(`  Interactive (blocked): ${totalSkippedLane}`);
   if (!isDryRun && totalCreated > 0) {
     console.log(`\n[seed] Task queue: ${TASK_QUEUE_DIR}`);

@@ -396,3 +396,52 @@ test('detectBlockedByCycle — canonical rotation (smallest id first)', () => {
   ];
   assert.deepEqual(detectBlockedByCycle(tasks), [['A', 'B', 'C']]);
 });
+
+// ---------------------------------------------------------------------------
+// Seeding skips tasks in blockedBy cycles — CV-409 / CV-REQ-054
+// ---------------------------------------------------------------------------
+
+test('blockedBy cycle — two-cycle tasks are not seeded', () => {
+  const { count, out } = seedFixture(`- [ ] **CV-100**: first task
+  - Complexity: S
+  - Parallel: blocked-by CV-200
+- [ ] **CV-200**: second task
+  - Complexity: S
+  - Parallel: blocked-by CV-100
+`);
+  assert.equal(count, 0, out);
+  assert.match(out, /CYCLE/);
+  assert.match(out, /blockedBy-cycle/);
+  assert.match(out, /Skipped \(cycle\)\s*:\s*2/);
+});
+
+test('blockedBy cycle — self-reference cycle is not seeded', () => {
+  const { count, out } = seedFixture(`- [ ] **CV-100**: self-blocking task
+  - Complexity: S
+  - Parallel: blocked-by CV-100
+`);
+  assert.equal(count, 0, out);
+  assert.match(out, /CYCLE/);
+  assert.match(out, /blockedBy-cycle/);
+});
+
+test('blockedBy cycle — DAG tasks without cycles still seed', () => {
+  const { count, out } = seedFixture(`- [ ] **CV-100**: root task
+  - Complexity: S
+- [ ] **CV-200**: depends on CV-100 but no cycle
+  - Complexity: S
+  - Parallel: blocked-by CV-100
+`);
+  assert.equal(count, 2, out);
+  assert.doesNotMatch(out, /blockedBy-cycle/);
+});
+
+test('blockedBy cycle — tasks with no blockedBy are not affected', () => {
+  const { count, out } = seedFixture(`- [ ] **CV-100**: standalone task
+  - Complexity: S
+- [ ] **CV-200**: also standalone
+  - Complexity: S
+`);
+  assert.equal(count, 2, out);
+  assert.doesNotMatch(out, /CYCLE/);
+});
