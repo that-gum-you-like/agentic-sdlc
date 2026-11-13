@@ -63,10 +63,8 @@ Then set the env var(s) for your provider:
 | Provider | Env vars |
 |---|---|
 | `anthropic` (Claude direct) | `ANTHROPIC_API_KEY` |
-| `openai` | `OPENAI_API_KEY` |
 | `groq` / `gemini` / `cerebras` | respective `*_API_KEY` (free tiers available) |
 | `ollama` | `OLLAMA_HOST=http://localhost:11434` |
-| `azure-openai` | `AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_API_KEY` |
 | `azure-foundry-claude` | `AZURE_FOUNDRY_ENDPOINT` + `AZURE_FOUNDRY_API_KEY` |
 
 **For enterprise/work environments using Azure or Microsoft Foundry**, jump to [Using Cursor with Azure / Foundry](#using-cursor-with-azure--foundry) below.
@@ -203,22 +201,6 @@ export AZURE_FOUNDRY_API_KEY="..."   # or set AZURE_FOUNDRY_AUTH_TOKEN for Entra
 {
   "agents": {
     "reviewer": { "model": "claude-sonnet-4-6", "dailyTokens": 500000 }
-  }
-}
-```
-
-**Azure OpenAI (GPT-4o / o-series):**
-
-```bash
-export AZURE_OPENAI_ENDPOINT="https://<your-resource>.openai.azure.com"
-export AZURE_OPENAI_API_KEY="..."
-```
-
-```json
-{
-  "llm": {
-    "defaultProvider": "azure-openai",
-    "azureOpenAI": { "deployments": { "gpt4o-prod": "gpt-4o" } }
   }
 }
 ```

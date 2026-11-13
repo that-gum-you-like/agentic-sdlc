@@ -26,11 +26,9 @@ Configure orchestration and LLM providers in `project.json`:
 - `anthropic` — Claude models via `ANTHROPIC_API_KEY` (an **API** key — the Claude Pro/Max **subscription** is not an API key and only works interactively in Claude Code, not here)
 - `openrouter` — many providers through one OpenAI-compatible API via `OPENROUTER_API_KEY`. Ships a curated **affordable, coding-capable, no-OpenAI** catalog and supports OpenRouter's native `models: [...]` upstream fallback (route onward when a model is rate-limited).
 - `groq` — Groq-hosted models via `GROQ_API_KEY`
-- `openai` — OpenAI GPT models via `OPENAI_API_KEY`
 - `gemini` — Google Gemini models via `GEMINI_API_KEY` (free tier: 250 req/day, no CC)
 - `cerebras` — Cerebras Inference via `CEREBRAS_API_KEY` (free tier: 1M tokens/day, no CC)
 - `ollama` — Local models via Ollama at `http://localhost:11434`
-- `azure-openai` — GPT-4o/o-series deployed in Azure OpenAI / Foundry via `AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_API_KEY`
 - `azure-foundry-claude` — Claude deployed in Foundry (Anthropic Messages API) via `AZURE_FOUNDRY_ENDPOINT` + `AZURE_FOUNDRY_API_KEY`. Enterprise/MCA-E only.
 
 **Free emergency fallbacks:** Groq, Gemini, and Cerebras all offer free tiers with no credit card. Every agent's fallback chain should end with a free-tier model to guarantee zero downtime.

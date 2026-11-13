@@ -637,12 +637,6 @@
       "consecutiveFailures": 0,
       "error": null
     },
-    "openai": {
-      "status": "not-configured",
-      "lastChecked": null,
-      "consecutiveFailures": 0,
-      "error": null
-    },
     "gemini": {
       "status": "not-configured",
       "lastChecked": null,

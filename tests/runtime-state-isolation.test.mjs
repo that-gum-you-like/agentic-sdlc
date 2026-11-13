@@ -23,7 +23,9 @@ function fixture() {
   // Copy the tracked tree (not .git, not openspec history) so scripts run against a real layout.
   for (const f of execFileSync('git', ['-C', REPO, 'ls-files', '-z'], { encoding: 'utf8' }).split('\0').filter(Boolean)) {
     if (f.startsWith('openspec/') || f.startsWith('tests/') || f.startsWith('docs/') || f.startsWith('.claude/')) continue;
-    if (!lstatSync(join(REPO, f)).isFile()) continue; // symlinks / submodules
+    let fp;
+    try { fp = join(REPO, f); lstatSync(fp); } catch { continue; } // file may have been deleted but not yet committed
+    if (!lstatSync(fp).isFile()) continue; // symlinks / submodules
     const dest = join(checkout, f);
     mkdirSync(dirname(dest), { recursive: true });
     copyFileSync(join(REPO, f), dest);

@@ -18,30 +18,11 @@ This guide explains how Agentic SDLC fits alongside Microsoft Foundry, Azure Ope
 
 Both adapters ship with the framework. No npm install required.
 
-### Option A: Azure OpenAI (GPT-4o, o-series)
+### Option A: Azure OpenAI (GPT-4o, o-series) — adapter removed
 
-1. Deploy a model in Azure OpenAI and note the deployment name.
-2. Export env vars:
+The GPT-4o/o-series adapter for Azure is no longer shipped. For these models on Azure, configure the model directly through your orchestration platform or use OpenRouter&#39;s OpenAI-compatible endpoint.
 
-```bash
-export AZURE_OPENAI_ENDPOINT="https://<your-resource>.openai.azure.com"
-export AZURE_OPENAI_API_KEY="..."           # or use AZURE_OPENAI_AUTH_TOKEN for Entra
-```
-
-3. Edit `agents/project.json`:
-
-```json
-{
-  "llm": {
-    "defaultProvider": "azure-openai",
-    "azureOpenAI": {
-      "deployments": { "gpt4o-prod": "gpt-4o", "o3-mini-prod": "o3-mini" }
-    }
-  }
-}
-```
-
-4. Reference the **deployment name** (not the model id) wherever you pick a model (budget.json, agent config).
+For Claude models on Azure/Microsoft Foundry, see Option B below.
 
 ### Option B: Claude in Foundry (Anthropic Messages API)
 
@@ -149,8 +130,6 @@ This is purely a hosting/provider choice; the framework stays provider-neutral a
 | Model | Region(s) | Adapter | Eligibility |
 |---|---|---|---|
 | Claude Opus 4.7 / 4.6 / Sonnet 4.6 / Haiku 4.5 | East US 2, Sweden Central | `azure-foundry-claude` | Enterprise or MCA-E |
-| GPT-4o / o3 / o1 families | Global Standard | `azure-openai` | Any paid Azure subscription |
-| Mistral, Llama, Cohere (partner models) | Varies | `azure-openai`-style REST | Any paid Azure subscription |
 
 Rate limits (Claude, Enterprise/MCA-E default): 2,000 RPM / 2M TPM for most Opus/Sonnet; 4,000 RPM / 4M TPM for Haiku. Request quota increases via Azure portal.
 
