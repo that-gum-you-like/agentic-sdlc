@@ -11,7 +11,7 @@
  *   queue-drainer.mjs reset <task-id>  # Reset a stuck task back to pending
  *   queue-drainer.mjs claim <task-id> <agent>  # Claim a task for an agent
  *   queue-drainer.mjs release <task-id>        # Release a claimed task
- *   queue-drainer.mjs archive                  # Move completed tasks to completed/
+ *   queue-drainer.mjs archive                  # Stamp completed tasks archived_at (in place)
  *
  * Agent domains are loaded from <project>/agents/domains.json.
  * If not found, falls back to manual assignment.
@@ -71,7 +71,7 @@ function loadTasks() {
 }
 
 function loadCompletedCount() {
-  return fileBased.loadCompletedCount(COMPLETED_DIR);
+  return fileBased.loadCompletedCount(COMPLETED_DIR, TASKS_DIR);
 }
 
 function loadHumanTasks() {
@@ -368,7 +368,8 @@ function filePatternOverlap(task1, task2) {
 function showStatus(tasks) {
   const pending = tasks.filter(t => t.status === 'pending');
   const inProgress = tasks.filter(t => t.status === 'in_progress');
-  const completed = tasks.filter(t => t.status === 'completed');
+  const showAll = args.includes('--all');
+  const completed = tasks.filter(t => t.status === 'completed' && (showAll || !t.archived_at));
   const archivedCount = loadCompletedCount();
   const independent = findIndependentTasks(tasks);
 
@@ -776,16 +777,27 @@ switch (cmd) {
   }
 
   case 'archive': {
-    const completedTasks = tasks.filter(t => t.status === 'completed');
+    // RS-REQ-020: stamp archived_at in place; never move or delete a file.
+    const completedTasks = tasks.filter(t => t.status === 'completed' && !t.archived_at);
     if (completedTasks.length === 0) {
       console.log('No completed tasks to archive.');
       break;
     }
-    for (const task of completedTasks) {
-      fileBased.archiveTask(TASKS_DIR, COMPLETED_DIR, task);
-      console.log(`  Archived ${task._file}`);
+    // RS-REQ-043: refuse (writing nothing) when the queue is owned by another uid.
+    const owner = fileBased.foreignDirOwner(TASKS_DIR);
+    if (owner !== null) {
+      console.error(`Refusing to archive: ${TASKS_DIR} is owned by uid ${owner}, not the current user. A human can fix it with: sudo chown -R $(id -un):$(id -gn) ${TASKS_DIR}`);
+      process.exitCode = 1;
+      break;
     }
-    console.log(`\n📦 Archived ${completedTasks.length} completed tasks to tasks/completed/`);
+    let stamped = 0;
+    for (const task of completedTasks) {
+      if (fileBased.archiveTask(TASKS_DIR, COMPLETED_DIR, task)) {
+        stamped++;
+        console.log(`  Archived ${task._file}`);
+      }
+    }
+    console.log(`\n📦 Archived ${stamped} completed tasks (stamped archived_at in tasks/queue/)`);
     break;
   }
 
@@ -865,7 +877,7 @@ switch (cmd) {
   queue-drainer.mjs claim <task-id> <agent>  # Claim a task for an agent
   queue-drainer.mjs release <task-id>        # Release a claimed task
   queue-drainer.mjs complete <task-id> passing  # Mark task done (requires passing tests)
-  queue-drainer.mjs archive                  # Move completed tasks to completed/
+  queue-drainer.mjs archive                  # Stamp completed tasks archived_at (in place)
   queue-drainer.mjs reset <task-id>  # Reset a stuck task
   queue-drainer.mjs human-status     # List pending human tasks
   queue-drainer.mjs human-complete <id>  # Mark human task done and unblock agent tasks`);
