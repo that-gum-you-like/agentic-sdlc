@@ -851,6 +851,34 @@ test('reviewer recall reads state dir (not the clone seed)', () => {
   }
 });
 
+test('RS-REQ-053: memory-publish PRs are ordinary reviewable content, not guardrail surface', () => {
+  const memoryOnly = ['agents/sdlc-developer/memory/long-term.json', 'agents/sdlc-reviewer/memory/recent.json', 'agents/versions/2026-11-12/sdlc-developer.md'];
+  const r = scanScope(memoryOnly);
+  assert(r.ok === true && r.flags.length === 0 && r.rejects.length === 0, `memory-only PR must not be flagged: ${JSON.stringify(r)}`);
+  // ...while adding a guardrail file to the same PR still flags it (the scope scan is not loosened)
+  assert(scanScope([...memoryOnly, 'agents/hermes-drain.sh']).flags.includes('agents/hermes-drain.sh'), 'guardrail path still flagged');
+  // The reviewer's own guardrail list does not name the state dir or the memory-publish script
+  assert(!FLAG_PATHS.some(f => /memory\//.test(f) || /\.local\/state/.test(f)), 'state dir / memory seeds are not on the guardrail surface');
+});
+
+test('RS-REQ-050/053: hardGate is unaffected by SDLC_STATE_DIR (passes with it unset, legacy, or pointing nowhere)', () => {
+  const prev = process.env.SDLC_STATE_DIR;
+  try {
+    for (const val of [undefined, 'legacy', '/nonexistent/state/dir']) {
+      const { origin, clone, work, d } = gateFixture();
+      git(work, 'checkout', '-qb', 'chore-memory'); mkdirSync(join(work, 'agents', 'x', 'memory'), { recursive: true });
+      writeFileSync(join(work, 'agents', 'x', 'memory', 'long-term.json'), '{"entries":[]}\n');
+      git(work, 'add', '.'); git(work, 'commit', '-qm', 'chore(memory): weekly'); git(work, 'push', '-q', 'origin', 'chore-memory');
+      git(d, 'clone', '-q', origin, clone);
+      if (val === undefined) delete process.env.SDLC_STATE_DIR; else process.env.SDLC_STATE_DIR = val;
+      const r = hardGate(clone, 'chore-memory', 'test -f agents/x/memory/long-term.json');
+      assert(r.passed === true, `SDLC_STATE_DIR=${val}: ${r.step} ${r.tail}`);
+    }
+  } finally {
+    if (prev === undefined) delete process.env.SDLC_STATE_DIR; else process.env.SDLC_STATE_DIR = prev;
+  }
+});
+
 for (const { name, fn } of queued) {
   process.stdout.write(`  ${name} ... `);
   try { await fn(); console.log('OK'); passed++; }

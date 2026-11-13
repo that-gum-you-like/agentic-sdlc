@@ -14,14 +14,15 @@
  */
 
 import { readFileSync, existsSync, readdirSync, statfsSync } from 'fs';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+import { createHash } from 'crypto';
 import { fileURLToPath } from 'url';
 
 import { loadConfig } from './load-config.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
 import { checkEgress } from './net-doctor.mjs';
 import { checkHermesConfig, FIX as HERMES_CONFIG_FIX } from './hermes-config-guard.mjs';
-import { checkContainerMounts } from './checkout-doctor.mjs';
+import { checkContainerMounts, diagnose } from './checkout-doctor.mjs';
 import { triggerNotificationOnce } from './notify.mjs';
 
 const QUEUE_DEPTH_WARN = 50;
@@ -271,6 +272,36 @@ export function checkHermesContainers({ mounts = {}, notify = triggerNotificatio
 }
 
 /**
+ * RS-REQ-041: foreign-owned (e.g. root-owned) paths in the live checkout, or a foreign-owned
+ * state dir, raise the existing notification once per path set (a new set re-alerts).
+ * Read-only: runs checkout-doctor's diagnose and never touches the tree.
+ */
+export function checkCheckoutHygiene({ repo, stateDir, run = diagnose, notify = triggerNotificationOnce, notifyOpts, diagnoseOpts = {} } = {}) {
+  let r;
+  try {
+    r = run({
+      repo: repo ?? resolve(dirname(fileURLToPath(import.meta.url)), '..'),
+      stateDir: stateDir ?? process.env.SDLC_STATE_DIR ?? loadConfig().stateDir,
+      ...diagnoseOpts,
+    });
+  } catch (e) {
+    return { name: 'checkout-hygiene', status: 'degraded', detail: `doctor failed to run: ${e.message}` };
+  }
+  const paths = [
+    ...r.foreign.map(f => f.path),
+    ...r.unreadable.map(u => u.path),
+    ...(r.stateDir && !r.stateDir.ok ? [`state-dir:${r.stateDir.path}`] : []),
+  ].sort();
+  if (!paths.length) return { name: 'checkout-hygiene', status: 'ok', detail: 'no foreign-owned or unreadable paths' };
+  const fix = r.foreign[0]?.command || r.stateDir?.command || 'node agents/checkout-doctor.mjs';
+  const shown = paths.slice(0, 5).join(', ') + (paths.length > 5 ? ` (+${paths.length - 5} more)` : '');
+  const detail = `${paths.length} foreign-owned/unreadable path(s): ${shown} — human fix: ${fix}`;
+  const key = `checkout-foreign:${createHash('sha256').update(paths.join('\n')).digest('hex').slice(0, 16)}`;
+  try { notify(key, 'blocker', `Checkout hygiene: ${detail}`, notifyOpts); } catch { /* alert delivery never fails the check */ }
+  return { name: 'checkout-hygiene', status: 'down', detail };
+}
+
+/**
  * Outbound egress to the LLM provider and the notification channel.
  *
  * This is the check that catches the IPv6-blackhole failure mode: when a host
@@ -332,6 +363,7 @@ export async function runHealthCheck(opts = {}) {
     now,
     hermesConfig = {},
     hermesContainers = {},
+    checkoutHygiene = {},
   } = opts;
   const config = loadConfig();
 
@@ -343,6 +375,7 @@ export async function runHealthCheck(opts = {}) {
     checkCycles(config, cycleHistory, now),
     checkHermesSandboxConfig(hermesConfig),
     checkHermesContainers(hermesContainers),
+    checkCheckoutHygiene(checkoutHygiene),
     await checkEgressHealth(egress),
   ];
 

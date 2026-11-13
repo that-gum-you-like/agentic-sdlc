@@ -79,7 +79,13 @@ function readChecklist() {
 // these are the countable signals whose movement flags a behavioral shift when
 // a prompt is edited. Threshold: >20% relative change vs the recorded baseline.
 
-const BASELINES_PATH = resolve(config.projectDir, 'agents', 'behavior-baselines.json');
+// Tracked seed (written only with --baseline --publish); the live baseline lives in the
+// state dir so the monthly cycle never dirties the checkout (runtime-state-isolation RS-REQ-050).
+const SEED_BASELINES_PATH = resolve(config.projectDir, 'agents', 'behavior-baselines.json');
+const PUBLISH_BASELINE = process.argv.includes('--publish');
+const BASELINES_PATH = (config.stateDir && config.stateDir !== 'legacy' && !PUBLISH_BASELINE)
+  ? resolve(config.stateDir, 'behavior-baselines.json')
+  : SEED_BASELINES_PATH;
 const LEGACY_BASELINES_PATH = resolve(config.projectDir, 'pm', 'behavior-baselines.json');
 const DRIFT_THRESHOLD = 0.20;
 
@@ -105,8 +111,10 @@ function computeAgentMetrics(agent) {
 
 function loadBaselines() {
   // New path takes priority; fall back to legacy pm/ path for existing deployments.
-  if (existsSync(BASELINES_PATH)) {
-    try { return JSON.parse(readFileSync(BASELINES_PATH, 'utf8')); } catch { return null; }
+  for (const p of [BASELINES_PATH, SEED_BASELINES_PATH]) {
+    if (existsSync(p)) {
+      try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return null; }
+    }
   }
   if (existsSync(LEGACY_BASELINES_PATH)) {
     try { return JSON.parse(readFileSync(LEGACY_BASELINES_PATH, 'utf8')); } catch { return null; }
@@ -120,7 +128,7 @@ function recordBaselines() {
     if (!readAgentMd(agent)) continue;
     baselines.agents[agent] = computeAgentMetrics(agent);
   }
-  mkdirSync(dirname(BASELINES_PATH), { recursive: true });
+  mkdirSync(dirname(BASELINES_PATH), { recursive: true, mode: 0o755 });
   writeFileSync(BASELINES_PATH, JSON.stringify(baselines, null, 2) + '\n');
   console.log(`📏 Behavior baselines recorded for ${Object.keys(baselines.agents).length} agent(s) → ${BASELINES_PATH}`);
   return baselines;

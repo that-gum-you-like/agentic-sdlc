@@ -11,7 +11,7 @@
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
@@ -22,11 +22,12 @@ const ROOT = resolve(__dirname, '..', '..');
 const AGENTS_DIR = resolve(__dirname, '..');
 const SCRIPT = join(AGENTS_DIR, 'test-behavior.mjs');
 const TMP_PROJECT = join(tmpdir(), `sdlc-baseline-test-${process.pid}`);
+const STATE = join(TMP_PROJECT, '.state'); // live baselines go to the state dir, never the checkout (RS-REQ-050)
 
 function runScript(args) {
   return execFileSync(process.execPath, [SCRIPT, ...args], {
     encoding: 'utf8',
-    env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT },
+    env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT, SDLC_STATE_DIR: STATE },
   });
 }
 
@@ -64,7 +65,8 @@ describe('test-behavior — baselines + drift detection (curriculum Ph7)', () =>
   it('--baseline records deterministic per-agent metrics', () => {
     const out = runScript(['--baseline']);
     assert.match(out, /baselines recorded for 1 agent/i);
-    const baselines = JSON.parse(readFileSync(join(TMP_PROJECT, 'agents', 'behavior-baselines.json'), 'utf8'));
+    const baselines = JSON.parse(readFileSync(join(STATE, 'behavior-baselines.json'), 'utf8'));
+    assert.equal(existsSync(join(TMP_PROJECT, 'agents', 'behavior-baselines.json')), false, 'tracked seed path untouched');
     const m = baselines.agents.tester;
     assert.ok(m, 'tester metrics recorded');
     assert.ok(m.prompt_lines > 0);
@@ -81,7 +83,7 @@ describe('test-behavior — baselines + drift detection (curriculum Ph7)', () =>
 
   it('loads baselines from legacy pm/ path when agents/ path is absent', () => {
     // Read the baseline that was recorded by the --baseline test
-    const baselinePath = join(TMP_PROJECT, 'agents', 'behavior-baselines.json');
+    const baselinePath = join(STATE, 'behavior-baselines.json');
     const baselineData = JSON.parse(readFileSync(baselinePath, 'utf8'));
     // Remove the new-format baseline
     rmSync(baselinePath, { force: true });

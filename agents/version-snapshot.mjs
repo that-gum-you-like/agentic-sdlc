@@ -157,7 +157,10 @@ function snapshot(opts = {}) {
   const agents = (opts.agents && opts.agents.length > 0) ? opts.agents : AGENTS;
   const agentsDir = opts.agentsDir || AGENTS_DIR;
   const stateDir = resolveStateOpt(opts);
-  const versionsDir = resolve(agentsDir, 'versions');
+  // RS-REQ-050: timers snapshot into the state dir; only `--publish` (a human/PR step)
+  // writes the tracked agents/versions/ and appends version-history entries to AGENT.md.
+  const publish = opts.publish === true || stateDir === LEGACY;
+  const versionsDir = publish ? resolve(agentsDir, 'versions') : resolve(stateDir, 'versions');
 
   const date = new Date().toISOString().split('T')[0];
   const snapshotDir = join(versionsDir, date);
@@ -179,7 +182,7 @@ function snapshot(opts = {}) {
 
   // Version history: append entry for each changed AGENT.md (CV-251)
   const prevDate = previousSnapshotDate(versionsDir, date);
-  if (prevDate) {
+  if (publish && prevDate) {
     const prevSnapshotDir = join(versionsDir, prevDate);
     for (const agent of agents) {
       appendVersionHistoryEntry(agent, agentsDir, prevSnapshotDir, date);
@@ -204,16 +207,17 @@ function snapshot(opts = {}) {
     }
   }
 
-  console.log(`\n✅ Snapshot saved to agents/versions/${date}/`);
+  console.log(`\n✅ Snapshot saved to ${publish ? 'agents/versions' : versionsDir}/${date}/`);
 }
 
 function list() {
-  if (!existsSync(VERSIONS_DIR)) {
+  const roots = [VERSIONS_DIR, ...(config.stateDir && config.stateDir !== LEGACY ? [resolve(config.stateDir, 'versions')] : [])].filter(existsSync);
+  if (roots.length === 0) {
     console.log('No snapshots found.');
     return;
   }
 
-  const snapshots = readdirSync(VERSIONS_DIR).filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f)).sort();
+  const snapshots = [...new Set(roots.flatMap(r => readdirSync(r).filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f))))].sort();
   if (snapshots.length === 0) {
     console.log('No snapshots found.');
     return;
@@ -221,7 +225,7 @@ function list() {
 
   console.log('📋 Agent Version Snapshots:');
   for (const s of snapshots) {
-    const files = readdirSync(join(VERSIONS_DIR, s)).filter(f => f.endsWith('.md'));
+    const files = readdirSync(join(roots.find(r => existsSync(join(r, s))), s)).filter(f => f.endsWith('.md'));
     console.log(`  ${s} (${files.length} agents)`);
   }
 }
@@ -230,8 +234,9 @@ function restore(date, opts = {}) {
   const agents = (opts.agents && opts.agents.length > 0) ? opts.agents : AGENTS;
   const agentsDir = opts.agentsDir || AGENTS_DIR;
   const stateDir = resolveStateOpt(opts);
-  const versionsDir = resolve(agentsDir, 'versions');
-  const snapshotDir = join(versionsDir, date);
+  // State-dir snapshots (timer-written) win over tracked published ones for the same date.
+  const stateSnap = stateDir === LEGACY ? null : join(stateDir, 'versions', date);
+  const snapshotDir = stateSnap && existsSync(stateSnap) ? stateSnap : join(resolve(agentsDir, 'versions'), date);
 
   if (!existsSync(snapshotDir)) {
     const msg = `Snapshot ${date} not found. Use 'list' to see available snapshots.`;
@@ -298,7 +303,7 @@ if (__isMainModule) {
 
   switch (cmd) {
     case 'snapshot':
-      snapshot();
+      snapshot({ publish: args.includes('--publish') });
       break;
     case 'list':
       list();
@@ -310,7 +315,8 @@ if (__isMainModule) {
       break;
     default:
       console.log(`Usage:
-  version-snapshot.mjs snapshot       # Save current AGENT.md + memory files
+  version-snapshot.mjs snapshot       # Save current AGENT.md + memory files (state dir)
+  version-snapshot.mjs snapshot --publish # ...into tracked agents/versions/ (for a PR)
   version-snapshot.mjs list           # List all snapshots
   version-snapshot.mjs restore <date> # Restore AGENT.md from a snapshot
   version-snapshot.mjs restore <date> --memory # Restore AGENT.md + memory`);

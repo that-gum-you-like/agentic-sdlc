@@ -126,6 +126,13 @@ Node stdlib only, zero new dependencies, no OpenAI, no Anthropic API. Tests run 
 - RS-007: pii-scrub entities block a publish only for high-risk types (email except `noreply@`, phone, SSN, card, IBAN, bank, passport, licence, crypto, IP); PERSON/LOCATION/DATE are normal memory content. `rem-sleep` locks per layer save (skip-after-5s), not across the whole async consolidation.
 - RS-008 cutover (Bryce): see RUNBOOK section 15.
 
+### Implementation notes (RS-302, RS-401..403, RS-501; branch feat/rs-guard-review)
+
+- RS-401 found three real tracked-tree writers in the cycles and moved them: `version-snapshot snapshot` (now `<state>/versions/`; `--publish` writes tracked `agents/versions/` and AGENT.md version history), the monthly `test-behavior.mjs --baseline` re-record (now `<state>/behavior-baselines.json`, tracked file is the seed, `--publish` rewrites it), and `weekly-review`'s snapshot-needed check reads the state versions dir.
+- **Deviation**: `queue-drainer archive` is excluded from the clean-tree assertion. No timer runs it, and the design's in-place `archived_at` stamp is a deliberate edit of the tracked task file (design.md "Task archive abolition"), so RS-REQ-050's wording ("covers queue-drainer archive") contradicts the design. It has its own test: stamps only, nothing moved, deleted or created. Revisit if archive is ever put on a timer.
+- RS-302: `checkCheckoutHygiene` in `health-check.mjs` (alerts on foreign-owned/unreadable paths and a foreign state dir, deduped by a hash of the path set).
+- Follow-ups from earlier agents: `scheduler-install.mjs install` now writes a `hermes-gateway.service.d` drop-in running `hermes-config-guard.mjs` as ExecStartPre (the installer does not manage or restart the gateway itself); generated units use the stable Homebrew node path (`agents/lib/node-path.mjs`).
+
 ### Phase 2: Task archive (RS-REQ-020..022)
 
 - [x] **RS-101**: `archive` stamps `archived_at` in place; `archiveTask` no longer renames; default list hides archived, `--all` shows
@@ -174,7 +181,7 @@ Node stdlib only, zero new dependencies, no OpenAI, no Anthropic API. Tests run 
   - Tests: "root-owned dir and untracked secrets.mjs reported with owner and command", "clean tree exits 0 with no findings", "never modifies anything (fixture hash before/after)", "unreadable path reported"
   - Lane: hermes | Parallel: yes | Complexity: M
 
-- [ ] **RS-302**: `health-check.mjs` runs the doctor and raises the existing notification, deduped per path set
+- [x] **RS-302**: `health-check.mjs` runs the doctor and raises the existing notification, deduped per path set
   - Files: `agents/health-check.mjs`, `tests/health-check.test.mjs`
   - Spec: RS-REQ-041
   - Tests: "new foreign path alerts once", "unchanged set silent inside window"
@@ -188,25 +195,25 @@ Node stdlib only, zero new dependencies, no OpenAI, no Anthropic API. Tests run 
 
 ### Phase 5: Guard and review interaction (RS-REQ-050..053)
 
-- [ ] **RS-401**: Whole-cycle cleanliness integration test (archive, REM sleep, snapshot, rag-index, daily/weekly/monthly in a fixture repo): `git status --porcelain` empty
+- [x] **RS-401**: Whole-cycle cleanliness integration test (archive, REM sleep, snapshot, rag-index, daily/weekly/monthly in a fixture repo): `git status --porcelain` empty
   - Files: `tests/runtime-state-isolation.test.mjs`
   - Spec: RS-REQ-050, RS-REQ-017
   - Tests: "no tracked or untracked-unignored change after every cycle script"; any failure names the script to move
   - Lane: interactive | Parallel: blocked-by RS-005, RS-101 | Complexity: M
 
-- [ ] **RS-402**: Trespass guard stays strict: update header comment, add tests (tracked edit restored and rc 97; state-dir write ignored)
+- [x] **RS-402**: Trespass guard stays strict: update header comment, add tests (tracked edit restored and rc 97; state-dir write ignored)
   - Files: `agents/drain-trespass-guard.sh`, `tests/drain-trespass-guard.test.mjs`
   - Spec: RS-REQ-051
   - Lane: interactive | Parallel: blocked-by RS-401 | Complexity: S
 
-- [ ] **RS-403**: Memory-only PRs are not guardrail-surface; publisher has no merge call (assert in `hardGate` fixture)
+- [x] **RS-403**: Memory-only PRs are not guardrail-surface; publisher has no merge call (assert in `hardGate` fixture)
   - Files: `tests/pr-auto-review.test.mjs`, `tests/memory-publish.test.mjs`
   - Spec: RS-REQ-053
   - Lane: interactive | Parallel: blocked-by RS-007 | Complexity: S
 
 ### Phase 6: Verify and ship
 
-- [ ] **RS-501**: Full suite and validators
+- [x] **RS-501**: Full suite and validators
   - Command: `npm test` (includes `node agents/four-layer-validate.mjs`, `test-behavior.mjs --framework`, `--drift`)
   - Expected: all passing; `__isMainModule` guard present on every new script
 - [ ] **RS-502**: One-week soak on the host after RS-008 and RS-203; `checkout-doctor --json` shows zero findings; record result in the change dir; then archive the change per OpenSpec

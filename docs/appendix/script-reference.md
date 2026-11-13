@@ -17,7 +17,7 @@
 | `agents/memory-publish.mjs` | Weekly scrubbed, never-self-merged PR exporting runtime memory to the tracked seeds |
 | `agents/rem-sleep.mjs` | Automated memory consolidation (+ similarity dedup) |
 | `agents/migrate-memory.mjs` | Memory migration on prompt upgrades |
-| `agents/version-snapshot.mjs` | Agent version snapshots |
+| `agents/version-snapshot.mjs` | Agent version snapshots (state dir; `--publish` for tracked `agents/versions/`) |
 | `agents/cost-tracker.mjs` | Token usage, efficiency metrics, session hours |
 | `agents/test-behavior.mjs` | Agent prompt quality + maturation regression |
 | `agents/four-layer-validate.mjs` | AST anti-pattern scanning |

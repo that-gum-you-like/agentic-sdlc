@@ -140,7 +140,7 @@ describe('monthly-review — the executed monthly cycle', () => {
   });
 
   it('baseline is re-recorded after drift passes (CV-109)', () => {
-    const baselinesPath = join(TMP_PROJECT, 'agents', 'behavior-baselines.json');
+    const baselinesPath = join(STATE, 'behavior-baselines.json');
     // Baseline matching the current tester AGENT.md (4 lines due to trailing newline, 1 rule,
     // "Never" triggers caution score of 25/100 lines, 0 optimism, 0 failure memory noise
     writeFileSync(baselinesPath, JSON.stringify({
@@ -161,7 +161,7 @@ describe('monthly-review — the executed monthly cycle', () => {
   });
 
   it('baseline is NOT re-recorded when drift fails (CV-109)', () => {
-    const baselinesPath = join(TMP_PROJECT, 'agents', 'behavior-baselines.json');
+    const baselinesPath = join(STATE, 'behavior-baselines.json');
     // Baseline far from the current tester AGENT.md to trigger drift >20%
     writeFileSync(baselinesPath, JSON.stringify({
       recordedAt: '2026-01-01T00:00:00.000Z',

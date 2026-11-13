@@ -5,6 +5,13 @@
 # drain-authored commits. Commits are NEVER reset automatically: a human may have
 # committed in the same window. Only unpushed commits count (`--not --remotes`),
 # so pulling squash-merged drain PRs is not a trespass.
+#
+# Strictness is deliberate (runtime-state-isolation RS-REQ-051): this guard has NO allowlist.
+# Scheduled writers (REM sleep, memory, snapshots, baselines) that used to dirty the tracked
+# tree were moved to the state dir (~/.local/state/sdlc/<project>/) and task archiving now
+# stamps in place; timer writers were removed rather than tolerated. Any tracked file that
+# changes during a drain is therefore a real trespass (or a human edit, which the pre-run
+# snapshot already exempts) and is restored with its patch saved first.
 declare -A guard_branch guard_head guard_dirty
 
 guard_snapshot() { # <checkout>...
