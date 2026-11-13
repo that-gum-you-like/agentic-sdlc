@@ -1,0 +1,24 @@
+{
+  "id": "FIX-179",
+  "phase": 1,
+  "title": "Fix rejected drain PR #179 (agent/drain/OS-curriculum-v2-conformance-117)",
+  "assignee": "sdlc-developer",
+  "priority": "CRITICAL",
+  "estimatedTokens": 16000,
+  "files": [],
+  "blockedBy": [],
+  "created": "2026-11-13T02:17:26.872Z",
+  "tags": [
+    "auto-fix"
+  ],
+  "description": "Drain PR #179 (branch `agent/drain/OS-curriculum-v2-conformance-117`) was NOT merged by pr-auto-review (gate-failed).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-117 && git checkout agent/drain/OS-curriculum-v2-conformance-117`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-117` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- hard gate failed at null\n- rite file tests/pr-auto-review.test.mjs\nerror: unable to write file tests/queue-drainer-archive.test.mjs\nerror: unable to write file tests/replay-corpus/SCHEMA.md\nerror: unable to write file tests/replay-corpus/capture-corpus.mjs\nerror: unable to write file tests/replay-corpus/reviewer-full-pr-review.json\nerror: unable to write file tests/replay-corpus/reviewer-missing-task.json\nerror: unable to write file tests/replay-corpus/scanner-branch-extract.json\nerror: unable to write file tests/replay-corpus/scanner-reject-env.json\nerror: unable to write file tests/replay-corpus/scanner-safe-paths.json\nerror: unable to write file tests/replay.test.mjs\nerror: unable to write file tests/report-error.test.mjs\nerror: unable to write file tests/runtime-state-isolation.test.mjs\nerror: unable to write file tests/scheduler-install.test.mjs\nerror: unable to write file tests/sdlc-inbox-skill.test.mjs\nerror: unable to write file tests/sdlc-portfolio-skill.test.mjs\nerror: unable to write file tests/sdlc-review-flagged-skill.test.mjs\nerror: unable to write file tests/sdlc-update.test.mjs\nerror: unable to write file tests/seed-queue-from-openspec.test.mjs\nerror: unable to write file tests/seed-queue-lane.test.mjs\nerror: unable to write file tests/seed-queue-readiness.test.mjs\nerror: unable to write file tests/state-dir.test.mjs\nerror: unable to write file tests/telegram-notify.test.mjs\nerror: unable to write file tests/wave2-preflight.test.mjs\nfatal: Could not reset index file to revision 'HEAD'.\n",
+  "attempts": 1,
+  "status": "pending",
+  "fixFor": {
+    "pr": 179,
+    "branch": "agent/drain/OS-curriculum-v2-conformance-117",
+    "headSha": "2ed0a7019b44ecdbceda4bb4511ad82f64d611c6",
+    "sourceTask": "OS-curriculum-v2-conformance-117",
+    "rejectionKind": "gate-failed"
+  }
+}
