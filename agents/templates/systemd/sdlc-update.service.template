@@ -1,0 +1,9 @@
+[Unit]
+Description=Agentic SDLC — guarded daily update (pulls only when ff-only is safe, else alerts once)
+
+[Service]
+Type=oneshot
+WorkingDirectory={{REPO}}
+ExecStart={{NODE}} {{REPO}}/agents/sdlc-update.mjs --repo {{REPO}}
+StandardOutput=append:{{HOME}}/.config/systemd/user/sdlc-crons.log
+StandardError=append:{{HOME}}/.config/systemd/user/sdlc-crons.log

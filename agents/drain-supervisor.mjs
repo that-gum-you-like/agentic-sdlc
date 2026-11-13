@@ -156,7 +156,22 @@ export async function pass() {
   return drained;
 }
 
+/** RS-REQ-042: returns the refusal message when running as root, else null. uid injectable. */
+export function rootRefusal(uid = process.env.SDLC_TEST_UID ? Number(process.env.SDLC_TEST_UID) : process.getuid?.()) {
+  return uid === 0
+    ? 'refusing to run as root (rc 98): run the user-level unit instead (systemctl --user start sdlc-drain-supervisor.service)'
+    : null;
+}
+
 async function main(argv = process.argv.slice(2)) {
+  const refusal = rootRefusal();
+  if (refusal) {
+    console.error('[supervisor]', refusal);
+    if (!process.env.SDLC_TEST_UID) { // hermes-drain.sh reuses this path (it runs us only to notify once)
+      try { (await import('./notify.mjs')).triggerNotificationOnce('drain:root', 'highSeverityFailure', `drain-supervisor ${refusal}`); } catch { /* notify is best effort */ }
+    }
+    process.exit(98);
+  }
   ONCE = argv.includes('--once');
   DRY = argv.includes('--dry-run');
   log(`starting (once=${ONCE} dry-run=${DRY})`);
