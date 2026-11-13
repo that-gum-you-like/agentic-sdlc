@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "id": "M-1785625484991",
+      "content": "Health-check design rule: a monitoring check must distinguish 'I could not measure this' from 'this is broken'. model-manager.mjs now has an 'unmonitored' status for providers with no HEALTH_ENDPOINTS entry — it is logged loudly (console + provider-unmonitored ledger event) but never latches down, never swaps an agent's model, and never fires highSeverityFailure. Same failure class as egress-preflight REQ-006. Any new provider added to budget.json must ship with a probe; tests/adapter-and-model-manager.test.mjs enforces this.",
+      "date": "2026-08-01",
+      "timestamp": "2026-08-01T23:04:44.991Z"
+    },
+    {
+      "id": "M-1785627567846",
+      "content": "Environment lesson (2026-08-01): systemd user units do NOT inherit an interactive shell's environment. GROQ_API_KEY was exported from ~/.bashrc, so an interactive 'model-manager.mjs check' showed 'groq: up' while the scheduler journal showed 'groq: not configured' on every tick. ALWAYS verify scheduler-affecting config from 'journalctl --user -u <unit>' after a real timer run, never from an interactive shell — an interactive run is what hid this. Scheduler-visible secrets belong in ~/.hermes/.env (mode 0600), which every sdlc-sched-* unit loads via EnvironmentFile=-%h/.hermes/.env.",
+      "date": "2026-08-01",
+      "timestamp": "2026-08-01T23:39:27.846Z"
+    },
+    {
+      "id": "M-1789139893299",
+      "content": "BACKLOG #29 (Nels Workshop hub) UNBLOCKED 2026-09-11 (T-705): business-os workstreams B (portfolio foundation, T-101..T-105) and C (environment tiering, T-201..T-206) have both landed. Entry #29 in openspec/BACKLOG.md has been promoted to the Promoted to Changes table. The hub can now be built as mission #1 through the pipeline.",
+      "date": "2026-09-15",
+      "timestamp": "2026-09-15T13:05:29.000Z"
+    },
+    {
+      "id": "M-1785625469429",
+      "content": "provider-health-probe-gaps (2026-08-01): Hermes paged 'OpenRouter is DOWN / no healthy fallback' 7,204 times on a HEALTHY provider. Root cause was not the provider — HEALTH_ENDPOINTS in agents/model-manager.mjs had no openrouter entry, so pingProvider returned {up:false, error:'unknown provider'}, latching status=down at 2 failures (reached 255). The openrouter-provider change (2026-07-05) switched defaultProvider and every agent to OpenRouter but never added the health probe, and no test checked the two stayed in sync. LESSON: when a health check reports a failure that no provider-side recovery could ever clear, suspect the checker, not the provider. Fix: /auth/key probe (free, no model tokens), key resolved from ~/.hermes/.env, new 'unmonitored' status so a missing probe can never masquerade as an outage, plus a guard test asserting every budget.json provider has a HEALTH_ENDPOINTS entry.",
+      "date": "2026-08-01",
+      "timestamp": "2026-08-01T23:04:29.429Z"
+    }
+  ]
+}

@@ -1,0 +1,272 @@
+diff --git a/agents/jony-aive/memory/compost.json b/agents/jony-aive/memory/compost.json
+index 5fe3208..c43cb32 100644
+--- a/agents/jony-aive/memory/compost.json
++++ b/agents/jony-aive/memory/compost.json
+@@ -1 +1,3 @@
+-{ "entries": [] }
++{
++  "entries": []
++}
+\ No newline at end of file
+diff --git a/agents/jony-aive/memory/core.json b/agents/jony-aive/memory/core.json
+index 5bc3247..6a721e4 100644
+--- a/agents/jony-aive/memory/core.json
++++ b/agents/jony-aive/memory/core.json
+@@ -77,6 +77,15 @@
+           "major": 0,
+           "minor": 0
+         }
++      },
++      "2026-W45": {
++        "correctionsReceived": 0,
++        "selfCorrections": 0,
++        "reviewSeverity": {
++          "critical": 0,
++          "major": 0,
++          "minor": 0
++        }
+       }
+     }
+   }
+diff --git a/agents/jony-aive/memory/medium-term.json b/agents/jony-aive/memory/medium-term.json
+index 94549ce..c43cb32 100644
+--- a/agents/jony-aive/memory/medium-term.json
++++ b/agents/jony-aive/memory/medium-term.json
+@@ -1,22 +1,3 @@
+ {
+-  "entries": [
+-    {
+-      "id": "M-1789139893505",
+-      "content": "BACKLOG #29 (Nels Workshop hub) UNBLOCKED 2026-09-11 (T-705): business-os B (portfolio foundation) and C (environment tiering) have landed, so the Nels Workshop hub is no longer blocked on business-os. BACKLOG.md entry #29 reflects the unblock; hub design/rollout can proceed as mission #1 through the pipeline when the queue picks it up.",
+-      "date": "2026-09-11",
+-      "timestamp": "2026-09-11T15:18:13.505Z"
+-    },
+-    {
+-      "id": "M-1789139893506",
+-      "content": "T-705 completed: promoted BACKLOG #29 (Nels Workshop hub) from 'Remaining Ideas' to 'Promoted to Changes' in openspec/BACKLOG.md. Hub unblocked now that business-os B and C have landed. Memory updated in all agent directories.",
+-      "date": "2026-09-15",
+-      "timestamp": "2026-09-15T13:05:29.000Z"
+-    },
+-    {
+-      "id": "M-1789500754002",
+-      "content": "BACKLOG #29 (Nels Workshop Hub) promoted from backlog to active change on 2026-09-11 (T-705). Unblocked because business-os workstreams B (portfolio foundation) and C (environment tiering) have landed. The hub is a separate repo (nels-workshop-hub), uses Granary UI components, v1 is read + light-actions. Scope decisions: no invoicing/contracts for v1, not a source of truth, writes go through existing scripts. Build as mission #1 through the pipeline — dogfooding the wireframe gate.",
+-      "date": "2026-09-11",
+-      "timestamp": "2026-09-11T12:00:00.000Z"
+-    }
+-  ]
+-}
++  "entries": []
++}
+\ No newline at end of file
+diff --git a/agents/sdlc-developer/memory/compost.json b/agents/sdlc-developer/memory/compost.json
+index 5fe3208..c43cb32 100644
+--- a/agents/sdlc-developer/memory/compost.json
++++ b/agents/sdlc-developer/memory/compost.json
+@@ -1 +1,3 @@
+-{ "entries": [] }
++{
++  "entries": []
++}
+\ No newline at end of file
+diff --git a/agents/sdlc-developer/memory/core.json b/agents/sdlc-developer/memory/core.json
+index ea1de47..0999e98 100644
+--- a/agents/sdlc-developer/memory/core.json
++++ b/agents/sdlc-developer/memory/core.json
+@@ -135,6 +135,15 @@
+           "major": 0,
+           "minor": 0
+         }
++      },
++      "2026-W45": {
++        "correctionsReceived": 0,
++        "selfCorrections": 0,
++        "reviewSeverity": {
++          "critical": 0,
++          "major": 0,
++          "minor": 0
++        }
+       }
+     }
+   }
+diff --git a/agents/sdlc-developer/memory/long-term.json b/agents/sdlc-developer/memory/long-term.json
+index c43cb32..8fa2711 100644
+--- a/agents/sdlc-developer/memory/long-term.json
++++ b/agents/sdlc-developer/memory/long-term.json
+@@ -1,3 +1,28 @@
+ {
+-  "entries": []
++  "entries": [
++    {
++      "id": "M-1785625484991",
++      "content": "Health-check design rule: a monitoring check must distinguish 'I could not measure this' from 'this is broken'. model-manager.mjs now has an 'unmonitored' status for providers with no HEALTH_ENDPOINTS entry — it is logged loudly (console + provider-unmonitored ledger event) but never latches down, never swaps an agent's model, and never fires highSeverityFailure. Same failure class as egress-preflight REQ-006. Any new provider added to budget.json must ship with a probe; tests/adapter-and-model-manager.test.mjs enforces this.",
++      "date": "2026-08-01",
++      "timestamp": "2026-08-01T23:04:44.991Z"
++    },
++    {
++      "id": "M-1785627567846",
++      "content": "Environment lesson (2026-08-01): systemd user units do NOT inherit an interactive shell's environment. GROQ_API_KEY was exported from ~/.bashrc, so an interactive 'model-manager.mjs check' showed 'groq: up' while the scheduler journal showed 'groq: not configured' on every tick. ALWAYS verify scheduler-affecting config from 'journalctl --user -u <unit>' after a real timer run, never from an interactive shell — an interactive run is what hid this. Scheduler-visible secrets belong in ~/.hermes/.env (mode 0600), which every sdlc-sched-* unit loads via EnvironmentFile=-%h/.hermes/.env.",
++      "date": "2026-08-01",
++      "timestamp": "2026-08-01T23:39:27.846Z"
++    },
++    {
++      "id": "M-1789139893299",
++      "content": "BACKLOG #29 (Nels Workshop hub) UNBLOCKED 2026-09-11 (T-705): business-os workstreams B (portfolio foundation, T-101..T-105) and C (environment tiering, T-201..T-206) have both landed. Entry #29 in openspec/BACKLOG.md has been promoted to the Promoted to Changes table. The hub can now be built as mission #1 through the pipeline.",
++      "date": "2026-09-15",
++      "timestamp": "2026-09-15T13:05:29.000Z"
++    },
++    {
++      "id": "M-1785625469429",
++      "content": "provider-health-probe-gaps (2026-08-01): Hermes paged 'OpenRouter is DOWN / no healthy fallback' 7,204 times on a HEALTHY provider. Root cause was not the provider — HEALTH_ENDPOINTS in agents/model-manager.mjs had no openrouter entry, so pingProvider returned {up:false, error:'unknown provider'}, latching status=down at 2 failures (reached 255). The openrouter-provider change (2026-07-05) switched defaultProvider and every agent to OpenRouter but never added the health probe, and no test checked the two stayed in sync. LESSON: when a health check reports a failure that no provider-side recovery could ever clear, suspect the checker, not the provider. Fix: /auth/key probe (free, no model tokens), key resolved from ~/.hermes/.env, new 'unmonitored' status so a missing probe can never masquerade as an outage, plus a guard test asserting every budget.json provider has a HEALTH_ENDPOINTS entry.",
++      "date": "2026-08-01",
++      "timestamp": "2026-08-01T23:04:29.429Z"
++    }
++  ]
+ }
+\ No newline at end of file
+diff --git a/agents/sdlc-developer/memory/medium-term.json b/agents/sdlc-developer/memory/medium-term.json
+index 23747ba..c43cb32 100644
+--- a/agents/sdlc-developer/memory/medium-term.json
++++ b/agents/sdlc-developer/memory/medium-term.json
+@@ -1,22 +1,3 @@
+ {
+-  "entries": [
+-    {
+-      "id": "M-1785625484991",
+-      "content": "Health-check design rule: a monitoring check must distinguish 'I could not measure this' from 'this is broken'. model-manager.mjs now has an 'unmonitored' status for providers with no HEALTH_ENDPOINTS entry — it is logged loudly (console + provider-unmonitored ledger event) but never latches down, never swaps an agent's model, and never fires highSeverityFailure. Same failure class as egress-preflight REQ-006. Any new provider added to budget.json must ship with a probe; tests/adapter-and-model-manager.test.mjs enforces this.",
+-      "date": "2026-08-01",
+-      "timestamp": "2026-08-01T23:04:44.991Z"
+-    },
+-    {
+-      "id": "M-1785627567846",
+-      "content": "Environment lesson (2026-08-01): systemd user units do NOT inherit an interactive shell's environment. GROQ_API_KEY was exported from ~/.bashrc, so an interactive 'model-manager.mjs check' showed 'groq: up' while the scheduler journal showed 'groq: not configured' on every tick. ALWAYS verify scheduler-affecting config from 'journalctl --user -u <unit>' after a real timer run, never from an interactive shell — an interactive run is what hid this. Scheduler-visible secrets belong in ~/.hermes/.env (mode 0600), which every sdlc-sched-* unit loads via EnvironmentFile=-%h/.hermes/.env.",
+-      "date": "2026-08-01",
+-      "timestamp": "2026-08-01T23:39:27.846Z"
+-    },
+-    {
+-      "id": "M-1789139893299",
+-      "content": "BACKLOG #29 (Nels Workshop hub) UNBLOCKED 2026-09-11 (T-705): business-os workstreams B (portfolio foundation, T-101..T-105) and C (environment tiering, T-201..T-206) have both landed. Entry #29 in openspec/BACKLOG.md has been promoted to the Promoted to Changes table. The hub can now be built as mission #1 through the pipeline.",
+-      "date": "2026-09-15",
+-      "timestamp": "2026-09-15T13:05:29.000Z"
+-    }
+-  ]
++  "entries": []
+ }
+\ No newline at end of file
+diff --git a/agents/sdlc-developer/memory/recent.json b/agents/sdlc-developer/memory/recent.json
+index 277d954..2e536f7 100644
+--- a/agents/sdlc-developer/memory/recent.json
++++ b/agents/sdlc-developer/memory/recent.json
+@@ -1,11 +1,5 @@
+ {
+   "entries": [
+-    {
+-      "id": "M-1785625469429",
+-      "content": "provider-health-probe-gaps (2026-08-01): Hermes paged 'OpenRouter is DOWN / no healthy fallback' 7,204 times on a HEALTHY provider. Root cause was not the provider — HEALTH_ENDPOINTS in agents/model-manager.mjs had no openrouter entry, so pingProvider returned {up:false, error:'unknown provider'}, latching status=down at 2 failures (reached 255). The openrouter-provider change (2026-07-05) switched defaultProvider and every agent to OpenRouter but never added the health probe, and no test checked the two stayed in sync. LESSON: when a health check reports a failure that no provider-side recovery could ever clear, suspect the checker, not the provider. Fix: /auth/key probe (free, no model tokens), key resolved from ~/.hermes/.env, new 'unmonitored' status so a missing probe can never masquerade as an outage, plus a guard test asserting every budget.json provider has a HEALTH_ENDPOINTS entry.",
+-      "date": "2026-08-01",
+-      "timestamp": "2026-08-01T23:04:29.429Z"
+-    },
+     {
+       "id": "M-1794160669062",
+       "content": "FIX-103: branch agent/drain/OS-curriculum-v2-conformance-23 already had the test concurrency fix (--test-concurrency=1) pushed; all 808 tests pass; no new changes needed",
+diff --git a/agents/sdlc-documentarian/memory/compost.json b/agents/sdlc-documentarian/memory/compost.json
+index 5fe3208..c43cb32 100644
+--- a/agents/sdlc-documentarian/memory/compost.json
++++ b/agents/sdlc-documentarian/memory/compost.json
+@@ -1 +1,3 @@
+-{ "entries": [] }
++{
++  "entries": []
++}
+\ No newline at end of file
+diff --git a/agents/sdlc-documentarian/memory/core.json b/agents/sdlc-documentarian/memory/core.json
+index 337e493..027da7f 100644
+--- a/agents/sdlc-documentarian/memory/core.json
++++ b/agents/sdlc-documentarian/memory/core.json
+@@ -86,6 +86,15 @@
+           "major": 0,
+           "minor": 0
+         }
++      },
++      "2026-W45": {
++        "correctionsReceived": 0,
++        "selfCorrections": 0,
++        "reviewSeverity": {
++          "critical": 0,
++          "major": 0,
++          "minor": 0
++        }
+       }
+     }
+   }
+diff --git a/agents/sdlc-documentarian/memory/medium-term.json b/agents/sdlc-documentarian/memory/medium-term.json
+index 80c028c..c43cb32 100644
+--- a/agents/sdlc-documentarian/memory/medium-term.json
++++ b/agents/sdlc-documentarian/memory/medium-term.json
+@@ -1,16 +1,3 @@
+ {
+-  "entries": [
+-    {
+-      "id": "M-1789139893298",
+-      "content": "BACKLOG #29 (Nels Workshop hub) UNBLOCKED 2026-09-11 (T-705): business-os workstreams B (portfolio foundation, T-101..T-105) and C (environment tiering, T-201..T-206) have both landed — every task checked off in openspec/changes/business-os/tasks.md. Entry #29 in openspec/BACKLOG.md was updated to reflect this; the hub can now be promoted to an OpenSpec change and built as mission #1 through the pipeline. Do not re-check whether B/C landed; the blocker line is struck through with the date.",
+-      "date": "2026-09-11",
+-      "timestamp": "2026-09-11T15:18:13.298Z"
+-    },
+-    {
+-      "id": "M-1789500754001",
+-      "content": "BACKLOG #29 (Nels Workshop Hub) promoted from backlog to active change on 2026-09-11 (T-705). Unblocked because business-os workstreams B (portfolio foundation) and C (environment tiering) have landed. The hub is a separate repo (nels-workshop-hub), uses Granary UI components, v1 is read + light-actions. BACKLOG.md updated — removed from Remaining Ideas, added row to Promoted to Changes table.",
+-      "date": "2026-09-11",
+-      "timestamp": "2026-09-11T12:00:00.000Z"
+-    }
+-  ]
+-}
++  "entries": []
++}
+\ No newline at end of file
+diff --git a/agents/sdlc-reviewer/memory/compost.json b/agents/sdlc-reviewer/memory/compost.json
+index 5fe3208..c43cb32 100644
+--- a/agents/sdlc-reviewer/memory/compost.json
++++ b/agents/sdlc-reviewer/memory/compost.json
+@@ -1 +1,3 @@
+-{ "entries": [] }
++{
++  "entries": []
++}
+\ No newline at end of file
+diff --git a/agents/sdlc-reviewer/memory/core.json b/agents/sdlc-reviewer/memory/core.json
+index a73db43..3750417 100644
+--- a/agents/sdlc-reviewer/memory/core.json
++++ b/agents/sdlc-reviewer/memory/core.json
+@@ -86,6 +86,15 @@
+           "major": 0,
+           "minor": 0
+         }
++      },
++      "2026-W45": {
++        "correctionsReceived": 0,
++        "selfCorrections": 0,
++        "reviewSeverity": {
++          "critical": 0,
++          "major": 0,
++          "minor": 0
++        }
+       }
+     }
+   }
+diff --git a/agents/sdlc-reviewer/memory/medium-term.json b/agents/sdlc-reviewer/memory/medium-term.json
+index 489fa83..c43cb32 100644
+--- a/agents/sdlc-reviewer/memory/medium-term.json
++++ b/agents/sdlc-reviewer/memory/medium-term.json
+@@ -1,10 +1,3 @@
+ {
+-  "entries": [
+-    {
+-      "id": "M-1789139893300",
+-      "content": "BACKLOG #29 (Nels Workshop hub) UNBLOCKED 2026-09-11 (T-705): business-os workstreams B (portfolio foundation, T-101..T-105) and C (environment tiering, T-201..T-206) have both landed. Entry #29 in openspec/BACKLOG.md has been promoted to the Promoted to Changes table. The hub can now be built as mission #1 through the pipeline.",
+-      "date": "2026-09-15",
+-      "timestamp": "2026-09-15T13:05:29.000Z"
+-    }
+-  ]
+-}
++  "entries": []
++}
+\ No newline at end of file

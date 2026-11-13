@@ -1,0 +1,21 @@
+{
+  "id": "OS-curriculum-v2-conformance-130",
+  "title": "Add `agents/secrets.mjs` to resolve a credential from VaultWarden through the `bw` CLI, falling back to env/.env",
+  "description": "- [ ] **CV-706**: Add `agents/secrets.mjs` to resolve a credential from VaultWarden through the `bw` CLI, falling back to env/.env\n  - **Priority:** MEDIUM\n  - Files: `agents/secrets.mjs` (new), `tests/secrets.test.mjs` (new)\n  - Spec: CV-REQ-112\n  - Gaps: D1-17\n  - Lane: hermes\n  - Test: with a stub `bw` on PATH the value comes from the vault; with no `bw` the env fallback is used and the warning never contains the value; a session past its TTL is re-unlocked\n  - Complexity: M",
+  "priority": "MEDIUM",
+  "status": "completed",
+  "agent": "sdlc-developer",
+  "estimatedTokens": 3500,
+  "source": "openspec/curriculum-v2-conformance/tasks.md",
+  "createdAt": "2026-11-03T20:05:57.820Z",
+  "claimedBy": "sdlc-developer",
+  "testStatus": null,
+  "_file": "OS-curriculum-v2-conformance-130.json",
+  "assignee": "sdlc-developer",
+  "claimedAt": "2026-11-11T18:24:08.483Z",
+  "instanceId": "sdlc-developer",
+  "started_at": "2026-11-11T18:24:08.483Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-11T18:25:07.810Z"
+}
