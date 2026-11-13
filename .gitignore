@@ -21,3 +21,7 @@ agents/*/reviews/
 
 # Derived memory artifact (rebuilt into the state dir; runtime-state-isolation RS-REQ-017)
 agents/*/memory/vectors.json
+
+# Agent version snapshots (local backups; git history is the record for tracked files)
+# Already-tracked snapshots remain tracked.
+agents/versions/
