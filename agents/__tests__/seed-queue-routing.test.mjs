@@ -11,7 +11,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync, mkdirSync, cpSync } from 'fs';
+import { readFileSync, existsSync, mkdirSync, cpSync, mkdtempSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
@@ -128,6 +128,14 @@ describe('scaffoldBugChange — bug change scaffolding (CV-308 / CV-REQ-036)', (
     assert.equal(proposalFirst, proposalSecond, 'proposal.md must be byte-identical on second call');
     assert.equal(tasksFirst, tasksSecond, 'tasks.md must be byte-identical on second call');
     assert.equal(statusFirst, statusSecond, 'status.json must be byte-identical on second call');
+  });
+
+  it('throws on a missing template and creates no directory', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'sbc-'));
+    const changesDir = join(tmp, 'changes');
+    mkdirSync(changesDir);
+    assert.throws(() => scaffoldBugChange({ id: 'T-1', title: 't' }, { templatesDir: join(tmp, 'nope'), changesDir }), /missing template/);
+    assert.equal(existsSync(join(changesDir, 'bug-T-1')), false);
   });
 
   it('throws when templatesDir or changesDir are missing', () => {

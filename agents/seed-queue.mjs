@@ -222,6 +222,16 @@ export function scaffoldBugChange(task, opts = {}) {
   const dateStr = new Date().toISOString().slice(0, 10);
   const failureText = task.description || 'No failure details provided.';
 
+  // Idempotent: an existing bug change is left untouched (spec CV-REQ-036), even across days.
+  if (existsSync(bugDir)) return resolve(bugDir);
+
+  // Fail loudly, before creating anything, when a template is missing.
+  for (const t of ['proposal.md.template', 'tasks.md.template', 'status.json.template']) {
+    if (!existsSync(join(templatesDir, t))) {
+      throw new Error(`scaffoldBugChange: missing template ${join(templatesDir, t)}`);
+    }
+  }
+
   mkdirSync(bugDir, { recursive: true });
 
   // Build proposal.md from template
