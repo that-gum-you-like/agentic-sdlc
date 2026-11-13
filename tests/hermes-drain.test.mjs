@@ -8,7 +8,7 @@
  * Run: node tests/hermes-drain.test.mjs
  */
 
-import { readFileSync, existsSync, statSync, constants, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { readdirSync, readFileSync, existsSync, statSync, constants, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { accessSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { tmpdir } from 'os';
@@ -388,6 +388,21 @@ test('a task the worker gave up on is skipped next time, not re-picked forever (
   } finally { f.cleanup(); }
   const src = readFileSync(script, 'utf8');
   assert(/DRAIN: \(skipped\|blocked\) \$TASK_ID/.test(src) && />> "\$SKIP_LEDGER"/.test(src), 'a give-up is recorded in the ledger');
+});
+
+test('uid 0 -> rc 98, no mutex/clone/log created, message names the user-level unit (RS-REQ-042)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'rs-root-'));
+  try {
+    for (const args of [[], ['--dry-run']]) {
+      let status = 0, stderr = '';
+      try {
+        execFileSync('bash', [script, ...args], { encoding: 'utf8', stdio: 'pipe', env: { ...process.env, SDLC_TEST_UID: '0', SDLC_REPO: dir, SDLC_LOCK_DIR: join(dir, 'lock.d'), SDLC_DRAIN_CLONE: join(dir, 'clone') } });
+      } catch (e) { status = e.status; stderr = String(e.stderr); }
+      assert(status === 98, `rc ${status} for ${args.join(' ') || 'normal'}`);
+      assert(/systemctl --user/.test(stderr), 'names the user-level unit');
+    }
+    assert(readdirSync(dir).length === 0, `files created: ${readdirSync(dir)}`);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
 // Summary LAST (bug 2026-11-09): a test declared after it could fail without failing the suite.

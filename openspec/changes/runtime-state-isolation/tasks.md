@@ -120,19 +120,19 @@ Node stdlib only, zero new dependencies, no OpenAI, no Anthropic API. Tests run 
 
 ### Phase 2: Task archive (RS-REQ-020..022)
 
-- [ ] **RS-101**: `archive` stamps `archived_at` in place; `archiveTask` no longer renames; default list hides archived, `--all` shows
+- [x] **RS-101**: `archive` stamps `archived_at` in place; `archiveTask` no longer renames; default list hides archived, `--all` shows
   - Files: `agents/queue-drainer.mjs`, `agents/adapters/orchestration/file-based.mjs`, `tests/queue-drainer-archive.test.mjs`
   - Spec: RS-REQ-020, RS-REQ-043
   - Tests: "3 completed + 2 pending -> 3 stamped, 0 moved, no completed dir", "re-run does not restamp", "root-owned queue reports and writes nothing"
   - Lane: hermes | Parallel: yes | Complexity: S
 
-- [ ] **RS-102**: Readers use archived-in-queue: counts, dependency resolution, `capability-monitor`; legacy `tasks/completed/` read for counts only
+- [x] **RS-102**: Readers use archived-in-queue: counts, dependency resolution, `capability-monitor`; legacy `tasks/completed/` read for counts only
   - Files: `agents/queue-drainer.mjs`, `agents/adapters/orchestration/file-based.mjs`, `agents/capability-monitor.mjs`, `agents/__tests__/capability-monitor.test.mjs`, `tests/queue-drainer-archive.test.mjs`
   - Spec: RS-REQ-021
   - Tests: "dependency on archived task is satisfied", "counts = queue-archived + legacy", "no writer to completedDir"
   - Lane: hermes | Parallel: blocked-by RS-101 | Complexity: M
 
-- [ ] **RS-103**: `migrate-task-archive.mjs` (restore missing, skip identical, save conflicts to state dir, never touch the legacy dir, print human chown/remove command)
+- [x] **RS-103**: `migrate-task-archive.mjs` (restore missing, skip identical, save conflicts to state dir, never touch the legacy dir, print human chown/remove command)
   - Files: `agents/migrate-task-archive.mjs`, `tests/migrate-task-archive.test.mjs`
   - Spec: RS-REQ-022
   - Tests: "146 files: 144 no-op, 2 conflicts saved, queue unchanged", "idempotent", "unreadable dir reports, writes nothing", "dry-run"
@@ -140,19 +140,19 @@ Node stdlib only, zero new dependencies, no OpenAI, no Anthropic API. Tests run 
 
 ### Phase 3: Update safety (RS-REQ-030..033)
 
-- [ ] **RS-201**: `sdlc-update.mjs` with pure `classifyTree`, injectable git runner and notifier; never stash/reset/checkout/clean/chown
+- [x] **RS-201**: `sdlc-update.mjs` with pure `classifyTree`, injectable git runner and notifier; never stash/reset/checkout/clean/chown
   - Files: `agents/sdlc-update.mjs`, `tests/sdlc-update.test.mjs`
   - Spec: RS-REQ-030, RS-REQ-031, RS-REQ-032
   - Tests: classification table (clean+behind, dirty-disjoint, dirty-overlap, ahead, wrong branch, mid-rebase, fetch fail); "argv never contains stash/reset/checkout/clean"; "same cause twice -> one alert"; "notifier throws -> exit 0"; "31 behind -> drift alert with count and date"
   - Lane: hermes | Parallel: yes | Complexity: M
   - Notes: reuse `triggerNotificationOnce` from `agents/notify.mjs`; guard CLI with `__isMainModule`.
 
-- [ ] **RS-202**: Repo-owned unit template and test that it calls `sdlc-update.mjs` (no `git pull`)
+- [x] **RS-202**: Repo-owned unit template and test that it calls `sdlc-update.mjs` (no `git pull`)
   - Files: `agents/templates/systemd/sdlc-update.service.template`, `tests/sdlc-update.test.mjs`, `docs/RUNBOOK.md`
   - Spec: RS-REQ-033
   - Lane: hermes | Parallel: blocked-by RS-201 | Complexity: S
 
-- [ ] **RS-203**: Install the new `ExecStart` in `~/.config/systemd/user/sdlc-update.service` and `daemon-reload` (Bryce session only; outside the repo)
+- [x] **RS-203**: Install the new `ExecStart` in `~/.config/systemd/user/sdlc-update.service` and `daemon-reload` (Bryce session only; outside the repo)
   - Files: none (operational)
   - Spec: RS-REQ-033
   - Lane: interactive | Parallel: blocked-by RS-202 | Complexity: S
@@ -160,7 +160,7 @@ Node stdlib only, zero new dependencies, no OpenAI, no Anthropic API. Tests run 
 
 ### Phase 4: Checkout hygiene (RS-REQ-040..043)
 
-- [ ] **RS-301**: `checkout-doctor.mjs` read-only report, `--json`, injectable ownership lookup, shared ownership helper (also used by RS-001/RS-201)
+- [x] **RS-301**: `checkout-doctor.mjs` read-only report, `--json`, injectable ownership lookup, shared ownership helper (also used by RS-001/RS-201)
   - Files: `agents/checkout-doctor.mjs`, `agents/state-dir.mjs` (helper export), `tests/checkout-doctor.test.mjs`
   - Spec: RS-REQ-040
   - Tests: "root-owned dir and untracked secrets.mjs reported with owner and command", "clean tree exits 0 with no findings", "never modifies anything (fixture hash before/after)", "unreadable path reported"
@@ -172,7 +172,7 @@ Node stdlib only, zero new dependencies, no OpenAI, no Anthropic API. Tests run 
   - Tests: "new foreign path alerts once", "unchanged set silent inside window"
   - Lane: hermes | Parallel: blocked-by RS-301 | Complexity: S
 
-- [ ] **RS-303**: No-root rule: `hermes-drain.sh` and `drain-supervisor.mjs` exit 98 at uid 0 before any side effect
+- [x] **RS-303**: No-root rule: `hermes-drain.sh` and `drain-supervisor.mjs` exit 98 at uid 0 before any side effect
   - Files: `agents/hermes-drain.sh`, `agents/drain-supervisor.mjs`, `tests/hermes-drain.test.mjs`, `tests/drain-supervisor-review.test.mjs`
   - Spec: RS-REQ-042
   - Tests: "uid 0 -> rc 98, no mutex/clone/log created", "dry-run also refuses", "message names the user-level unit"

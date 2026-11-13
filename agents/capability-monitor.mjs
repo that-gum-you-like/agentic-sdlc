@@ -18,6 +18,7 @@ import { dirname } from 'path';
 
 import { loadConfig } from './load-config.mjs';
 import { triggerNotification } from './notify.mjs';
+import * as fileBased from './adapters/orchestration/file-based.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -67,18 +68,8 @@ function loadSystemLog() {
 // ---------------------------------------------------------------------------
 
 function loadCompletedTasks() {
-  const completedDir = config.completedDir;
-  if (!existsSync(completedDir)) return [];
-
-  const files = readdirSync(completedDir).filter(f => f.endsWith('.json')).sort();
-  const tasks = [];
-  for (const file of files) {
-    try {
-      const task = JSON.parse(readFileSync(resolve(completedDir, file), 'utf8'));
-      tasks.push(task);
-    } catch { /* skip malformed */ }
-  }
-  return tasks;
+  // RS-REQ-021: archived tasks live in tasks/queue (archived_at); legacy dir is read-only fallback.
+  return fileBased.loadArchivedTasks(config.tasksDir, config.completedDir);
 }
 
 // ---------------------------------------------------------------------------

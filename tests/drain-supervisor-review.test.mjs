@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { runReview } from '../agents/drain-supervisor.mjs';
+import { runReview, rootRefusal } from '../agents/drain-supervisor.mjs';
 
 test('runReview runs pr-auto-review for the drained project', () => {
   const calls = [];
@@ -23,4 +23,18 @@ test('pass() reviews immediately after each drain', () => {
   const drainAt = src.indexOf('const ok = runDrain(p);');
   const reviewAt = src.indexOf('runReview(p)', drainAt);
   assert.ok(drainAt > 0 && reviewAt > drainAt && reviewAt - drainAt < 200, 'review must follow drain in pass()');
+});
+
+test('uid 0 -> refusal message naming the user-level unit; non-root -> null (RS-REQ-042)', () => {
+  assert.match(rootRefusal(0), /rc 98.*systemctl --user/);
+  assert.equal(rootRefusal(1000), null);
+});
+
+test('supervisor exits 98 as root, dry-run included, before logging a start', async () => {
+  const { spawnSync } = await import('node:child_process');
+  for (const a of [[], ['--dry-run']]) {
+    const r = spawnSync(process.execPath, [new URL('../agents/drain-supervisor.mjs', import.meta.url).pathname, ...a], { encoding: 'utf8', env: { ...process.env, SDLC_TEST_UID: '0' } });
+    assert.equal(r.status, 98);
+    assert.doesNotMatch(r.stdout, /starting/);
+  }
 });

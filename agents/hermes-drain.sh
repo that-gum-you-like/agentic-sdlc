@@ -27,6 +27,18 @@
 #      HERMES_DRAIN_HOME, MAX_OPEN_DRAIN_PRS
 set -uo pipefail
 
+# RS-REQ-042: the drain never runs as root. Checked FIRST, before any mutex, clone or
+# log is created (dry-run included). SDLC_TEST_UID is a test-only uid override.
+DRAIN_UID="${SDLC_TEST_UID:-$(id -u)}"
+if [ "$DRAIN_UID" -eq 0 ]; then
+  echo "[hermes-drain] refusing to run as root (rc 98): run the user-level unit instead (systemctl --user start sdlc-sched-autonomous-drain.service)" >&2
+  if [ -z "${SDLC_TEST_UID:-}" ]; then
+    _SD="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    node "$_SD/drain-supervisor.mjs" >/dev/null 2>&1 || true
+  fi
+  exit 98
+fi
+
 # Where the framework lives — derived from THIS script's own location, so it is
 # correct regardless of SDLC_REPO and of the caller's CWD (the systemd unit's
 # working directory is not guaranteed).
