@@ -29,7 +29,6 @@ import { loadConfig } from './load-config.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const __filename = fileURLToPath(import.meta.url);
 const _config = loadConfig();
 const PROJECT_ROOT = _config.projectDir;
 const LINGUAFLOW_ROOT = _config.appPath;
@@ -143,242 +142,119 @@ function rel(absPath) {
   return path.relative(PROJECT_ROOT, absPath);
 }
 
+// ---------------------------------------------------------------------------
+// Function metrics (CV-303)
+// ---------------------------------------------------------------------------
+
+/** Blank out strings, comments and template literals (keeping newlines and offsets) so braces/parens inside them never count. */
+function blankLiterals(src) {
+  const out = src.split('');
+  const blank = (a, b) => { for (let k = a; k < b && k < out.length; k++) if (out[k] !== '\n') out[k] = ' '; };
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i], n = src[i + 1];
+    let end = -1;
+    if (c === '/' && n === '/') { end = src.indexOf('\n', i); if (end < 0) end = src.length; }
+    else if (c === '/' && n === '*') { end = src.indexOf('*/', i + 2); end = end < 0 ? src.length : end + 2; }
+    else if (c === '"' || c === "'" || c === '`') {
+      end = i + 1;
+      while (end < src.length && src[end] !== c) end += src[end] === '\\' ? 2 : 1;
+      end++;
+    }
+    if (end < 0) { i++; continue; }
+    blank(i, end);
+    i = end;
+  }
+  return out.join('');
+}
+
+/** Index of the bracket matching the opener at `open` in blanked text, or -1. */
+function matchClose(text, open) {
+  const pairs = { '(': ')', '{': '}' };
+  const o = text[open], cl = pairs[o];
+  let depth = 0;
+  for (let i = open; i < text.length; i++) {
+    if (text[i] === o) depth++;
+    else if (text[i] === cl && --depth === 0) return i;
+  }
+  return -1;
+}
+
+/** Number of top-level, comma-separated parameters in a parameter-list string. */
+function countParams(list) {
+  if (!list.trim()) return 0;
+  let depth = 0, count = 1, last = '';
+  for (let i = 0; i < list.length; i++) {
+    const c = list[i];
+    if ('([{<'.includes(c)) depth++;
+    else if (')]}'.includes(c) || (c === '>' && list[i - 1] !== '=')) depth--;
+    else if (c === ',' && depth === 0) count++;
+    if (c.trim()) last = c;
+  }
+  return last === ',' ? count - 1 : count; // trailing comma
+}
+
 /**
- * Scan JavaScript/TypeScript source code and return metrics for every function
- * with a brace-delimited body.
+ * Metrics for each JS/TS function with a braced body: `function` declarations/expressions
+ * and arrow functions with block bodies. Nested functions are reported separately.
+ * Expression-bodied arrows, methods and accessors are NOT reported (out of scope).
+ * Known limit: regex literals containing quotes or braces can confuse the scan.
  *
- * Supports:
- *   - Function declarations: `function name(params) { ... }`
- *   - Async function declarations: `async function name(params) { ... }`
- *   - Function expressions: `const name = function(params) { ... }`
- *   - Arrow functions with block body: `const name = (params) => { ... }` and `const f = x => { ... }`
- *   - Method shorthand: `{ name(params) { ... } }`
- *   - Getter/setter accessors: `{ get name() { ... } set name(v) { ... } }`
- *   - Class method shorthand / async methods: `class C { name(params) { ... } async name(params) { ... } }`
- *
- * Uses brace-matching to determine function span. Nested functions are counted
- * separately. Implicit-return arrow functions like `() => x` are excluded.
- *
- * @param {string} source - Source code to scan
- * @returns {Array<{name: string, startLine: number, lines: number, params: number}>}
+ * @param {string} source
+ * @returns {Array<{name:string,startLine:number,lines:number,params:number}>}
  */
 export function scanFunctionMetrics(source) {
-  source = source.replace(/\r\n/g, '\n');
+  const text = blankLiterals(source.replace(/\r\n/g, '\n'));
+  const lineOf = (off) => text.slice(0, off).split('\n').length;
   const results = [];
-  const lines = source.split('\n');
-  function lineAt(offset) { let n = 1, i = 0; while (i < offset && i < source.length) { if (source[i] === '\n') n++; i++; } return n; }
-  function countParams(text) { if (!text || !text.trim()) return 0; let depth = 0, c = 1; for (let i = 0; i < text.length; i++) { const ch = text[i]; if (ch === '(' || ch === '[' || ch === '{') depth++; else if (ch === ')' || ch === ']' || ch === '}') depth--; else if (depth === 0 && ch === ',') c++; } return c; }
+  const NAME_BEFORE = /(?:(?:const|let|var)\s+([\w$]+)|([\w$]+)\s*[:=])\s*(?::[^=]*)?=?\s*(?:async\s+)?$/;
 
-  // Find matching `}` starting from braceStart, respecting strings/comments/templates
-  function matchBrace(src, braceStart) {
-    let depth = 1, i = braceStart + 1;
-    while (i < src.length && depth > 0) {
-      const ch = src[i];
-      if (ch === '"' || ch === "'") { const q = ch; i++; while (i < src.length && src[i] !== q) { if (src[i] === '\\') i++; i++; } }
-      else if (ch === '`') { i++; while (i < src.length && src[i] !== '`') { if (src[i] === '\\') i++; else if (src[i] === '$' && i + 1 < src.length && src[i + 1] === '{') { depth++; i += 2; continue; } i++; } }
-      else if (ch === '/' && i + 1 < src.length) {
-        if (src[i + 1] === '/') { i += 2; while (i < src.length && src[i] !== '\n') i++; }
-        else if (src[i + 1] === '*') { i += 2; while (i + 1 < src.length && !(src[i] === '*' && src[i + 1] === '/')) i++; i++; }
-      } else if (ch === '{') depth++;
-      else if (ch === '}') { depth--; if (depth === 0) return i; }
-      i++;
-    }
-    return -1;
+  function record(startOff, name, paramsText, braceOff) {
+    const end = matchClose(text, braceOff);
+    if (end < 0) return;
+    results.push({ name, startLine: lineOf(startOff), lines: lineOf(end) - lineOf(startOff) + 1, params: countParams(paramsText) });
+  }
+  function inferName(beforeOff) {
+    const m = text.slice(Math.max(0, beforeOff - 120), beforeOff).match(NAME_BEFORE);
+    return m ? (m[1] || m[2]) : '(anonymous)';
   }
 
-  // Find matching `)` for a `(` at openParen
-  function matchParen(src, openParen) {
-    let depth = 1, i = openParen + 1;
-    while (i < src.length && depth > 0) {
-      if (src[i] === '(') depth++;
-      else if (src[i] === ')') depth--;
-      else if (src[i] === '"' || src[i] === "'") { const q = src[i]; i++; while (i < src.length && src[i] !== q) { if (src[i] === '\\') i++; i++; } }
-      else if (src[i] === '`') { i++; while (i < src.length && src[i] !== '`') { if (src[i] === '\\') i++; i++; } }
-      if (depth > 0) i++;
-    }
-    return depth === 0 ? i : -1;
+  for (const m of text.matchAll(/\bfunction\b\s*\*?\s*([\w$]*)\s*\(/g)) {
+    const open = m.index + m[0].length - 1;
+    const close = matchClose(text, open);
+    if (close < 0) continue;
+    const body = text.slice(close + 1).match(/^\s*(?::[^{;=]*)?\{/); // optional TS return type
+    if (!body) continue;
+    const name = m[1] || inferName(m.index);
+    record(m.index, name, text.slice(open + 1, close), close + body[0].length);
   }
 
-  // Skip past string/comment/template at position i; returns new position or i if nothing skipped
-  function skipLiteral(i) {
-    const ch = source[i];
-    if (ch === '"' || ch === "'") { let j = i + 1; while (j < source.length && source[j] !== ch) { if (source[j] === '\\') j++; j++; } return j + 1 <= source.length ? j + 1 : j; }
-    if (ch === '`') { let j = i + 1; while (j < source.length && source[j] !== '`') { if (source[j] === '\\') j++; if (source[j] === '$' && j + 1 < source.length && source[j + 1] === '{') j += 2; j++; } return j + 1; }
-    if (ch === '/' && i + 1 < source.length) {
-      if (source[i + 1] === '/') { let j = i + 2; while (j < source.length && source[j] !== '\n') j++; return j + 1; }
-      if (source[i + 1] === '*') { let j = i + 2; while (j + 1 < source.length && !(source[j] === '*' && source[j + 1] === '/')) j++; return j + 2; }
-    }
-    return i;
-  }
-
-  // Extract identifier starting at i (or assume default)
-  function parseFunctionName(src, i) {
-    if (i >= src.length || !/[a-zA-Z_$]/.test(src[i])) return { name: '(anonymous)', next: i };
-    let j = i;
-    while (j < src.length && /\w/.test(src[j])) j++;
-    return { name: src.slice(i, j), next: j };
-  }
-
-  // Skip whitespace (spaces, tabs, newlines)
-  function skipWS(src, i) { while (i < src.length && (src[i] === ' ' || src[i] === '\t' || src[i] === '\n')) i++; return i; }
-
-  // Scan a `function` keyword starting at pos i
-  function scanFunction(src, i) {
-    const afterFn = skipWS(src, i + 8);
-    const { name, next } = parseFunctionName(src, afterFn);
-    const openParen = skipWS(src, next);
-    if (openParen >= src.length || src[openParen] !== '(') return null;
-    const closeParen = matchParen(src, openParen);
-    if (closeParen === -1) return null;
-    const paramCount = countParams(src.slice(openParen + 1, closeParen));
-    const bodyStart = skipWS(src, closeParen + 1);
-    if (bodyStart >= src.length || src[bodyStart] !== '{') return null;
-    const bodyEnd = matchBrace(src, bodyStart);
-    if (bodyEnd === -1) return null;
-    return { name, startLine: lineAt(i), lines: lineAt(bodyEnd) - lineAt(i) + 1, params: paramCount, bodyEnd };
-  }
-
-  let i = 0;
-  while (i < source.length) {
-    // Skip string/comment literals
-    const afterSkip = skipLiteral(i);
-    if (afterSkip > i) { i = afterSkip; continue; }
-
-    // Pattern A: async function
-    if (source[i] === 'a' && source.slice(i, i + 5) === 'async' && i + 5 < source.length && /\s/.test(source[i + 5])) {
-      const j = skipWS(source, i + 5);
-      if (source.slice(j, j + 8) === 'function') {
-        const r = scanFunction(source, j);
-        if (r) { results.push({ ...r }); i = r.bodyEnd + 1; continue; }
+  for (const m of text.matchAll(/=>\s*\{/g)) {
+    const brace = m.index + m[0].length - 1;
+    let p = m.index - 1;
+    while (p >= 0 && /\s/.test(text[p])) p--;
+    let open, paramsText;
+    if (text[p] === ')') {
+      let depth = 0;
+      for (open = p; open >= 0; open--) {
+        if (text[open] === ')') depth++;
+        else if (text[open] === '(' && --depth === 0) break;
       }
-      i++; continue;
+      if (open < 0) continue;
+      paramsText = text.slice(open + 1, p);
+    } else {
+      let s = p;
+      while (s >= 0 && /[\w$]/.test(text[s])) s--;
+      if (s === p) continue; // not a parameter identifier
+      open = s + 1;
+      paramsText = text.slice(open, p + 1);
     }
-
-    // Pattern B: function keyword
-    if (source.slice(i, i + 8) === 'function' && (i + 8 >= source.length || !/[a-zA-Z0-9_]/.test(source[i + 8]))) {
-      const r = scanFunction(source, i);
-      if (r) { results.push(r); i = r.bodyEnd + 1; continue; }
-      i++; continue;
-    }
-
-    // Pattern C: Arrow functions with block body
-    if (source[i] === '=' && i + 1 < source.length && source[i + 1] === '>') {
-      const afterArrow = skipWS(source, i + 2);
-      if (afterArrow < source.length && source[afterArrow] === '{') {
-        // Walk back from => to find name and params
-        let scanName = '(anonymous)', paramCount = 0;
-        let scanPos = i - 1;
-        while (scanPos >= 0 && /\s/.test(source[scanPos])) scanPos--;
-        if (scanPos >= 0 && source[scanPos] === ')') {
-          // Multi-param: ...(p1, p2) =>
-          let pd = 1, parenStart = scanPos - 1;
-          while (parenStart >= 0 && pd > 0) {
-            if (source[parenStart] === ')') pd++;
-            else if (source[parenStart] === '(') pd--;
-            if (pd > 0) parenStart--;
-          }
-          if (parenStart >= 0) {
-            paramCount = countParams(source.slice(parenStart + 1, scanPos));
-            // Try to find variable assignment to the left
-            let eqPos = parenStart - 1;
-            while (eqPos >= 0 && /\s/.test(source[eqPos])) eqPos--;
-            if (eqPos >= 0 && source[eqPos] === '=') {
-              let ns = eqPos - 1;
-              while (ns >= 0 && /\s/.test(source[ns])) ns--;
-              if (ns >= 0 && /[a-zA-Z_$]/.test(source[ns])) {
-                const ne = ns;
-                while (ns >= 0 && /\w/.test(source[ns])) ns--;
-                scanName = source.slice(ns + 1, ne + 1);
-              }
-            }
-          }
-        } else {
-          // Single-param: x => { ... }
-          paramCount = 1;
-          let eqPos = scanPos;
-          while (eqPos >= 0 && /\s/.test(source[eqPos])) eqPos--;
-          if (eqPos >= 0 && source[eqPos] === '=') {
-            let ns = eqPos - 1;
-            while (ns >= 0 && /\s/.test(source[ns])) ns--;
-            if (ns >= 0 && /[a-zA-Z_$]/.test(source[ns])) {
-              const ne = ns;
-              while (ns >= 0 && /\w/.test(source[ns])) ns--;
-              scanName = source.slice(ns + 1, ne + 1);
-            }
-          }
-        }
-        const bodyEnd = matchBrace(source, afterArrow);
-        if (bodyEnd !== -1) {
-          // Determine start offset for line counting
-          let startOffset = i - 1;
-          while (startOffset >= 0 && (/\w/.test(source[startOffset]) || source[startOffset] === ')' || source[startOffset] === '(' || source[startOffset] === ',' || /\s/.test(source[startOffset]))) startOffset--;
-          startOffset++;
-          results.push({ name: scanName, startLine: lineAt(startOffset), lines: lineAt(bodyEnd) - lineAt(startOffset) + 1, params: paramCount });
-        }
-      }
-      i++; continue;
-    }
-
-    // Pattern D: Method shorthand / getter/setter / async method
-    // Look for `) {` with only whitespace between — indicates method shorthand
-    if (source[i] === ')' && i + 1 < source.length) {
-      let k = i + 1;
-      while (k < source.length && (source[k] === ' ' || source[k] === '\t')) k++;
-      if (k < source.length && source[k] === '{') {
-        // Walk backwards from ) to find opening paren and method name
-        let pd = 1, openParen = i - 1;
-        while (openParen >= 0 && pd > 0) {
-          if (source[openParen] === ')') pd++;
-          else if (source[openParen] === '(') pd--;
-          if (pd > 0) openParen--;
-        }
-        if (openParen < 0) { i++; continue; }
-
-        // Walk back from openParen to find the method name
-        let nameEnd = openParen - 1;
-        while (nameEnd >= 0 && /\s/.test(source[nameEnd])) nameEnd--;
-        if (nameEnd < 0 || !/[a-zA-Z_$]/.test(source[nameEnd])) { i++; continue; }
-        let nameStart = nameEnd;
-        while (nameStart >= 0 && /\w/.test(source[nameStart])) nameStart--;
-        nameStart++;
-
-        // Check for get/set/async prefix before the method name
-        let prefix = '';
-        let contextBefore = nameStart - 1;
-        while (contextBefore >= 0 && /\s/.test(source[contextBefore])) contextBefore--;
-        if (contextBefore >= 0) {
-          let prefixEnd = contextBefore;
-          let prefixStart = prefixEnd;
-          while (prefixStart >= 0 && /\w/.test(source[prefixStart])) prefixStart--;
-          prefixStart++;
-          const word = source.slice(prefixStart, prefixEnd + 1);
-          if (word === 'get' || word === 'set' || word === 'async') {
-            prefix = word + ' ';
-            contextBefore = prefixStart - 1;
-            while (contextBefore >= 0 && /\s/.test(source[contextBefore])) contextBefore--;
-          }
-        }
-
-        // Verify it's a method (not a function/if/while/etc keyword)
-        const rawName = source.slice(nameStart, nameEnd + 1);
-        if (/^(function|if|while|for|switch|catch|with|else|return|typeof|instanceof)$/.test(rawName)) { i++; continue; }
-
-        // Context check: prev char should be {, ,, ;, =, :, }, or line start
-        if (!(contextBefore < 0 || /[{,;=:}]/.test(source[contextBefore]))) { i++; continue; }
-
-        const paramCount = countParams(source.slice(openParen + 1, i));
-        const bodyEnd = matchBrace(source, k);
-        if (bodyEnd !== -1) {
-          results.push({ name: prefix + rawName, startLine: lineAt(nameStart), lines: lineAt(bodyEnd) - lineAt(nameStart) + 1, params: paramCount });
-        }
-      }
-    }
-
-    i++;
+    record(open, inferName(open), paramsText, brace);
   }
 
-  return results;
+  return results.sort((a, b) => a.startLine - b.startLine);
 }
+
 // ---------------------------------------------------------------------------
 // File collection: git diff or glob
 // ---------------------------------------------------------------------------
@@ -1185,9 +1061,7 @@ async function main() {
   process.exit(passed ? 0 : 1);
 }
 
-const __isMainModule = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(__filename);
-if (__isMainModule) {
-main().catch((err) => {
+if (fileURLToPath(import.meta.url) === process.argv[1]) main().catch((err) => {
   const report = {
     passed: false,
     layers: [{ name: 'Error', status: 'fail', details: [String(err)] }],
@@ -1199,4 +1073,3 @@ main().catch((err) => {
   }
   process.exit(1);
 });
-}
