@@ -91,3 +91,49 @@ describe('four-layer Layer 3 — silent-default fallback scan (curriculum Ph5)',
     assert.equal(code, 0);
   });
 });
+
+describe('scanFunctionMetrics (CV-303)', () => {
+  let scan;
+  before(async () => { ({ scanFunctionMetrics: scan } = await import(join(AGENTS_DIR, 'four-layer-validate.mjs'))); });
+
+  it('importing the module does not run the CLI and exports the scanner', () => {
+    assert.equal(typeof scan, 'function');
+  });
+
+  it('60-line function -> lines 60; 5 params -> params 5', () => {
+    const src = 'function big(a, b, c, d, e) {\n' + '  const x = 1;\n'.repeat(58) + '}\n';
+    assert.deepEqual(scan(src), [{ name: 'big', startLine: 1, lines: 60, params: 5 }]);
+  });
+
+  it('nested arrows are counted separately, with names', () => {
+    const r = scan('const outer = (x) => {\n  const inner = (y, z) => {\n    return x;\n  };\n  return inner;\n};\n');
+    assert.deepEqual(r, [
+      { name: 'outer', startLine: 1, lines: 6, params: 1 },
+      { name: 'inner', startLine: 2, lines: 3, params: 2 },
+    ]);
+  });
+
+  it('nested function declarations inside a function are found', () => {
+    const r = scan('function a() {\n  function b(q) {\n    return q;\n  }\n}\n');
+    assert.deepEqual(r.map(f => f.name), ['a', 'b']);
+  });
+
+  it('function expression and single-param arrow take the variable name', () => {
+    const r = scan('const f = function (a, b) { return 1; };\nconst g = x => { return x; };\n');
+    assert.deepEqual(r.map(f => [f.name, f.params]), [['f', 2], ['g', 1]]);
+  });
+
+  it('braces and parens inside strings, comments and templates are ignored', () => {
+    const src = 'function s(a) {\n  const t = "}{)(";\n  // }\n  const u = `${a} }`;\n  return t + u;\n}\n';
+    assert.deepEqual(scan(src), [{ name: 's', startLine: 1, lines: 6, params: 1 }]);
+  });
+
+  it('nested/default params and trailing commas count correctly; zero params is 0', () => {
+    assert.equal(scan('function a({ x, y }, [p, q], cb = f(1, 2),) {}')[0].params, 3);
+    assert.equal(scan('function z() {}')[0].params, 0);
+  });
+
+  it('expression-bodied arrows are not reported', () => {
+    assert.deepEqual(scan('const k = (a) => a + 1;\n'), []);
+  });
+});

@@ -143,6 +143,119 @@ function rel(absPath) {
 }
 
 // ---------------------------------------------------------------------------
+// Function metrics (CV-303)
+// ---------------------------------------------------------------------------
+
+/** Blank out strings, comments and template literals (keeping newlines and offsets) so braces/parens inside them never count. */
+function blankLiterals(src) {
+  const out = src.split('');
+  const blank = (a, b) => { for (let k = a; k < b && k < out.length; k++) if (out[k] !== '\n') out[k] = ' '; };
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i], n = src[i + 1];
+    let end = -1;
+    if (c === '/' && n === '/') { end = src.indexOf('\n', i); if (end < 0) end = src.length; }
+    else if (c === '/' && n === '*') { end = src.indexOf('*/', i + 2); end = end < 0 ? src.length : end + 2; }
+    else if (c === '"' || c === "'" || c === '`') {
+      end = i + 1;
+      while (end < src.length && src[end] !== c) end += src[end] === '\\' ? 2 : 1;
+      end++;
+    }
+    if (end < 0) { i++; continue; }
+    blank(i, end);
+    i = end;
+  }
+  return out.join('');
+}
+
+/** Index of the bracket matching the opener at `open` in blanked text, or -1. */
+function matchClose(text, open) {
+  const pairs = { '(': ')', '{': '}' };
+  const o = text[open], cl = pairs[o];
+  let depth = 0;
+  for (let i = open; i < text.length; i++) {
+    if (text[i] === o) depth++;
+    else if (text[i] === cl && --depth === 0) return i;
+  }
+  return -1;
+}
+
+/** Number of top-level, comma-separated parameters in a parameter-list string. */
+function countParams(list) {
+  if (!list.trim()) return 0;
+  let depth = 0, count = 1, last = '';
+  for (let i = 0; i < list.length; i++) {
+    const c = list[i];
+    if ('([{<'.includes(c)) depth++;
+    else if (')]}'.includes(c) || (c === '>' && list[i - 1] !== '=')) depth--;
+    else if (c === ',' && depth === 0) count++;
+    if (c.trim()) last = c;
+  }
+  return last === ',' ? count - 1 : count; // trailing comma
+}
+
+/**
+ * Metrics for each JS/TS function with a braced body: `function` declarations/expressions
+ * and arrow functions with block bodies. Nested functions are reported separately.
+ * Expression-bodied arrows, methods and accessors are NOT reported (out of scope).
+ * Known limit: regex literals containing quotes or braces can confuse the scan.
+ *
+ * @param {string} source
+ * @returns {Array<{name:string,startLine:number,lines:number,params:number}>}
+ */
+export function scanFunctionMetrics(source) {
+  const text = blankLiterals(source.replace(/\r\n/g, '\n'));
+  const lineOf = (off) => text.slice(0, off).split('\n').length;
+  const results = [];
+  const NAME_BEFORE = /(?:(?:const|let|var)\s+([\w$]+)|([\w$]+)\s*[:=])\s*(?::[^=]*)?=?\s*(?:async\s+)?$/;
+
+  function record(startOff, name, paramsText, braceOff) {
+    const end = matchClose(text, braceOff);
+    if (end < 0) return;
+    results.push({ name, startLine: lineOf(startOff), lines: lineOf(end) - lineOf(startOff) + 1, params: countParams(paramsText) });
+  }
+  function inferName(beforeOff) {
+    const m = text.slice(Math.max(0, beforeOff - 120), beforeOff).match(NAME_BEFORE);
+    return m ? (m[1] || m[2]) : '(anonymous)';
+  }
+
+  for (const m of text.matchAll(/\bfunction\b\s*\*?\s*([\w$]*)\s*\(/g)) {
+    const open = m.index + m[0].length - 1;
+    const close = matchClose(text, open);
+    if (close < 0) continue;
+    const body = text.slice(close + 1).match(/^\s*(?::[^{;=]*)?\{/); // optional TS return type
+    if (!body) continue;
+    const name = m[1] || inferName(m.index);
+    record(m.index, name, text.slice(open + 1, close), close + body[0].length);
+  }
+
+  for (const m of text.matchAll(/=>\s*\{/g)) {
+    const brace = m.index + m[0].length - 1;
+    let p = m.index - 1;
+    while (p >= 0 && /\s/.test(text[p])) p--;
+    let open, paramsText;
+    if (text[p] === ')') {
+      let depth = 0;
+      for (open = p; open >= 0; open--) {
+        if (text[open] === ')') depth++;
+        else if (text[open] === '(' && --depth === 0) break;
+      }
+      if (open < 0) continue;
+      paramsText = text.slice(open + 1, p);
+    } else {
+      let s = p;
+      while (s >= 0 && /[\w$]/.test(text[s])) s--;
+      if (s === p) continue; // not a parameter identifier
+      open = s + 1;
+      paramsText = text.slice(open, p + 1);
+    }
+    record(open, inferName(open), paramsText, brace);
+  }
+
+  return results.sort((a, b) => a.startLine - b.startLine);
+}
+
+// ---------------------------------------------------------------------------
 // File collection: git diff or glob
 // ---------------------------------------------------------------------------
 
@@ -948,7 +1061,7 @@ async function main() {
   process.exit(passed ? 0 : 1);
 }
 
-main().catch((err) => {
+if (fileURLToPath(import.meta.url) === process.argv[1]) main().catch((err) => {
   const report = {
     passed: false,
     layers: [{ name: 'Error', status: 'fail', details: [String(err)] }],
