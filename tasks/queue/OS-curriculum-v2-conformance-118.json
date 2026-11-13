@@ -3,11 +3,15 @@
   "title": "docs/curriculum-conformance.md: downgrade overstated rows to Partial with a one-line reason citing the gap id: weekly pattern hunt/REM (D5-04), behavior drift (D7-01/D7-02), Playwright runner (D7-04), \"Pre-commit hooks\" and \"Senior review that can BLOCK\" (D5-01)",
   "description": "- [ ] **CV-605**: docs/curriculum-conformance.md: downgrade overstated rows to Partial with a one-line reason citing the gap id: weekly pattern hunt/REM (D5-04), behavior drift (D7-01/D7-02), Playwright runner (D7-04), \"Pre-commit hooks\" and \"Senior review that can BLOCK\" (D5-01)\n  - **Priority:** LOW\n  - Files: `docs/curriculum-conformance.md`\n  - Spec: hygiene (conformance honesty)\n  - Gaps: D7-21, D5-04, D5-01\n  - Agent: sdlc-documentarian\n  - Lane: hermes\n  - Test: tests/curriculum-conformance.test.mjs still passes; the five rows read Partial\n  - Parallel: yes\n  - Complexity: S",
   "priority": "LOW",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-documentarian",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
   "createdAt": "2026-11-03T20:05:57.817Z",
   "claimedBy": null,
-  "testStatus": null
+  "testStatus": null,
+  "_file": "OS-curriculum-v2-conformance-118.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-13T20:17:43.945Z"
 }

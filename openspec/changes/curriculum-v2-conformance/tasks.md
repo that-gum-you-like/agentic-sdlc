@@ -1562,7 +1562,7 @@ Hygiene tasks cite gap ids and carry no spec. Conformance rows are downgraded fi
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-605**: docs/curriculum-conformance.md: downgrade overstated rows to Partial with a one-line reason citing the gap id: weekly pattern hunt/REM (D5-04), behavior drift (D7-01/D7-02), Playwright runner (D7-04), "Pre-commit hooks" and "Senior review that can BLOCK" (D5-01)
+- [x] **CV-605**: docs/curriculum-conformance.md: downgrade overstated rows to Partial with a one-line reason citing the gap id: weekly pattern hunt/REM (D5-04), behavior drift (D7-01/D7-02), Playwright runner (D7-04), "Pre-commit hooks" and "Senior review that can BLOCK" (D5-01)
   - **Priority:** LOW
   - Files: `docs/curriculum-conformance.md`
   - Spec: hygiene (conformance honesty)

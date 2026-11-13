@@ -9,6 +9,7 @@
 - 2026-11-13 #177 chore(adapters): delete openai.mjs and azure-openai.mjs (CV-601, drain) (backend)
 - 2026-11-13 #178 chore(adapters): delete paperclip.mjs and paperclip-sync.mjs (CV-603) (backend)
 - 2026-11-13 #179 chore(gitignore): ignore agents/versions/ snapshots; already-tracked stay [OS-curriculum-v2-conformance-117] (docs-tests)
+- 2026-11-13 #180 docs(curriculum-conformance): downgrade 5 overstated rows to Partial (CV-605) (docs-tests)
 
 ## 2026-11-11
 
