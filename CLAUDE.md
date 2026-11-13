@@ -171,7 +171,7 @@ Semantic search uses local vector embeddings when `sentence-transformers` is ins
 All AGENT.md files MUST have `<!-- version: X.X.X | date: YYYY-MM-DD -->` as the first line. Increment version when adding failure memories or changing operating rules.
 
 When editing any agent's AGENT.md:
-1. **Before:** `node ~/agentic-sdlc/agents/version-snapshot.mjs snapshot`
+1. **Before:** `node ~/agentic-sdlc/agents/version-snapshot.mjs snapshot` (saves to the state dir; `--publish` writes the tracked `agents/versions/`)
 2. **After:** `node ~/agentic-sdlc/agents/migrate-memory.mjs --check`
 3. **Apply:** `node ~/agentic-sdlc/agents/migrate-memory.mjs --apply`
 4. **Validate:** `node ~/agentic-sdlc/agents/test-behavior.mjs`

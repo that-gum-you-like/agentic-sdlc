@@ -288,7 +288,7 @@ test('checkCycles: live-shaped history with no monthly run reports ONLY monthly 
   assert.equal(res.detail, 'process-erosion: monthly never-run');
 });
 
-import { checkHermesContainers, checkHermesSandboxConfig } from '../agents/health-check.mjs';
+import { checkHermesContainers, checkHermesSandboxConfig, checkCheckoutHygiene } from '../agents/health-check.mjs';
 
 test('new exposed container alerts once', () => {
   const sent = [];
@@ -308,4 +308,31 @@ test('new exposed container alerts once', () => {
 
 test('hermes sandbox config check is down on exposure, ok when config missing', () => {
   assert.equal(checkHermesSandboxConfig({ configPath: '/nonexistent/c.yaml' }).status, 'ok');
+});
+
+// RS-302 / RS-REQ-041
+test('new foreign path alerts once; unchanged set is silent; a new path re-alerts', () => {
+  const sent = []; const seen = new Set();
+  const notify = (key, trigger, msg) => { if (seen.has(key)) return false; seen.add(key); sent.push({ key, trigger, msg }); return true; };
+  const mk = (...paths) => () => ({ foreign: paths.map(p => ({ path: p, owner: 'root', command: `sudo chown -R u:u ${p}` })), unreadable: [], stateDir: null });
+  const a = checkCheckoutHygiene({ repo: '/r', stateDir: '/s', run: mk('agents/secrets.mjs'), notify });
+  checkCheckoutHygiene({ repo: '/r', stateDir: '/s', run: mk('agents/secrets.mjs'), notify });
+  assert.equal(a.status, 'down');
+  assert.match(a.detail, /agents\/secrets\.mjs/);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].trigger, 'blocker');
+  checkCheckoutHygiene({ repo: '/r', stateDir: '/s', run: mk('agents/secrets.mjs', 'tasks/completed'), notify });
+  assert.equal(sent.length, 2);
+});
+
+test('clean checkout is ok and silent; foreign state dir counts; doctor crash is degraded', () => {
+  const sent = [];
+  const notify = (...a) => { sent.push(a); return true; };
+  const clean = checkCheckoutHygiene({ repo: '/r', stateDir: '/s', run: () => ({ foreign: [], unreadable: [], stateDir: { path: '/s', ok: true } }), notify });
+  assert.equal(clean.status, 'ok');
+  assert.equal(sent.length, 0);
+  const st = checkCheckoutHygiene({ repo: '/r', stateDir: '/s', run: () => ({ foreign: [], unreadable: [], stateDir: { path: '/s', ok: false, command: 'sudo chown -R u:u /s' } }), notify });
+  assert.equal(st.status, 'down');
+  assert.equal(sent.length, 1);
+  assert.equal(checkCheckoutHygiene({ run: () => { throw new Error('boom'); }, notify }).status, 'degraded');
 });

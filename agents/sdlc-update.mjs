@@ -12,6 +12,7 @@
  * Usage: node agents/sdlc-update.mjs [--repo <path>] [--base main] [--dry-run] [--render-unit]
  * Node stdlib only.
  */
+import { stableNodePath } from './lib/node-path.mjs';
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -113,7 +114,7 @@ export function runUpdate({ repo, base = 'main', git = defaultGit, notify = () =
   return { outcome: pulled ? 'pulled' : verdict.action === 'alert' ? 'alert' : 'noop', cause: verdict.cause, behind, alerts };
 }
 
-export function renderUnit({ repo, node = process.execPath, template }) {
+export function renderUnit({ repo, node = stableNodePath(), template }) {
   const t = template ?? readFileSync(join(dirname(__filename), 'templates/systemd/sdlc-update.service.template'), 'utf8');
   return t.replaceAll('{{REPO}}', repo).replaceAll('{{NODE}}', node).replaceAll('{{HOME}}', homedir());
 }

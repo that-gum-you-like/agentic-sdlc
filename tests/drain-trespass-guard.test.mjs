@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -88,4 +88,28 @@ test('every restored change is saved as a patch first, so a human or timer edit 
   assert.equal(readFileSync(join(dir, 'a.txt'), 'utf8'), 'a\n', 'still restored');
   git(dir, 'apply', patch);
   assert.equal(readFileSync(join(dir, 'a.txt'), 'utf8'), 'a\ninteractive session edit\n', 'the patch brings the edit back');
+});
+
+// RS-REQ-051: the guard stays strict. Timer writers were removed (memory moved to the state
+// dir, archive in place), not tolerated, so there is no allowlist to maintain.
+test('a state-dir memory write mid-drain is not a trespass; a checkout write still is (rc 97 path)', () => {
+  const dir = repo();
+  mkdirSync(join(dir, 'agents', 'sdlc-developer', 'memory'), { recursive: true });
+  writeFileSync(join(dir, 'agents', 'sdlc-developer', 'memory', 'long-term.json'), '{"entries":[]}\n');
+  git(dir, 'add', '.'); git(dir, 'commit', '-qm', 'seed');
+  const state = mkdtempSync(join(tmpdir(), 'guard-state-'));
+  // REM-sleep style write into the state dir (outside the checkout) during the drain
+  const outClean = run(dir, `mkdir -p "${state}/memory/sdlc-developer"; echo '{"entries":[{"id":"x"}]}' > "${state}/memory/sdlc-developer/long-term.json"`);
+  assert.equal(outClean, '', 'state-dir write is invisible to the guard');
+  // The very same write landing on the TRACKED seed in the checkout is a trespass: restored + patch saved
+  const out = run(dir, `echo '{"entries":[{"id":"x"}]}' > "${dir}/agents/sdlc-developer/memory/long-term.json"`);
+  assert.match(out, /modified tracked files restored: agents\/sdlc-developer\/memory\/long-term\.json \(saved: git apply .*\);/);
+  assert.equal(readFileSync(join(dir, 'agents', 'sdlc-developer', 'memory', 'long-term.json'), 'utf8'), '{"entries":[]}\n', 'seed restored');
+});
+
+test('the guard has no allowlist and its header records that timer writers were removed', () => {
+  const src = readFileSync(GUARD, 'utf8');
+  assert.match(src.split('\n').filter(l => l.startsWith('#')).join('\n'), /timer writers were removed rather than tolerated/);
+  assert.doesNotMatch(src.split('\n').filter(l => !l.startsWith('#')).join('\n'), /allowlist|ignore_paths|GUARD_IGNORE/i, 'no allowlist in code');
+  assert.equal(/\bgrep -q[^\n]*\bmemory\b/.test(src.split('\n').filter(l => !l.startsWith('#')).join('\n')), false, 'no memory-path exemption in code');
 });

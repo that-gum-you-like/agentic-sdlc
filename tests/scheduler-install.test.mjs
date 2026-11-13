@@ -15,6 +15,8 @@ import {
   loadSchedule,
   extraPathDirs,
   applyInstall,
+  buildGatewayGuardDropIn,
+  installGatewayGuard,
 } from '../agents/scheduler-install.mjs';
 
 let passed = 0;
@@ -191,6 +193,25 @@ test('cron-schedule.json and its template carry no paperclip / orchestration-syn
     assert(!/paperclip/i.test(raw), `${p} still mentions paperclip`);
     assert(!JSON.parse(raw).schedules.some(j => j.name === 'orchestration-sync'), `${p} still has orchestration-sync`);
   }
+});
+
+test('RS-REQ-063: gateway guard drop-in is ExecStartPre of the config guard, written only when the gateway unit exists, idempotent', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sched-gw-'));
+  try {
+    const body = buildGatewayGuardDropIn({ repoDir: '/r', nodeBin: '/n/node' });
+    assert(/^\[Service\]\nExecStartPre=\/n\/node \/r\/agents\/hermes-config-guard\.mjs$/m.test(body), body);
+    assert(installGatewayGuard({ repoDir: '/r', nodeBin: '/n/node', unitDir: dir }) === null, 'no gateway unit -> nothing written');
+    assert(!existsSync(join(dir, 'hermes-gateway.service.d')), 'no drop-in dir created');
+    writeFileSync(join(dir, 'hermes-gateway.service'), '[Service]\nExecStart=/x\n');
+    const file = installGatewayGuard({ repoDir: '/r', nodeBin: '/n/node', unitDir: dir });
+    assert(file && existsSync(file), 'drop-in written');
+    assert(readFileSync(join(dir, 'hermes-gateway.service'), 'utf8') === '[Service]\nExecStart=/x\n', 'gateway unit itself untouched');
+    assert(installGatewayGuard({ repoDir: '/r', nodeBin: '/n/node', unitDir: dir }) === null, 'unchanged -> null (idempotent)');
+    const calls = [];
+    const r = applyInstall({ kept: [], repoDir: '/r', nodeBin: '/n/node', home: '/h', pathDirs: [], unitDir: dir, systemctlFn: a => { calls.push(a.join(' ')); return ''; } });
+    assert(!calls.some(c => /restart|hermes-gateway/.test(c)), `gateway must never be restarted from the installer: ${calls}`);
+    assert(r.gatewayGuard === null, 'already current');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
 console.log(`\n${passed} passed,${failed} failed`);

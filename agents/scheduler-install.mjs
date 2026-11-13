@@ -29,6 +29,7 @@ import { execFileSync } from 'child_process';
 
 import { loadConfig } from './load-config.mjs';
 import { logCapabilityUsage } from './capability-logger.mjs';
+import { stableNodePath } from './lib/node-path.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -37,6 +38,8 @@ const __dirname = dirname(__filename);
 // pre-existing sdlc-update.timer). Only sdlc-sched-* units are ever managed here.
 const UNIT_PREFIX = 'sdlc-sched-';
 const UNIT_DIR = join(homedir(), '.config', 'systemd', 'user');
+const GATEWAY_UNIT = 'hermes-gateway.service';
+const GATEWAY_DROPIN_NAME = '10-sdlc-config-guard.conf';
 
 // ---------------------------------------------------------------------------
 // Schedule loading + selection
@@ -198,6 +201,31 @@ WantedBy=timers.target
   return { name, serviceName: `${name}.service`, timerName: `${name}.timer`, service, timer, onCalendar, execStart };
 }
 
+/**
+ * RS-REQ-063: hermes-gateway must not start while its config would let a sandbox mount the
+ * home or a live checkout read-write. A drop-in adds the config guard as ExecStartPre (a
+ * non-zero exit refuses the start, and the journal names the offending key). The gateway
+ * unit itself is Hermes-owned and never edited; only this drop-in is written.
+ */
+export function buildGatewayGuardDropIn({ repoDir, nodeBin }) {
+  return `# Managed by agentic-sdlc scheduler-install (runtime-state-isolation RS-REQ-063). Do not edit.
+[Service]
+ExecStartPre=${nodeBin} ${repoDir}/agents/hermes-config-guard.mjs
+`;
+}
+
+/** Install the guard drop-in iff the gateway unit exists. Returns the drop-in path or null. */
+export function installGatewayGuard({ repoDir, nodeBin, unitDir = UNIT_DIR }) {
+  if (!existsSync(join(unitDir, GATEWAY_UNIT))) return null;
+  const dir = join(unitDir, `${GATEWAY_UNIT}.d`);
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, GATEWAY_DROPIN_NAME);
+  const body = buildGatewayGuardDropIn({ repoDir, nodeBin });
+  if (existsSync(file) && readFileSync(file, 'utf8') === body) return null; // unchanged: no reload needed
+  writeFileSync(file, body);
+  return file;
+}
+
 // ---------------------------------------------------------------------------
 // systemctl helpers
 // ---------------------------------------------------------------------------
@@ -236,9 +264,11 @@ export function applyInstall({ kept, superseded = [], repoDir, nodeBin, home, pa
     writeFileSync(join(unitDir, u.timerName), u.timer);
     installed.push({ ...u, enable: job.enabled !== false });
   }
+  const gatewayGuard = installGatewayGuard({ repoDir, nodeBin, unitDir });
   systemctlFn(['daemon-reload']);
   for (const u of installed) if (u.enable) systemctlFn(['enable', '--now', u.timerName]);
-  return { installed, removed };
+  // The drop-in takes effect at the gateway's next (re)start; it is never restarted from here.
+  return { installed, removed, gatewayGuard };
 }
 
 function planInstall() {
@@ -276,7 +306,7 @@ function cmdList() {
 
 function cmdInstall(dryRun) {
   const { kept, superseded, repoDir } = planInstall();
-  const nodeBin = process.execPath;
+  const nodeBin = stableNodePath();
   const home = homedir();
   const pathDirs = extraPathDirs({ home });
 
@@ -290,12 +320,13 @@ function cmdInstall(dryRun) {
     return;
   }
 
-  const { installed, removed } = applyInstall({ kept, superseded, repoDir, nodeBin, home, pathDirs });
+  const { installed, removed, gatewayGuard } = applyInstall({ kept, superseded, repoDir, nodeBin, home, pathDirs });
 
   logCapabilityUsage('schedulerInstall', 'system', 'scheduler-install', 'scheduler-install.mjs', 'install');
   console.log(`✅ Installed ${installed.length} timer(s) in ${UNIT_DIR}`);
   for (const u of installed) console.log(`  • ${u.timerName}  (${u.onCalendar})${u.enable ? '' : '  [not enabled]'}`);
   for (const n of removed) console.log(`  - ${n} superseded: disabled + removed`);
+  if (gatewayGuard) console.log(`  + hermes-gateway config guard drop-in: ${gatewayGuard} (applies at next gateway restart)`);
   console.log(`\nVerify:  node ${resolve(__dirname, 'scheduler-install.mjs')} status`);
 }
 

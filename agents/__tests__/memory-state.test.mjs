@@ -132,14 +132,15 @@ describe('memory state (RS-REQ-011/012/014/017)', () => {
     assert.equal(existsSync(join(agentsDir, 'a1', 'memory', '.lock')), false);
   });
 
-  it('restore --memory writes state not seed; snapshot reads state, writes agents/versions', async () => {
+  it('restore --memory writes state not seed; snapshot reads state, writes <state>/versions (--publish -> agents/versions)', async () => {
     const stateAgentFile = stateFile('a1', 'long-term');
     store.saveMemory('a1', 'long-term', { entries: [{ id: 'S1', content: 'seed lesson' }, { id: 'LIVE', content: 'live' }] });
     const vs = await import('../version-snapshot.mjs');
     writeFileSync(join(agentsDir, 'a1', 'AGENT.md'), '# a1\n');
     vs.snapshot({ agentsDir, stateDir, agents: ['a1'] });
-    const date = readdirSync(join(agentsDir, 'versions'))[0];
-    const snap = JSON.parse(readFileSync(join(agentsDir, 'versions', date, 'memory', 'a1', 'long-term.json'), 'utf8'));
+    assert.equal(existsSync(join(agentsDir, 'versions')), false, 'timer snapshot never writes tracked agents/versions');
+    const date = readdirSync(join(stateDir, 'versions'))[0];
+    const snap = JSON.parse(readFileSync(join(stateDir, 'versions', date, 'memory', 'a1', 'long-term.json'), 'utf8'));
     assert.deepEqual(snap.entries.map(e => e.id), ['S1', 'LIVE'], 'snapshot holds LIVE state, not the seed');
     // corrupt state, restore
     writeFileSync(stateAgentFile, '{corrupt');
@@ -147,6 +148,9 @@ describe('memory state (RS-REQ-011/012/014/017)', () => {
     vs.restore(date, { agentsDir, stateDir, agents: ['a1'], memory: true });
     assert.deepEqual(JSON.parse(readFileSync(stateAgentFile, 'utf8')), snap);
     assert.equal(readFileSync(seedFile('a1', 'long-term'), 'utf8'), seedBefore, 'seed untouched by restore');
+    // --publish is the only path that writes tracked agents/versions
+    vs.snapshot({ agentsDir, stateDir, agents: ['a1'], publish: true });
+    assert.ok(readdirSync(join(agentsDir, 'versions')).length === 1, 'publish writes the tracked versions dir');
   });
 
   it('vectors.json recreated outside checkout', () => {

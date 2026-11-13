@@ -428,6 +428,8 @@ drain-clone `reset --hard` can never delete a lesson.
 ├── memory/<agent>/{core,long-term,medium-term,recent,compost,vectors}.json
 ├── memory/<agent>/.lock/                 # advisory lock (mkdir; stale after 10 min)
 ├── memory-audit.jsonl                    # one line per save (CV-REQ-072 format)
+├── versions/<date>/                      # timer snapshots (`version-snapshot.mjs snapshot`)
+├── behavior-baselines.json               # live baseline (`test-behavior.mjs --baseline`)
 └── migration/                            # manifest + pre-migration snapshot (one-shot)
 ```
 
@@ -439,6 +441,15 @@ drain-clone `reset --hard` can never delete a lesson.
 | How does memory reach git? | `memory-publish.mjs`, timer `memory-publish-weekly` (Sun 23:45): one PR `chore(memory): weekly memory publish <date>` containing only changed layers |
 | Reviewing the publish PR | Read the diff, merge by hand. It is scrubbed (pii-scrub + secrets patterns); a hit refuses the whole publish and alerts once. It is never self-merged and never touches the live checkout |
 | Skip / dry run | `node agents/memory-publish.mjs --dry-run` lists the layers that would be published |
+
+### Scheduler cycles leave the checkout clean (RS-401..403, RS-302)
+
+- **Cleanliness test**: `tests/runtime-state-isolation.test.mjs` runs `rem-sleep`, `version-snapshot snapshot`, `rag-indexer` and the daily/weekly/monthly cycles in a fixture repo with `SDLC_STATE_DIR` set and asserts `git status --porcelain` is empty; a failure names the script that must move its writes. To keep that true, three writers were moved: timer snapshots go to `<stateDir>/versions/` (only `version-snapshot.mjs snapshot --publish` writes the tracked `agents/versions/` and appends AGENT.md version history, for a PR), the live behavior baseline is `<stateDir>/behavior-baselines.json` (the tracked `agents/behavior-baselines.json` is the seed; `test-behavior.mjs --baseline --publish` rewrites it), and `weekly-review` reads the state-dir snapshot dir for its "AGENT.md changed?" check. `queue-drainer archive` is manual (no timer) and stamps `archived_at` in the task files in place; its own test asserts it moves, deletes and creates nothing.
+- **Trespass guard stays strict**: `drain-trespass-guard.sh` has no allowlist. A tracked file changed mid-drain is restored with its patch saved (rc 97 path); a state-dir write is invisible to it.
+- **Review**: `pr-auto-review` is unaffected by the state dir (`hardGate` passes with `SDLC_STATE_DIR` unset, `legacy` or pointing nowhere). `agents/*/memory/**` is not guardrail surface, so `chore(memory):` publish PRs get an ordinary review; the publisher has no merge call and the PR is merged by hand.
+- **Health check**: `health-check.mjs` runs the checkout doctor (`checkout-hygiene`): any foreign-owned or unreadable path, or a foreign-owned state dir, raises one `blocker` notification per path set (a new set re-alerts) with the human `sudo chown` command.
+- **Gateway guard**: `scheduler-install.mjs install` writes `~/.config/systemd/user/hermes-gateway.service.d/10-sdlc-config-guard.conf` (only when `hermes-gateway.service` exists) adding `ExecStartPre=<node> agents/hermes-config-guard.mjs`. It applies at the gateway's next restart (the installer never restarts it); if the config exposes the home or a checkout the gateway refuses to start and `journalctl --user -u hermes-gateway` names the key. The gateway unit itself is untouched.
+- **Stable node path**: generated units (`scheduler-install.mjs`, `sdlc-update.mjs --render-unit`) now embed `/home/linuxbrew/.linuxbrew/bin/node` instead of the version-pinned `Cellar/node/<ver>/bin/node` path, which breaks on `brew upgrade node`. Re-run `scheduler-install.mjs install` and the `--render-unit` step once to refresh existing units.
 
 ### One-shot migration (this host, run once)
 

@@ -723,7 +723,9 @@ async function main() {
 
   // Agent version snapshot check — run snapshot if AGENT.md files changed (CV-REQ-016 / CV-126)
   {
-    const changed = agentMdChangedSinceSnapshot(AGENTS_DIR, VERSIONS_DIR);
+    // Timer snapshots live in the state dir; the tracked agents/versions/ holds published ones.
+    const stateVersions = config.stateDir && config.stateDir !== 'legacy' ? resolve(config.stateDir, 'versions') : null;
+    const changed = agentMdChangedSinceSnapshot(AGENTS_DIR, stateVersions && existsSync(stateVersions) ? stateVersions : VERSIONS_DIR);
     if (changed) {
       console.log('\n📸 Agent Version Snapshot');
       console.log('─'.repeat(40));
