@@ -3,11 +3,13 @@
   "title": "four-layer-validate.mjs: export `scanFunctionMetrics(source)` returning [{name,startLine,lines,params}] (brace-matching, JS/TS function and arrow forms); ensure importing the file does not run the CLI",
   "description": "- [ ] **CV-303**: four-layer-validate.mjs: export `scanFunctionMetrics(source)` returning [{name,startLine,lines,params}] (brace-matching, JS/TS function and arrow forms); ensure importing the file does not run the CLI\n  - **Priority:** MEDIUM\n  - Files: `agents/four-layer-validate.mjs, agents/__tests__/silent-fallback-scan.test.mjs`\n  - Spec: CV-REQ-031\n  - Gaps: D5-02\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: 60-line function -> lines 60; 5-param function -> params 5; nested arrow counted separately; import has no side effects\n  - Parallel: yes\n  - Complexity: M\n  - Notes: If the file has no __isMainModule guard, add one in this task.",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
   "createdAt": "2026-11-03T20:05:57.808Z",
   "claimedBy": null,
-  "testStatus": null
+  "testStatus": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-13T00:08:29.942Z"
 }

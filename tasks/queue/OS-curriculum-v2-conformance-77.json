@@ -3,11 +3,13 @@
   "title": "scaffoldBugChange(task, {templatesDir, changesDir}) in seed-queue.mjs: create openspec/changes/bug-<id>/{proposal.md,tasks.md,status.json} from the templates with readiness `draft`, embedding task id, title, last failure; idempotent",
   "description": "- [ ] **CV-308**: scaffoldBugChange(task, {templatesDir, changesDir}) in seed-queue.mjs: create openspec/changes/bug-<id>/{proposal.md,tasks.md,status.json} from the templates with readiness `draft`, embedding task id, title, last failure; idempotent\n  - **Priority:** MEDIUM\n  - Files: `agents/seed-queue.mjs, agents/__tests__/seed-queue-routing.test.mjs`\n  - Spec: CV-REQ-036\n  - Gaps: D1-03\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: tmp dirs: dir created with readiness draft; second call leaves files byte-identical\n  - Parallel: yes\n  - Complexity: M",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
   "createdAt": "2026-11-03T20:05:57.809Z",
   "claimedBy": null,
-  "testStatus": null
+  "testStatus": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-13T00:08:29.942Z"
 }
