@@ -291,3 +291,108 @@ test('goal safety — safe task has no goalSafety field', () => {
   assert.equal(tasks.length, 1);
   assert.equal(tasks[0].goalSafety, undefined, JSON.stringify(tasks[0]));
 });
+
+// ---------------------------------------------------------------------------
+// detectBlockedByCycle — CV-408 / CV-REQ-054
+// ---------------------------------------------------------------------------
+
+import { detectBlockedByCycle } from '../agents/seed-queue-from-openspec.mjs';
+
+test('detectBlockedByCycle — DAG returns empty array', () => {
+  const tasks = [
+    { id: 'A', blockedBy: ['C'] },
+    { id: 'B', blockedBy: ['C'] },
+    { id: 'C' },
+  ];
+  assert.deepEqual(detectBlockedByCycle(tasks), []);
+});
+
+test('detectBlockedByCycle — no blockedBy fields returns empty array', () => {
+  const tasks = [
+    { id: 'X' },
+    { id: 'Y' },
+  ];
+  assert.deepEqual(detectBlockedByCycle(tasks), []);
+});
+
+test('detectBlockedByCycle — empty task list returns empty array', () => {
+  assert.deepEqual(detectBlockedByCycle([]), []);
+});
+
+test('detectBlockedByCycle — self-reference detected as single-member cycle', () => {
+  const tasks = [
+    { id: 'A', blockedBy: ['A'] },
+    { id: 'B' },
+  ];
+  assert.deepEqual(detectBlockedByCycle(tasks), [['A']]);
+});
+
+test('detectBlockedByCycle — two-cycle (A<->B)', () => {
+  const tasks = [
+    { id: 'A', blockedBy: ['B'] },
+    { id: 'B', blockedBy: ['A'] },
+    { id: 'C' },
+  ];
+  assert.deepEqual(detectBlockedByCycle(tasks), [['A', 'B']]);
+});
+
+test('detectBlockedByCycle — longer cycle (A->B->C->A)', () => {
+  const tasks = [
+    { id: 'A', blockedBy: ['B'] },
+    { id: 'B', blockedBy: ['C'] },
+    { id: 'C', blockedBy: ['A'] },
+  ];
+  assert.deepEqual(detectBlockedByCycle(tasks), [['A', 'B', 'C']]);
+});
+
+test('detectBlockedByCycle — unknown blockedBy ids are ignored', () => {
+  const tasks = [
+    { id: 'A', blockedBy: ['does-not-exist'] },
+    { id: 'B', blockedBy: ['also-missing'] },
+  ];
+  assert.deepEqual(detectBlockedByCycle(tasks), []);
+});
+
+test('detectBlockedByCycle — two independent cycles detected', () => {
+  const tasks = [
+    { id: 'A', blockedBy: ['B'] },
+    { id: 'B', blockedBy: ['A'] },
+    { id: 'X', blockedBy: ['Y'] },
+    { id: 'Y', blockedBy: ['X'] },
+  ];
+  const result = detectBlockedByCycle(tasks);
+  assert.equal(result.length, 2);
+  assert.deepEqual(result[0], ['A', 'B']);
+  assert.deepEqual(result[1], ['X', 'Y']);
+});
+
+test('detectBlockedByCycle — task with no blockedBy is not in a cycle', () => {
+  const tasks = [
+    { id: 'A', blockedBy: ['B'] },
+    { id: 'B', blockedBy: ['A'] },
+    { id: 'C' },
+  ];
+  const result = detectBlockedByCycle(tasks);
+  assert.equal(result.length, 1);
+  assert.deepEqual(result[0], ['A', 'B']);
+});
+
+test('detectBlockedByCycle — a task blocking a cycle member is not itself in the cycle', () => {
+  const tasks = [
+    { id: 'A', blockedBy: ['B'] },
+    { id: 'B', blockedBy: ['A'] },
+    { id: 'D', blockedBy: ['B'] },
+  ];
+  const result = detectBlockedByCycle(tasks);
+  assert.equal(result.length, 1);
+  assert.deepEqual(result[0], ['A', 'B']);
+});
+
+test('detectBlockedByCycle — canonical rotation (smallest id first)', () => {
+  const tasks = [
+    { id: 'B', blockedBy: ['C'] },
+    { id: 'C', blockedBy: ['A'] },
+    { id: 'A', blockedBy: ['B'] },
+  ];
+  assert.deepEqual(detectBlockedByCycle(tasks), [['A', 'B', 'C']]);
+});
