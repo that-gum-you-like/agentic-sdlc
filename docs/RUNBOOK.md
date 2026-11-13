@@ -415,8 +415,8 @@ Hermes Docker sandboxes must never mount `/home/bryce`, an ancestor, or a live c
 - **Install the unit** (human step, outside the repo): `node agents/sdlc-update.mjs --render-unit > ~/.config/systemd/user/sdlc-update.service && systemctl --user daemon-reload`. The template is `agents/templates/systemd/sdlc-update.service.template`; the timer (04:00) is unchanged. `scheduler-install.mjs` does not manage this unit.
 - **Doctor**: `node agents/checkout-doctor.mjs [--json] [--repo <path>]` is read-only; it lists foreign-owned and stray paths and prints the `sudo chown` command for a human. Exit 1 when there are findings.
 - **No root**: `hermes-drain.sh` and `drain-supervisor.mjs` exit 98 when run as uid 0 (dry-run included). Use the user-level units.
-=======
-## 13. Where runtime state lives (runtime-state-isolation)
+
+## 15. Where runtime state lives (runtime-state-isolation)
 
 Agent memory is **not** written into the git checkout. The tracked
 `agents/<agent>/memory/*.json` files are frozen **seeds** (read-only fallback); every runtime
