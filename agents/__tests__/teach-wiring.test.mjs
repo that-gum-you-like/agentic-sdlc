@@ -27,7 +27,7 @@ function runHunt(args = []) {
   return execFileSync(process.execPath, [SCRIPT, '--json', ...args], {
     encoding: 'utf8',
     cwd: TMP_PROJECT,
-    env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT },
+    env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT, SDLC_STATE_DIR: 'legacy' },
   });
 }
 
@@ -121,7 +121,7 @@ function runCrossHunt(args = []) {
   return execFileSync(process.execPath, [SCRIPT, '--json', ...args], {
     encoding: 'utf8',
     cwd: CROSS_TMP,
-    env: { ...process.env, SDLC_PROJECT_DIR: CROSS_TMP },
+    env: { ...process.env, SDLC_PROJECT_DIR: CROSS_TMP, SDLC_STATE_DIR: 'legacy' },
   });
 }
 
@@ -223,7 +223,7 @@ describe('pattern-hunt — Cross-domain teaching (CV-246)', () => {
       execFileSync('git', ['-C', FRESH_TMP, 'commit', '-q', '-m', 'fixture']);
 
       const out = JSON.parse(execFileSync(process.execPath, [SCRIPT, '--json', '--dry-run'], {
-        encoding: 'utf8', cwd: FRESH_TMP, env: { ...process.env, SDLC_PROJECT_DIR: FRESH_TMP },
+        encoding: 'utf8', cwd: FRESH_TMP, env: { ...process.env, SDLC_PROJECT_DIR: FRESH_TMP, SDLC_STATE_DIR: 'legacy' },
       }));
 
       assert.equal(out.teaching.taught, 0, 'dry-run taught is 0');

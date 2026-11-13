@@ -17,6 +17,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, readFileSync, readdirSync, mkdirSync, rmSync, existsSync } from 'fs';
 import { resolve, join } from 'path';
 import { tmpdir } from 'os';
+import { createMemoryStore } from '../memory-store.mjs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { REVIEWER_AGENT, resolveReviewsDir, computePrRejectRate, prRejectTarget } from '../cycles/weekly-review.mjs';
@@ -63,6 +64,17 @@ function buildMaturation(level = 0, metricsMap = {}, overrides = {}) {
     metrics: metricsMap,
     ...overrides,
   };
+}
+
+
+// weekly-review reads/writes memory through the state-dir store; these tests drive the
+// extracted functions against a plain temp agents dir, i.e. the legacy (in-tree) layout.
+function legacyStore(agentsDir) {
+  return createMemoryStore({ stateDir: 'legacy', agentsDir, projectDir: agentsDir });
+}
+function legacyHas(agentsDir) {
+  const st = legacyStore(agentsDir);
+  return (agent, layer) => existsSync(st.memoryPath(agent, layer));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -319,7 +331,7 @@ describe('Metrics written to core.json', () => {
 
     // Build a function that operates on our temp directory
     const fn = new Function(
-      'AGENTS', 'AGENTS_DIR', 'REVIEWS_DIR', 'existsSync', 'readdirSync', 'readFileSync', 'writeFileSync', 'resolve',
+      'AGENTS', 'AGENTS_DIR', 'REVIEWS_DIR', 'existsSync', 'readdirSync', 'readFileSync', 'writeFileSync', 'resolve', 'memStore', 'hasMemory',
       `return (${computeMaturationMetricsFactory})`
     )(
       ['testbot'],
@@ -329,7 +341,9 @@ describe('Metrics written to core.json', () => {
       readdirSync,
       readFileSync,
       writeFileSync,
-      resolve
+      resolve,
+      legacyStore(tmpRoot),
+      legacyHas(tmpRoot)
     );
 
     fn();
@@ -368,7 +382,7 @@ describe('Metrics written to core.json', () => {
     }, null, 2));
 
     const fn = new Function(
-      'AGENTS', 'AGENTS_DIR', 'REVIEWS_DIR', 'existsSync', 'readdirSync', 'readFileSync', 'writeFileSync', 'resolve',
+      'AGENTS', 'AGENTS_DIR', 'REVIEWS_DIR', 'existsSync', 'readdirSync', 'readFileSync', 'writeFileSync', 'resolve', 'memStore', 'hasMemory',
       `return (${computeMaturationMetricsFactory})`
     )(
       ['testbot2'],
@@ -378,7 +392,9 @@ describe('Metrics written to core.json', () => {
       readdirSync,
       readFileSync,
       writeFileSync,
-      resolve
+      resolve,
+      legacyStore(tmpRoot),
+      legacyHas(tmpRoot)
     );
 
     fn();
@@ -408,7 +424,7 @@ describe('Metrics written to core.json', () => {
     writeFileSync(join(memDir, 'recent.json'), JSON.stringify({ entries: [] }, null, 2));
 
     const fn = new Function(
-      'AGENTS', 'AGENTS_DIR', 'REVIEWS_DIR', 'existsSync', 'readdirSync', 'readFileSync', 'writeFileSync', 'resolve',
+      'AGENTS', 'AGENTS_DIR', 'REVIEWS_DIR', 'existsSync', 'readdirSync', 'readFileSync', 'writeFileSync', 'resolve', 'memStore', 'hasMemory',
       `return (${computeMaturationMetricsFactory})`
     )(
       ['testbot3'],
@@ -418,7 +434,9 @@ describe('Metrics written to core.json', () => {
       readdirSync,
       readFileSync,
       writeFileSync,
-      resolve
+      resolve,
+      legacyStore(tmpRoot),
+      legacyHas(tmpRoot)
     );
 
     fn();
@@ -530,7 +548,7 @@ describe('Reviewer reviews directory', () => {
     assert.equal(reviewsDir, resolve(tmpRoot, 'sdlc-reviewer', 'reviews'));
 
     const fn = new Function(
-      'AGENTS', 'AGENTS_DIR', 'REVIEWS_DIR', 'existsSync', 'readdirSync', 'readFileSync', 'writeFileSync', 'resolve',
+      'AGENTS', 'AGENTS_DIR', 'REVIEWS_DIR', 'existsSync', 'readdirSync', 'readFileSync', 'writeFileSync', 'resolve', 'memStore', 'hasMemory',
       `return (${computeMaturationMetricsFactory})`
     )(
       ['testbot'],
@@ -540,7 +558,9 @@ describe('Reviewer reviews directory', () => {
       readdirSync,
       readFileSync,
       writeFileSync,
-      resolve
+      resolve,
+      legacyStore(tmpRoot),
+      legacyHas(tmpRoot)
     );
 
     fn();
@@ -570,7 +590,7 @@ describe('Reviewer reviews directory', () => {
     const stubConsole = { log: (msg) => logs.push(String(msg)) };
 
     const fn = new Function(
-      'AGENTS', 'AGENTS_DIR', 'REVIEWS_DIR', 'existsSync', 'readdirSync', 'readFileSync', 'resolve', 'console',
+      'AGENTS', 'AGENTS_DIR', 'REVIEWS_DIR', 'existsSync', 'readdirSync', 'readFileSync', 'resolve', 'console', 'memStore', 'hasMemory',
       `return (${analyzePatternsFactory})`
     )(
       ['testbot'],
@@ -580,7 +600,9 @@ describe('Reviewer reviews directory', () => {
       readdirSync,
       readFileSync,
       resolve,
-      stubConsole
+      stubConsole,
+      legacyStore(tmpRoot),
+      legacyHas(tmpRoot)
     );
 
     fn();

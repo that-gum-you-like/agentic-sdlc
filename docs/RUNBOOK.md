@@ -415,3 +415,44 @@ Hermes Docker sandboxes must never mount `/home/bryce`, an ancestor, or a live c
 - **Install the unit** (human step, outside the repo): `node agents/sdlc-update.mjs --render-unit > ~/.config/systemd/user/sdlc-update.service && systemctl --user daemon-reload`. The template is `agents/templates/systemd/sdlc-update.service.template`; the timer (04:00) is unchanged. `scheduler-install.mjs` does not manage this unit.
 - **Doctor**: `node agents/checkout-doctor.mjs [--json] [--repo <path>]` is read-only; it lists foreign-owned and stray paths and prints the `sudo chown` command for a human. Exit 1 when there are findings.
 - **No root**: `hermes-drain.sh` and `drain-supervisor.mjs` exit 98 when run as uid 0 (dry-run included). Use the user-level units.
+=======
+## 13. Where runtime state lives (runtime-state-isolation)
+
+Agent memory is **not** written into the git checkout. The tracked
+`agents/<agent>/memory/*.json` files are frozen **seeds** (read-only fallback); every runtime
+read/write goes to the per-project state directory, so the live checkout stays clean and a
+drain-clone `reset --hard` can never delete a lesson.
+
+```
+~/.local/state/sdlc/<project>/            # default; $XDG_STATE_HOME and $SDLC_STATE_DIR override
+├── memory/<agent>/{core,long-term,medium-term,recent,compost,vectors}.json
+├── memory/<agent>/.lock/                 # advisory lock (mkdir; stale after 10 min)
+├── memory-audit.jsonl                    # one line per save (CV-REQ-072 format)
+└── migration/                            # manifest + pre-migration snapshot (one-shot)
+```
+
+| Question | Answer |
+|---|---|
+| Roll everything back | `SDLC_STATE_DIR=legacy` (old in-tree behaviour; state dir and seeds are both kept) |
+| Move the state dir | `SDLC_STATE_DIR=/some/path` in the unit env (the dir must be owned by you; a foreign-owned dir is refused) |
+| Does the drain worker see it? | Yes: `hermes-drain.sh` exports the HOST `SDLC_STATE_DIR` to the worker; `pr-auto-review` recall reads it too |
+| How does memory reach git? | `memory-publish.mjs`, timer `memory-publish-weekly` (Sun 23:45): one PR `chore(memory): weekly memory publish <date>` containing only changed layers |
+| Reviewing the publish PR | Read the diff, merge by hand. It is scrubbed (pii-scrub + secrets patterns); a hit refuses the whole publish and alerts once. It is never self-merged and never touches the live checkout |
+| Skip / dry run | `node agents/memory-publish.mjs --dry-run` lists the layers that would be published |
+
+### One-shot migration (this host, run once)
+
+```bash
+cd ~/agentic-sdlc && git pull --ff-only              # after the PR is merged
+node agents/migrate-runtime-state.mjs --dry-run      # prints the plan, writes nothing
+node agents/migrate-runtime-state.mjs                # copies, sha256-verifies, writes manifest
+```
+
+It copies every seed into the state dir and verifies each sha256, merges the lessons rescued
+in `state-archive/2026-11-12/` (PR #164) by entry id (so none is lost), and writes
+`migration/runtime-state-manifest.json` only if everything verified. It never deletes or edits
+a seed, never overwrites a state file, and is idempotent. Exit code 1 means a verification
+failure: nothing was flipped and the seeds are intact.
+
+`vectors.json` is derived: it is gitignored and rebuilt into the state dir by the semantic
+indexer; the old tracked copy is simply dropped from git.

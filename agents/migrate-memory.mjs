@@ -13,6 +13,7 @@ import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 import { loadConfig } from './load-config.mjs';
+import { createMemoryStore } from './memory-store.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,6 +21,7 @@ const __dirname = dirname(__filename);
 const config = loadConfig();
 const AGENTS = config.agents;
 const AGENTS_DIR = config.agentsDir;
+const memStore = createMemoryStore({ stateDir: config.stateDir, agentsDir: AGENTS_DIR, projectDir: config.projectDir });
 const VERSIONS_DIR = resolve(AGENTS_DIR, 'versions');
 const LAYERS = ['long-term', 'medium-term', 'recent'];
 
@@ -35,14 +37,11 @@ function getLatestSnapshot() {
 }
 
 function loadMemory(agent, layer) {
-  const path = resolve(AGENTS_DIR, agent, 'memory', `${layer}.json`);
-  if (!existsSync(path)) return { entries: [] };
-  return JSON.parse(readFileSync(path, 'utf8'));
+  return memStore.loadMemory(agent, layer);
 }
 
 function saveMemory(agent, layer, data) {
-  const path = resolve(AGENTS_DIR, agent, 'memory', `${layer}.json`);
-  writeFileSync(path, JSON.stringify(data, null, 2));
+  memStore.saveMemory(agent, layer, data);
 }
 
 function checkAgent(agent) {

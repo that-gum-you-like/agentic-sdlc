@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
 
 import { loadConfig } from '../load-config.mjs';
+import { createMemoryStore } from '../memory-store.mjs';
 import { runStep } from './monthly-review.mjs';
 import { upsertDashboardSection } from './daily-review.mjs';
 
@@ -25,6 +26,9 @@ const __dirname = dirname(__filename);
 const config = loadConfig();
 const ROOT = config.projectDir;
 const AGENTS_DIR = config.agentsDir;
+// Memory goes through the state dir; tracked files are seeds (runtime-state-isolation)
+const memStore = createMemoryStore({ stateDir: config.stateDir, agentsDir: AGENTS_DIR, projectDir: config.projectDir });
+const hasMemory = (agent, layer) => [memStore.memoryPath(agent, layer), memStore.seedPath(agent, layer)].some(existsSync);
 const TASKS_DIR = config.tasksDir;
 const VERSIONS_DIR = resolve(AGENTS_DIR, 'versions');
 
@@ -81,9 +85,8 @@ function analyzePatterns() {
   console.log('─'.repeat(40));
 
   for (const agent of AGENTS) {
-    const corePath = resolve(AGENTS_DIR, agent, 'memory/core.json');
-    if (!existsSync(corePath)) continue;
-    const core = JSON.parse(readFileSync(corePath, 'utf8'));
+    if (!hasMemory(agent, 'core')) continue;
+    const core = memStore.loadMemory(agent, 'core');
     if (core.failures?.length > 0) {
       console.log(`  ${agent}: ${core.failures.length} failures`);
       core.failures.forEach(f => console.log(`    - ${f.description}`));
@@ -182,21 +185,19 @@ function computeMaturationMetrics() {
   }
 
   for (const agent of AGENTS) {
-    const corePath = resolve(AGENTS_DIR, agent, 'memory/core.json');
-    if (!existsSync(corePath)) {
+    if (!hasMemory(agent, 'core')) {
       console.log(`  ${agent}: no core.json — skipped`);
       continue;
     }
 
-    const core = JSON.parse(readFileSync(corePath, 'utf8'));
+    const core = memStore.loadMemory(agent, 'core');
 
     // Count correction entries across recent + medium-term memory
     let correctionsReceived = 0;
     let selfCorrections = 0;
     for (const layer of ['recent', 'medium-term']) {
-      const memPath = resolve(AGENTS_DIR, agent, `memory/${layer}.json`);
-      if (!existsSync(memPath)) continue;
-      const mem = JSON.parse(readFileSync(memPath, 'utf8'));
+      if (!hasMemory(agent, layer)) continue;
+      const mem = memStore.loadMemory(agent, layer);
       for (const entry of mem.entries || []) {
         const text = (entry.content || '').toLowerCase();
         if (text.includes('[correction]') || text.includes('correction:')) {
@@ -215,7 +216,7 @@ function computeMaturationMetrics() {
     core.maturation.metrics = core.maturation.metrics || {};
     core.maturation.metrics[isoWeek] = { correctionsReceived, selfCorrections, reviewSeverity };
 
-    writeFileSync(corePath, JSON.stringify(core, null, 2));
+    memStore.saveMemory(agent, 'core', core);
     console.log(`  ${agent} [${isoWeek}]: corrections=${correctionsReceived}, self-corrections=${selfCorrections}, severity=${JSON.stringify(reviewSeverity)}`);
   }
 }
@@ -609,10 +610,9 @@ async function main() {
       // Derive framework maturity level as the max level across all agents
       let frameworkLevel = 0;
       for (const agent of AGENTS) {
-        const corePath = resolve(AGENTS_DIR, agent, 'memory/core.json');
-        if (existsSync(corePath)) {
+        if (hasMemory(agent, 'core')) {
           try {
-            const core = JSON.parse(readFileSync(corePath, 'utf8'));
+            const core = memStore.loadMemory(agent, 'core');
             const lvl = core.maturation?.level;
             if (typeof lvl === 'number' && lvl > frameworkLevel) {
               frameworkLevel = lvl;

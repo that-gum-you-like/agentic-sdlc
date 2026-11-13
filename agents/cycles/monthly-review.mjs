@@ -24,6 +24,7 @@ import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
 
 import { loadConfig } from '../load-config.mjs';
+import { createMemoryStore } from '../memory-store.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -85,10 +86,10 @@ export function cleanCompost(config, { dryRun = false } = {}) {
   console.log('─'.repeat(40));
   let removedTotal = 0;
   for (const agent of config.agents || []) {
-    const path = resolve(config.agentsDir, agent, 'memory', 'compost.json');
-    if (!existsSync(path)) continue;
+    const store = createMemoryStore({ stateDir: config.stateDir, agentsDir: config.agentsDir, projectDir: config.projectDir });
+    if (![store.memoryPath(agent, 'compost'), store.seedPath(agent, 'compost')].some(existsSync)) continue;
     let compost;
-    try { compost = JSON.parse(readFileSync(path, 'utf8')); } catch { continue; }
+    try { compost = store.loadMemory(agent, 'compost'); } catch { continue; }
     const entries = compost.entries || [];
     const kept = entries.filter(e => {
       const date = e.date || e.timestamp;
@@ -99,7 +100,7 @@ export function cleanCompost(config, { dryRun = false } = {}) {
       console.log(`  ${agent}: ${removed} stale compost entr${removed === 1 ? 'y' : 'ies'} ${dryRun ? 'would be ' : ''}removed`);
       if (!dryRun) {
         compost.entries = kept;
-        writeFileSync(path, JSON.stringify(compost, null, 2));
+        store.saveMemory(agent, 'compost', compost);
       }
       removedTotal += removed;
     }
