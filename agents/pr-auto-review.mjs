@@ -146,6 +146,19 @@ export function reviewModelFor(repoDir) {
  * The reviewer's identity block (AGENT.md + memory recall), or '' when the
  * reviewed repo has no AGENT.md. Best-effort: never throws (CV-REQ-123).
  */
+/**
+ * Env for the reviewer's memory recall in a clone: SDLC_PROJECT_DIR is the clone, but
+ * SDLC_STATE_DIR stays the HOST's, so the reviewer reads real runtime memory instead of
+ * the clone's stale seed (runtime-state-isolation RS-REQ-013/052).
+ */
+export function reviewerRecallEnv(repoDir, env = process.env, hostStateDir = () => loadConfig().stateDir) {
+  const out = { ...env, SDLC_PROJECT_DIR: repoDir };
+  if (!out.SDLC_STATE_DIR) {
+    try { const d = hostStateDir(); if (d) out.SDLC_STATE_DIR = d; } catch { /* default resolution applies */ }
+  }
+  return out;
+}
+
 export function reviewerIdentityBlock(repoDir) {
   if (!repoDir) return '';
   let identity;
@@ -160,7 +173,7 @@ export function reviewerIdentityBlock(repoDir) {
   try {
     const recalled = execFileSync('node', [join(__dirname, 'memory-manager.mjs'), 'recall', REVIEW_AGENT], {
       cwd: repoDir, encoding: 'utf8', timeout: 15000, stdio: ['ignore', 'pipe', 'ignore'],
-      env: { ...process.env, SDLC_PROJECT_DIR: repoDir },
+      env: reviewerRecallEnv(repoDir),
     }).trim();
     if (recalled) {
       block += `## Your memory (recalled)\n${recalled.length > RECALL_CHAR_LIMIT ? recalled.slice(0, RECALL_CHAR_LIMIT) + '\n... [memory truncated]' : recalled}\n\n`;

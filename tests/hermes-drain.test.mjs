@@ -8,7 +8,7 @@
  * Run: node tests/hermes-drain.test.mjs
  */
 
-import { readdirSync, readFileSync, existsSync, statSync, constants, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { readdirSync, readFileSync, existsSync, statSync, constants, mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'fs';
 import { accessSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { tmpdir } from 'os';
@@ -403,6 +403,32 @@ test('uid 0 -> rc 98, no mutex/clone/log created, message names the user-level u
     }
     assert(readdirSync(dir).length === 0, `files created: ${readdirSync(dir)}`);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+// --- runtime-state-isolation RS-REQ-013 ------------------------------------------------------
+test('worker env contains SDLC_STATE_DIR (host state dir, resolved from the HOST repo config)', () => {
+  const s = readFileSync(script, 'utf8');
+  assert(/SDLC_PROJECT_DIR="\$DRAIN_CLONE" SDLC_STATE_DIR="\$HOST_STATE_DIR"/.test(s), 'worker invocation must export the host SDLC_STATE_DIR next to the clone SDLC_PROJECT_DIR');
+  assert(/SDLC_PROJECT_DIR="\$REPO" node .*load-config\.mjs/.test(s), 'state dir must be resolved from the HOST repo, not the clone');
+});
+
+test('clone memory write leaves clone clean; recall survives clone reset', () => {
+  const base = mkdtempSync(join(tmpdir(), 'rs-drain-'));
+  try {
+    const clone = join(base, 'clone'); const state = join(base, 'state');
+    mkdirSync(join(clone, 'agents', 'ag', 'memory'), { recursive: true });
+    writeFileSync(join(clone, 'agents', 'project.json'), JSON.stringify({ name: 'drain-fixture', agents: ['ag'] }));
+    writeFileSync(join(clone, '.gitignore'), 'pm/\n'); // runtime pm/ is ignored in every real project
+    const g = (...a) => execFileSync('git', ['-C', clone, '-c', 'user.email=t@t', '-c', 'user.name=t', ...a], { encoding: 'utf8' });
+    g('init', '-q'); g('add', '-A'); g('commit', '-qm', 'init');
+    const env = { ...process.env, SDLC_PROJECT_DIR: clone, SDLC_STATE_DIR: state };
+    const mm = join(root, 'agents', 'memory-manager.mjs');
+    execFileSync('node', [mm, 'record', 'ag', 'recent', 'worker lesson survives'], { cwd: clone, env, encoding: 'utf8' });
+    assert(g('status', '--porcelain').trim() === '', 'memory write must leave the clone clean');
+    g('reset', '--hard'); g('clean', '-fdq');
+    const out = execFileSync('node', [mm, 'recall', 'ag'], { cwd: clone, env, encoding: 'utf8' });
+    assert(/worker lesson survives/.test(out), 'lesson must survive the next pass reset');
+  } finally { rmSync(base, { recursive: true, force: true }); }
 });
 
 // Summary LAST (bug 2026-11-09): a test declared after it could fail without failing the suite.

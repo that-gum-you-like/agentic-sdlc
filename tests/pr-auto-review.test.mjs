@@ -8,7 +8,7 @@
  * Run: node tests/pr-auto-review.test.mjs
  */
 
-import { readFileSync, mkdtempSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, mkdtempSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'fs';
 import { execFileSync, spawnSync } from 'child_process';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -819,6 +819,36 @@ test('mergePr rethrows when the PR is not actually merged', () => {
   let threw = false;
   try { M.mergePr(9, { gh: fake }); } catch (e) { threw = /not mergeable/.test(e.message); }
   assert(threw);
+});
+
+
+// --- runtime-state-isolation RS-REQ-013/052 ---------------------------------------------------
+test('reviewerRecallEnv pins the clone project dir but keeps the HOST state dir', () => {
+  const env = M.reviewerRecallEnv('/clone', { PATH: '/bin' }, () => '/host/state');
+  assert(env.SDLC_PROJECT_DIR === '/clone' && env.SDLC_STATE_DIR === '/host/state');
+  const keep = M.reviewerRecallEnv('/clone', { SDLC_STATE_DIR: '/explicit' }, () => '/host/state');
+  assert(keep.SDLC_STATE_DIR === '/explicit', 'an explicit env value wins');
+});
+
+test('reviewer recall reads state dir (not the clone seed)', () => {
+  const base = mkdtempSync(join(tmpdir(), 'rs-rev-'));
+  const prev = process.env.SDLC_STATE_DIR;
+  try {
+    const clone = join(base, 'clone'); const state = join(base, 'state');
+    mkdirSync(join(clone, 'agents', M.REVIEW_AGENT, 'memory'), { recursive: true });
+    writeFileSync(join(clone, 'agents', 'project.json'), JSON.stringify({ name: 'rev-fixture', agents: [M.REVIEW_AGENT] }));
+    writeFileSync(join(clone, 'agents', M.REVIEW_AGENT, 'AGENT.md'), '# reviewer\n');
+    writeFileSync(join(clone, 'agents', M.REVIEW_AGENT, 'memory', 'long-term.json'), JSON.stringify({ entries: [{ id: 'S', content: 'stale seed lesson' }] }));
+    mkdirSync(join(state, 'memory', M.REVIEW_AGENT), { recursive: true });
+    writeFileSync(join(state, 'memory', M.REVIEW_AGENT, 'long-term.json'), JSON.stringify({ entries: [{ id: 'L', content: 'live state lesson' }] }));
+    process.env.SDLC_STATE_DIR = state;
+    const block = M.reviewerIdentityBlock(clone);
+    assert(/live state lesson/.test(block), 'recall must read the state dir');
+    assert(!/stale seed lesson/.test(block), 'state wins over the clone seed');
+  } finally {
+    if (prev === undefined) delete process.env.SDLC_STATE_DIR; else process.env.SDLC_STATE_DIR = prev;
+    rmSync(base, { recursive: true, force: true });
+  }
 });
 
 for (const { name, fn } of queued) {
