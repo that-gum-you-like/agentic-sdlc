@@ -1352,7 +1352,7 @@ Capability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are 
   - Parallel: blocked-by CV-208
   - Complexity: S
 
-- [ ] **CV-409**: seed-queue-from-openspec.mjs: skip tasks in a blockedBy cycle with reason `blockedBy-cycle` and print the cycle
+- [x] **CV-409**: seed-queue-from-openspec.mjs: skip tasks in a blockedBy cycle with reason `blockedBy-cycle` and print the cycle
   - **Priority:** MEDIUM
   - Files: `agents/seed-queue-from-openspec.mjs, tests/seed-queue-from-openspec.test.mjs`
   - Spec: CV-REQ-054

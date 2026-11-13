@@ -3,7 +3,7 @@
   "title": "seed-queue-from-openspec.mjs: skip tasks in a blockedBy cycle with reason `blockedBy-cycle` and print the cycle",
   "description": "- [ ] **CV-409**: seed-queue-from-openspec.mjs: skip tasks in a blockedBy cycle with reason `blockedBy-cycle` and print the cycle\n  - **Priority:** MEDIUM\n  - Files: `agents/seed-queue-from-openspec.mjs, tests/seed-queue-from-openspec.test.mjs`\n  - Spec: CV-REQ-054\n  - Gaps: D4-05\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: fixture with a 2-cycle: neither seeded, output names both ids\n  - Parallel: blocked-by CV-408\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-99"
   ],
   "_file": "OS-curriculum-v2-conformance-100.json",
-  "claimedAt": "2026-11-13T01:42:15.873Z"
+  "claimedAt": "2026-11-13T01:42:15.873Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-13T01:54:57.017Z"
 }
