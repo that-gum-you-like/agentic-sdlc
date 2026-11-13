@@ -3,7 +3,7 @@
   "title": "pattern-hunt.mjs findReviewsDir(): prefer agents/sdlc-reviewer/reviews when it exists",
   "description": "- [ ] **CV-322**: pattern-hunt.mjs findReviewsDir(): prefer agents/sdlc-reviewer/reviews when it exists\n  - **Priority:** MEDIUM\n  - Files: `agents/pattern-hunt.mjs, agents/__tests__/pattern-hunt-clustering.test.mjs`\n  - Spec: CV-REQ-037\n  - Gaps: D5-03\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: with a tmp agents dir containing sdlc-reviewer/reviews, findReviewsDir returns it (export the function for the test)\n  - Parallel: blocked-by CV-321\n  - Complexity: S\n\n### Phase 4: Release manager\n\nCapability: release-manager. pr-auto-review.mjs and queue-drainer.mjs edits are interactive; the cycle detector is hermes.",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-90"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-91.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-13T01:35:01.831Z"
 }

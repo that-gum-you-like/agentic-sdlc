@@ -1215,7 +1215,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: blocked-by CV-306, CV-305, CV-233
   - Complexity: M
 
-- [ ] **CV-322**: pattern-hunt.mjs findReviewsDir(): prefer agents/sdlc-reviewer/reviews when it exists
+- [x] **CV-322**: pattern-hunt.mjs findReviewsDir(): prefer agents/sdlc-reviewer/reviews when it exists
   - **Priority:** MEDIUM
   - Files: `agents/pattern-hunt.mjs, agents/__tests__/pattern-hunt-clustering.test.mjs`
   - Spec: CV-REQ-037

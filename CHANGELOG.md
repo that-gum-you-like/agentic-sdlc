@@ -3,6 +3,7 @@
 ## 2026-11-13
 
 - 2026-11-13 #168 feat(validate): add Layer 3 fn-length/param-count advisory scan (CV-304) (backend)
+- 2026-11-13 #172 CV-322: pattern-hunt.mjs findReviewsDir() prefers sdlc-reviewer/reviews (backend)
 
 ## 2026-11-11
 
