@@ -1539,7 +1539,7 @@ Hygiene tasks cite gap ids and carry no spec. Conformance rows are downgraded fi
   - Parallel: blocked-by CV-115
   - Complexity: S
 
-- [ ] **CV-603**: Delete agents/adapters/orchestration/paperclip.mjs and agents/paperclip-sync.mjs; remove references (load-adapter.mjs, tests, docs); keep `.gitignore` entries
+- [x] **CV-603**: Delete agents/adapters/orchestration/paperclip.mjs and agents/paperclip-sync.mjs; remove references (load-adapter.mjs, tests, docs); keep `.gitignore` entries
   - **Priority:** LOW
   - Files: `agents/adapters/orchestration/paperclip.mjs, agents/paperclip-sync.mjs, agents/adapters/load-adapter.mjs, tests/scheduler-install.test.mjs, docs/adapter-guide.md`
   - Spec: hygiene (paperclip retired)
