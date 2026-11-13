@@ -40,7 +40,7 @@ Maturity ladder: Levels 0–6 (`framework/maturity-model.md` is canonical).
 | File-based task coordination | Solid | `tasks/queue/` + `tasks/completed/`, `agents/queue-drainer.mjs`, `agents/adapters/orchestration/file-based.mjs` |
 | Testing tiers: unit/integration/E2E/front-end E2E | Solid | `framework/validation-patterns.md` (5 layers), CLAUDE.md micro cycle step 6 (browser E2E required for frontend changes) |
 | **Pre-commit hooks (test/lint/typecheck)** | Partial | `agents/review-hook.mjs` — D5-01: drain does not call review-hook.mjs; only manual install exists |
-| Execution cadence / scheduling | Solid | `agents/scheduler-install.mjs` + `agents/templates/cron-schedule.json.template` (15 schedules: daily/weekly/monthly + drain + auto-review) |
+| Execution cadence / scheduling | Solid | `agents/cron-schedule.json` + `agents/scheduler-install.mjs` + `agents/templates/cron-schedule.json.template` (15 schedules: daily/weekly/monthly + drain + auto-review) |
 | MCP servers | Partial | Consumed via OpenClaw MCP tools + Azure Foundry MCP connector (`docs/azure-foundry-integration.md`); no in-repo MCP server (deliberately out of scope — competitive-roadmap P7 was cancelled per Bryce's directive) |
 
 ## Phase 3 — Orchestration (Hour 3)
@@ -86,7 +86,7 @@ Maturity ladder: Levels 0–6 (`framework/maturity-model.md` is canonical).
 |-----------|--------|-------|
 | 5-layer memory (core/long-term/medium-term/recent/compost) | Solid | `agents/memory-manager.mjs`, per-agent `memory/*.json` |
 | Failure → core-memory self-correction | Solid | CLAUDE.md rule 8; `core.json.template` failure memories; memory protocol |
-| REM sleep consolidation | Solid | `agents/rem-sleep.mjs` (weekly timer; similarity dedup; import-guarded since H-004) |
+| REM sleep consolidation | Solid | `agents/rem-sleep.mjs` (weekly timer; similarity dedup; import-guarded since H-004); schedule in `agents/cron-schedule.json` |
 | Character sheets | Solid | `AGENT.md.template` + versioned AGENT.md convention |
 | Four-layer validation (research→critique→code→statistics) | Solid | `agents/four-layer-validate.mjs` (+ Layer 5 browser verification; runs in npm test + CI) |
 | Structured handoff templates | Solid | `agents/templates/handoff-template.md` |
