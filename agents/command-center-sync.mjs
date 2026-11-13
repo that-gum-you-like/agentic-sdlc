@@ -681,8 +681,9 @@ export function syncAllProjects() {
     const queueDir = p.path ? join(p.path, 'tasks', 'queue') : null;
     if (!queueDir || !fs.existsSync(queueDir)) {
       const w = `sync --all: skipping "${p.name}" — ${p.path ? `no tasks/queue at ${p.path}` : 'no path in portfolio.json'}`;
-      console.warn(`⚠ ${w}`);
-      out.warnings.push(w);
+      // A project with no queue dir is simply not queue-driven: skip quietly
+      // (still recorded in out.skipped) rather than warn on every timer run.
+      if (!p.path) { console.warn(`⚠ ${w}`); out.warnings.push(w); }
       out.skipped.push(p.name);
       continue;
     }

@@ -899,7 +899,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-245
   - Complexity: M
 
-- [ ] **CV-247**: version-snapshot.mjs snapshot(): also copy each agent's memory/*.json to agents/versions/<date>/memory/<agent>/; export a pure `memoryFilesFor(agent)` for testing
+- [x] **CV-247**: version-snapshot.mjs snapshot(): also copy each agent's memory/*.json to agents/versions/<date>/memory/<agent>/; export a pure `memoryFilesFor(agent)` for testing
   - **Priority:** MEDIUM
   - Files: `agents/version-snapshot.mjs, agents/__tests__/version-snapshot.test.mjs`
   - Spec: CV-REQ-072
@@ -911,7 +911,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Complexity: M
   - Notes: Parameterize the root dir (default config.agentsDir) so the test does not touch real agents.
 
-- [ ] **CV-248**: version-snapshot.mjs restore(date, {memory}): `restore <date> --memory` copies snapshot memory back; refuse a date with no memory snapshot
+- [x] **CV-248**: version-snapshot.mjs restore(date, {memory}): `restore <date> --memory` copies snapshot memory back; refuse a date with no memory snapshot
   - **Priority:** MEDIUM
   - Files: `agents/version-snapshot.mjs, agents/__tests__/version-snapshot.test.mjs`
   - Spec: CV-REQ-072
@@ -944,7 +944,7 @@ Capabilities: input-safety, planning-templates, memory-evolution. The three grou
   - Parallel: blocked-by CV-221, CV-209
   - Complexity: S
 
-- [ ] **CV-251**: version-snapshot.mjs snapshot(): when an AGENT.md differs from the previous snapshot copy and has a `## Version History` section, append `- <date>: changed (+N/-M lines)` once per date
+- [x] **CV-251**: version-snapshot.mjs snapshot(): when an AGENT.md differs from the previous snapshot copy and has a `## Version History` section, append `- <date>: changed (+N/-M lines)` once per date
   - **Priority:** MEDIUM
   - Files: `agents/version-snapshot.mjs, agents/__tests__/version-snapshot.test.mjs`
   - Spec: CV-REQ-074
@@ -1027,7 +1027,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Complexity: M
   - Notes: Advisory only so existing repo code does not fail npm test; if existing code produces findings, add them to the allowlist in this task.
 
-- [ ] **CV-305**: checklist.md.template: add `Security Checks` and `Simulation` sections; create agents/sdlc-reviewer/checklist.md from it
+- [x] **CV-305**: checklist.md.template: add `Security Checks` and `Simulation` sections; create agents/sdlc-reviewer/checklist.md from it
   - **Priority:** MEDIUM
   - Files: `agents/templates/checklist.md.template, agents/sdlc-reviewer/checklist.md`
   - Spec: CV-REQ-031, CV-REQ-037
@@ -1050,7 +1050,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-307**: project.json.template: document `allowedExtensions` (empty array disables)
+- [x] **CV-307**: project.json.template: document `allowedExtensions` (empty array disables)
   - **Priority:** MEDIUM
   - Files: `agents/project.json.template`
   - Spec: CV-REQ-032

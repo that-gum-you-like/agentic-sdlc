@@ -3,7 +3,7 @@
   "title": "version-snapshot.mjs restore(date, {memory}): `restore <date> --memory` copies snapshot memory back; refuse a date with no memory snapshot",
   "description": "- [ ] **CV-248**: version-snapshot.mjs restore(date, {memory}): `restore <date> --memory` copies snapshot memory back; refuse a date with no memory snapshot\n  - **Priority:** MEDIUM\n  - Files: `agents/version-snapshot.mjs, agents/__tests__/version-snapshot.test.mjs`\n  - Spec: CV-REQ-072\n  - Gaps: D6-05\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: corrupt a memory file in tmp dir, restore, file equals snapshot copy; missing memory snapshot -> refusal\n  - Parallel: blocked-by CV-247\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-63"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-64.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-11T17:15:17.096Z"
 }

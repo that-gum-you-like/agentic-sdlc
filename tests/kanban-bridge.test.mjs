@@ -208,6 +208,18 @@ test('buildRegistry normalizes budget agents + degrades spend to 0', () => {
   assertEqual(reg.emergencyFallbackModel, 'deepseek/deepseek-v4-flash');
 });
 
+test('runKanban handles >1MB JSON output (Node default maxBuffer regression)', () => {
+  const big = JSON.stringify(Array.from({ length: 3000 }, (_, i) => ({ id: 't_' + i, title: 'x'.repeat(500) })));
+  assert(big.length > 1024 * 1024, 'fixture exceeds 1MB');
+  const f = join(fakeBin, 'big.json');
+  writeFileSync(f, big);
+  process.env.HERMES_LIST_FILE = f;
+  try {
+    const out = bridge.runKanban(['list', '--json'], { json: true });
+    assertEqual(out.length, 3000);
+  } finally { delete process.env.HERMES_LIST_FILE; }
+});
+
 // cleanup
 process.env.PATH = ORIG_PATH;
 try { rmSync(proj, { recursive: true, force: true }); rmSync(fakeBin, { recursive: true, force: true }); } catch { /* ignore */ }

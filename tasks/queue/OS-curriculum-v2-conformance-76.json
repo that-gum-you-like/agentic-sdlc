@@ -3,11 +3,15 @@
   "title": "project.json.template: document `allowedExtensions` (empty array disables)",
   "description": "- [ ] **CV-307**: project.json.template: document `allowedExtensions` (empty array disables)\n  - **Priority:** MEDIUM\n  - Files: `agents/project.json.template`\n  - Spec: CV-REQ-032\n  - Gaps: D5-07\n  - Agent: sdlc-documentarian\n  - Lane: hermes\n  - Test: template parses as JSON and has `allowedExtensions: []`\n  - Parallel: yes\n  - Complexity: S",
   "priority": "MEDIUM",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
   "createdAt": "2026-11-03T20:05:57.809Z",
   "claimedBy": null,
-  "testStatus": null
+  "testStatus": null,
+  "_file": "OS-curriculum-v2-conformance-76.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-11T18:21:49.006Z"
 }

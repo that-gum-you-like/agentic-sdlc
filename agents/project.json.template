@@ -20,5 +20,6 @@
       "dailySummary": false,
       "approvalTimeout": true
     }
-  }
+  },
+  "allowedExtensions": []
 }

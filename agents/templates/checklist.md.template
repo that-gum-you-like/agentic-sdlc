@@ -43,6 +43,22 @@ Use this checklist before marking any task complete or submitting work for revie
 - [ ] No vague qualifiers ("user-friendly", "fast", "good") — use measurable criteria
 - [ ] Multi-phase work has a roadmap with demo sentences and handoff conditions
 
+## Security Checks
+
+- [ ] No hardcoded secrets, API keys, tokens, or passwords in source code
+- [ ] Input validation on all user-facing entry points — reject unexpected types, lengths, and characters
+- [ ] Error messages do not leak internal paths, stack traces, or connection strings to the user
+- [ ] File paths are sanitised and restricted to allowed directories — no path traversal
+- [ ] HTTP endpoints validate Content-Type and reject unexpected payloads before processing
+- [ ] Database queries use parameterised statements — no string concatenation of user input into SQL/NoSQL
+
+## Simulation
+
+- [ ] Tested with realistic edge cases (empty inputs, maximum-length inputs, null values, concurrent access)
+- [ ] Behaviour verified under failure conditions (network timeouts, disk full, service unavailable)
+- [ ] Fallback paths produce degraded-but-safe output instead of crashing or exposing raw errors
+- [ ] Resource limits applied and tested: max file size, max request body, max concurrent connections
+
 ## Field-Proven Guards
 
 - [ ] **Exception normalization** — Approved exceptions MUST be time-boxed with an expiry date or logged as tech debt with a removal plan. One-time approvals MUST NOT become permanent patterns.
@@ -55,3 +71,5 @@ Use this checklist before marking any task complete or submitting work for revie
 - [ ] The task spec is fully addressed — nothing left half-done
 - [ ] No regressions in existing tests
 - [ ] Memory updated with what changed and why
+
+## Auto-added by pattern-hunt
