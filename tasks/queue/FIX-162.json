@@ -13,12 +13,14 @@
   ],
   "description": "Drain PR #162 (branch `agent/drain/OS-curriculum-v2-conformance-77`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-77 && git checkout agent/drain/OS-curriculum-v2-conformance-77`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-77` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- [major] Missing imports: Line 195-196 uses 'join', 'mkdirSync', 'readFileSync', 'writeFileSync', 'existsSync' without importing them — Add required imports from 'fs' and 'path'\n- [major] Template file existence not validated: Line 225 reads template files without checking if they exist — Add file existence checks with proper error handling for missing templates\n- [minor] Hardcoded author name: Line 229 uses 'hermes-drain' as author — Make author configurable or use a more generic identifier\n- [minor] Incomplete template substitution: Line 287-288 leaves empty stream fields instead of omitting them — Consider cleaning up empty template placeholders for better output quality",
   "attempts": 1,
-  "status": "pending",
+  "status": "completed",
   "fixFor": {
     "pr": 162,
     "branch": "agent/drain/OS-curriculum-v2-conformance-77",
     "headSha": "9228b0bc13e457651eb8fdb9c089c9e163b8f31c",
     "sourceTask": "OS-curriculum-v2-conformance-77",
     "rejectionKind": "llm-rejected"
-  }
+  },
+  "test_status": "passing",
+  "completed_at": "2026-11-13T00:08:29.942Z"
 }

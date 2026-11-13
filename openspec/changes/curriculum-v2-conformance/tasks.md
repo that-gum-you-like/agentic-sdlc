@@ -1003,7 +1003,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: blocked-by CV-250
   - Complexity: S
 
-- [ ] **CV-303**: four-layer-validate.mjs: export `scanFunctionMetrics(source)` returning [{name,startLine,lines,params}] (brace-matching, JS/TS function and arrow forms); ensure importing the file does not run the CLI
+- [x] **CV-303**: four-layer-validate.mjs: export `scanFunctionMetrics(source)` returning [{name,startLine,lines,params}] (brace-matching, JS/TS function and arrow forms); ensure importing the file does not run the CLI
   - **Priority:** MEDIUM
   - Files: `agents/four-layer-validate.mjs, agents/__tests__/silent-fallback-scan.test.mjs`
   - Spec: CV-REQ-031
@@ -1061,7 +1061,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-308**: scaffoldBugChange(task, {templatesDir, changesDir}) in seed-queue.mjs: create openspec/changes/bug-<id>/{proposal.md,tasks.md,status.json} from the templates with readiness `draft`, embedding task id, title, last failure; idempotent
+- [x] **CV-308**: scaffoldBugChange(task, {templatesDir, changesDir}) in seed-queue.mjs: create openspec/changes/bug-<id>/{proposal.md,tasks.md,status.json} from the templates with readiness `draft`, embedding task id, title, last failure; idempotent
   - **Priority:** MEDIUM
   - Files: `agents/seed-queue.mjs, agents/__tests__/seed-queue-routing.test.mjs`
   - Spec: CV-REQ-036
