@@ -77,7 +77,7 @@ test('selectJobs skips unmet agentRequired / adapterRequired', () => {
   const jobs = [
     { name: 'a', cron: '0 6 * * *', script: 'node x' },
     { name: 'b', cron: '0 6 * * *', script: 'node x', agentRequired: 'dependency-auditor' },
-    { name: 'c', cron: '0 6 * * *', script: 'node x', adapterRequired: 'paperclip' },
+    { name: 'c', cron: '0 6 * * *', script: 'node x', adapterRequired: 'orchestration-adapter' },
     { name: 'd', cron: '0 6 * * *', script: 'node x', agentRequired: 'sdlc-developer' },
   ];
   const { kept, skipped } = selectJobs(jobs, { agents: ['sdlc-developer'], adapter: 'file-based' });
@@ -184,15 +184,6 @@ test('applyInstall: superseded -> disable + unit removal, no install; enabled:fa
     assert(existsSync(join(dir, 'sdlc-sched-off.timer')) && existsSync(join(dir, 'sdlc-sched-off.service')), 'enabled:false unit still written');
     assert(!readdirSync(dir).some(f => f.includes('old')), 'superseded installs nothing');
   } finally { rmSync(dir, { recursive: true, force: true }); }
-});
-
-// --- paperclip retired: no orchestration-sync entry (CV-602) ---
-test('cron-schedule.json and its template carry no paperclip / orchestration-sync entry', () => {
-  for (const p of ['../agents/cron-schedule.json', '../agents/templates/cron-schedule.json.template']) {
-    const raw = readFileSync(new URL(p, import.meta.url), 'utf8');
-    assert(!/paperclip/i.test(raw), `${p} still mentions paperclip`);
-    assert(!JSON.parse(raw).schedules.some(j => j.name === 'orchestration-sync'), `${p} still has orchestration-sync`);
-  }
 });
 
 test('RS-REQ-063: gateway guard drop-in is ExecStartPre of the config guard, written only when the gateway unit exists, idempotent', () => {

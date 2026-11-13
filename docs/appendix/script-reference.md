@@ -37,7 +37,6 @@
 | `agents/model-intel.json` | Model intelligence database: costs, strengths, limitations for all providers |
 | `agents/maturity-assess.mjs` | Platform maturity assessment: 8-dimension scoring, DORA metrics, production readiness |
 | `agents/adapters/load-adapter.mjs` | Dynamic adapter loader for orchestration and LLM providers |
-| `agents/paperclip-sync.mjs` | Push SDLC agent config (model, role, instructions) → Paperclip |
 | `agents/garden-roadmap.mjs` | Archive completed roadmap items, keep roadmap focused |
 | `agents/autonomous-launcher.sh` | Headless Claude Code launcher for autonomous operation |
 | `agents/voice-intake.sh` | Terminal-based voice input with multiple modes |

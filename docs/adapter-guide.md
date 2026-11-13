@@ -21,7 +21,7 @@ Every orchestration adapter must export 7 named functions. See `agents/adapters/
 | `saveHumanTask` | `(humanQueueDir: string, task: object)` | `void` -- writes human task |
 | `syncConfig` | `(sdlcConfig: object)` | `{ drift: object[] }` -- differences between SDLC config and platform |
 
-The `syncConfig` method is a no-op for adapters that have no external platform (e.g., `file-based` returns empty drift). For platform-backed adapters like `paperclip`, it pushes SDLC agent configuration and reports drift.
+The `syncConfig` method is a no-op for adapters that have no external platform (e.g., `file-based` returns empty drift). For platform-backed adapters, it pushes SDLC agent configuration and reports drift.
 
 **Queue-drainer now uses the orchestration adapter.** All task loading, saving, and archiving goes through `agents/adapters/orchestration/file-based.mjs` (the default adapter). The adapter produces identical behavior to the previous inline I/O — this is a refactor, not a behavior change.
 
@@ -125,7 +125,6 @@ The `loadOrchestrationAdapter` and `loadLlmAdapter` functions in `load-adapter.m
 | Adapter | Key | Description |
 |---------|-----|-------------|
 | File-based | `file-based` | Default. Reads and writes task JSON files on the local filesystem. |
-| Paperclip | `paperclip` | Syncs tasks and agent config with the Paperclip control plane REST API. |
 | Claude Code Native | `claude-code-native` | Spawns Claude Code subagents for task execution. |
 
 ### LLM Providers
