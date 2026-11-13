@@ -5,5 +5,7 @@
   "console-log": [],
   "file-size": [],
   "missing-error-handling": [],
-  "hardcoded-values": []
+  "hardcoded-values": [],
+  "fn-length": [],
+  "param-count": []
 }

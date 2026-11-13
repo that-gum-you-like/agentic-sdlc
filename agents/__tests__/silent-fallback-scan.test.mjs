@@ -137,3 +137,74 @@ describe('scanFunctionMetrics (CV-303)', () => {
     assert.deepEqual(scan('const k = (a) => a + 1;\n'), []);
   });
 });
+
+describe('four-layer Layer 3 — function metrics advisory (CV-304)', () => {
+  before(() => {
+    mkdirSync(join(TMP_PROJECT, 'agents'), { recursive: true });
+    writeFileSync(join(TMP_PROJECT, 'agents', 'project.json'), JSON.stringify({
+      name: 'fallback-fixture', projectDir: TMP_PROJECT, appDir: '.', testCmd: 'true',
+      agents: ['tester'],
+    }));
+  });
+
+  function runWithAllowlist(glob) {
+    const allowlistPath = join(TMP_PROJECT, 'defeat-allowlist.json');
+    try {
+      const out = execFileSync(process.execPath, [
+        VALIDATOR, '--files', glob, '--json',
+        '--allowlist', allowlistPath,
+      ], {
+        encoding: 'utf8',
+        cwd: TMP_PROJECT,
+        env: { ...process.env, SDLC_PROJECT_DIR: TMP_PROJECT },
+      });
+      return { code: 0, report: JSON.parse(out) };
+    } catch (err) {
+      let report = null;
+      try { report = JSON.parse(String(err.stdout || '')); } catch { /* non-JSON */ }
+      return { code: err.status, report, raw: String(err.stdout || '') };
+    }
+  }
+
+  it('reports [fn-length] advisory for a function over 50 lines, exit 0', () => {
+    writeFileSync(join(TMP_PROJECT, 'fixture-long.mjs'),
+      'function bigFn(a, b) {\n' + '  const x = 1;\n'.repeat(55) + '}\n');
+    const { code, report } = runValidator('fixture-long.mjs');
+    assert.equal(code, 0, 'advisory-only findings must not fail');
+    const layer3 = report.layers.find(l => l.name.startsWith('Code'));
+    assert.ok(layer3.details.some(d => d.includes('[fn-length]') && d.includes('bigFn')), JSON.stringify(layer3.details));
+  });
+
+  it('reports [param-count] advisory for a function with over 4 params, exit 0', () => {
+    writeFileSync(join(TMP_PROJECT, 'fixture-params.mjs'),
+      'function manyParams(a, b, c, d, e, f) {\n  return a + b + c + d + e + f;\n}\n');
+    const { code, report } = runValidator('fixture-params.mjs');
+    assert.equal(code, 0, 'advisory-only findings must not fail');
+    const layer3 = report.layers.find(l => l.name.startsWith('Code'));
+    assert.ok(layer3.details.some(d => d.includes('[param-count]') && d.includes('manyParams')), JSON.stringify(layer3.details));
+  });
+
+  it('allowlisted file produces no [fn-length] or [param-count] advisory', () => {
+    writeFileSync(join(TMP_PROJECT, 'fixture-allowlisted.mjs'),
+      'function bigFn(a, b, c, d, e, f) {\n' + '  const x = 1;\n'.repeat(55) + '}\n');
+    writeFileSync(join(TMP_PROJECT, 'defeat-allowlist.json'), JSON.stringify({
+      'fn-length': ['fixture-allowlisted.mjs'],
+      'param-count': ['fixture-allowlisted.mjs'],
+    }));
+    const { code, report } = runWithAllowlist('fixture-allowlisted.mjs');
+    assert.equal(code, 0, 'allowlisted advisory must not fail');
+    const layer3 = report.layers.find(l => l.name.startsWith('Code'));
+    assert.ok(!layer3.details.some(d => d.includes('[fn-length]')), JSON.stringify(layer3.details));
+    assert.ok(!layer3.details.some(d => d.includes('[param-count]')), JSON.stringify(layer3.details));
+  });
+
+  it('silent-fallback PLUS advisory still fails with [fn-length] in details', () => {
+    writeFileSync(join(TMP_PROJECT, 'mixed.mjs'),
+      'function bigFn(a, b) {\n' + '  const total = computeTotal(x) || 0;\n'.repeat(55) + '}\n');
+    const { code, report } = runValidator('mixed.mjs');
+    assert.equal(code, 1, 'blocking issue must still fail');
+    const layer3 = report.layers.find(l => l.name.startsWith('Code'));
+    assert.ok(layer3.details.some(d => d.includes('[fn-length]')), JSON.stringify(layer3.details));
+    assert.ok(layer3.details.some(d => d.includes('silent-fallback')), JSON.stringify(layer3.details));
+  });
+});
