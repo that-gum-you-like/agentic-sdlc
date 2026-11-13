@@ -26,10 +26,8 @@ const LLM_ADAPTERS = {
   'openrouter': join(__dirname, 'llm', 'openrouter.mjs'),
   'groq': join(__dirname, 'llm', 'groq.mjs'),
   'ollama': join(__dirname, 'llm', 'ollama.mjs'),
-  'openai': join(__dirname, 'llm', 'openai.mjs'),
   'gemini': join(__dirname, 'llm', 'gemini.mjs'),
   'cerebras': join(__dirname, 'llm', 'cerebras.mjs'),
-  'azure-openai': join(__dirname, 'llm', 'azure-openai.mjs'),
   'azure-foundry-claude': join(__dirname, 'llm', 'azure-foundry-claude.mjs'),
 };
 
