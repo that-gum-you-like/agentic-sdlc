@@ -1,0 +1,24 @@
+{
+  "id": "FIX-168",
+  "phase": 1,
+  "title": "Fix rejected drain PR #168 (agent/drain/OS-curriculum-v2-conformance-73-1794530672)",
+  "assignee": "sdlc-developer",
+  "priority": "CRITICAL",
+  "estimatedTokens": 16000,
+  "files": [],
+  "blockedBy": [],
+  "created": "2026-11-13T00:53:22.719Z",
+  "tags": [
+    "auto-fix"
+  ],
+  "description": "Drain PR #168 (branch `agent/drain/OS-curriculum-v2-conformance-73-1794530672`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-73-1794530672 && git checkout agent/drain/OS-curriculum-v2-conformance-73-1794530672`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-73-1794530672` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- [major] scope creep: defeat-allowlist.json includes files that weren't scanned in this task — the PR description says 'pre-populated with all existing repo findings' but this should be done in a separate inventory task, not bundled with the validation logic\n- [major] fragile implementation: four-layer-validate.mjs line 625-642 — the advisory scan runs before TS availability check but uses scanFunctionMetrics which may not exist if TS is unavailable, creating a potential runtime error\n- [minor] inconsistent output: four-layer-validate.mjs line 656-657 — advisory findings are shown with different formatting when TS is unavailable vs available, creating inconsistent user experience",
+  "attempts": 1,
+  "status": "pending",
+  "fixFor": {
+    "pr": 168,
+    "branch": "agent/drain/OS-curriculum-v2-conformance-73-1794530672",
+    "headSha": "97dcb4c8ef5a22dcc50f034f0993499a19c1310e",
+    "sourceTask": "OS-curriculum-v2-conformance-73",
+    "rejectionKind": "llm-rejected"
+  }
+}
