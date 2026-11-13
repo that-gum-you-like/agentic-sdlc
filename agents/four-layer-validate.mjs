@@ -617,19 +617,27 @@ async function runLayer3(targetFiles) {
   // to report functions over 50 lines → [fn-length] and over 4 params → [param-count].
   // Run before the TS block so .mjs/.js files are covered even when TS is unavailable.
   // Advisory only: findings do NOT flip the layer to fail.
+  //
+  // scanFunctionMetrics is defined in this file (line ~206) — it is a pure JS
+  // regex-based parser, depends on NO imports beyond Node stdlib, and is always
+  // available regardless of TypeScript compiler availability.
   // ---------------------------------------------------------------------------
   const fnMetricsIssues = [];
-  for (const filePath of allSourceFiles) {
-    if (!fs.existsSync(filePath)) continue;
-    const content = fs.readFileSync(filePath, 'utf8');
-    const metrics = scanFunctionMetrics(content);
-    const rp = rel(filePath);
-    for (const fn of metrics) {
-      if (fn.lines > 50) {
-        fnMetricsIssues.push(`[fn-length] ${rp}:${fn.startLine} — advisory: function "${fn.name}" has ${fn.lines} lines (limit: 50)`);
-      }
-      if (fn.params > 4) {
-        fnMetricsIssues.push(`[param-count] ${rp}:${fn.startLine} — advisory: function "${fn.name}" has ${fn.params} parameters (limit: 4)`);
+  if (typeof scanFunctionMetrics !== 'function') {
+    fnMetricsIssues.push('[advisory-scan] scanFunctionMetrics not available — advisory scan skipped');
+  } else {
+    for (const filePath of allSourceFiles) {
+      if (!fs.existsSync(filePath)) continue;
+      const content = fs.readFileSync(filePath, 'utf8');
+      const metrics = scanFunctionMetrics(content);
+      const rp = rel(filePath);
+      for (const fn of metrics) {
+        if (fn.lines > 50) {
+          fnMetricsIssues.push(`[fn-length] ${rp}:${fn.startLine} — advisory: function "${fn.name}" has ${fn.lines} lines (limit: 50)`);
+        }
+        if (fn.params > 4) {
+          fnMetricsIssues.push(`[param-count] ${rp}:${fn.startLine} — advisory: function "${fn.name}" has ${fn.params} parameters (limit: 4)`);
+        }
       }
     }
   }
@@ -655,7 +663,6 @@ async function runLayer3(targetFiles) {
   } catch (e) {
     const details = issues.length > 0 ? [...issues] : [];
     if (newAdvisoryIssues.length > 0) {
-      if (issues.length > 0) details.push('---');
       details.push(...newAdvisoryIssues);
       if (issues.length > 0) details.push(`(${newAdvisoryIssues.length} advisory finding(s) — not counted as failure)`);
     }
