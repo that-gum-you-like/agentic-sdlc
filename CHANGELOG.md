@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-13
+
+- 2026-11-13 #168 feat(validate): add Layer 3 fn-length/param-count advisory scan (CV-304) (backend)
+
 ## 2026-11-11
 
 - 2026-11-11 #158 feat(checklist): add Security Checks and Simulation sections to checklist.md.template; create sdlc-reviewer/checklist.md (backend)

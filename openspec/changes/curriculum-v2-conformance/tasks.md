@@ -1015,7 +1015,7 @@ Capability: autonomous-path-gates. Edits the machinery the drain runs on, so the
   - Complexity: M
   - Notes: If the file has no __isMainModule guard, add one in this task.
 
-- [ ] **CV-304**: four-layer-validate.mjs Layer 3: report functions over 50 lines and over 4 parameters as advisory `[fn-length]`/`[param-count]` using scanFunctionMetrics; respect defeat-allowlist.json (shrink-only)
+- [x] **CV-304**: four-layer-validate.mjs Layer 3: report functions over 50 lines and over 4 parameters as advisory `[fn-length]`/`[param-count]` using scanFunctionMetrics; respect defeat-allowlist.json (shrink-only)
   - **Priority:** MEDIUM
   - Files: `agents/four-layer-validate.mjs, agents/__tests__/silent-fallback-scan.test.mjs`
   - Spec: CV-REQ-031
