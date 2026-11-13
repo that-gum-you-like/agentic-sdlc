@@ -32,6 +32,13 @@ const NOTIF = config.notification;
 // Providers
 // ---------------------------------------------------------------------------
 
+/** Escape text for embedding inside a double-quoted POSIX shell string
+ *  (backslash, double quote, dollar and backtick — backticks in task titles
+ *  were being executed as command substitution and vanished from messages). */
+export function shellEscapeDq(text) {
+  return String(text ?? '').replace(/[\\"$`]/g, '\\$&');
+}
+
 function sendViaOpenclaw(message, mediaPath) {
   const channel = NOTIF.channel;
   if (!channel) {
@@ -39,7 +46,7 @@ function sendViaOpenclaw(message, mediaPath) {
     process.exit(1);
   }
 
-  let cmd = `openclaw message send --channel whatsapp --target "${channel}" --message "${message.replace(/"/g, '\\"')}"`;
+  let cmd = `openclaw message send --channel whatsapp --target "${channel}" --message "${shellEscapeDq(message)}"`;
   if (mediaPath) {
     const absMedia = resolve(mediaPath);
     cmd += ` --media "${absMedia}"`;
@@ -60,7 +67,7 @@ function sendViaTelegram(message) {
   // CLI so sendNotification() stays synchronous (returns boolean). The Telegram
   // sender itself resolves credentials from env/config and no-ops when unconfigured.
   const script = resolve(__dirname, 'telegram-notify.mjs');
-  const cmd = `node "${script}" send "${message.replace(/"/g, '\\"')}"`;
+  const cmd = `node "${script}" send "${shellEscapeDq(message)}"`;
   try {
     execSync(cmd, { stdio: 'pipe', timeout: 30000 });
     console.log(`📤 Sent via Telegram`);
@@ -106,7 +113,7 @@ export function sendDesktopNotification(message, { execFn } = {}) {
     if (!env.DBUS_SESSION_BUS_ADDRESS) {
       env.DBUS_SESSION_BUS_ADDRESS = `unix:path=/run/user/${process.getuid()}/bus`;
     }
-    exec(`notify-send --app-name="Agentic SDLC" "Agentic SDLC" "${String(message).replace(/"/g, '\\"')}"`,
+    exec(`notify-send --app-name="Agentic SDLC" "Agentic SDLC" "${shellEscapeDq(message)}"`,
       { stdio: 'pipe', timeout: 5000, env });
     return true;
   } catch {
@@ -741,6 +748,35 @@ export function recordErrorOccurrence(text) {
     writeFileSync(ERROR_SIG_PATH, JSON.stringify(ledger, null, 2) + '\n');
   } catch { /* ledger write failure must not block notification */ }
   return { sig, count: entry.count, suppressed };
+}
+
+const ONCE_STATE_PATH = process.env.SDLC_NOTIFY_ONCE_PATH || resolve(config.projectDir, 'pm', 'notify-once.json');
+const ONCE_DEFAULT_WINDOW_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * Per-key rate limit with persisted state. Returns true when `key` has not
+ * fired within `windowMs` (and records it now); false when it should be
+ * suppressed. Key should identify (event, subject, episode), e.g.
+ * `stale-claim:TASK-1:<claimedAt>` so a NEW claim episode notifies again.
+ */
+export function shouldNotifyOnce(key, { windowMs = ONCE_DEFAULT_WINDOW_MS, statePath = ONCE_STATE_PATH, now = Date.now() } = {}) {
+  let state = {};
+  try { state = JSON.parse(readFileSync(statePath, 'utf8')); } catch { /* first run */ }
+  const last = state[key] ? Number(state[key]) : 0;
+  if (last && now - last < windowMs) return false;
+  state[key] = now;
+  for (const k of Object.keys(state)) if (now - Number(state[k]) > 7 * 24 * 60 * 60 * 1000) delete state[k];
+  try {
+    mkdirSync(dirname(statePath), { recursive: true });
+    writeFileSync(statePath, JSON.stringify(state, null, 2) + '\n');
+  } catch { /* state write failure must not block notification */ }
+  return true;
+}
+
+/** triggerNotification gated by shouldNotifyOnce(key). */
+export function triggerNotificationOnce(key, triggerName, message, opts = {}) {
+  if (!shouldNotifyOnce(key, opts)) return false;
+  return triggerNotification(triggerName, message);
 }
 
 export function triggerNotification(triggerName, message, mediaPath) {
