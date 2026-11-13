@@ -39,7 +39,7 @@ Maturity ladder: Levels 0–6 (`framework/maturity-model.md` is canonical).
 | Headless autonomous mode | Solid | `agents/autonomous-launcher.sh` (exit code fixed in H-004); `agents/hermes-drain.sh` (Hermes + OpenRouter ladder, dedicated clone) |
 | File-based task coordination | Solid | `tasks/queue/` + `tasks/completed/`, `agents/queue-drainer.mjs`, `agents/adapters/orchestration/file-based.mjs` |
 | Testing tiers: unit/integration/E2E/front-end E2E | Solid | `framework/validation-patterns.md` (5 layers), CLAUDE.md micro cycle step 6 (browser E2E required for frontend changes) |
-| **Pre-commit hooks (test/lint/typecheck)** | **Solid (new)** | `agents/review-hook.mjs install` now wires an ENFORCING pre-commit gate (blocks secrets/silent-failures on staged diffs) + advisory post-commit (PR #17). Projects add their test/lint commands to the same hook as desired |
+| **Pre-commit hooks (test/lint/typecheck)** | Partial | `agents/review-hook.mjs` — D5-01: drain does not call review-hook.mjs; only manual install exists |
 | Execution cadence / scheduling | Solid | `agents/scheduler-install.mjs` + `agents/templates/cron-schedule.json.template` (15 schedules: daily/weekly/monthly + drain + auto-review) |
 | MCP servers | Partial | Consumed via OpenClaw MCP tools + Azure Foundry MCP connector (`docs/azure-foundry-integration.md`); no in-repo MCP server (deliberately out of scope — competitive-roadmap P7 was cancelled per Bryce's directive) |
 
@@ -70,7 +70,7 @@ Maturity ladder: Levels 0–6 (`framework/maturity-model.md` is canonical).
 |-----------|--------|-------|
 | Named anti-pattern vocabulary | Solid | CLAUDE.md rule 7; reviewer templates |
 | Senior-dev checklist that GROWS | Solid | `agents/templates/checklist.md.template` + `appendToChecklist()` in pattern-hunt.mjs appends one-line checklist items idempotently when recurring patterns are confirmed under `## Auto-added by pattern-hunt`. Tested via `agents/__tests__/checklist-growth.test.mjs` (append, idempotency, no-op, dry-run) |
-| **Senior review that can BLOCK (not just warn)** | **Solid (new)** | `agents/review-hook.mjs`: enforcing pre-commit `check-staged` exits 1 on blocking violations — a real git commit is blocked (proven in `agents/__tests__/gates-enforce.test.mjs`); required CI check runs the whole suite (H-001); `agents/pr-auto-review.mjs` gates merges (clean-worktree tests + scope scan + OpenRouter LLM review) |
+| **Senior review that can BLOCK (not just warn)** | Partial | `agents/review-hook.mjs` — D5-01: drain does not invoke check-staged; blocking pre-commit only available via manual install |
 | Static analysis: AST | Solid | `agents/ast-analyzer.mjs` (TS compiler API: unused exports, cycles, dead code; import-guarded since H-004) |
 | Static analysis: lint/typecheck | Partial | Runs via project-configured `testCmd`/CI; no framework-owned lint runner (projects bring their own) |
 | **spaCy semantic near-miss analyzer** (`fullName` vs `full_name`) | Solid | `agents/nlp-analyzer.mjs` (+ `agents/nlp-analyze.py` optional spaCy path, `agents/requirements-nlp.txt` venv) wired as four-layer **Layer 2.5** (`four-layer-validate.mjs`); zero-dep JS identifier-token fallback when spaCy is absent (PR #24) |
@@ -97,12 +97,12 @@ Maturity ladder: Levels 0–6 (`framework/maturity-model.md` is canonical).
 
 | Capability | Status | Owner |
 |-----------|--------|-------|
-| Pattern hunt | Solid (fixed) | `agents/pattern-hunt.mjs`: mines reviews, semantic clustering; the always-passing generic scaffold is GONE — unknown categories surface `needs-detector` (PR #17) |
+| Pattern hunt | Partial | `agents/pattern-hunt.mjs` — D5-04: weekly cadence not wired (pattern-hunt, REM sleep, and drift not actually run by weekly-review.mjs) |
 | Defeat tests | Solid | four-layer Layer 3 + `defeat-allowlist.json` (shrink-only); run in npm test + CI + now blockable pre-commit |
 | E2E regression test per fixed bug | Partial | Real per-bug regressions exist (E2BIG, REQ-H4 sweep, maturation) but not the three curriculum case studies (citation/NaN/Math.random — those bugs lived in LinguaFlow, not this repo); `openspec/changes/replay-regression-ci-gate/` still in design. CLOSE: keep the per-bug-regression rule; the replay gate change is the vehicle |
-| **Behavior baselines + drift detection (>20% alert)** | Solid | `agents/test-behavior.mjs --baseline` records per-agent metrics, `--drift` compares and exits 1 beyond the >20% relative threshold (PR #21) |
+| **Behavior baselines + drift detection (>20% alert)** | Partial | `agents/test-behavior.mjs --baseline` / `--drift`, >20% threshold — D7-01: baselines not recorded on primary box; D7-02: drift not wired into test pipeline |
 | Improvement loop Find→Defeat→Teach | Solid | Find (`pattern-hunt.mjs` mining + clustering) → Defeat (real detectors, post H-007) → **Teach** (`pattern-hunt.teachAgents()` writes recurring patterns into the responsible agent's memory, logged as `memoryRecord`; reported under `teaching` in the run summary) (PR #26) |
-| **Playwright autonomous user-testing w/ screenshots** | Solid | `agents/browser-user-test.mjs` — `generate <change-name>` builds a user-journey spec FROM an OpenSpec proposal (one test per user-story line, per-step screenshot discipline), `run` executes the project's own Playwright and archives screenshots; degrades with a clear message when Playwright isn't installed (PR #28) |
+| **Playwright autonomous user-testing w/ screenshots** | Partial | `agents/browser-user-test.mjs` — D7-04: not wired into daily-review.mjs user-test runner |
 | Cost tracking + conservation + model tiers | Solid | `agents/cost-tracker.mjs` (now capturing provider-reported usage, H-006), `budget.json` OpenRouter ladder, `model-manager.mjs` (80% predictive swap + circuit breaker), conservation mode |
 | Agent versioning cycle | Solid | see Phase 6 |
 
