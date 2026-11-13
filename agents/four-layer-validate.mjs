@@ -642,37 +642,44 @@ async function runLayer3(targetFiles) {
     }
   }
 
-  // Filter advisory findings through allowlist (suppress known debt) without
-  // modifying the allowlist — advisory scans are read-only.
-  let newAdvisoryIssues = fnMetricsIssues;
-  if (allowlist && fnMetricsIssues.length > 0) {
-    const allNew = [];
-    for (const category of ['fn-length', 'param-count']) {
-      const categoryViolations = fnMetricsIssues.filter(v => v.startsWith(`[${category}]`));
-      const { newViolations, knownDebt } = applyAllowlist(categoryViolations, category);
-      allNew.push(...newViolations);
-    }
-    newAdvisoryIssues = allNew; // known-debt suppressed; shrink skipped for advisory-only
-  }
+  // Advisory findings are collected from two sources:
+  //   1. fnMetricsIssues (below) — pre-TS regex scan for [fn-length], [param-count]
+  //   2. astAdvisoryIssues (after TS AST analysis) — [too-many-params]
+  // Both are combined and filtered through the allowlist ONCE after all analysis,
+  // so advisory findings never affect layer failure status.
+  let newAdvisoryIssues = [];
+  let astAdvisoryIssues = [];
 
   let ts;
   try {
     const requireFn = createRequire(import.meta.url);
     ts = requireFn(path.join(LINGUAFLOW_ROOT, 'node_modules', 'typescript'));
   } catch (e) {
+    // Filter fnMetricsIssues through allowlist for advisory-only output
+    let catchAdvisoryIssues = fnMetricsIssues;
+    if (allowlist && fnMetricsIssues.length > 0) {
+      const allNew = [];
+      for (const category of ['fn-length', 'param-count']) {
+        const categoryViolations = fnMetricsIssues.filter(v => v.startsWith(`[${category}]`));
+        const { newViolations, knownDebt } = applyAllowlist(categoryViolations, category);
+        allNew.push(...newViolations);
+        // shrinkAllowlist deliberately NOT called — advisory scans are read-only
+      }
+      catchAdvisoryIssues = allNew;
+    }
     if (issues.length > 0) {
       const details = [...issues];
-      if (newAdvisoryIssues.length > 0) {
-        details.push(...newAdvisoryIssues);
-        details.push(`(${newAdvisoryIssues.length} advisory finding(s) — not counted as failure)`);
+      if (catchAdvisoryIssues.length > 0) {
+        details.push(...catchAdvisoryIssues);
+        details.push(`(${catchAdvisoryIssues.length} advisory finding(s) — not counted as failure)`);
       }
       return { name: layerName, status: 'fail', details };
     }
-    if (newAdvisoryIssues.length > 0) {
+    if (catchAdvisoryIssues.length > 0) {
       return {
         name: layerName,
         status: 'pass',
-        details: [...newAdvisoryIssues, `(${newAdvisoryIssues.length} advisory finding(s) — not counted as failure)`],
+        details: [...catchAdvisoryIssues, `(${catchAdvisoryIssues.length} advisory finding(s) — not counted as failure)`],
       };
     }
     return {
@@ -774,13 +781,24 @@ async function runLayer3(targetFiles) {
         node.parameters.length > 5
       ) {
         const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
-        issues.push(
+        astAdvisoryIssues.push(
           `[too-many-params] ${relPath}:${line + 1} — function has ${node.parameters.length} parameters (consider an options object)`,
         );
       }
     });
   }
-
+  // Combine fnMetricsIssues + astAdvisoryIssues and filter through allowlist ONCE,
+  // after all analysis is done — advisory findings never affect layer failure status.
+  newAdvisoryIssues = fnMetricsIssues.concat(astAdvisoryIssues);
+  if (allowlist && newAdvisoryIssues.length > 0) {
+    const allNew = [];
+    for (const category of ['fn-length', 'param-count']) {
+      const categoryViolations = newAdvisoryIssues.filter(v => v.startsWith(`[${category}]`));
+      const { newViolations, knownDebt } = applyAllowlist(categoryViolations, category);
+      allNew.push(...newViolations);
+    }
+    newAdvisoryIssues = allNew;
+  }
   // Include advisory findings in output without affecting layer status
   if (issues.length > 0) {
     const details = [...issues];
