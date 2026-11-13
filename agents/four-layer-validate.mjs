@@ -612,13 +612,58 @@ async function runLayer3(targetFiles) {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Function metrics advisory scan (CV-304) — uses scanFunctionMetrics (TS-free)
+  // to report functions over 50 lines → [fn-length] and over 4 params → [param-count].
+  // Run before the TS block so .mjs/.js files are covered even when TS is unavailable.
+  // Advisory only: findings do NOT flip the layer to fail.
+  // ---------------------------------------------------------------------------
+  const fnMetricsIssues = [];
+  for (const filePath of allSourceFiles) {
+    if (!fs.existsSync(filePath)) continue;
+    const content = fs.readFileSync(filePath, 'utf8');
+    const metrics = scanFunctionMetrics(content);
+    const rp = rel(filePath);
+    for (const fn of metrics) {
+      if (fn.lines > 50) {
+        fnMetricsIssues.push(`[fn-length] ${rp}:${fn.startLine} — advisory: function "${fn.name}" has ${fn.lines} lines (limit: 50)`);
+      }
+      if (fn.params > 4) {
+        fnMetricsIssues.push(`[param-count] ${rp}:${fn.startLine} — advisory: function "${fn.name}" has ${fn.params} parameters (limit: 4)`);
+      }
+    }
+  }
+
+  // Apply allowlist filtering for fn-length and param-count (shrink-only) before TS block,
+  // so advisory output works even when TS is unavailable.
+  let newAdvisoryIssues = fnMetricsIssues;
+  if (allowlist && fnMetricsIssues.length > 0) {
+    const allNew = [];
+    for (const category of ['fn-length', 'param-count']) {
+      const categoryViolations = fnMetricsIssues.filter(v => v.startsWith(`[${category}]`));
+      const { newViolations, knownDebt, fixedEntries } = applyAllowlist(categoryViolations, category);
+      allNew.push(...newViolations);
+      shrinkAllowlist(category, fixedEntries);
+    }
+    newAdvisoryIssues = allNew; // known-debt is suppressed; only new findings shown
+  }
+
   let ts;
   try {
     const requireFn = createRequire(import.meta.url);
     ts = requireFn(path.join(LINGUAFLOW_ROOT, 'node_modules', 'typescript'));
   } catch (e) {
+    const details = issues.length > 0 ? [...issues] : [];
+    if (newAdvisoryIssues.length > 0) {
+      if (issues.length > 0) details.push('---');
+      details.push(...newAdvisoryIssues);
+      if (issues.length > 0) details.push(`(${newAdvisoryIssues.length} advisory finding(s) — not counted as failure)`);
+    }
     if (issues.length > 0) {
-      return { name: layerName, status: 'fail', details: issues };
+      return { name: layerName, status: 'fail', details };
+    }
+    if (newAdvisoryIssues.length > 0) {
+      return { name: layerName, status: 'warn', details };
     }
     return {
       name: layerName,
@@ -726,15 +771,26 @@ async function runLayer3(targetFiles) {
     });
   }
 
-  if (issues.length > 0) {
-    return { name: layerName, status: 'fail', details: issues };
+  // Apply allowlist filtering for fn-length and param-count (shrink-only)
+  // Advisory findings go into issues list for display but don't affect layer status
+  const hasBlocking = issues.length > 0;
+  issues.push(...newAdvisoryIssues);
+
+  if (hasBlocking || issues.length > 0) {
+    const details = [...issues];
+    // If there are blocking issues, layer fails. If only advisory findings, warn.
+    if (hasBlocking) {
+      if (newAdvisoryIssues.length > 0) details.push(`(${newAdvisoryIssues.length} advisory finding(s) — not counted as failure)`);
+      return { name: layerName, status: 'fail', details };
+    }
+    return { name: layerName, status: 'warn', details };
   }
 
   return {
     name: layerName,
     status: 'pass',
     details: [
-      `AST-analysed ${productionFiles.length} production file(s) — no defeat patterns found`,
+      `AST-analysed ${productionFiles.length} production file(s) — no defeat patterns or advisory findings`,
     ],
   };
 }
