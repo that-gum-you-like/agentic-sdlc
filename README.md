@@ -66,14 +66,12 @@ If you're cloning this onto a work or locked-down machine, here's exactly what y
 | **Any npm dependencies?** | Zero. Every script uses Node.js stdlib only. The only `package.json` with deps is empty. |
 | **Any network calls at rest?** | No. Scripts only call the network when you explicitly invoke a model (via a provider adapter you configured) or run `model-manager.mjs research` (fetches provider pricing pages). |
 | **Any telemetry?** | None. The framework writes logs *locally* to `pm/` — never transmits anywhere. |
-| **Does it need OpenClaw, Paperclip, Matrix, or WhatsApp?** | **No — all optional adapters.** See below. |
 
 ### Optional integrations (adapters — skip any you don't want)
 
 | Adapter | What it is | Skip by… |
 |---|---|---|
 | **OpenClaw** | A personal WhatsApp/browser automation gateway the author uses locally. Appears in `notify.mjs` as one of three notification providers. | Default. Leave `notification.provider: "none"` (the default) in `project.json`. No OpenClaw binary means OpenClaw code paths are never entered. |
-| **Paperclip** | Cloud orchestration control plane. Requires `.paperclip.env` with API keys. | Default. Leave `orchestration.adapter: "file-based"` (the default) in `project.json`. Without `.paperclip.env`, Paperclip code never runs. |
 | **Matrix** | Self-hosted agent-to-agent chat (`matrix-client/`). Requires you to run your own Synapse/conduwuit homeserver. | Simply don't use `matrix-cli.mjs`. Nothing else depends on it. |
 | **WhatsApp / external channels** | Delivery targets for `notify.mjs`. | `notification.provider: "file"` writes to `pm/notifications.log` instead — zero external network. |
 

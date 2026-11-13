@@ -91,11 +91,11 @@ test('unknown LLM adapter throws', async () => {
   }
 });
 
-test('listOrchestrationAdapters returns 3 adapters', () => {
+test('listOrchestrationAdapters returns 2 adapters', () => {
   const adapters = listOrchestrationAdapters();
-  assertEqual(adapters.length, 3, `Expected 3 orchestration adapters, got ${adapters.length}`);
+  assertEqual(adapters.length, 2, `Expected 2 orchestration adapters, got ${adapters.length}`);
   assert(adapters.includes('file-based'), 'Should include file-based');
-  assert(adapters.includes('paperclip'), 'Should include paperclip');
+  assert(!adapters.includes('paperclip'), 'Should NOT include paperclip (retired)');
   assert(adapters.includes('claude-code-native'), 'Should include claude-code-native');
 });
 

@@ -2,8 +2,7 @@
  * seed-queue-routing.test.mjs — Regression tests for REQ-H7 (de-coupled bindings).
  *
  * seed-queue-from-openspec.mjs must route tasks from domains.json patterns,
- * not hardcoded LinguaFlow agent names; paperclip-sync.mjs must read model
- * IDs/urlKeys from config, not stale literals.
+ * not hardcoded LinguaFlow agent names.
  *
  * Run with:
  *   node --test agents/__tests__/seed-queue-routing.test.mjs
@@ -154,28 +153,5 @@ describe('scaffoldBugChange — bug change scaffolding (CV-308 / CV-REQ-036)', (
     assert.ok(existsSync(join(resultDir, 'status.json')));
     const status = JSON.parse(readFileSync(join(resultDir, 'status.json'), 'utf8'));
     assert.equal(status.readiness, 'draft');
-  });
-});
-
-describe('paperclip-sync — config-driven bindings', () => {
-  // Scan code only — the config examples in doc comments are allowed.
-  const src = readFileSync(resolve(AGENTS_DIR, 'paperclip-sync.mjs'), 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/\/\/.*$/gm, '');
-
-  it('contains no hardcoded Claude model IDs', () => {
-    assert.ok(!/claude-(opus|sonnet|haiku)-[\w.-]+/.test(src),
-      'model IDs must come from budget.json modelAliases + the model-intel catalog');
-  });
-
-  it('contains no hardcoded IT-Crowd urlKeys', () => {
-    for (const key of ['roy-trenneman', 'maurice-moss', 'jen-barber', 'richmond-avenal']) {
-      assert.ok(!src.includes(key), `urlKey literal ${key} must come from project.json paperclip.urlKeys`);
-    }
-  });
-
-  it('derives per-model cost from the model-intel catalog', () => {
-    assert.ok(src.includes('loadModelIntel'), 'cost math must read the catalog, not literal $/M constants');
-    assert.ok(!/COST_PER_MILLION_TOKENS\s*=\s*\{\s*opus/.test(src));
   });
 });

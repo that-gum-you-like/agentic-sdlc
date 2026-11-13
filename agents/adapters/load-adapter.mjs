@@ -17,7 +17,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const ORCHESTRATION_ADAPTERS = {
   'file-based': join(__dirname, 'orchestration', 'file-based.mjs'),
-  'paperclip': join(__dirname, 'orchestration', 'paperclip.mjs'),
   'claude-code-native': join(__dirname, 'orchestration', 'claude-code-native.mjs'),
 };
 

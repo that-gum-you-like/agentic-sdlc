@@ -185,7 +185,6 @@ When editing any agent's AGENT.md:
 3. Check mailbox: `node ~/agentic-sdlc/agents/notify.mjs check-mailbox`
 4. Read PM dashboard: `pm/DASHBOARD.md`
 5. Pick up next unblocked tasks
-6. If using Paperclip: `source .paperclip.env`
 
 ### Adapters (orchestration + LLM provider)
 **Adapter Configuration:** the framework is platform-agnostic. Configure via `project.json`. Default: `file-based` orchestration + `anthropic` LLM. Other providers: groq, openai, gemini, cerebras, ollama, azure-openai, azure-foundry-claude. Free-tier fallbacks (Groq, Gemini, Cerebras) should end every fallback chain.

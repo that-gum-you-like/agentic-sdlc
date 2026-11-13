@@ -28,7 +28,6 @@ Write a human task back to its queue.
 Sync SDLC agent configuration to the orchestration platform.
 - Returns array of drift objects describing differences between SDLC config and platform state
 - For `file-based`, this is a no-op returning empty drift
-- For `paperclip`, this wraps the existing paperclip-sync API calls
 
 ## Task Object Shape
 
@@ -57,7 +56,6 @@ Sync SDLC agent configuration to the orchestration platform.
 
 Each adapter is a single `.mjs` file in `agents/adapters/orchestration/`:
 - `file-based.mjs` — default, reads/writes local JSON files
-- `paperclip.mjs` — wraps Paperclip REST API
 - `claude-code-native.mjs` — spawns Claude Code subagents
 
 Loaded dynamically by `agents/adapters/load-adapter.mjs` based on `project.json` config.

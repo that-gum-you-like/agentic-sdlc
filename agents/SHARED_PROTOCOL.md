@@ -41,7 +41,7 @@ All agents in this project follow these standard procedures. Agent-specific rule
 - Format: `type(scope): description`
 - Types: feat, fix, refactor, test, docs, chore
 - Include task ID: `feat(auth): add login endpoint [T-042]`
-- Co-author: `Co-Authored-By: Paperclip <noreply@paperclip.ing>` (or project-specific)
+- Co-author: `Co-Authored-By: the orchestrating system` (or project-specific)
 - One logical change per commit
 
 ### Channel Posting

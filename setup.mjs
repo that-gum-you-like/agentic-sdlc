@@ -455,7 +455,7 @@ Examples:
   console.log('');
   console.log('🔌 Platform Configuration');
   console.log('─'.repeat(40));
-  const orchAdapter = await ask('Orchestration adapter (file-based/paperclip/claude-code-native)', 'file-based');
+  const orchAdapter = await ask('Orchestration adapter (file-based/claude-code-native)', 'file-based');
   const llmProvider = await ask('Default LLM provider (anthropic/groq/ollama)', 'anthropic');
 
   console.log('');
