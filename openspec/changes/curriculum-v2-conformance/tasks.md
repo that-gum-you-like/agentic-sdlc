@@ -1551,7 +1551,7 @@ Hygiene tasks cite gap ids and carry no spec. Conformance rows are downgraded fi
   - Complexity: M
   - Notes: Do NOT touch the retirement notes in docs/ that explain why.
 
-- [ ] **CV-604**: .gitignore: ignore `agents/versions/` (snapshots are local backups; git history is the record for tracked files); already-tracked snapshots stay
+- [x] **CV-604**: .gitignore: ignore `agents/versions/` (snapshots are local backups; git history is the record for tracked files); already-tracked snapshots stay
   - **Priority:** LOW
   - Files: `.gitignore`
   - Spec: hygiene (loop-health §7)
