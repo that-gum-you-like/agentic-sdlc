@@ -1573,7 +1573,7 @@ Hygiene tasks cite gap ids and carry no spec. Conformance rows are downgraded fi
   - Parallel: yes
   - Complexity: S
 
-- [ ] **CV-606**: tests/curriculum-conformance.test.mjs: add exported `isScheduledRow(row)` (text matches scheduled|weekly|daily|monthly|timer|cron) and `hasScheduleEvidence(row)` (owner list contains agents/cron-schedule.json or a path under agents/cycles/, or text contains sdlc-sched-); a Solid scheduled row without evidence fails
+- [x] **CV-606**: tests/curriculum-conformance.test.mjs: add exported `isScheduledRow(row)` (text matches scheduled|weekly|daily|monthly|timer|cron) and `hasScheduleEvidence(row)` (owner list contains agents/cron-schedule.json or a path under agents/cycles/, or text contains sdlc-sched-); a Solid scheduled row without evidence fails
   - **Priority:** LOW
   - Files: `tests/curriculum-conformance.test.mjs`
   - Spec: hygiene (conformance honesty)

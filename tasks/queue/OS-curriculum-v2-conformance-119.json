@@ -3,7 +3,7 @@
   "title": "tests/curriculum-conformance.test.mjs: add exported `isScheduledRow(row)` (text matches scheduled|weekly|daily|monthly|timer|cron) and `hasScheduleEvidence(row)` (owner list contains agents/cron-schedule.json or a path under agents/cycles/, or text contains sdlc-sched-); a Solid scheduled row without evidence fails",
   "description": "- [ ] **CV-606**: tests/curriculum-conformance.test.mjs: add exported `isScheduledRow(row)` (text matches scheduled|weekly|daily|monthly|timer|cron) and `hasScheduleEvidence(row)` (owner list contains agents/cron-schedule.json or a path under agents/cycles/, or text contains sdlc-sched-); a Solid scheduled row without evidence fails\n  - **Priority:** LOW\n  - Files: `tests/curriculum-conformance.test.mjs`\n  - Spec: hygiene (conformance honesty)\n  - Gaps: D7-21\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: fixture rows: Solid + \"weekly\" + only pattern-hunt.mjs owner -> fails; with cron-schedule.json -> passes; real doc passes after CV-605\n  - Parallel: blocked-by CV-605\n  - Complexity: M",
   "priority": "LOW",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-developer",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -14,5 +14,8 @@
     "OS-curriculum-v2-conformance-118"
   ],
   "_file": "OS-curriculum-v2-conformance-119.json",
-  "claimedAt": "2026-11-13T20:18:24.327Z"
+  "claimedAt": "2026-11-13T20:18:24.327Z",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-14T00:18:11.952Z"
 }

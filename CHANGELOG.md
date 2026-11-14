@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-14
+
+- 2026-11-14 #181 test(curriculum-conformance): add isScheduledRow + hasScheduleEvidence guards (CV-606) (docs-tests)
+
 ## 2026-11-13
 
 - 2026-11-13 #168 feat(validate): add Layer 3 fn-length/param-count advisory scan (CV-304) (backend)
