@@ -165,3 +165,21 @@ the report, deliberately not "corrected" — see `maturity-reconciliation`).
 All LLM-invoking pieces run through `loadLlmAdapter(config, 'openrouter')` on the
 affordable ladder / Hermes harness — no Claude API, no OpenAI, deterministic
 gates stay deterministic.
+
+---
+
+## Source — Curriculum Files
+
+| Workshop / Document | Source file |
+|--------------------|-------------|
+| Course syllabus | `docs/curriculum/00-syllabus.md` |
+| Workshop 1: Planning & Requirements | `docs/curriculum/w1-planning-requirements.md` |
+| Workshop 2: Autonomous Workers | `docs/curriculum/w2-autonomous-workers.md` |
+| Workshop 3: Agent Orchestration | `docs/curriculum/w3-agent-orchestration.md` |
+| Workshop 4: Release Management & Scaling | `docs/curriculum/w4-release-management.md` |
+| Workshop 5: Anti-Pattern Detection | `docs/curriculum/w5-anti-pattern-detection.md` |
+| Workshop 6: Agent Memory & Evolution | `docs/curriculum/w6-agent-memory-evolution.md` |
+| Workshop 6 (full notes): Agent Memory & Evolution | `docs/curriculum/w6-agent-memory-evolution-full.md` |
+| Workshop 7: Continuous Improvement | `docs/curriculum/w7-continuous-improvement.md` |
+| The Long Game: Operating Agent Teams | `docs/curriculum/long-game-operating-agent-teams.md` |
+| Manic Episode | `docs/curriculum/manic-episode.md` |

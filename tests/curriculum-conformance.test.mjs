@@ -222,3 +222,51 @@ test('a Missing row whose owner exists is exactly what fails', () => {
   assert.equal(parsed[0].status, 'missing');
   assert.ok(parsed[0].owners.some(exists), 'fixture owner must really exist');
 });
+
+// --- source table -----------------------------------------------------------
+
+/**
+ * Parse the "Source — Curriculum Files" table from the doc and return the
+ * backticked file paths listed in the second column.
+ */
+export function parseSourcePaths(markdown) {
+  const lines = markdown.split('\n');
+  const idx = lines.findIndex(l => l.startsWith('| Workshop / Document | Source file |'));
+  if (idx === -1) return [];
+  const paths = [];
+  for (let i = idx + 2; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.startsWith('|')) break;
+    const cells = line.split('|').slice(1, -1).map(c => c.trim());
+    if (cells.length < 2) break;
+    // Extract backticked tokens from the second (source file) column
+    const tokens = [...cells[1].matchAll(/`([^`]+)`/g)].map(x => x[1]);
+    paths.push(...tokens);
+  }
+  return paths;
+}
+
+test('the Source table references every listed curriculum file', () => {
+  const doc = readFileSync(DOC, 'utf8');
+  const paths = parseSourcePaths(doc);
+  assert.ok(paths.length >= 11,
+    `expected at least 11 paths from the Source table, got ${paths.length}`);
+  const missing = paths.filter(p => !exists(p));
+  assert.deepEqual(missing, [],
+    `Source table references missing files:\n  ${missing.join('\n  ')}`);
+});
+
+test('parseSourcePaths extracts backticked paths from the Source table', () => {
+  const fixture = [
+    '| Workshop / Document | Source file |',
+    '|--------------------|-------------|',
+    '| Course syllabus | `docs/curriculum/00-syllabus.md` |',
+    '| Workshop 1 | `docs/curriculum/w1-planning-requirements.md` |',
+    '| Manic Episode | `docs/curriculum/manic-episode.md` |',
+  ].join('\n');
+  assert.deepEqual(parseSourcePaths(fixture), [
+    'docs/curriculum/00-syllabus.md',
+    'docs/curriculum/w1-planning-requirements.md',
+    'docs/curriculum/manic-episode.md',
+  ]);
+});
