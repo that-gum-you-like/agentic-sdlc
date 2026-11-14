@@ -3,7 +3,7 @@
   "title": "docs/curriculum-conformance.md: add a \"Source\" table linking each workshop (W1-W7, syllabus, long game, manic episode) to its docs/curriculum/*.md file",
   "description": "- [ ] **CV-607**: docs/curriculum-conformance.md: add a \"Source\" table linking each workshop (W1-W7, syllabus, long game, manic episode) to its docs/curriculum/*.md file\n  - **Priority:** LOW\n  - Files: `docs/curriculum-conformance.md, tests/curriculum-conformance.test.mjs`\n  - Spec: hygiene (traceability)\n  - Gaps: D7-21\n  - Agent: sdlc-developer\n  - Lane: hermes\n  - Test: test extracts docs/curriculum/*.md links from the doc and asserts each file exists\n  - Parallel: blocked-by CV-606\n  - Complexity: S",
   "priority": "LOW",
-  "status": "pending",
+  "status": "completed",
   "agent": "sdlc-documentarian",
   "estimatedTokens": 3500,
   "source": "openspec/curriculum-v2-conformance/tasks.md",
@@ -12,5 +12,9 @@
   "testStatus": null,
   "blockedBy": [
     "OS-curriculum-v2-conformance-119"
-  ]
+  ],
+  "_file": "OS-curriculum-v2-conformance-120.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-14T00:25:33.993Z"
 }

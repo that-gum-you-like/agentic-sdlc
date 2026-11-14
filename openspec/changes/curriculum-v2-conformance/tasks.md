@@ -1584,7 +1584,7 @@ Hygiene tasks cite gap ids and carry no spec. Conformance rows are downgraded fi
   - Parallel: blocked-by CV-605
   - Complexity: M
 
-- [ ] **CV-607**: docs/curriculum-conformance.md: add a "Source" table linking each workshop (W1-W7, syllabus, long game, manic episode) to its docs/curriculum/*.md file
+- [x] **CV-607**: docs/curriculum-conformance.md: add a "Source" table linking each workshop (W1-W7, syllabus, long game, manic episode) to its docs/curriculum/*.md file
   - **Priority:** LOW
   - Files: `docs/curriculum-conformance.md, tests/curriculum-conformance.test.mjs`
   - Spec: hygiene (traceability)

@@ -3,6 +3,7 @@
 ## 2026-11-14
 
 - 2026-11-14 #181 test(curriculum-conformance): add isScheduledRow + hasScheduleEvidence guards (CV-606) (docs-tests)
+- 2026-11-14 #182 feat(curriculum-conformance): add Source table linking workshops to curriculum files (CV-607) (docs-tests)
 
 ## 2026-11-13
 
