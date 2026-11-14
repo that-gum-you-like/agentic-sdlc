@@ -13,12 +13,16 @@
   ],
   "description": "Drain PR #181 (branch `agent/drain/OS-curriculum-v2-conformance-119`) was NOT merged by pr-auto-review (llm-rejected).\nRepair it ON THE EXISTING BRANCH — do NOT create a new branch or a second PR:\n1. `git fetch origin agent/drain/OS-curriculum-v2-conformance-119 && git checkout agent/drain/OS-curriculum-v2-conformance-119`\n2. Address EVERY reason below.\n3. Run `npm test` until green.\n4. Commit and `git push origin agent/drain/OS-curriculum-v2-conformance-119` — the reviewer re-reviews at the new SHA.\n\n## Rejection reasons (verbatim)\n- [major] Scope creep: The PR modifies docs/curriculum-conformance.md to add 'agents/cron-schedule.json' to owner lists — this is outside the task scope which only specifies changes to tests/curriculum-conformance.test.mjs — Remove the documentation changes and focus only on the test file as specified in the task\n- [major] Incorrect task status update: The PR modifies tasks/queue/OS-curriculum-v2-conformance-119.json to set claimedBy and add metadata — task queue management is outside the scope of this test implementation task and should be handled by the queue system — Revert the task file changes and let the queue system handle task status updates\n- [minor] Fragile regex pattern: The SCHEDULE_RE pattern uses \\b word boundaries which may miss some legitimate scheduling terms in different contexts — Consider using a more robust pattern or adding additional validation for edge cases — Review and potentially expand the regex pattern to handle more scheduling terminology variations",
   "attempts": 1,
-  "status": "pending",
+  "status": "completed",
   "fixFor": {
     "pr": 181,
     "branch": "agent/drain/OS-curriculum-v2-conformance-119",
     "headSha": "88dec89db03332b9f4dabdad73a301c5783a78d4",
     "sourceTask": "OS-curriculum-v2-conformance-119",
     "rejectionKind": "llm-rejected"
-  }
+  },
+  "_file": "FIX-181.json",
+  "capabilityChecklist": null,
+  "test_status": "passing",
+  "completed_at": "2026-11-14T00:21:11.843Z"
 }
