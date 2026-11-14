@@ -43,6 +43,7 @@
     "quirks": [],
     "relationships": [],
     "inTheirOwnWords": "{{IN_THEIR_OWN_WORDS}}",
-    "growthJourney": []
+    "growthJourney": [],
+    "voice": "default"
   }
 }
