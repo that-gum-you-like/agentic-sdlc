@@ -114,6 +114,91 @@ test('the obsolete "close ONLY these" gap list is gone', () => {
     'the stale "close ONLY these" instruction must not return');
 });
 
+// --- schedule-honesty guards ------------------------------------------------
+
+const SCHEDULE_RE = /\b(scheduled|weekly|daily|monthly|timer|cron)\b/i;
+
+/**
+ * A row is "scheduled" if its capability name or full line mentions any
+ * scheduling keyword: scheduled, weekly, daily, monthly, timer, or cron.
+ */
+export function isScheduledRow(row) {
+  const text = row.capability + ' ' + row.line;
+  return SCHEDULE_RE.test(text);
+}
+
+/**
+ * A row has schedule evidence if its owner list contains the canonical
+ * schedule definition (agents/cron-schedule.json) or a path under
+ * agents/cycles/, or if the row text mentions a systemd timer unit
+ * (sdlc-sched-).
+ */
+export function hasScheduleEvidence(row) {
+  const hasOwner = row.owners.some(o => {
+    // Try raw path, then with implicit agents/ prefix (common in prose)
+    const variants = [o];
+    if (!o.startsWith('agents/') && !o.startsWith('/')) {
+      variants.push('agents/' + o);
+    }
+    return variants.some(v =>
+      v === 'agents/cron-schedule.json' || v.startsWith('agents/cycles/')
+    );
+  });
+  if (hasOwner) return true;
+  const text = row.capability + ' ' + row.line;
+  return /sdlc-sched-/i.test(text);
+}
+
+test('a Solid scheduled row without schedule evidence fails', () => {
+  const violations = rows
+    .filter(r => r.status === 'solid')
+    .filter(r => isScheduledRow(r))
+    .filter(r => !hasScheduleEvidence(r))
+    .map(r => `${r.capability} → scheduled but no schedule evidence`);
+  assert.deepEqual(violations, [],
+    `Solid scheduled rows without schedule evidence:\n  ${violations.join('\n  ')}`);
+});
+
+test('isScheduledRow detects scheduling keywords', () => {
+  const r = (capability, line) => ({ capability, line, owners: [] });
+  assert.ok(isScheduledRow(r('Weekly report', '| Weekly report | Solid | `x` |')));
+  assert.ok(isScheduledRow(r('Daily build', '| Daily build | Solid | `x` |')));
+  assert.ok(isScheduledRow(r('Monthly audit', '| Monthly audit | Solid | `x` |')));
+  assert.ok(isScheduledRow(r('Timer job', '| Timer job | Solid | `x` |')));
+  assert.ok(isScheduledRow(r('Cron task', '| Cron task | Solid | `x` |')));
+  assert.ok(isScheduledRow(r('Scheduled maintenance', '| Scheduled maintenance | Solid | `x` |')));
+  assert.ok(!isScheduledRow(r('Pattern hunt', '| Pattern hunt | Solid | `x` |')));
+  assert.ok(!isScheduledRow(r('Static analysis', '| Static analysis | Solid | `x` |')));
+});
+
+test('hasScheduleEvidence detects schedule evidence', () => {
+  const r = (owners, line) => ({ capability: 'Test', line, owners });
+  // cron-schedule.json counts
+  assert.ok(hasScheduleEvidence(r(['agents/cron-schedule.json'], '| Test | Solid | ... |')));
+  // agents/cycles/ path counts
+  assert.ok(hasScheduleEvidence(r(['agents/cycles/daily-review.mjs'], '| Test | Solid | ... |')));
+  // implicit agents/ prefix: cycles/daily-review.mjs → agents/cycles/daily-review.mjs
+  assert.ok(hasScheduleEvidence(r(['cycles/daily-review.mjs'], '| Test | Solid | ... |')));
+  // sdlc-sched- in text counts
+  assert.ok(hasScheduleEvidence(r(['agents/pattern-hunt.mjs'], '| Test | Solid | sdlc-sched-backlog |')));
+  // pattern-hunt.mjs alone is NOT evidence
+  assert.ok(!hasScheduleEvidence(r(['agents/pattern-hunt.mjs'], '| Test | Solid | ... |')));
+  // agents/templates/cron-schedule.json.template is NOT evidence (it's a template)
+  assert.ok(!hasScheduleEvidence(r(['agents/templates/cron-schedule.json.template'], '| Test | Solid | ... |')));
+});
+
+test('fixture: Solid + weekly + only pattern-hunt.mjs owner fails hasScheduleEvidence', () => {
+  const row = { capability: 'Weekly pattern hunt', line: '| Weekly pattern hunt | Solid | `agents/pattern-hunt.mjs` |', owners: ['agents/pattern-hunt.mjs'] };
+  assert.ok(isScheduledRow(row), 'fixture must be a scheduled row');
+  assert.ok(!hasScheduleEvidence(row), 'pattern-hunt.mjs alone must not provide schedule evidence');
+});
+
+test('fixture: Solid + weekly + cron-schedule.json owner passes hasScheduleEvidence', () => {
+  const row = { capability: 'Weekly pattern hunt', line: '| Weekly pattern hunt | Solid | `agents/pattern-hunt.mjs` + `agents/cron-schedule.json` |', owners: ['agents/pattern-hunt.mjs', 'agents/cron-schedule.json'] };
+  assert.ok(isScheduledRow(row), 'fixture must be a scheduled row');
+  assert.ok(hasScheduleEvidence(row), 'cron-schedule.json must provide schedule evidence');
+});
+
 // --- parser coverage --------------------------------------------------------
 
 test('decorated statuses parse', () => {
