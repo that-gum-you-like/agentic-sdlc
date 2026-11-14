@@ -119,23 +119,24 @@ test('resolveVoice reads from core.json character.voice when present', () => {
     writeFileSync(join(agentsDir, 'core.json'), JSON.stringify({
       character: { voice: 'test-voice' }
     }));
+    assert(resolveVoice('test-agent', testDir) === 'test-voice', 'should read from per-agent core.json');
+  } finally {
+    rmSync(testDir, { recursive: true, force: true });
+  }
+});
 
-    // Save and restore PROJECT_DIR
-    const origAgentsDir = resolve(PROJECT_DIR, 'agents');
-    // We can't easily swap PROJECT_DIR, but we can test via the per-agent
-    // path resolution by reading the file directly. Instead, let's verify
-    // the read behavior by temporarily adding a test budget:
-    const budgetPath = resolve(PROJECT_DIR, 'agents', 'budget.json');
-    const origBudget = readFileSync(budgetPath, 'utf8');
-    try {
-      const budget = JSON.parse(origBudget);
-      budget.agents = budget.agents || {};
-      budget.agents['test-agent'] = { model: 'test', character: { voice: 'test-voice' } };
-      writeFileSync(budgetPath, JSON.stringify(budget, null, 2));
-      assert(resolveVoice('test-agent') === 'test-voice', 'should read from budget.json');
-    } finally {
-      writeFileSync(budgetPath, origBudget);
-    }
+test('resolveVoice reads from budget.json character.voice when present', () => {
+  const testDir = join(tmpdir(), 'speak-test-budget-' + Date.now());
+  const agentsDir = join(testDir, 'agents');
+  const budgetPath = join(agentsDir, 'budget.json');
+  mkdirSync(agentsDir, { recursive: true });
+  try {
+    writeFileSync(budgetPath, JSON.stringify({
+      agents: {
+        'test-agent': { model: 'test', character: { voice: 'budget-voice' } }
+      }
+    }));
+    assert(resolveVoice('test-agent', testDir) === 'budget-voice', 'should read from budget.json');
   } finally {
     rmSync(testDir, { recursive: true, force: true });
   }

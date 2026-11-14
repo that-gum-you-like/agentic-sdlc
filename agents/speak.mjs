@@ -35,11 +35,12 @@ const DEFAULT_VOICE = 'default';
  *   3. Fall back to 'default'
  *
  * @param {string} agentName
+ * @param {string} [projectDir] - Project root directory (defaults to PROJECT_DIR)
  * @returns {string} voice name
  */
-export function resolveVoice(agentName) {
+export function resolveVoice(agentName, projectDir = PROJECT_DIR) {
   // 1. Check budget.json
-  const budgetPath = resolve(PROJECT_DIR, 'agents', 'budget.json');
+  const budgetPath = resolve(projectDir, 'agents', 'budget.json');
   if (existsSync(budgetPath)) {
     try {
       const budget = JSON.parse(readFileSync(budgetPath, 'utf8'));
@@ -47,21 +48,21 @@ export function resolveVoice(agentName) {
       if (agent?.character?.voice && typeof agent.character.voice === 'string') {
         return agent.character.voice;
       }
-    } catch {
-      // swallow parse errors, continue to next source
+    } catch (parseErr) {
+      console.debug(`speak.mjs: parse error reading ${budgetPath}: ${parseErr.message}`);
     }
   }
 
   // 2. Check per-agent core.json
-  const corePath = resolve(PROJECT_DIR, 'agents', agentName, 'memory', 'core.json');
+  const corePath = resolve(projectDir, 'agents', agentName, 'memory', 'core.json');
   if (existsSync(corePath)) {
     try {
       const core = JSON.parse(readFileSync(corePath, 'utf8'));
       if (core?.character?.voice && typeof core.character.voice === 'string') {
         return core.character.voice;
       }
-    } catch {
-      // swallow parse errors, fall through to default
+    } catch (parseErr) {
+      console.debug(`speak.mjs: parse error reading ${corePath}: ${parseErr.message}`);
     }
   }
 
